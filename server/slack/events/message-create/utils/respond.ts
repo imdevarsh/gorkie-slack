@@ -7,6 +7,7 @@ import { getWeather } from '~/lib/ai/tools/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/leave-channel';
 import { react } from '~/lib/ai/tools/react';
 import { reply } from '~/lib/ai/tools/reply';
+import { searchSlack } from '~/lib/ai/tools/search-slack';
 import { searchWeb } from '~/lib/ai/tools/search-web';
 import { skip } from '~/lib/ai/tools/skip';
 import { startDM } from '~/lib/ai/tools/start-dm';
@@ -69,6 +70,7 @@ export async function generateResponse(
       activeTools: [
         'getWeather',
         'searchWeb',
+        'searchSlack',
         'startDM',
         'getUserInfo',
         'leaveChannel',
@@ -80,6 +82,7 @@ export async function generateResponse(
       tools: {
         getWeather,
         searchWeb,
+        searchSlack: searchSlack({ context }),
         startDM: startDM({ context }),
         getUserInfo: getUserInfo({ context }),
         leaveChannel: leaveChannel({ context }),

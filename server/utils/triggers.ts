@@ -1,24 +1,24 @@
-import type { SlackMessageContext, SlackMessageEvent } from "~/types";
-import { primeSlackUserName } from "~/utils/users";
+import type { SlackMessageContext, SlackMessageEvent } from '~/types';
+import { primeSlackUserName } from '~/utils/users';
 
-export type TriggerType = "ping" | "dm" | "thread" | null;
+export type TriggerType = 'ping' | 'dm' | 'thread' | null;
 
 function isPlainMessage(
-  event: SlackMessageEvent
+  event: SlackMessageEvent,
 ): event is SlackMessageEvent & { text: string; user: string } {
-  const subtype = "subtype" in event ? event.subtype : undefined;
+  const subtype = 'subtype' in event ? event.subtype : undefined;
   return (
-    (!subtype || subtype === "thread_broadcast" || subtype === "file_share") &&
-    "text" in event &&
-    typeof (event as { text?: unknown }).text === "string" &&
-    "user" in event &&
-    typeof (event as { user?: unknown }).user === "string"
+    (!subtype || subtype === 'thread_broadcast' || subtype === 'file_share') &&
+    'text' in event &&
+    typeof (event as { text?: unknown }).text === 'string' &&
+    'user' in event &&
+    typeof (event as { user?: unknown }).user === 'string'
   );
 }
 
 export async function getTrigger(
   message: SlackMessageContext,
-  botId?: string
+  botId?: string,
 ): Promise<{ type: TriggerType; info: string | string[] | null }> {
   const { event, client } = message;
 
@@ -36,17 +36,17 @@ export async function getTrigger(
       if (displayName) {
         primeSlackUserName(botId, displayName);
       }
-      return { type: "ping", info: displayName ?? botId };
+      return { type: 'ping', info: displayName ?? botId };
     } catch {
-      return { type: "ping", info: botId };
+      return { type: 'ping', info: botId };
     }
   }
 
   const channelType = (event as { channel_type?: string }).channel_type;
-  if (channelType === "im") {
-    return { type: "dm", info: event.user };
+  if (channelType === 'im') {
+    return { type: 'dm', info: event.user };
   }
-  
+
   if (
     !message.event.subtype &&
     message.event.thread_ts &&
@@ -58,9 +58,8 @@ export async function getTrigger(
       })
     )?.messages?.[0]?.text?.includes(`<@${botId}>`)
   ) {
-    return { type: "thread", info: event.user }
+    return { type: 'thread', info: event.user };
   }
 
   return { type: null, info: null };
 }
-

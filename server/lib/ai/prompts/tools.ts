@@ -5,6 +5,7 @@ IMPORTANT: Calling 'reply' ENDS the loop immediately. Do NOT call any other tool
 ALSO: when a user asks you to leave a channel, do not reply to them first - just run leaveChannel. If the user asks you to leave a channel, you MUST run the leaveChannel tool.
 
 Items:
+searchSlack: get fresh info from the Slack workspace you are in.
 searchWeb: get fresh info from the internet. 
 getUserInfo: fetch Slack user profile (id, avatar, etc). 
 react: add emoji reaction. 

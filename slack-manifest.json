@@ -14,9 +14,12 @@
         "app_mentions:read",
         "channels:history",
         "channels:join",
+        "channels:manage",
         "channels:read",
         "channels:write.invites",
         "chat:write",
+        "files:read",
+        "files:write",
         "groups:history",
         "groups:read",
         "groups:write",
@@ -27,12 +30,13 @@
         "mpim:write",
         "reactions:read",
         "reactions:write",
+        "search:read.files",
+        "search:read.public",
+        "search:read.users",
         "team:read",
         "users.profile:read",
         "users:read",
-        "channels:manage",
-        "files:read",
-        "files:write"
+        "assistant:write"
       ]
     }
   },
