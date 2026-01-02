@@ -1,5 +1,5 @@
 import { tool } from 'ai';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getSlackUserName } from '~/utils/users';
