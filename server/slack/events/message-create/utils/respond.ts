@@ -7,6 +7,7 @@ import { getWeather } from '~/lib/ai/tools/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/leave-channel';
 import { react } from '~/lib/ai/tools/react';
 import { reply } from '~/lib/ai/tools/reply';
+import { scheduleReminder } from '~/lib/ai/tools/schedule-reminder';
 import { searchSlack } from '~/lib/ai/tools/search-slack';
 import { searchWeb } from '~/lib/ai/tools/search-web';
 import { skip } from '~/lib/ai/tools/skip';
@@ -67,17 +68,6 @@ export async function generateResponse(
         },
       },
       temperature: 1.1,
-      activeTools: [
-        'getWeather',
-        'searchWeb',
-        'searchSlack',
-        'startDM',
-        'getUserInfo',
-        'leaveChannel',
-        'react',
-        'reply',
-        'skip',
-      ],
       toolChoice: 'required',
       tools: {
         getWeather,
@@ -86,6 +76,7 @@ export async function generateResponse(
         startDM: startDM({ context }),
         getUserInfo: getUserInfo({ context }),
         leaveChannel: leaveChannel({ context }),
+        scheduleReminder: scheduleReminder({ context }),
         react: react({ context }),
         reply: reply({ context }),
         skip: skip({ context }),
