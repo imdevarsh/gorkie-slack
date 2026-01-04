@@ -12,6 +12,7 @@ import { searchSlack } from '~/lib/ai/tools/search-slack';
 import { searchWeb } from '~/lib/ai/tools/search-web';
 import { skip } from '~/lib/ai/tools/skip';
 import { startDM } from '~/lib/ai/tools/start-dm';
+import { summariseThread } from '~/lib/ai/tools/summarise-thread';
 import { successToolCall } from '~/lib/ai/utils';
 import type { RequestHints, SlackMessageContext } from '~/types';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
@@ -77,6 +78,7 @@ export async function generateResponse(
         getUserInfo: getUserInfo({ context }),
         leaveChannel: leaveChannel({ context }),
         scheduleReminder: scheduleReminder({ context }),
+        summariseThread: summariseThread({ context }),
         react: react({ context }),
         reply: reply({ context }),
         skip: skip({ context }),
