@@ -66,7 +66,7 @@ export async function generateResponse(
           reasoning: {
             enabled: true,
             exclude: false,
-            effort: "medium"
+            effort: 'medium',
           },
         },
       },
