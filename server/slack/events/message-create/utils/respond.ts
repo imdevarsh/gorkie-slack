@@ -22,7 +22,28 @@ export async function generateResponse(
   messages: ModelMessage[],
   hints: RequestHints,
 ) {
+  const threadTs =
+    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
+
   try {
+    await context.client.assistant.threads.setStatus({
+      channel_id: context.event.channel,
+      thread_ts: threadTs,
+      status: 'is thinking',
+      loading_messages: [
+        'is pondering your question',
+        'is working on it',
+        'is putting thoughts together',
+        'is mulling this over',
+        'is figuring this out',
+        'is cooking up a response',
+        'is connecting the dots',
+        'is working through this',
+        'is piecing things together',
+        'is giving it a good think',
+      ],
+    });
+
     const userId = (context.event as { user?: string }).user;
     const messageText = (context.event as { text?: string }).text ?? '';
     const files = (context.event as { files?: SlackFile[] }).files;
@@ -100,8 +121,23 @@ export async function generateResponse(
       },
     });
 
+    // clear status
+    await context.client.assistant.threads.setStatus({
+      channel_id: context.event.channel,
+      thread_ts: threadTs,
+      status: '',
+    });
+
     return { success: true, toolCalls };
   } catch (e) {
+    try {
+      // clear status
+      await context.client.assistant.threads.setStatus({
+        channel_id: context.event.channel,
+        thread_ts: threadTs,
+        status: '',
+      });
+    } catch {}
     return {
       success: false,
       error: (e as Error)?.message,
