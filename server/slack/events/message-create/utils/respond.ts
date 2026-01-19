@@ -52,7 +52,7 @@ export async function generateResponse(
       currentMessageContent = replyPrompt;
     }
 
-    const { toolCalls, providerMetadata } = await generateText({
+    const { toolCalls } = await generateText({
       model: provider.languageModel('chat-model'),
       messages: [
         ...messages,
@@ -101,7 +101,6 @@ export async function generateResponse(
         },
       },
     });
-    console.log(JSON.stringify(providerMetadata))
 
     return { success: true, toolCalls };
   } catch (e) {
