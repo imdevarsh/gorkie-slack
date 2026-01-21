@@ -4,6 +4,7 @@ import { env } from '~/env';
 import { isUserAllowed } from '~/lib/allowed-users';
 import { ratelimit, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
+import { getQueue } from '~/lib/queue';
 import type { SlackMessageContext } from '~/types';
 import { buildChatContext } from '~/utils/context';
 import { logReply } from '~/utils/log';
@@ -81,16 +82,19 @@ async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
 }
 
 function getContextId(ctx: SlackMessageContext): string {
-  const channel = (ctx.event as { channel?: string }).channel;
+  const channel = ctx.event.channel ?? 'unknown-channel';
+  const channelType = ctx.event.channel_type;
   const userId = (ctx.event as { user?: string }).user;
-  const channelType = (ctx.event as { channel_type?: string }).channel_type;
-  if (channelType === 'im' && userId) {
-    return `dm:${userId}`;
-  }
-  return channel ?? 'unknown-channel';
+  const threadTs = (ctx.event as { thread_ts?: string }).thread_ts;
+
+  return channelType === 'im' && userId
+    ? `dm:${userId}`
+    : threadTs
+      ? `${channel}:${threadTs}`
+      : channel;
 }
 
-export async function execute(args: MessageEventArgs) {
+async function handleMessage(args: MessageEventArgs) {
   if (
     args.event.subtype &&
     args.event.subtype !== 'thread_broadcast' &&
@@ -102,8 +106,6 @@ export async function execute(args: MessageEventArgs) {
   if (!messageContext) return;
 
   const ctxId = getContextId(messageContext);
-  if (!(await canReply(ctxId))) return;
-
   const trigger = await getTrigger(messageContext, messageContext.botUserId);
 
   const authorName = await getAuthorName(messageContext);
@@ -150,4 +152,21 @@ export async function execute(args: MessageEventArgs) {
     );
     return;
   }
+}
+
+export async function execute(args: MessageEventArgs) {
+  if (
+    args.event.subtype &&
+    args.event.subtype !== 'thread_broadcast' &&
+    args.event.subtype !== 'file_share'
+  )
+    return;
+
+  const messageContext = isProcessableMessage(args);
+  if (!messageContext) return;
+
+  const ctxId = getContextId(messageContext);
+  if (!(await canReply(ctxId))) return;
+
+  return await getQueue(ctxId).add(async () => handleMessage(args));
 }
