@@ -44,6 +44,9 @@ Great! Now you just need to start the development server.
 ```bash
 # Start server
 $ bun run dev
+
+# Start server in production
+$ bun run start
 ```
 
 ## <a name="license">📝 License</a>
