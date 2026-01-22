@@ -16,7 +16,8 @@ An AI assistant (called Gorkie) designed to help Slack users. This is based on t
 This project was developed with the following technologies:
 
 - [Vercel AI SDK][ai-sdk]
-- [Exa AI][exa]
+- [Exa][exa]
+- [Mermaid][mermaid]
 - [Redis][redis]
 - [Slack Bolt SDK][slack-bolt]
 - [TypeScript][ts]
@@ -57,5 +58,6 @@ This project is under the MIT license. See the [LICENSE](LICENSE) for details.
 [ai-sdk]: https://ai-sdk.dev/
 [bun]: https://bun.sh/
 [exa]: https://exa.ai/
+[mermaid]: https://mermaid.js.org/
 [pinecone]: https://www.pinecone.io/
 [redis]: https://redis.io/
