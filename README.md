@@ -39,13 +39,13 @@ $ bun install
 ```
 
 Next, copy the .env.example file, rename it to .env, and add your environment variables.
-Great! Now you just need to start the development server.
+Great! Now you just need to start the app.
 
 ```bash
-# Start server
+# Start app in watch mode
 $ bun run dev
 
-# Start server in production
+# Start app in production
 $ bun run start
 ```
 
