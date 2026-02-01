@@ -12,9 +12,9 @@ import {
   checkMessageQuota,
   resetMessageCount,
 } from '~/utils/message-rate-limiter';
+import { shouldUse } from '~/utils/messages';
 import { getTrigger } from '~/utils/triggers';
 import { generateResponse } from './utils/respond';
-import { shouldUse } from '~/utils/messages';
 
 export const name = 'message';
 
