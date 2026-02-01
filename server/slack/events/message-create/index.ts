@@ -14,6 +14,7 @@ import {
 } from '~/utils/message-rate-limiter';
 import { getTrigger } from '~/utils/triggers';
 import { generateResponse } from './utils/respond';
+import { shouldUse } from '~/utils/messages';
 
 export const name = 'message';
 
@@ -103,6 +104,8 @@ async function handleMessage(args: MessageEventArgs) {
     args.event.subtype !== 'file_share'
   )
     return;
+
+  if (!shouldUse(args.event.text || '')) return;
 
   const messageContext = isProcessableMessage(args);
   if (!messageContext) return;

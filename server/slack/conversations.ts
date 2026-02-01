@@ -2,6 +2,7 @@ import type { WebClient } from '@slack/web-api';
 import type { ModelMessage, UserContent } from 'ai';
 import logger from '~/lib/logger';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
+import { shouldUse } from '~/utils/messages';
 
 interface ConversationOptions {
   client: WebClient;
@@ -56,6 +57,7 @@ export async function getConversationMessages({
     const filteredMessages = latest
       ? messages.filter((message) => {
           if (!message.ts) return false;
+          if (!shouldUse(message.text || '')) return false;
           const messageTs = Number(message.ts);
           const latestTs = Number(latest);
           return inclusive ? messageTs <= latestTs : messageTs < latestTs;

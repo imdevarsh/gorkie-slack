@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { shouldUse } from '~/utils/messages';
 import { getSlackUserName } from '~/utils/users';
 
 interface SlackHistoryMessage {
@@ -32,8 +33,13 @@ async function resolveTargetMessage(
     limit: offset,
   });
 
-  const sorted = ((history.messages ?? []) as SlackHistoryMessage[])
-    .filter((msg) => Boolean(msg.ts))
+  if(!history.messages) {
+    logger.error({res: history}, "Error fetching history");
+  }
+
+  // TODO: Integrate shouldUse with this to prevent offset mismatches
+  const sorted = (history.messages ?? [])
+    .filter((msg) => Boolean(msg.ts)  && shouldUse(msg.text || ""))
     .sort((a, b) => Number(b.ts ?? '0') - Number(a.ts ?? '0'));
 
   return sorted[offset - 1] ?? { ts: messageTs };
