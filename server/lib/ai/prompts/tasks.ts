@@ -1,7 +1,7 @@
 export const replyPrompt = `\
 <task>
 Reply briefly, naturally, and only once.
-Focus on the most recent message or request - you don't need to address every pending question or ping from the conversation history. Just respond to what's being asked right now.
+Focus on the most recent message or request; DO NOT address every pending question or ping from the conversation history. Respond ONLY to what is being asked right now.
 </task>
 `;
 
