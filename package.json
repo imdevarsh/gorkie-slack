@@ -15,6 +15,7 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.26",
     "@exalabs/ai-sdk": "^1.0.5",
     "@langfuse/otel": "^4.5.1",
     "@langfuse/tracing": "^4.5.1",
