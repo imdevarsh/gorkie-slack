@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { setToolStatus } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -23,6 +24,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         .describe('Title or description for the file'),
     }),
     execute: async ({ path, filename, title }) => {
+      await setToolStatus(context, 'is uploading file');
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;

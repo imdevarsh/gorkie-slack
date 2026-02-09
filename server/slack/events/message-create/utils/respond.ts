@@ -23,18 +23,6 @@ import { getContextId } from '~/utils/context';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
-const toolStatusMap: Record<string, string> = {
-  executeCode: 'is running code in sandbox',
-  showFile: 'is uploading file',
-  searchWeb: 'is searching the web',
-  searchSlack: 'is searching Slack',
-  summariseThread: 'is reading the thread',
-  getUserInfo: 'is fetching user info',
-  mermaid: 'is generating diagram',
-  scheduleReminder: 'is scheduling reminder',
-  getWeather: 'is checking the weather',
-};
-
 export async function generateResponse(
   context: SlackMessageContext,
   messages: ModelMessage[],
@@ -123,21 +111,6 @@ export async function generateResponse(
         skip: skip({ context }),
       },
       system: systemPrompt({ requestHints: hints, context }),
-      onStepFinish: async (stepResult) => {
-        const toolCall = stepResult.toolCalls[0];
-        const status = toolCall ? toolStatusMap[toolCall.toolName] : undefined;
-        if (status) {
-          await context.client.assistant.threads
-            .setStatus({
-              channel_id: context.event.channel,
-              thread_ts: threadTs,
-              status,
-            })
-            .catch(() => {
-              // ignore status update failures
-            });
-        }
-      },
       stopWhen: [
         stepCountIs(25),
         successToolCall('leave-channel'),

@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { setToolStatus } from '~/lib/ai/utils';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
@@ -25,6 +26,7 @@ export const executeCode = ({
     }),
     execute: async ({ command }) => {
       const ctxId = getContextId(context);
+      await setToolStatus(context, 'is running code in sandbox');
 
       try {
         const sandbox = await getOrCreate(ctxId);

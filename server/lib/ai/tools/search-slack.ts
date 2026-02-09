@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { setToolStatus } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 
@@ -10,6 +11,7 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
       query: z.string(),
     }),
     execute: async ({ query }) => {
+      await setToolStatus(context, 'is searching Slack');
       // biome-ignore lint/suspicious/noExplicitAny: manual API calls because Slack Bolt doesn't have support for this method yet
       const action_token = (context.event as any)?.assistant_thread
         ?.action_token;

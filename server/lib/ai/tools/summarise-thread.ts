@@ -2,6 +2,7 @@ import { generateText, tool } from 'ai';
 import { z } from 'zod';
 import { summariseThreadPrompt } from '~/lib/ai/prompts/tasks';
 import { provider } from '~/lib/ai/providers';
+import { setToolStatus } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
 import { getConversationMessages } from '~/slack/conversations';
 import type { SlackMessageContext } from '~/types';
@@ -20,6 +21,7 @@ export const summariseThread = ({
         .describe('Optional instructions to provide to the summariser agent'),
     }),
     execute: async ({ instructions }) => {
+      await setToolStatus(context, 'is reading the thread');
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
 
