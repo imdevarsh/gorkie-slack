@@ -1,19 +1,19 @@
 {
   "name": "gorkie-slack",
   "version": "1.0.0",
-  "description": "",
+  "license": "MIT",
+  "description": "A helpful AI Slack Bot built with AI SDK.",
+  "private": true,
   "scripts": {
     "dev": "bun run --watch server/index.ts",
     "start": "bun run server/index.ts",
-    "format": "biome format --write .",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
-    "check": "biome check .",
-    "fix": "biome check --write"
+    "check": "ultracite check .",
+    "check:spelling": "cspell -c .cspell.jsonc --no-progress --no-summary --no-must-find-files --unique --cache",
+    "check:unsafe": "ultracite fix --unsafe true .",
+    "check:write": "ultracite fix .",
+    "typecheck": "tsc --noEmit",
+    "prepare": "lefthook install"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "@exalabs/ai-sdk": "^1.0.5",
     "@langfuse/otel": "^4.5.1",
@@ -32,9 +32,15 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.11",
+    "@biomejs/biome": "2.3.12",
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
+    "@commitlint/types": "^20.3.1",
+    "@cspell/dict-bash": "^4.2.2",
     "@types/bun": "^1.3.6",
-    "typescript": "^5.9.3"
-  },
-  "private": true
+    "cspell": "^9.6.0",
+    "lefthook": "^2.0.15",
+    "typescript": "^5.9.3",
+    "ultracite": "7.0.12"
+  }
 }
