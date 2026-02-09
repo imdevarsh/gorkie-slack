@@ -1,6 +1,7 @@
 import { webSearch } from '@exalabs/ai-sdk';
 import type { ModelMessage, UserContent } from 'ai';
 import { generateText, stepCountIs } from 'ai';
+import { loadingMessages } from '~/config';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
 import { executeCode } from '~/lib/ai/tools/execute-code';
@@ -37,18 +38,7 @@ export async function generateResponse(
       channel_id: context.event.channel,
       thread_ts: threadTs,
       status: 'is thinking',
-      loading_messages: [
-        'is pondering your question',
-        'is working on it',
-        'is putting thoughts together',
-        'is mulling this over',
-        'is figuring this out',
-        'is cooking up a response',
-        'is connecting the dots',
-        'is working through this',
-        'is piecing things together',
-        'is giving it a good think',
-      ],
+      loading_messages: loadingMessages,
     });
 
     const userId = (context.event as { user?: string }).user;
