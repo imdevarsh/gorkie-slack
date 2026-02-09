@@ -34,6 +34,8 @@ export const executeCode = ({
           filesTransported = true;
         }
 
+        logger.debug({ ctxId, command }, 'Sandbox command starting');
+
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
@@ -41,6 +43,11 @@ export const executeCode = ({
 
         const stdout = await result.stdout();
         const stderr = await result.stderr();
+
+        logger.debug(
+          { ctxId, exitCode: result.exitCode, stdout, stderr },
+          'Sandbox command finished'
+        );
 
         return {
           stdout: stdout || '(no output)',
