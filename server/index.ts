@@ -23,7 +23,7 @@ async function main() {
   logger.info({ port: env.PORT }, 'Slack Bolt app listening for events');
 }
 
-void main().catch(async (error) => {
+main().catch(async (error) => {
   logger.error({ error }, 'Failed to start Slack Bolt app');
   await sdk.shutdown();
   process.exitCode = 1;
