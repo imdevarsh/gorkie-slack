@@ -1,14 +1,11 @@
 # TODO
 
-- Migrate to AI SDK Agents
-- Add ability to give file outputs
-- Review Claude's refactor of getContext to per thread, see if thread refactor affects ratelimits
-- Preinstall Image Magick and other packages
-- Add more proper and detailed examples to the AI, AI gets confused about attachments dir still...
-- Think about security too...
-- Why do we still store the sandboxId in redis, with the TTL of 10?
-- Cleanup vibe slop
-- Give it context, gorkie that it can't login or do authenticationj and stuff so it cant use githb etcetc
-- add better prompting to always use web search, etc it doesn't know it cant login or use another altenrative method
-- Maybe use a smarter agent architecture -> spawn subagent with smarter model which completes the task like the discord ai bot...
-- Add better context eg in sandbox show when installing packages (Status Updating), restoring executing, completed, etc. same with other tools
+- Review Claude refactor of `getContext` to per-thread usage; confirm thread changes do not affect rate limits.
+- Expand system prompt examples; AI still gets confused about the attachments directory.
+- Audit security: authentication boundaries, data access, and tool permissions.
+- Revisit why `sandboxId` is stored in Redis with TTL 10 seconds; confirm necessity or remove.
+- Code cleanup and consistency pass (naming, types, error handling).
+- Update system prompt: Gorkie cannot log in or perform authentication, and cannot access GitHub or other sites requiring auth.
+- Update system prompt: require web search usage when needed and avoid assuming alternative access methods.
+- Explore smarter agent architecture: spawn a sub-agent with a stronger model to complete tasks (similar to the Discord AI bot).
+- Improve sandbox/tool UX context: show status updates for installing packages/restoring sandbox/execute/complete, and apply to other tools.
