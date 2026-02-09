@@ -13,7 +13,7 @@ Use when:
 - Finding who discussed a topic or made a decision
 - Researching context from outside the current thread
 
-Search queries work best when specific — use keywords, user names, channel names, or date ranges.
+Search queries work best when specific. Use keywords, user names, channel names, or date ranges.
 </description>
 </tool>
 
@@ -81,7 +81,7 @@ Node packages:
 </description>
 <rules>
 - Packages persist via snapshots, install once per thread
-- Commands run via sh -c — pipes, redirection, and shell features work
+- Commands run via sh -c, pipes, redirection, and shell features work
 - 10-minute timeout per command
 </rules>
 </tool>
@@ -106,7 +106,7 @@ Node packages:
 <name>reply</name>
 <description>Send a threaded reply or message.</description>
 <rules>
-- THIS ENDS THE LOOP — do not call any other tools after reply.
+- THIS ENDS THE LOOP. Do NOT call any other tools after reply.
 - Content is an array where each item becomes a separate message.
 - Offset counts back from the LATEST user message, not the one before.
 </rules>
@@ -121,8 +121,8 @@ Node packages:
 <name>leaveChannel</name>
 <description>Leave the current channel immediately.</description>
 <rules>
-- Do NOT reply to the user first — just run this tool.
-- THIS ENDS THE LOOP — do not call any other tools after leaveChannel.
+- Do NOT reply to the user first, just run this tool.
+- THIS ENDS THE LOOP. Do NOT call any other tools after leaveChannel.
 </rules>
 </tool>
 
