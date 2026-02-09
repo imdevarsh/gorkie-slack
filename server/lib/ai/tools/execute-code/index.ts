@@ -6,6 +6,8 @@ import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { getOrCreate } from './sandbox';
 
+export { snapshotAndStop } from './sandbox';
+
 export const executeCode = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description:

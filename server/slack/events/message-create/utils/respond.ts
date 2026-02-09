@@ -3,7 +3,7 @@ import type { ModelMessage, UserContent } from 'ai';
 import { generateText, stepCountIs } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
-import { executeCode } from '~/lib/ai/tools/execute-code';
+import { executeCode, snapshotAndStop } from '~/lib/ai/tools/execute-code';
 import { getUserInfo } from '~/lib/ai/tools/get-user-info';
 import { getWeather } from '~/lib/ai/tools/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/leave-channel';
@@ -15,7 +15,9 @@ import { searchSlack } from '~/lib/ai/tools/search-slack';
 import { skip } from '~/lib/ai/tools/skip';
 import { summariseThread } from '~/lib/ai/tools/summarise-thread';
 import { successToolCall } from '~/lib/ai/utils';
+import logger from '~/lib/logger';
 import type { RequestHints, SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
@@ -57,15 +59,12 @@ export async function generateResponse(
       requestHints: hints,
     });
 
-    // Process images from the current message
     const imageContents = await processSlackFiles(files);
 
-    // Build the current message content
     let currentMessageContent: UserContent;
     const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
 
     if (imageContents.length > 0) {
-      // Include images with the reply prompt
       currentMessageContent = [
         { type: 'text' as const, text: replyPrompt },
         ...imageContents,
@@ -128,7 +127,6 @@ export async function generateResponse(
       },
     });
 
-    // clear status
     await context.client.assistant.threads.setStatus({
       channel_id: context.event.channel,
       thread_ts: threadTs,
@@ -138,7 +136,6 @@ export async function generateResponse(
     return { success: true, toolCalls };
   } catch (e) {
     try {
-      // clear status
       await context.client.assistant.threads.setStatus({
         channel_id: context.event.channel,
         thread_ts: threadTs,
@@ -151,5 +148,10 @@ export async function generateResponse(
       success: false,
       error: (e as Error)?.message,
     };
+  } finally {
+    const ctxId = getContextId(context);
+    snapshotAndStop(ctxId).catch((error: unknown) => {
+      logger.warn({ error, ctxId }, 'Sandbox snapshot failed');
+    });
   }
 }
