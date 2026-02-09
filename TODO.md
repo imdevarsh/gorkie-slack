@@ -8,3 +8,5 @@
 - Think about security too...
 - Why do we still store the sandboxId in redis, with the TTL of 10?
 - Cleanup vibe slop
+- See how it works, if you interrupt the task
+- Give it context, gorkie that it can't login or do authenticationj and stuff so it cant use githb etcetc
