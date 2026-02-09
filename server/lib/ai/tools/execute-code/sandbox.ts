@@ -3,7 +3,7 @@ import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 
-async function preinstallPackages(instance: Sandbox): Promise<void> {
+async function installPackages(instance: Sandbox): Promise<void> {
   const packages = config.packages;
   if (!packages.length) {
     return;
@@ -76,7 +76,7 @@ export async function getOrCreate(ctxId: string): Promise<Sandbox> {
     }));
 
   if (!restored) {
-    await preinstallPackages(instance);
+    await installPackages(instance);
   }
 
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
