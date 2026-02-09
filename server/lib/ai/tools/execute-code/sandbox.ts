@@ -2,6 +2,7 @@ import { Sandbox } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
+import { setToolStatus } from '../../utils';
 
 async function installPackages(instance: Sandbox): Promise<void> {
   const packages = config.packages;
