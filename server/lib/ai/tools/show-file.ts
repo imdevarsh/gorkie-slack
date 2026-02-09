@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { setToolStatus } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
-import { getSandboxContextId } from '~/utils/context';
+import { getContextId } from '~/utils/context';
 import { getOrCreate } from './execute-code/sandbox';
 
 export const showFile = ({ context }: { context: SlackMessageContext }) =>
@@ -28,7 +28,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;
-      const ctxId = getSandboxContextId(context);
+      const ctxId = getContextId(context);
 
       if (!channelId) {
         return { success: false, error: 'Missing Slack channel' };

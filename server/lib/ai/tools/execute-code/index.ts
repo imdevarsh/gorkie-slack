@@ -4,7 +4,7 @@ import { setToolStatus } from '~/lib/ai/utils';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
-import { getSandboxContextId } from '~/utils/context';
+import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 import { transportAttachments } from './attachments';
 import { getOrCreate } from './sandbox';
@@ -25,7 +25,7 @@ export const executeCode = ({
       command: z.string().describe('Shell command (runs via sh -c)'),
     }),
     execute: async ({ command }) => {
-      const ctxId = getSandboxContextId(context);
+      const ctxId = getContextId(context);
       await setToolStatus(context, 'is running code in sandbox');
 
       try {

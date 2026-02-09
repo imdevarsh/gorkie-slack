@@ -7,31 +7,6 @@ export function getContextId(context: SlackMessageContext): string {
   const channel = context.event.channel ?? 'unknown-channel';
   const channelType = context.event.channel_type;
   const userId = (context.event as { user?: string }).user;
-  const threadTs = (context.event as { thread_ts?: string }).thread_ts;
-
-  if (channelType === 'im' && userId) {
-    return `dm:${userId}`;
-  }
-  if (threadTs) {
-    return `${channel}:${threadTs}`;
-  }
-  return channel;
-}
-
-/**
- * Thread-aware context ID for sandbox persistence.
- *
- * Unlike getContextId (which returns just the channel for non-threaded
- * messages), this always includes the message timestamp so the sandbox
- * key is the same for the initial channel message and its thread replies.
- *
- *   Initial message  (ts=X, no thread_ts) → channel:X
- *   Thread reply     (thread_ts=X)        → channel:X
- */
-export function getSandboxContextId(context: SlackMessageContext): string {
-  const channel = context.event.channel ?? 'unknown-channel';
-  const channelType = context.event.channel_type;
-  const userId = (context.event as { user?: string }).user;
   const threadTs =
     (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
 
