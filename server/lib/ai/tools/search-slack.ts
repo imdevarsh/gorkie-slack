@@ -38,7 +38,7 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
         // biome-ignore lint/suspicious/noExplicitAny: see above
         .json()) as any;
 
-      if (!res.ok || !res.results || !res.results.messages) {
+      if (!(res.ok && res.results && res.results.messages)) {
         logger.error({ res }, 'Failed to search');
         return {
           success: false,

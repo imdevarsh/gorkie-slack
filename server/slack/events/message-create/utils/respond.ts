@@ -21,7 +21,7 @@ import { getSlackUserName } from '~/utils/users';
 export async function generateResponse(
   context: SlackMessageContext,
   messages: ModelMessage[],
-  hints: RequestHints,
+  hints: RequestHints
 ) {
   const threadTs =
     (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
@@ -119,7 +119,7 @@ export async function generateResponse(
       ],
       experimental_telemetry: {
         isEnabled: true,
-        functionId: `chat`,
+        functionId: 'chat',
         metadata: {
           userId: userId || 'unknown-user',
         },

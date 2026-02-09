@@ -36,7 +36,7 @@ const chatModel = createRetryable({
   onError: (context) => {
     const { model } = context.current;
     logger.error(
-      `error with model ${model.provider}/${model.modelId}, switching to next model`,
+      `error with model ${model.provider}/${model.modelId}, switching to next model`
     );
   },
 });
@@ -53,7 +53,7 @@ const summariserModel = createRetryable({
   onError: (context) => {
     const { model } = context.current;
     logger.error(
-      `error with model ${model.provider}/${model.modelId}, switching to next model`,
+      `error with model ${model.provider}/${model.modelId}, switching to next model`
     );
   },
 });

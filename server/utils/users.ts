@@ -5,9 +5,11 @@ const userNameCache = new Map<string, string>();
 
 export async function getSlackUserName(
   client: WebClient,
-  userId: string,
+  userId: string
 ): Promise<string> {
-  if (!userId) return 'unknown';
+  if (!userId) {
+    return 'unknown';
+  }
 
   const cached = userNameCache.get(userId);
   if (cached) {
@@ -31,7 +33,9 @@ export async function getSlackUserName(
 }
 
 export function primeSlackUserName(userId: string, name: string) {
-  if (!userId) return;
+  if (!userId) {
+    return;
+  }
   userNameCache.set(userId, name);
 }
 

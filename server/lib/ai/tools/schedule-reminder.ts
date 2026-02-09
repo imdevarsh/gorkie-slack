@@ -9,21 +9,22 @@ export const scheduleReminder = ({
   context: SlackMessageContext;
 }) =>
   tool({
-    description: `Schedule a reminder to be sent to the user who sent the last message in the conversation.`,
+    description:
+      'Schedule a reminder to be sent to the user who sent the last message in the conversation.',
     inputSchema: z.object({
       text: z
         .string()
         .describe(
-          "The text of the reminder message that will be sent to the user. For example, 'Hi there! 1 hour ago, you asked me to remind you to update your computer.'",
+          "The text of the reminder message that will be sent to the user. For example, 'Hi there! 1 hour ago, you asked me to remind you to update your computer.'"
         ),
       seconds: z
         .number()
         .describe(
-          'The number of seconds to wait before sending the reminder from the current time.',
+          'The number of seconds to wait before sending the reminder from the current time.'
         )
         .max(
           // 120 days
-          120 * 24 * 60 * 60,
+          120 * 24 * 60 * 60
         ),
     }),
     execute: async ({ text, seconds }) => {
@@ -49,7 +50,7 @@ export const scheduleReminder = ({
             userId,
             text,
           },
-          'Scheduled reminder',
+          'Scheduled reminder'
         );
 
         return {

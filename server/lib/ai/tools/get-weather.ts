@@ -11,12 +11,12 @@ export const getWeather = tool({
   execute: async ({ latitude, longitude }) => {
     try {
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`,
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`
       );
 
       if (!response.ok) {
         throw new Error(
-          `Weather API request failed with status ${response.status}`,
+          `Weather API request failed with status ${response.status}`
         );
       }
 

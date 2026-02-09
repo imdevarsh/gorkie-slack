@@ -49,7 +49,7 @@ const transport = targets.length > 0 ? createTransport({ targets }) : undefined;
 const logger = transport
   ? pino(
       { level: logLevel, timestamp: pino.stdTimeFunctions.isoTime },
-      transport,
+      transport
     )
   : pino({ level: logLevel, timestamp: pino.stdTimeFunctions.isoTime });
 

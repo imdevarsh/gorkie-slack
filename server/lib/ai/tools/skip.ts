@@ -22,7 +22,7 @@ export const skip = ({ context }: { context: SlackMessageContext }) =>
           : 'unknown';
         logger.info(
           { reason, message: `${author}: ${content}` },
-          'Skipping reply',
+          'Skipping reply'
         );
       }
 

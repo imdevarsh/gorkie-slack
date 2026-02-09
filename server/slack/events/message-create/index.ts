@@ -33,7 +33,7 @@ async function onSuccess(_context: SlackMessageContext) {
 }
 
 function isProcessableMessage(
-  args: MessageEventArgs,
+  args: MessageEventArgs
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
 
@@ -42,16 +42,21 @@ function isProcessableMessage(
     event.subtype &&
     event.subtype !== 'thread_broadcast' &&
     event.subtype !== 'file_share'
-  )
+  ) {
     return null;
+  }
 
-  if ('bot_id' in event && event.bot_id) return null;
+  if ('bot_id' in event && event.bot_id) {
+    return null;
+  }
 
   if (context.botUserId && event.user === context.botUserId) {
     return null;
   }
 
-  if (!('text' in event)) return null;
+  if (!('text' in event)) {
+    return null;
+  }
 
   return {
     event: event as SlackMessageContext['event'],
@@ -67,7 +72,9 @@ function isProcessableMessage(
 
 async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
   const userId = (ctx.event as { user?: string }).user;
-  if (!userId) return 'unknown';
+  if (!userId) {
+    return 'unknown';
+  }
   try {
     const info = await ctx.client.users.info({ user: userId });
     return (
@@ -102,13 +109,18 @@ async function handleMessage(args: MessageEventArgs) {
     args.event.subtype &&
     args.event.subtype !== 'thread_broadcast' &&
     args.event.subtype !== 'file_share'
-  )
+  ) {
     return;
+  }
 
-  if (!shouldUse(args.event.text || '')) return;
+  if (!shouldUse(args.event.text || '')) {
+    return;
+  }
 
   const messageContext = isProcessableMessage(args);
-  if (!messageContext) return;
+  if (!messageContext) {
+    return;
+  }
 
   const ctxId = getContextId(messageContext);
   const trigger = await getTrigger(messageContext, messageContext.botUserId);
@@ -134,7 +146,7 @@ async function handleMessage(args: MessageEventArgs) {
       {
         message: `${authorName}: ${content}`,
       },
-      `[${ctxId}] Triggered by ${trigger.type}`,
+      `[${ctxId}] Triggered by ${trigger.type}`
     );
 
     const result = await generateResponse(messageContext, messages, hints);
@@ -147,13 +159,15 @@ async function handleMessage(args: MessageEventArgs) {
     return;
   }
 
-  if (!isUserAllowed(args.event.user)) return;
+  if (!isUserAllowed(args.event.user)) {
+    return;
+  }
 
   const { count: idleCount, hasQuota } = await checkMessageQuota(ctxId);
 
   if (!hasQuota) {
     logger.debug(
-      `[${ctxId}] Quota exhausted (${idleCount}/${messageThreshold})`,
+      `[${ctxId}] Quota exhausted (${idleCount}/${messageThreshold})`
     );
     return;
   }
@@ -164,14 +178,19 @@ export async function execute(args: MessageEventArgs) {
     args.event.subtype &&
     args.event.subtype !== 'thread_broadcast' &&
     args.event.subtype !== 'file_share'
-  )
+  ) {
     return;
+  }
 
   const messageContext = isProcessableMessage(args);
-  if (!messageContext) return;
+  if (!messageContext) {
+    return;
+  }
 
   const ctxId = getContextId(messageContext);
-  if (!(await canReply(ctxId))) return;
+  if (!(await canReply(ctxId))) {
+    return;
+  }
 
   return await getQueue(ctxId).add(async () => handleMessage(args));
 }

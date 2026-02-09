@@ -11,7 +11,9 @@ export function getMessageText(message: ModelMessage): string {
     return (
       content
         .map((part) => {
-          if (typeof part === 'string') return part;
+          if (typeof part === 'string') {
+            return part;
+          }
           if (typeof part === 'object' && part) {
             const maybeText = (part as { text?: unknown }).text;
             if (typeof maybeText === 'string') {
@@ -38,7 +40,7 @@ export function getMessageText(message: ModelMessage): string {
 
 export function buildHistorySnippet(
   messages: ModelMessage[],
-  limit: number,
+  limit: number
 ): string {
   return messages
     .slice(-limit)
@@ -48,6 +50,8 @@ export function buildHistorySnippet(
 }
 
 export function shouldUse(message: string) {
-  if (message.startsWith('##')) return false;
+  if (message.startsWith('##')) {
+    return false;
+  }
   return true;
 }

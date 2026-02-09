@@ -4,7 +4,7 @@ import { primeSlackUserName } from '~/utils/users';
 export type TriggerType = 'ping' | 'dm' | 'thread' | null;
 
 function isPlainMessage(
-  event: SlackMessageEvent,
+  event: SlackMessageEvent
 ): event is SlackMessageEvent & { text: string; user: string } {
   const subtype = 'subtype' in event ? event.subtype : undefined;
   return (
@@ -18,7 +18,7 @@ function isPlainMessage(
 
 export async function getTrigger(
   message: SlackMessageContext,
-  botId?: string,
+  botId?: string
 ): Promise<{ type: TriggerType; info: string | string[] | null }> {
   const { event, client } = message;
 

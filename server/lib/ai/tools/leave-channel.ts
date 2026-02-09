@@ -17,7 +17,7 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
       const authorId = (context.event as { user?: string }).user;
       logger.info(
         { reason, authorId, channel: context.event.channel },
-        'Leaving channel',
+        'Leaving channel'
       );
 
       try {
@@ -27,7 +27,7 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
       } catch (error) {
         logger.error(
           { error, channel: context.event.channel },
-          'Failed to leave channel',
+          'Failed to leave channel'
         );
         return {
           success: false,

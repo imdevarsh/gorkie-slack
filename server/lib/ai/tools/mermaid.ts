@@ -39,7 +39,7 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
       code: z
         .string()
         .describe(
-          'Valid Mermaid diagram code (flowchart, sequence, classDiagram, etc.)',
+          'Valid Mermaid diagram code (flowchart, sequence, classDiagram, etc.)'
         ),
       title: z
         .string()
@@ -82,7 +82,7 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
       } catch (error) {
         logger.error(
           { error, channel: channelId },
-          'Failed to create Mermaid diagram',
+          'Failed to create Mermaid diagram'
         );
         return {
           success: false,

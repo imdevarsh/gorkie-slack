@@ -63,7 +63,7 @@ export const summariseThread = ({
 
         logger.debug(
           { channelId, threadTs, messageCount: messages.length },
-          'Thread summarised successfully',
+          'Thread summarised successfully'
         );
 
         return {
@@ -74,7 +74,7 @@ export const summariseThread = ({
       } catch (error) {
         logger.error(
           { error, channelId, threadTs },
-          'Failed to summarise thread',
+          'Failed to summarise thread'
         );
         return {
           success: false,

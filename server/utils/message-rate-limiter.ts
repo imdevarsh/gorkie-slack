@@ -31,14 +31,13 @@ export async function checkMessageQuota(ctxId: string): Promise<{
 
 export async function handleMessageCount(
   ctxId: string,
-  willReply: boolean,
+  willReply: boolean
 ): Promise<number> {
   const key = redisKeys.messageCount(ctxId);
 
   if (willReply) {
     await redis.del(key);
     return 0;
-  } else {
-    return await incrementMessageCount(ctxId);
   }
+  return await incrementMessageCount(ctxId);
 }
