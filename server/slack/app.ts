@@ -12,11 +12,9 @@ export interface SlackApp {
 
 function registerApp(app: App) {
   buildCache(app);
-  Object.keys(events).forEach((key) => {
-    const event = events[key as keyof typeof events];
-
+  for (const event of events) {
     app.event(event.name, event.execute);
-  });
+  }
 }
 
 export function createSlackApp(): SlackApp {

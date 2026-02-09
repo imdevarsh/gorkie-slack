@@ -4,10 +4,10 @@ import { z } from 'zod';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 
-/**
- * Generate a mermaid.ink PNG URL from Mermaid diagram code.
- * Uses pako-compatible deflate compression and URL-safe base64 encoding.
- */
+const PLUS_REGEX = /\+/g;
+const SLASH_REGEX = /\//g;
+const EQUALS_REGEX = /=+$/;
+
 function getMermaidImageUrl(code: string) {
   const payload = {
     code,
@@ -21,12 +21,15 @@ function getMermaidImageUrl(code: string) {
 
   let binary = '';
   const bytes = new Uint8Array(compressed);
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i] ?? 0);
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte ?? 0);
   }
   let base64 = btoa(binary);
 
-  base64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  base64 = base64
+    .replace(PLUS_REGEX, '-')
+    .replace(SLASH_REGEX, '_')
+    .replace(EQUALS_REGEX, '');
 
   return `https://mermaid.ink/img/pako:${base64}?type=png`;
 }

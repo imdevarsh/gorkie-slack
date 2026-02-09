@@ -142,7 +142,9 @@ export async function generateResponse(
         thread_ts: threadTs,
         status: '',
       });
-    } catch {}
+    } catch {
+      // ignore errors
+    }
     return {
       success: false,
       error: (e as Error)?.message,
