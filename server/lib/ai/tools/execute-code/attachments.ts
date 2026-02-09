@@ -3,27 +3,7 @@ import { env } from '~/env';
 import logger from '~/lib/logger';
 import type { SlackFile } from '~/utils/images';
 
-const ATTACHMENTS_DIR = 'attachments';
-
-export interface SandboxFile {
-  path: string;
-  mimetype: string;
-}
-
-export function buildAttachmentHints(
-  messageTs: string,
-  files: SlackFile[] | undefined
-): SandboxFile[] {
-  if (!files || files.length === 0) {
-    return [];
-  }
-
-  const dir = `${ATTACHMENTS_DIR}/${messageTs}`;
-  return files.map((f) => ({
-    path: `${dir}/${f.name}`,
-    mimetype: f.mimetype ?? 'application/octet-stream',
-  }));
-}
+export const ATTACHMENTS_DIR = 'attachments';
 
 async function download(file: SlackFile): Promise<Buffer | null> {
   const url = file.url_private ?? file.url_private_download;

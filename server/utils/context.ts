@@ -123,7 +123,6 @@ export async function buildChatContext(
       joined: botDetails.joined,
       status: botDetails.status,
       activity: botDetails.activity,
-      attachments: [],
     };
   }
 

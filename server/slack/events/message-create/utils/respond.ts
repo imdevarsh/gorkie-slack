@@ -3,7 +3,7 @@ import type { ModelMessage, UserContent } from 'ai';
 import { generateText, stepCountIs } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
-import { buildAttachmentHints, executeCode } from '~/lib/ai/tools/execute-code';
+import { executeCode } from '~/lib/ai/tools/execute-code';
 import { snapshotAndStop } from '~/lib/ai/tools/execute-code/sandbox';
 import { getUserInfo } from '~/lib/ai/tools/get-user-info';
 import { getWeather } from '~/lib/ai/tools/get-weather';
@@ -58,7 +58,6 @@ export async function generateResponse(
       : 'user';
 
     const imageContents = await processSlackFiles(files);
-    hints.attachments = buildAttachmentHints(context.event.ts, files);
 
     const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
 
@@ -109,7 +108,11 @@ export async function generateResponse(
         reply: reply({ context }),
         skip: skip({ context }),
       },
-      system: systemPrompt({ requestHints: hints }),
+      system: systemPrompt({
+        requestHints: hints,
+        messageTs: context.event.ts,
+        files,
+      }),
       stopWhen: [
         stepCountIs(25),
         successToolCall('leave-channel'),

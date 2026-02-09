@@ -10,7 +10,7 @@ searchWeb: get fresh info from the internet.
 getUserInfo: fetch Slack user profile (id, avatar, etc).
 scheduleMessage: schedule a message to be sent to the current user (the one who sent the most recent message) in the future.
 summariseThread: get a summary of the current Slack conversation thread - use this tool when asked to provide a summary (it has awareness of more messages).
-executeCode: run shell commands in a sandboxed Linux VM. Persists per thread. Supports bash, node, python, curl, npm, dnf.
+executeCode: run shell commands in a sandboxed Linux VM. Persists per thread: files, packages, and prior attachments carry over. Supports bash, node, python, curl, npm, dnf. Check "attachments/" for files from earlier messages.
 mermaid: create and share diagrams (flowcharts, sequence, class, etc.) as images. Use when visualizing processes, architectures, or relationships would help.
 react: add emoji reaction. 
 reply: send threaded reply or message (ends loop). 

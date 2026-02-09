@@ -8,9 +8,6 @@ import type { SlackFile } from '~/utils/images';
 import { transportAttachments } from './attachments';
 import { getOrCreate } from './sandbox';
 
-export type { SandboxFile } from './attachments';
-export { buildAttachmentHints } from './attachments';
-
 export const executeCode = ({
   context,
   files,
