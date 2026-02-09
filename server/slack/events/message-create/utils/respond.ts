@@ -19,7 +19,7 @@ import { summariseThread } from '~/lib/ai/tools/summarise-thread';
 import { successToolCall } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
 import type { RequestHints, SlackMessageContext } from '~/types';
-import { getContextId } from '~/utils/context';
+import { getSandboxContextId } from '~/utils/context';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
@@ -28,7 +28,7 @@ export async function generateResponse(
   messages: ModelMessage[],
   hints: RequestHints
 ) {
-  const ctxId = getContextId(context);
+  const ctxId = getSandboxContextId(context);
   const threadTs =
     (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
 

@@ -56,12 +56,16 @@ Returns a structured summary with key points, decisions, action items, and unres
 Run shell commands in a persistent sandboxed Linux VM (Amazon Linux 2023, Node.js 22).
 
 Persistence:
-The sandbox persists for the entire thread via snapshots. Files you create, packages you install, and user attachments all carry over between calls. Install once, use forever within the thread.
+The sandbox persists for the entire thread via snapshots. ALL files (user uploads, your output files, installed packages) carry over between messages. The sandbox is YOUR workspace, if you created a file in a previous message, it's still there.
 
 Attachments:
 - User uploads are placed in: attachments/<message_ts>/
 - Attachments from ALL messages in the thread persist, not just the current one
-- To find a specific file: find attachments/ -type f
+
+Finding files:
+- When a user references a file from earlier in the thread, it's in the sandbox. Don't ask them to re-upload.
+- Run: find . -type f -not -path '*/node_modules/*' to discover all files
+- Run: ls attachments/ to see uploaded files by message timestamp
 
 Pre-installed:
 node (v22), npm, git, curl, tar, gzip, bzip2, unzip, which, openssl
@@ -83,6 +87,7 @@ Node packages:
 - Packages persist via snapshots, install once per thread
 - Commands run via sh -c, pipes, redirection, and shell features work
 - 10-minute timeout per command
+- NEVER say you can't find a file without first running find or ls in the sandbox
 </rules>
 </tool>
 
