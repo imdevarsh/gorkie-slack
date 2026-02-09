@@ -27,6 +27,8 @@ export const env = createEnv({
       .default('info'),
     // Exa
     EXA_API_KEY: z.string().min(1),
+    // Vercel Sandbox
+    VERCEL_OIDC_TOKEN: z.string().min(1),
   },
 
   /**

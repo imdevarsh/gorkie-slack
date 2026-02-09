@@ -3,6 +3,7 @@ import type { ModelMessage, UserContent } from 'ai';
 import { generateText, stepCountIs } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
+import { executeCode } from '~/lib/ai/tools/execute-code';
 import { getUserInfo } from '~/lib/ai/tools/get-user-info';
 import { getWeather } from '~/lib/ai/tools/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/leave-channel';
@@ -104,6 +105,7 @@ export async function generateResponse(
         leaveChannel: leaveChannel({ context }),
         scheduleReminder: scheduleReminder({ context }),
         summariseThread: summariseThread({ context }),
+        executeCode: executeCode(),
         mermaid: mermaid({ context }),
         react: react({ context }),
         reply: reply({ context }),
