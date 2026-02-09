@@ -10,7 +10,7 @@ searchWeb: get fresh info from the internet.
 getUserInfo: fetch Slack user profile (id, avatar, etc).
 scheduleMessage: schedule a message to be sent to the current user (the one who sent the most recent message) in the future.
 summariseThread: get a summary of the current Slack conversation thread - use this tool when asked to provide a summary (it has awareness of more messages).
-executeCode: run JavaScript code in an isolated Node.js 22 sandbox. Use for calculations, data processing, API calls, or demonstrating code. Output is captured from console.log(). Each execution is ephemeral and isolated.
+executeCode: run shell commands in a sandboxed Linux VM. Persists per thread. Supports bash, node, python, curl, npm, dnf.
 mermaid: create and share diagrams (flowcharts, sequence, class, etc.) as images. Use when visualizing processes, architectures, or relationships would help.
 react: add emoji reaction. 
 reply: send threaded reply or message (ends loop). 

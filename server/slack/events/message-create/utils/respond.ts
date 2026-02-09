@@ -105,7 +105,7 @@ export async function generateResponse(
         leaveChannel: leaveChannel({ context }),
         scheduleReminder: scheduleReminder({ context }),
         summariseThread: summariseThread({ context }),
-        executeCode: executeCode(),
+        executeCode: executeCode({ context }),
         mermaid: mermaid({ context }),
         react: react({ context }),
         reply: reply({ context }),
