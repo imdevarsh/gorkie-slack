@@ -5,26 +5,22 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { prepareAttachments } from './attachments';
+import { transportAttachments } from './attachments';
 import { getOrCreate } from './sandbox';
 
 export type { SandboxFile } from './attachments';
+export { buildAttachmentHints } from './attachments';
 
-export async function prepareSandboxAttachments(
-  ctxId: string,
-  messageTs: string,
-  files: SlackFile[] | undefined
-) {
-  if (!files || files.length === 0) {
-    return [];
-  }
+export const executeCode = ({
+  context,
+  files,
+}: {
+  context: SlackMessageContext;
+  files?: SlackFile[];
+}) => {
+  let filesTransported = false;
 
-  const sandbox = await getOrCreate(ctxId);
-  return prepareAttachments(sandbox, messageTs, files);
-}
-
-export const executeCode = ({ context }: { context: SlackMessageContext }) =>
-  tool({
+  return tool({
     description:
       'Run a shell command in a sandboxed Linux VM. Persists per thread, installed tools and files carry over between calls. Supports bash, node, python, curl, npm, dnf.',
     inputSchema: z.object({
@@ -35,6 +31,11 @@ export const executeCode = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getOrCreate(ctxId);
+
+        if (!filesTransported && files?.length) {
+          await transportAttachments(sandbox, context.event.ts, files);
+          filesTransported = true;
+        }
 
         const result = await sandbox.runCommand({
           cmd: 'sh',
@@ -61,3 +62,4 @@ export const executeCode = ({ context }: { context: SlackMessageContext }) =>
       }
     },
   });
+};

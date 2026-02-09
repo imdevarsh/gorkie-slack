@@ -10,6 +10,21 @@ export interface SandboxFile {
   mimetype: string;
 }
 
+export function buildAttachmentHints(
+  messageTs: string,
+  files: SlackFile[] | undefined
+): SandboxFile[] {
+  if (!files || files.length === 0) {
+    return [];
+  }
+
+  const dir = `${ATTACHMENTS_DIR}/${messageTs}`;
+  return files.map((f) => ({
+    path: `${dir}/${f.name}`,
+    mimetype: f.mimetype ?? 'application/octet-stream',
+  }));
+}
+
 async function download(file: SlackFile): Promise<Buffer | null> {
   const url = file.url_private ?? file.url_private_download;
   if (!url) {
@@ -27,47 +42,31 @@ async function download(file: SlackFile): Promise<Buffer | null> {
   return Buffer.from(await response.arrayBuffer());
 }
 
-export async function prepareAttachments(
+export async function transportAttachments(
   sandbox: Sandbox,
   messageTs: string,
-  files: SlackFile[] | undefined
-): Promise<SandboxFile[]> {
-  if (!files || files.length === 0) {
-    return [];
-  }
-
+  files: SlackFile[]
+): Promise<void> {
   const dir = `${ATTACHMENTS_DIR}/${messageTs}`;
   await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
 
-  const results = await Promise.all(
-    files.map(async (file): Promise<SandboxFile | null> => {
+  await Promise.all(
+    files.map(async (file) => {
       const content = await download(file);
       if (!content) {
         logger.warn(
           { fileId: file.id, name: file.name },
           'Failed to download attachment'
         );
-        return null;
+        return;
       }
 
-      const path = `${dir}/${file.name}`;
-      await sandbox.writeFiles([{ path, content }]);
-
-      return {
-        path,
-        mimetype: file.mimetype ?? 'application/octet-stream',
-      };
+      await sandbox.writeFiles([{ path: `${dir}/${file.name}`, content }]);
     })
   );
 
-  const transported = results.filter((r): r is SandboxFile => r !== null);
-
-  if (transported.length > 0) {
-    logger.info(
-      { count: transported.length, messageTs },
-      'Transported attachments to sandbox'
-    );
-  }
-
-  return transported;
+  logger.info(
+    { count: files.length, messageTs },
+    'Transported attachments to sandbox'
+  );
 }

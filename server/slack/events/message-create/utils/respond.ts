@@ -3,10 +3,7 @@ import type { ModelMessage, UserContent } from 'ai';
 import { generateText, stepCountIs } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
-import {
-  executeCode,
-  prepareSandboxAttachments,
-} from '~/lib/ai/tools/execute-code';
+import { buildAttachmentHints, executeCode } from '~/lib/ai/tools/execute-code';
 import { snapshotAndStop } from '~/lib/ai/tools/execute-code/sandbox';
 import { getUserInfo } from '~/lib/ai/tools/get-user-info';
 import { getWeather } from '~/lib/ai/tools/get-weather';
@@ -60,11 +57,8 @@ export async function generateResponse(
       ? await getSlackUserName(context.client, userId)
       : 'user';
 
-    const [imageContents, attachments] = await Promise.all([
-      processSlackFiles(files),
-      prepareSandboxAttachments(ctxId, context.event.ts, files),
-    ]);
-    hints.attachments = attachments;
+    const imageContents = await processSlackFiles(files);
+    hints.attachments = buildAttachmentHints(context.event.ts, files);
 
     const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
 
@@ -109,7 +103,7 @@ export async function generateResponse(
         leaveChannel: leaveChannel({ context }),
         scheduleReminder: scheduleReminder({ context }),
         summariseThread: summariseThread({ context }),
-        executeCode: executeCode({ context }),
+        executeCode: executeCode({ context, files }),
         mermaid: mermaid({ context }),
         react: react({ context }),
         reply: reply({ context }),
