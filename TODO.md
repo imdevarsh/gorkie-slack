@@ -10,3 +10,5 @@
 - Cleanup vibe slop
 - See how it works, if you interrupt the task
 - Give it context, gorkie that it can't login or do authenticationj and stuff so it cant use githb etcetc
+- add better prompting to always use web search, etc it doesn't know it cant login or use another altenrative method
+- Maybe use a smarter agent architecture -> spawn subagent with smarter model which completes the task like the discord ai bot...
