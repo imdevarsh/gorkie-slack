@@ -15,6 +15,7 @@ import { scheduleReminder } from '~/lib/ai/tools/schedule-reminder';
 import { searchSlack } from '~/lib/ai/tools/search-slack';
 import { skip } from '~/lib/ai/tools/skip';
 import { summariseThread } from '~/lib/ai/tools/summarise-thread';
+import { showFile } from '~/lib/ai/tools/show-file';
 import { successToolCall } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
 import type { RequestHints, SlackMessageContext } from '~/types';
@@ -103,6 +104,7 @@ export async function generateResponse(
         scheduleReminder: scheduleReminder({ context }),
         summariseThread: summariseThread({ context }),
         executeCode: executeCode({ context, files }),
+        showFile: showFile({ context }),
         mermaid: mermaid({ context }),
         react: react({ context }),
         reply: reply({ context }),

@@ -45,6 +45,7 @@ export const examplesPrompt = `\
 <tool><name>executeCode</name><input>{ "command": "ls -lR attachments/" }</input></tool>
 <tool><name>executeCode</name><input>{ "command": "sudo dnf install -y ImageMagick" }</input></tool>
 <tool><name>executeCode</name><input>{ "command": "convert attachments/1770648887.532179/photo.png -negate output.png" }</input></tool>
+<tool><name>showFile</name><input>{ "path": "output.png", "title": "Black and white version" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done! I inverted your image to black and white."] }</input></tool>
 </workflow>
 </example>
@@ -77,6 +78,16 @@ Never claim a file is missing without checking attachments/ first. Files from al
 <workflow>
 <tool><name>mermaid</name><input>{ "code": "sequenceDiagram\\n  Client->>Server: POST /login\\n  Server->>DB: Verify credentials\\n  DB-->>Server: User data\\n  Server-->>Client: JWT token", "title": "Auth Flow" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the authentication flow diagram. The client sends credentials, the server verifies against the DB, and returns a JWT."] }</input></tool>
+</workflow>
+</example>
+
+<example>
+<title>Data export from sandbox</title>
+<user>Generate a report of that data as CSV</user>
+<workflow>
+<tool><name>executeCode</name><input>{ "command": "python3 generate_report.py > report.csv && ls -lh report.csv" }</input></tool>
+<tool><name>showFile</name><input>{ "path": "report.csv", "title": "Data Report" }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Here's the CSV report."] }</input></tool>
 </workflow>
 </example>
 

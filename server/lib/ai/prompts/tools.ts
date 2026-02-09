@@ -87,6 +87,23 @@ Node packages:
 </tool>
 
 <tool>
+<name>showFile</name>
+<description>
+Upload a file from the sandbox to Slack so the user can see or download it.
+
+Use after generating files with executeCode (images, CSVs, PDFs, charts, etc.). The file must exist in the sandbox filesystem. Use relative paths (e.g. output.png) or full paths (e.g. attachments/1770648887.532179/result.csv).
+</description>
+<rules>
+- Call showFile BEFORE reply so the file appears in the thread.
+- Follow up with reply to add context about the file.
+</rules>
+<examples>
+- After image processing: showFile({ "path": "output.png", "title": "Black and white conversion" })
+- After CSV generation: showFile({ "path": "report.csv", "filename": "analysis-report.csv" })
+</examples>
+</tool>
+
+<tool>
 <name>mermaid</name>
 <description>Create and share diagrams as images (flowcharts, sequence, class, etc.). Diagram is automatically uploaded to the thread.</description>
 <rules>
