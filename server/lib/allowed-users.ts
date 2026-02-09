@@ -9,20 +9,24 @@ export async function buildCache(app: App) {
     return;
   }
 
+  // biome-ignore lint/suspicious/useAwait: await is not needed here
   app.event('member_joined_channel', async ({ event }) => {
     if (event.channel !== env.OPT_IN_CHANNEL) {
       return;
     }
     logger.debug(`${event.user} joined opt-in channel`);
     allowedUsers.add(event.user);
+    return;
   });
 
+  // biome-ignore lint/suspicious/useAwait: await is not needed here
   app.event('member_left_channel', async ({ event }) => {
     if (event.channel !== env.OPT_IN_CHANNEL) {
       return;
     }
     logger.debug(`${event.user} left opt-in channel`);
     allowedUsers.delete(event.user);
+    return;
   });
 
   let cursor: string | undefined;
