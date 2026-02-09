@@ -108,11 +108,7 @@ export async function generateResponse(
         reply: reply({ context }),
         skip: skip({ context }),
       },
-      system: systemPrompt({
-        requestHints: hints,
-        messageTs: context.event.ts,
-        files,
-      }),
+      system: systemPrompt({ requestHints: hints, context }),
       stopWhen: [
         stepCountIs(25),
         successToolCall('leave-channel'),

@@ -1,5 +1,4 @@
-import type { RequestHints } from '~/types';
-import type { SlackFile } from '~/utils/images';
+import type { RequestHints, SlackMessageContext } from '~/types';
 import { attachmentsPrompt } from './attachments';
 import { corePrompt } from './core';
 import { examplesPrompt } from './examples';
@@ -17,12 +16,10 @@ Your current status is ${hints.status} and your activity is ${hints.activity}.
 
 export const systemPrompt = ({
   requestHints,
-  messageTs,
-  files,
+  context,
 }: {
   requestHints: RequestHints;
-  messageTs: string;
-  files?: SlackFile[];
+  context: SlackMessageContext;
 }) => {
   return [
     corePrompt,
@@ -31,7 +28,7 @@ export const systemPrompt = ({
     getRequestPromptFromHints(requestHints),
     toolsPrompt,
     replyPrompt,
-    attachmentsPrompt(messageTs, files),
+    attachmentsPrompt(context),
   ]
     .filter(Boolean)
     .join('\n')

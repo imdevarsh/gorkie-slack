@@ -1,15 +1,14 @@
 import { ATTACHMENTS_DIR } from '~/lib/ai/tools/execute-code/attachments';
+import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 
-export function attachmentsPrompt(
-  messageTs: string,
-  files: SlackFile[] | undefined
-): string {
+export function attachmentsPrompt(context: SlackMessageContext): string {
+  const files = (context.event as { files?: SlackFile[] }).files;
   if (!files || files.length === 0) {
     return '';
   }
 
-  const dir = `${ATTACHMENTS_DIR}/${messageTs}`;
+  const dir = `${ATTACHMENTS_DIR}/${context.event.ts}`;
   const listing = files
     .map(
       (f) =>
