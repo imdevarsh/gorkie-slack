@@ -1,5 +1,4 @@
 import type { StopCondition, ToolSet } from 'ai';
-import { loadingMessages } from '~/config';
 import type { SlackMessageContext } from '~/types';
 
 export function setToolStatus(
@@ -13,7 +12,7 @@ export function setToolStatus(
       channel_id: context.event.channel,
       thread_ts: threadTs,
       status,
-      loading_messages: loadingMessages
+      loading_messages: [status],
     })
     .catch(() => {
       // ignore status update failures
