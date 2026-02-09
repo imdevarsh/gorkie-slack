@@ -3,6 +3,23 @@ import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 
+async function preinstallPackages(instance: Sandbox): Promise<void> {
+  const packages = config.packages;
+  if (!packages.length) {
+    return;
+  }
+
+  await instance
+    .runCommand({
+      cmd: 'dnf',
+      args: ['install', '-y', ...packages],
+      sudo: true
+    })
+    .catch((error: unknown) => {
+      logger.warn({ error, packages }, 'Sandbox preinstall failed');
+    });
+}
+
 async function reconnect(ctxId: string): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
   if (!sandboxId) {
@@ -57,6 +74,10 @@ export async function getOrCreate(ctxId: string): Promise<Sandbox> {
       runtime: config.runtime,
       timeout: config.timeoutMs,
     }));
+
+  if (!restored) {
+    await preinstallPackages(instance);
+  }
 
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
   await redis.expire(redisKeys.sandbox(ctxId), config.sandboxTtlSeconds);
