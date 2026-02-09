@@ -24,6 +24,7 @@
     "@slack/types": "^2.19.0",
     "@t3-oss/env-core": "^0.13.10",
     "@types/pako": "^2.0.4",
+    "@vercel/sandbox": "^1.4.1",
     "ai": "^6.0.48",
     "ai-retry": "^1.0.2",
     "p-queue": "^9.1.0",
