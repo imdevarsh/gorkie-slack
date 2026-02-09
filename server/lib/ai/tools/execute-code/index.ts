@@ -4,11 +4,24 @@ import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import type { SlackFile } from '~/utils/images';
+import { prepareAttachments } from './attachments';
 import { getOrCreate } from './sandbox';
 
-export type { TransportedFile } from './attachments';
-export { formatAttachmentContext, transportAttachments } from './attachments';
-export { getOrCreate, snapshotAndStop } from './sandbox';
+export type { SandboxFile } from './attachments';
+
+export async function prepareSandboxAttachments(
+  ctxId: string,
+  messageTs: string,
+  files: SlackFile[] | undefined
+) {
+  if (!files || files.length === 0) {
+    return [];
+  }
+
+  const sandbox = await getOrCreate(ctxId);
+  return prepareAttachments(sandbox, messageTs, files);
+}
 
 export const executeCode = ({ context }: { context: SlackMessageContext }) =>
   tool({

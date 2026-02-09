@@ -3,15 +3,14 @@ import { env } from '~/env';
 import logger from '~/lib/logger';
 import type { SlackFile } from '~/utils/images';
 
-const ATTACHMENTS_DIR = '/attachments';
+const ATTACHMENTS_DIR = 'attachments';
 
-export interface TransportedFile {
-  name: string;
+export interface SandboxFile {
   path: string;
   mimetype: string;
 }
 
-async function downloadSlackFile(file: SlackFile): Promise<Buffer | null> {
+async function download(file: SlackFile): Promise<Buffer | null> {
   const url = file.url_private ?? file.url_private_download;
   if (!url) {
     return null;
@@ -28,12 +27,12 @@ async function downloadSlackFile(file: SlackFile): Promise<Buffer | null> {
   return Buffer.from(await response.arrayBuffer());
 }
 
-export async function transportAttachments(
+export async function prepareAttachments(
   sandbox: Sandbox,
   messageTs: string,
-  files: SlackFile[]
-): Promise<TransportedFile[]> {
-  if (files.length === 0) {
+  files: SlackFile[] | undefined
+): Promise<SandboxFile[]> {
+  if (!files || files.length === 0) {
     return [];
   }
 
@@ -41,8 +40,8 @@ export async function transportAttachments(
   await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
 
   const results = await Promise.all(
-    files.map(async (file): Promise<TransportedFile | null> => {
-      const content = await downloadSlackFile(file);
+    files.map(async (file): Promise<SandboxFile | null> => {
+      const content = await download(file);
       if (!content) {
         logger.warn(
           { fileId: file.id, name: file.name },
@@ -55,14 +54,13 @@ export async function transportAttachments(
       await sandbox.writeFiles([{ path, content }]);
 
       return {
-        name: file.name,
         path,
         mimetype: file.mimetype ?? 'application/octet-stream',
       };
     })
   );
 
-  const transported = results.filter((r): r is TransportedFile => r !== null);
+  const transported = results.filter((r): r is SandboxFile => r !== null);
 
   if (transported.length > 0) {
     logger.info(
@@ -72,17 +70,4 @@ export async function transportAttachments(
   }
 
   return transported;
-}
-
-export function formatAttachmentContext(files: TransportedFile[]): string {
-  if (files.length === 0) {
-    return '';
-  }
-
-  const listing = files.map((f) => `  - ${f.path} (${f.mimetype})`).join('\n');
-
-  return [
-    `\nAttachments available in sandbox:\n${listing}`,
-    'Clean up attachments with `rm -rf /attachments/<messageTs>` after use to save space.',
-  ].join('\n');
 }

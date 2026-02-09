@@ -5,11 +5,9 @@ import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
 import {
   executeCode,
-  formatAttachmentContext,
-  getOrCreate,
-  snapshotAndStop,
-  transportAttachments,
+  prepareSandboxAttachments,
 } from '~/lib/ai/tools/execute-code';
+import { snapshotAndStop } from '~/lib/ai/tools/execute-code/sandbox';
 import { getUserInfo } from '~/lib/ai/tools/get-user-info';
 import { getWeather } from '~/lib/ai/tools/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/leave-channel';
@@ -27,25 +25,12 @@ import { getContextId } from '~/utils/context';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
-async function prepareAttachments(
-  ctxId: string,
-  messageTs: string,
-  files: SlackFile[] | undefined
-): Promise<string> {
-  if (!files || files.length === 0) {
-    return '';
-  }
-
-  const sandbox = await getOrCreate(ctxId);
-  const transported = await transportAttachments(sandbox, messageTs, files);
-  return formatAttachmentContext(transported);
-}
-
 export async function generateResponse(
   context: SlackMessageContext,
   messages: ModelMessage[],
   hints: RequestHints
 ) {
+  const ctxId = getContextId(context);
   const threadTs =
     (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
 
@@ -75,17 +60,13 @@ export async function generateResponse(
       ? await getSlackUserName(context.client, userId)
       : 'user';
 
-    const system = systemPrompt({
-      requestHints: hints,
-    });
-
-    const ctxId = getContextId(context);
-    const [imageContents, attachmentContext] = await Promise.all([
+    const [imageContents, attachments] = await Promise.all([
       processSlackFiles(files),
-      prepareAttachments(ctxId, context.event.ts, files),
+      prepareSandboxAttachments(ctxId, context.event.ts, files),
     ]);
+    hints.attachments = attachments;
 
-    const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}${attachmentContext}`;
+    const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
 
     let currentMessageContent: UserContent;
     if (imageContents.length > 0) {
@@ -134,7 +115,7 @@ export async function generateResponse(
         reply: reply({ context }),
         skip: skip({ context }),
       },
-      system,
+      system: systemPrompt({ requestHints: hints }),
       stopWhen: [
         stepCountIs(25),
         successToolCall('leave-channel'),
@@ -173,7 +154,6 @@ export async function generateResponse(
       error: (e as Error)?.message,
     };
   } finally {
-    const ctxId = getContextId(context);
     snapshotAndStop(ctxId).catch((error: unknown) => {
       logger.warn({ error, ctxId }, 'Sandbox snapshot failed');
     });
