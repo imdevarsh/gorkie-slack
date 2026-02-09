@@ -3,7 +3,13 @@ import type { ModelMessage, UserContent } from 'ai';
 import { generateText, stepCountIs } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
-import { executeCode, snapshotAndStop } from '~/lib/ai/tools/execute-code';
+import {
+  executeCode,
+  formatAttachmentContext,
+  getOrCreate,
+  snapshotAndStop,
+  transportAttachments,
+} from '~/lib/ai/tools/execute-code';
 import { getUserInfo } from '~/lib/ai/tools/get-user-info';
 import { getWeather } from '~/lib/ai/tools/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/leave-channel';
@@ -20,6 +26,20 @@ import type { RequestHints, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
+
+async function prepareAttachments(
+  ctxId: string,
+  messageTs: string,
+  files: SlackFile[] | undefined
+): Promise<string> {
+  if (!files || files.length === 0) {
+    return '';
+  }
+
+  const sandbox = await getOrCreate(ctxId);
+  const transported = await transportAttachments(sandbox, messageTs, files);
+  return formatAttachmentContext(transported);
+}
 
 export async function generateResponse(
   context: SlackMessageContext,
@@ -59,11 +79,15 @@ export async function generateResponse(
       requestHints: hints,
     });
 
-    const imageContents = await processSlackFiles(files);
+    const ctxId = getContextId(context);
+    const [imageContents, attachmentContext] = await Promise.all([
+      processSlackFiles(files),
+      prepareAttachments(ctxId, context.event.ts, files),
+    ]);
+
+    const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}${attachmentContext}`;
 
     let currentMessageContent: UserContent;
-    const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
-
     if (imageContents.length > 0) {
       currentMessageContent = [
         { type: 'text' as const, text: replyPrompt },

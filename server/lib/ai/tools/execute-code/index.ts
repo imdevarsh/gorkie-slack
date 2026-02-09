@@ -6,7 +6,9 @@ import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { getOrCreate } from './sandbox';
 
-export { snapshotAndStop } from './sandbox';
+export type { TransportedFile } from './attachments';
+export { formatAttachmentContext, transportAttachments } from './attachments';
+export { getOrCreate, snapshotAndStop } from './sandbox';
 
 export const executeCode = ({ context }: { context: SlackMessageContext }) =>
   tool({
