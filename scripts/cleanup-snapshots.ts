@@ -3,6 +3,8 @@ import { env } from '../server/env';
 
 async function run(): Promise<void> {
   const projectId = env.VERCEL_PROJECT_ID;
+  const teamId = env.VERCEL_TEAM_ID;
+  const token = env.VERCEL_OIDC_TOKEN;
 
   let totalDeleted = 0;
   let iteration = 0;
@@ -10,7 +12,10 @@ async function run(): Promise<void> {
   while (true) {
     iteration++;
     const response = await Snapshot.list({
-      limit: 100
+      limit: 100,
+      projectId,
+      teamId,
+      token
     });
 
     const snapshots = response.json.snapshots;
@@ -22,7 +27,9 @@ async function run(): Promise<void> {
       try {
         const snapshot = await Snapshot.get({
           snapshotId: snap.id,
-          projectId
+          projectId,
+          teamId,
+          token
         });
         await snapshot.delete();
         totalDeleted++;
