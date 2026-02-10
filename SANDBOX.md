@@ -13,7 +13,7 @@ This project uses Vercel Sandbox snapshots to persist state between thread messa
 - On restore, snapshots older than this TTL are deleted and ignored.
 - The snapshot ID and timestamp are stored in Redis and expire together.
 - If a thread is never restored, its snapshot may remain until Vercel’s automatic expiration (7 days).
-- A cleanup pass runs on each snapshot to delete any snapshots older than the TTL.
+- A cleanup pass runs on each snapshot and every 30 minutes in the server process to delete any snapshots older than the TTL.
 
 ## Why Storage Can Grow
 Storage is measured as GB-month across all snapshots that exist at a given time.
@@ -44,4 +44,5 @@ Multiply GB-month by the plan’s rate to get cost.
 
 ## Where This Is Implemented
 - Snapshot creation and pruning: `server/lib/ai/tools/sandbox/bash/sandbox.ts`
+- Snapshot cleanup helpers: `server/lib/ai/tools/sandbox/bash/snapshot.ts`
 - Snapshot config: `server/config.ts`

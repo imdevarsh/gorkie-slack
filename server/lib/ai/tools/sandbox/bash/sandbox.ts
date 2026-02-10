@@ -1,4 +1,4 @@
-import { Sandbox, Snapshot } from '@vercel/sandbox';
+import { Sandbox } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
@@ -7,8 +7,12 @@ import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 import { transportAttachments } from './attachments';
 import { installUtils, makeFolders } from './bootstrap';
-
-const SNAPSHOT_INDEX_SEPARATOR = ':';
+import {
+  cleanupSnapshots,
+  deleteSnapshot,
+  logSnapshotSizes,
+  registerSnapshot,
+} from './snapshot';
 
 async function reconnect(ctxId: string): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
@@ -67,32 +71,6 @@ async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
     'Restored from snapshot'
   );
   return instance;
-}
-
-async function cleanupExpiredSnapshots(): Promise<void> {
-  const cutoff = Date.now() - config.snapshot.ttl * 1000;
-  const expired = await redis.zrangebyscore(
-    redisKeys.snapshotIndex(),
-    0,
-    cutoff
-  );
-
-  if (expired.length === 0) {
-    return;
-  }
-
-  await Promise.all(
-    expired.map(async (entry) => {
-      const [snapshotId, ctxId] = entry.split(SNAPSHOT_INDEX_SEPARATOR);
-      if (!snapshotId || !ctxId) {
-        await redis.zrem(redisKeys.snapshotIndex(), entry);
-        return;
-      }
-
-      await deleteSnapshot(snapshotId, ctxId);
-      await redis.zrem(redisKeys.snapshotIndex(), entry);
-    })
-  );
 }
 
 export interface SandboxAttachments {
@@ -167,42 +145,6 @@ async function forceStop(sandboxId: string): Promise<void> {
   }
 }
 
-async function pruneSandboxFiles(
-  instance: Sandbox,
-  ctxId: string
-): Promise<void> {
-  const result = await instance.runCommand({ cmd: 'ls', args: ['-1'] });
-  const stdout = await result.stdout();
-  const entries = stdout.split('\n').filter(Boolean);
-  const keep = new Set<string>(config.keep);
-  const toRemove = entries.filter((entry) => !keep.has(entry));
-
-  if (toRemove.length === 0) {
-    return;
-  }
-
-  await instance
-    .runCommand({ cmd: 'rm', args: ['-rf', ...toRemove] })
-    .catch((error: unknown) => {
-      logger.warn({ error, ctxId }, 'Sandbox prune failed');
-    });
-}
-
-async function deleteSnapshot(
-  snapshotId: string,
-  ctxId: string
-): Promise<void> {
-  try {
-    const snapshot = await Snapshot.get({
-      snapshotId,
-    });
-    await snapshot.delete();
-    logger.info({ snapshotId, ctxId }, 'Deleted previous snapshot');
-  } catch (error) {
-    logger.warn({ snapshotId, error, ctxId }, 'Failed to delete snapshot');
-  }
-}
-
 export async function snapshotAndStop(ctxId: string): Promise<void> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
   if (!sandboxId) {
@@ -217,44 +159,8 @@ export async function snapshotAndStop(ctxId: string): Promise<void> {
     return;
   }
 
-  await cleanupExpiredSnapshots();
-
-  const sizeResult = await instance
-    .runCommand({
-      cmd: 'du',
-      args: [
-        '-sk',
-        '/',
-        '--exclude=/proc',
-        '--exclude=/sys',
-        '--exclude=/dev',
-        '--exclude=/run',
-      ],
-    })
-    .catch(() => null);
-  const sizeStdout = sizeResult ? await sizeResult.stdout() : '';
-  const totalKb = Number.parseInt(sizeStdout.split('\t')[0] ?? '', 10);
-  if (Number.isFinite(totalKb)) {
-    logger.info(
-      { sandboxId, ctxId, totalKb },
-      'Sandbox size (KB) before snapshot'
-    );
-  }
-
-  const homeResult = await instance
-    .runCommand({
-      cmd: 'du',
-      args: ['-sk', '/home/vercel-sandbox'],
-    })
-    .catch(() => null);
-  const homeStdout = homeResult ? await homeResult.stdout() : '';
-  const homeKb = Number.parseInt(homeStdout.split('\t')[0] ?? '', 10);
-  if (Number.isFinite(homeKb)) {
-    logger.info(
-      { sandboxId, ctxId, homeKb },
-      'Sandbox /home/vercel-sandbox size (KB) before snapshot'
-    );
-  }
+  await cleanupSnapshots();
+  await logSnapshotSizes(instance, ctxId, sandboxId);
 
   const snap = await instance.snapshot().catch((error: unknown) => {
     logger.warn({ sandboxId, error, ctxId }, 'Snapshot failed');
@@ -270,17 +176,7 @@ export async function snapshotAndStop(ctxId: string): Promise<void> {
     await deleteSnapshot(previousSnapshotId, ctxId);
   }
 
-  await redis.set(redisKeys.snapshot(ctxId), snap.snapshotId);
-  await redis.set(redisKeys.snapshotMeta(ctxId), Date.now().toString());
-  await Promise.all([
-    redis.expire(redisKeys.snapshot(ctxId), config.snapshot.ttl),
-    redis.expire(redisKeys.snapshotMeta(ctxId), config.snapshot.ttl),
-  ]);
-  await redis.zadd(
-    redisKeys.snapshotIndex(),
-    Date.now(),
-    `${snap.snapshotId}${SNAPSHOT_INDEX_SEPARATOR}${ctxId}`
-  );
+  await registerSnapshot(ctxId, snap.snapshotId);
 
   logger.info(
     { sandboxId, snapshotId: snap.snapshotId, ctxId },
