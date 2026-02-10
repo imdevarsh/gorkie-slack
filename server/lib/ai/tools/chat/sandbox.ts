@@ -33,11 +33,15 @@ export const sandbox = ({
 
       try {
         const ctxId = getContextId(context);
-        const contextBlock = await buildSandboxContext({ ctxId, context });
-        const prompt = contextBlock ? `${contextBlock}\n\n${task}` : task;
+        const { messages, requestHints } = await buildSandboxContext({
+          ctxId,
+          context,
+        });
 
-        const agent = sandboxAgent({ context, files });
-        const result = await agent.generate({ prompt });
+        const agent = sandboxAgent({ context, files, requestHints });
+        const result = await agent.generate({
+          messages: [...messages, { role: 'user', content: task }],
+        });
 
         logger.info({ steps: result.steps.length }, 'Sandbox agent completed');
 

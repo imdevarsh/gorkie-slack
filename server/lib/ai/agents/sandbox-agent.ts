@@ -9,20 +9,28 @@ import { read } from '~/lib/ai/tools/sandbox/read';
 import { showFile } from '~/lib/ai/tools/sandbox/show-file';
 import { write } from '~/lib/ai/tools/sandbox/write';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
-import type { SlackMessageContext } from '~/types';
+import type { SandboxRequestHints, SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 import { getUserInfo } from '../tools/shared/get-user-info';
 
-export const sandboxAgent = ({
-  context,
-  files,
-}: {
+interface SandboxAgentOptions {
   context: SlackMessageContext;
   files?: SlackFile[];
-}) =>
-  new ToolLoopAgent({
+  requestHints?: SandboxRequestHints;
+}
+
+export function sandboxAgent({
+  context,
+  files,
+  requestHints,
+}: SandboxAgentOptions) {
+  return new ToolLoopAgent({
     model: provider.languageModel('agent-model'),
-    instructions: systemPrompt({ agent: 'sandbox', context }),
+    instructions: systemPrompt({
+      agent: 'sandbox',
+      context,
+      requestHints,
+    }),
     tools: {
       bash: bash({ context, files }),
       glob: glob({ context }),
@@ -41,3 +49,4 @@ export const sandboxAgent = ({
       functionId: 'sandbox',
     },
   });
+}

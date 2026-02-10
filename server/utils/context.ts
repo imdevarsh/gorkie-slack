@@ -1,6 +1,6 @@
 import type { ModelMessage } from 'ai';
 import { getConversationMessages } from '~/slack/conversations';
-import type { RequestHints, SlackMessageContext } from '~/types';
+import type { ChatRequestHints, SlackMessageContext } from '~/types';
 import { getTime } from '~/utils/time';
 
 export function getContextId(context: SlackMessageContext): string {
@@ -79,11 +79,11 @@ export async function buildChatContext(
   ctx: SlackMessageContext,
   opts?: {
     messages?: ModelMessage[];
-    hints?: RequestHints;
+    requestHints?: ChatRequestHints;
   }
 ) {
   let messages = opts?.messages;
-  let hints = opts?.hints;
+  let requestHints = opts?.requestHints;
 
   const channelId = (ctx.event as { channel?: string }).channel;
   const threadTs = (ctx.event as { thread_ts?: string }).thread_ts;
@@ -107,14 +107,14 @@ export async function buildChatContext(
     });
   }
 
-  if (!hints) {
+  if (!requestHints) {
     const [channelName, serverName, botDetails] = await Promise.all([
       resolveChannelName(ctx),
       resolveServerName(ctx),
       resolveBotDetails(ctx),
     ]);
 
-    hints = {
+    requestHints = {
       channel: channelName,
       time: getTime(),
       server: serverName,
@@ -124,5 +124,5 @@ export async function buildChatContext(
     };
   }
 
-  return { messages, hints };
+  return { messages, requestHints };
 }

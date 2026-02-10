@@ -1,6 +1,7 @@
 import type { ModelMessage } from 'ai';
 import { getConversationMessages } from '~/slack/conversations';
-import type { SlackMessageContext } from '~/types';
+import type { SandboxRequestHints, SlackMessageContext } from '~/types';
+import { getTime } from '~/utils/time';
 import { reconnectSandbox } from './connect';
 
 const FRACTIONAL_SECONDS = /\.\d+$/;
@@ -58,28 +59,57 @@ export async function peekFilesystem(ctxId: string): Promise<string | null> {
     .join('\n');
 }
 
-function messageToText(message: ModelMessage): string {
-  if (typeof message.content === 'string') {
-    return message.content;
+async function resolveChannelName(
+  context: SlackMessageContext
+): Promise<string> {
+  const channelId = (context.event as { channel?: string }).channel;
+  if (!channelId) {
+    return 'unknown';
   }
-  return message.content
-    .map((part) => ('text' in part ? part.text : '[image]'))
-    .join(' ');
+  try {
+    const info = await context.client.conversations.info({
+      channel: channelId,
+    });
+    const ch = info.channel;
+    if (!ch) {
+      return channelId;
+    }
+    if (ch.is_im) {
+      return 'Direct Message';
+    }
+    return ch.name_normalized ?? ch.name ?? channelId;
+  } catch {
+    return channelId;
+  }
 }
 
-interface BuildContextOptions {
-  ctxId: string;
-  context: SlackMessageContext;
+async function resolveServerName(
+  context: SlackMessageContext
+): Promise<string> {
+  try {
+    const info = await context.client.team.info();
+    return info.team?.name ?? 'Slack Workspace';
+  } catch {
+    return 'Slack Workspace';
+  }
+}
+
+export interface SandboxContext {
+  messages: ModelMessage[];
+  requestHints: SandboxRequestHints;
 }
 
 export async function buildSandboxContext({
   ctxId,
   context,
-}: BuildContextOptions): Promise<string> {
+}: {
+  ctxId: string;
+  context: SlackMessageContext;
+}): Promise<SandboxContext> {
   const channel = (context.event as { channel?: string }).channel;
   const threadTs = (context.event as { thread_ts?: string }).thread_ts;
 
-  const [recent, fileListing] = await Promise.all([
+  const [messages, existingFiles, channelName, serverName] = await Promise.all([
     channel
       ? getConversationMessages({
           client: context.client,
@@ -90,22 +120,16 @@ export async function buildSandboxContext({
         })
       : [],
     peekFilesystem(ctxId),
+    resolveChannelName(context),
+    resolveServerName(context),
   ]);
 
-  const parts: string[] = [];
+  const requestHints: SandboxRequestHints = {
+    time: getTime(),
+    channel: channelName,
+    server: serverName,
+    existingFiles,
+  };
 
-  const recentText = recent.map(messageToText).join('\n');
-  if (recentText) {
-    parts.push(
-      `<recent_thread_context>\n${recentText}\n</recent_thread_context>`
-    );
-  }
-
-  if (fileListing) {
-    parts.push(
-      `<sandbox_files>\nFiles already in the sandbox (newest first):\n${fileListing}\n</sandbox_files>`
-    );
-  }
-
-  return parts.join('\n\n');
+  return { messages, requestHints };
 }

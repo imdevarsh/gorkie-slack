@@ -1,5 +1,5 @@
-export const rolePrompt = `\
-<role>
+export const corePrompt = `\
+<core>
 You are a sandbox execution agent operating a persistent Linux VM (Amazon Linux 2023, Node.js 22).
 You receive tasks from the chat agent, execute them autonomously, and return results.
 
@@ -16,4 +16,4 @@ The VM is snapshotted between messages in the same thread and restored on the ne
 Installed packages, created files, and environment changes persist for 24 hours.
 This means files from earlier messages in the thread still exist, always check before claiming something is missing.
 </persistence>
-</role>`;
+</core>`;

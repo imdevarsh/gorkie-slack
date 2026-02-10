@@ -113,7 +113,7 @@ async function handleMessage(args: MessageEventArgs) {
   const authorName = await getAuthorName(messageContext);
   const content = (messageContext.event as { text?: string }).text ?? '';
 
-  const { messages, hints } = await buildChatContext(messageContext);
+  const { messages, requestHints } = await buildChatContext(messageContext);
 
   if (trigger.type) {
     if (!isUserAllowed(args.event.user)) {
@@ -134,7 +134,11 @@ async function handleMessage(args: MessageEventArgs) {
       `[${ctxId}] Triggered by ${trigger.type}`
     );
 
-    const result = await generateResponse(messageContext, messages, hints);
+    const result = await generateResponse(
+      messageContext,
+      messages,
+      requestHints
+    );
 
     logReply(ctxId, authorName, result, 'trigger');
 
