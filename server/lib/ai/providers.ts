@@ -59,11 +59,8 @@ const summariserModel = createRetryable({
 });
 
 const agentModel = createRetryable({
-  model: openai('gpt-5.2-codex'),
-  retries: [
-    hackclub('openai/gpt-5.2-codex'),
-    openrouter('openai/gpt-5.2-codex'),
-  ],
+  model: openai('gpt-5.2'),
+  retries: [hackclub('openai/gpt-5.2'), openrouter('openai/gpt-5.2')],
   onError: onModelError,
 });
 

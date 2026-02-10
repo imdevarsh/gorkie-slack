@@ -59,14 +59,10 @@ export const bash = ({
   files?: SlackFile[];
 }) =>
   tool({
-    description:
-      'Run a shell command.',
+    description: 'Run a shell command.',
     inputSchema: z.object({
       command: z.string().describe('Shell command (runs via sh -c)'),
-      workdir: z
-        .string()
-        .optional()
-        .describe('Working directory (relative)'),
+      workdir: z.string().optional().describe('Working directory (relative)'),
       status: z
         .string()
         .describe('Status text formatted like "is xyz"')

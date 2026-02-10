@@ -1,6 +1,6 @@
 import type { SlackMessageContext } from '~/types';
-import { corePrompt } from '../shared/core';
 import { contextPrompt } from './context';
+import { directivesPrompt } from './directives';
 import { environmentPrompt } from './environment';
 import { examplesPrompt } from './examples';
 import { packagesPrompt } from './packages';
@@ -10,8 +10,8 @@ import { workflowPrompt } from './workflow';
 
 export function sandboxPrompt(context?: SlackMessageContext): string {
   return [
-    corePrompt,
     rolePrompt,
+    directivesPrompt,
     environmentPrompt,
     contextPrompt(context),
     toolsPrompt,
