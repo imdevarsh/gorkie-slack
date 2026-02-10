@@ -34,7 +34,7 @@ export const sandboxAgent = ({
       searchWeb,
       getUserInfo: getUserInfo({ context }),
     },
-    stopWhen: stepCountIs(15),
+    stopWhen: stepCountIs(30),
     temperature: 0.7,
     experimental_telemetry: {
       isEnabled: true,
