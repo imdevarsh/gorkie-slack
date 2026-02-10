@@ -6,8 +6,8 @@ on:
       - main
 
 jobs:
-  eslint:
-    name: ESLint
+  ultracite:
+    name: Ultracite
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -16,8 +16,8 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Run ESLint
-        run: bun lint
+      - name: Run Ultracite
+        run: bun check
 
   types:
     name: TypeScript
