@@ -8,6 +8,8 @@ import type { SlackFile } from '~/utils/images';
 import { transportAttachments } from './attachments';
 import { installUtils, makeFolders } from './bootstrap';
 
+const SNAPSHOT_INDEX_SEPARATOR = ':';
+
 async function reconnect(ctxId: string): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
   if (!sandboxId) {
@@ -24,8 +26,26 @@ async function reconnect(ctxId: string): Promise<Sandbox | null> {
 }
 
 async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
-  const snapshotId = await redis.get(redisKeys.snapshot(ctxId));
+  const [snapshotId, snapshotMeta] = await Promise.all([
+    redis.get(redisKeys.snapshot(ctxId)),
+    redis.get(redisKeys.snapshotMeta(ctxId)),
+  ]);
   if (!snapshotId) {
+    return null;
+  }
+
+  const createdAt = snapshotMeta ? Number(snapshotMeta) : Number.NaN;
+  if (!Number.isFinite(createdAt)) {
+    await redis.del(redisKeys.snapshot(ctxId));
+    await redis.del(redisKeys.snapshotMeta(ctxId));
+    return null;
+  }
+
+  const isExpired = Date.now() - createdAt > config.snapshot.ttl * 1000;
+  if (isExpired) {
+    await deleteSnapshot(snapshotId, ctxId);
+    await redis.del(redisKeys.snapshot(ctxId));
+    await redis.del(redisKeys.snapshotMeta(ctxId));
     return null;
   }
 
@@ -47,6 +67,32 @@ async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
     'Restored from snapshot'
   );
   return instance;
+}
+
+async function cleanupExpiredSnapshots(): Promise<void> {
+  const cutoff = Date.now() - config.snapshot.ttl * 1000;
+  const expired = await redis.zrangebyscore(
+    redisKeys.snapshotIndex(),
+    0,
+    cutoff
+  );
+
+  if (expired.length === 0) {
+    return;
+  }
+
+  await Promise.all(
+    expired.map(async (entry) => {
+      const [snapshotId, ctxId] = entry.split(SNAPSHOT_INDEX_SEPARATOR);
+      if (!snapshotId || !ctxId) {
+        await redis.zrem(redisKeys.snapshotIndex(), entry);
+        return;
+      }
+
+      await deleteSnapshot(snapshotId, ctxId);
+      await redis.zrem(redisKeys.snapshotIndex(), entry);
+    })
+  );
 }
 
 export interface SandboxAttachments {
@@ -109,7 +155,7 @@ export async function getOrCreate(
   }
 
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
-  await redis.expire(redisKeys.sandbox(ctxId), config.sandboxTtlSeconds);
+  await redis.expire(redisKeys.sandbox(ctxId), config.sandbox.ttl);
 
   return instance;
 }
@@ -171,7 +217,44 @@ export async function snapshotAndStop(ctxId: string): Promise<void> {
     return;
   }
 
-  await pruneSandboxFiles(instance, ctxId);
+  await cleanupExpiredSnapshots();
+
+  const sizeResult = await instance
+    .runCommand({
+      cmd: 'du',
+      args: [
+        '-sk',
+        '/',
+        '--exclude=/proc',
+        '--exclude=/sys',
+        '--exclude=/dev',
+        '--exclude=/run',
+      ],
+    })
+    .catch(() => null);
+  const sizeStdout = sizeResult ? await sizeResult.stdout() : '';
+  const totalKb = Number.parseInt(sizeStdout.split('\t')[0] ?? '', 10);
+  if (Number.isFinite(totalKb)) {
+    logger.info(
+      { sandboxId, ctxId, totalKb },
+      'Sandbox size (KB) before snapshot'
+    );
+  }
+
+  const homeResult = await instance
+    .runCommand({
+      cmd: 'du',
+      args: ['-sk', '/home/vercel-sandbox'],
+    })
+    .catch(() => null);
+  const homeStdout = homeResult ? await homeResult.stdout() : '';
+  const homeKb = Number.parseInt(homeStdout.split('\t')[0] ?? '', 10);
+  if (Number.isFinite(homeKb)) {
+    logger.info(
+      { sandboxId, ctxId, homeKb },
+      'Sandbox /home/vercel-sandbox size (KB) before snapshot'
+    );
+  }
 
   const snap = await instance.snapshot().catch((error: unknown) => {
     logger.warn({ sandboxId, error, ctxId }, 'Snapshot failed');
@@ -188,7 +271,16 @@ export async function snapshotAndStop(ctxId: string): Promise<void> {
   }
 
   await redis.set(redisKeys.snapshot(ctxId), snap.snapshotId);
-  await redis.expire(redisKeys.snapshot(ctxId), config.snapshotTtlSeconds);
+  await redis.set(redisKeys.snapshotMeta(ctxId), Date.now().toString());
+  await Promise.all([
+    redis.expire(redisKeys.snapshot(ctxId), config.snapshot.ttl),
+    redis.expire(redisKeys.snapshotMeta(ctxId), config.snapshot.ttl),
+  ]);
+  await redis.zadd(
+    redisKeys.snapshotIndex(),
+    Date.now(),
+    `${snap.snapshotId}${SNAPSHOT_INDEX_SEPARATOR}${ctxId}`
+  );
 
   logger.info(
     { sandboxId, snapshotId: snap.snapshotId, ctxId },

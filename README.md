@@ -5,7 +5,8 @@
 1. 🤖 [Introduction](#introduction)
 2. 🚀 [Tech Stack](#tech-stack)
 3. 📚 [Getting Started](#getting-started)
-4. 📝 [License](#license)
+4. Sandbox Storage Notes
+5. 📝 [License](#license)
 
 ## <a name="introduction">🤖 Introduction</a>
 
@@ -48,6 +49,10 @@ $ bun run dev
 # Start app in production
 $ bun run start
 ```
+
+## Sandbox Storage Notes
+
+See `SANDBOX.md` for how snapshots are retained, what persists, and how to estimate storage usage.
 
 ## <a name="license">📝 License</a>
 
