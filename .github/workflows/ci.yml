@@ -32,19 +32,6 @@ jobs:
       - name: Run type check
         run: bun typecheck
 
-  prettier:
-    name: Prettier
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v4
-
-      - name: Setup
-        uses: ./.github/actions/setup
-
-      - name: Run Prettier
-        run: bun format:check
-
   spelling:
     name: Spelling
     runs-on: ubuntu-latest
