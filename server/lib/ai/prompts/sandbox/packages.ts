@@ -16,8 +16,4 @@ Installing additional packages:
 
   System:
     sudo dnf install -y <package>
-
-Notes:
-- Packages do NOT persist between messages, install as needed
-- pip3 requires python3-pip to be installed first
 </packages>`;

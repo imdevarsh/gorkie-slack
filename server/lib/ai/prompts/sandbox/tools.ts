@@ -4,7 +4,7 @@ export const toolsPrompt = `\
 <tool>
 <name>bash</name>
 <description>
-Executes a given bash command in a sandboxed Linux VM.
+Executes a given bash command in a persistent shell session, ensuring proper handling and security measures.
 </description>
 <rules>
 - All commands run in /home/vercel-sandbox by default. Use workdir to run in a different directory. Avoid "cd &&" chains.
@@ -13,7 +13,6 @@ Executes a given bash command in a sandboxed Linux VM.
 - Always quote file paths that contain spaces with double quotes.
 - If output is truncated, the full log is in agent/turns/<n>.json.
 - Avoid using bash with find/grep/cat/head/tail/sed/awk/echo unless explicitly required.
-- Do not assume packages or files outside output/ and attachments/ will be available across messages.
 </rules>
 <examples>
 - Simple: bash({ "command": "echo $((44 * 44))" })
@@ -109,7 +108,7 @@ Performs exact string replacements in files.
 - Use replaceAll for replacing and renaming strings across the file.
 </rules>
 <examples>
-- edit({ "path": "output/config.json", "oldString": ""enabled": false", "newString": ""enabled": true" })
+- edit({ "path": "output/config.json", "oldString": "\"enabled\": false", "newString": "\"enabled\": true" })
 - edit({ "path": "output/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
 </examples>
 </tool>
@@ -123,7 +122,7 @@ The file must exist in the sandbox filesystem. Generated files live in output/, 
 <rules>
 - Call showFile as soon as the file is ready — don't wait until the end
 - Use relative paths: output/result.png, attachments/1770648887.532179/photo.png
-- Only upload user-requested results. Never upload every file or error logs.
+- Only upload user-requested results, or the single most relevant result if there are multiple outputs.
 </rules>
 <examples>
 - showFile({ "path": "output/result.png", "title": "Processed image" })

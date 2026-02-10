@@ -1,27 +1,30 @@
 export const environmentPrompt = `\
 <environment>
 Runtime: Amazon Linux 2023, Node.js 22 (Vercel Sandbox)
-The sandbox is reset between messages. Only output/, agent/ and attachments/ persist across messages in the same thread. Everything else is wiped, including installed packages and temporary files.
+The sandbox persists for the entire thread via snapshots. The sandbox is YOUR workspace. But, the sandbox's files expires after 24 hours.
 
 Filesystem layout:
 \`\`\`
-attachments/             # User uploads (auto-managed, read-only, persistent)
+attachments/             # User uploads (auto-managed, read-only)
   <message_ts>/          # Grouped by message timestamp
     photo.png
     data.csv
-output/                  # YOUR generated files go here (persistent)
-  result.png
-  report.csv
-agent/                   # Execution metadata (auto-managed, persistent)
+output/                  # Generated files go here
+  <message_ts>/
+    result.png
+    report.csv
+agent/                   # Execution metadata (auto-managed)
   turns/
-    1.json               # { command, stdout, stderr, exitCode }
-    2.json
+   <message_ts>/
+      1.json               # { command, stdout, stderr, exitCode }
+      2.json
 \`\`\`
 
 Persistence rules:
-- Only output/ and attachments/ persist across messages
-- Installed packages do NOT persist, install as needed
-- All other files and folders are wiped between messages
+- The sandbox persists via snapshots between messages in the same thread
+- Installed packages persist, install once per thread with sudo dnf install -y
+- Files in output/ and attachments/ persist across messages
+- agent/turns/ logs are auto-created per command execution
 
 Output directory:
 - ALWAYS save generated files to output/ (never the working directory root)

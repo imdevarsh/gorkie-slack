@@ -15,13 +15,12 @@ export const workflowPrompt = `\
     <name>Execute</name>
     <rules>
     - Use pre-installed tools directly (no need to install ImageMagick, ffmpeg, etc.).
-    - Install additional packages only if needed (they do NOT persist between messages).
+    - Install additional packages only if needed (they persist via snapshots).
     - Default workdir is /home/vercel-sandbox.
     - Prefer bash with workdir instead of "cd &&" chains.
     - Chain commands with && for dependent operations.
     - Check exit codes and stderr, if something fails, try a different approach.
     - Avoid time-consuming work; ask before tasks likely to take >30 seconds or large downloads.
-    - Assume only output/ and attachments/ persist between messages.
     </rules>
   </step>
 
