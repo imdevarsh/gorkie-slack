@@ -1,5 +1,5 @@
 import type { ModelMessage, UserContent } from 'ai';
-import { createChatAgent } from '~/lib/ai/agents/chat';
+import { orchestratorAgent } from '~/lib/ai/agents';
 import { snapshotAndStop } from '~/lib/ai/tools/execute-code/sandbox';
 import logger from '~/lib/logger';
 import type { RequestHints, SlackMessageContext } from '~/types';
@@ -56,7 +56,7 @@ export async function generateResponse(
       currentMessageContent = replyPrompt;
     }
 
-    const agent = createChatAgent({ context, hints, files });
+    const agent = orchestratorAgent({ context, hints, files });
 
     const { toolCalls } = await agent.generate({
       messages: [
