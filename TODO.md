@@ -10,3 +10,4 @@
 - Explore smarter agent architecture: spawn a sub-agent with a stronger model to complete tasks (similar to the Discord AI bot).
 - Improve sandbox/tool UX context: show status updates for installing packages/restoring sandbox/execute/complete, and apply to other tools.
 - Add a output truncation or something into the tool input so it doesnt get a huge blob of responses (refer http://github.com/techwithanirudh/discord-ai-bot)
+- take a look at opencode, and it's tools https://github.com/anomalyco/opencode see what we wanna add to agent
