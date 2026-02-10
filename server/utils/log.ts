@@ -25,7 +25,7 @@ export function logReply(
   } else if (result.error) {
     logger.error(
       { error: result.error },
-      `[${ctxId}] Failed reply to ${author}`
+      `[${ctxId}] Failed to reply to ${author}`
     );
   }
 }

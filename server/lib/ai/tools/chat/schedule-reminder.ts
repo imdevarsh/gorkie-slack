@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 
@@ -28,12 +29,15 @@ export const scheduleReminder = ({
         ),
     }),
     execute: async ({ text, seconds }) => {
+      await setStatus(context, {
+        status: 'is scheduling a reminder',
+        loading: true,
+      });
       const userId = (context.event as { user?: string }).user;
 
       if (!userId) {
         return {
           success: false,
-          // well what to say??
           error: 'Something went wrong.',
         };
       }

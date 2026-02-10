@@ -6,7 +6,7 @@ import { ratelimit, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { SlackMessageContext } from '~/types';
-import { buildChatContext } from '~/utils/context';
+import { buildChatContext, getContextId } from '~/utils/context';
 import { logReply } from '~/utils/log';
 import {
   checkMessageQuota,
@@ -87,21 +87,6 @@ async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
     logger.warn({ error, userId }, 'Failed to fetch user info for logging');
     return userId;
   }
-}
-
-function getContextId(ctx: SlackMessageContext): string {
-  const channel = ctx.event.channel ?? 'unknown-channel';
-  const channelType = ctx.event.channel_type;
-  const userId = (ctx.event as { user?: string }).user;
-  const threadTs = (ctx.event as { thread_ts?: string }).thread_ts;
-
-  if (channelType === 'im' && userId) {
-    return `dm:${userId}`;
-  }
-  if (threadTs) {
-    return `${channel}:${threadTs}`;
-  }
-  return channel;
 }
 
 async function handleMessage(args: MessageEventArgs) {

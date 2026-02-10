@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import { deflate } from 'pako';
 import { z } from 'zod';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 
@@ -50,6 +51,10 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
         .describe('Optional title/alt text for the diagram'),
     }),
     execute: async ({ code, title }) => {
+      await setStatus(context, {
+        status: 'is generating a diagram',
+        loading: true,
+      });
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;

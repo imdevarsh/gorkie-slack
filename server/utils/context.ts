@@ -3,6 +3,19 @@ import { getConversationMessages } from '~/slack/conversations';
 import type { RequestHints, SlackMessageContext } from '~/types';
 import { getTime } from '~/utils/time';
 
+export function getContextId(context: SlackMessageContext): string {
+  const channel = context.event.channel ?? 'unknown-channel';
+  const channelType = context.event.channel_type;
+  const userId = (context.event as { user?: string }).user;
+  const threadTs =
+    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
+
+  if (channelType === 'im' && userId) {
+    return `dm:${userId}`;
+  }
+  return `${channel}:${threadTs}`;
+}
+
 async function resolveChannelName(ctx: SlackMessageContext): Promise<string> {
   const channelId = (ctx.event as { channel?: string }).channel;
   if (!channelId) {

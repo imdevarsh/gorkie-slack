@@ -1,7 +1,20 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+
+interface AssistantThreadEvent {
+  assistant_thread?: { action_token?: string };
+}
+
+interface SlackSearchResponse {
+  ok: boolean;
+  error?: string;
+  results?: {
+    messages: unknown[];
+  };
+}
 
 export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -10,9 +23,9 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
       query: z.string(),
     }),
     execute: async ({ query }) => {
-      // biome-ignore lint/suspicious/noExplicitAny: manual API calls because Slack Bolt doesn't have support for this method yet
-      const action_token = (context.event as any)?.assistant_thread
-        ?.action_token;
+      await setStatus(context, { status: 'is searching Slack', loading: true });
+      const action_token = (context.event as AssistantThreadEvent)
+        .assistant_thread?.action_token;
 
       if (!action_token) {
         return {
@@ -22,23 +35,21 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
         };
       }
 
-      const res = (await (
-        await fetch('https://slack.com/api/assistant.search.context', {
+      const response = await fetch(
+        'https://slack.com/api/assistant.search.context',
+        {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${context.client.token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            query,
-            action_token,
-          }),
-        })
-      )
-        // biome-ignore lint/suspicious/noExplicitAny: see above
-        .json()) as any;
+          body: JSON.stringify({ query, action_token }),
+        }
+      );
 
-      if (!(res.ok && res.results && res.results.messages)) {
+      const res = (await response.json()) as SlackSearchResponse;
+
+      if (!(res.ok && res.results?.messages)) {
         logger.error({ res }, 'Failed to search');
         return {
           success: false,
@@ -46,7 +57,10 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
         };
       }
 
-      logger.debug({ messages: res.results.messages }, 'Search results');
+      logger.debug(
+        { query, count: res.results.messages.length },
+        'Search Slack complete'
+      );
 
       return {
         messages: res.results.messages,

@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { normalizeSlackUserId } from '~/utils/users';
@@ -14,6 +15,10 @@ export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
         .describe('The Slack user ID (e.g. U123) of the user.'),
     }),
     execute: async ({ userId }) => {
+      await setStatus(context, {
+        status: 'is fetching user info',
+        loading: true,
+      });
       try {
         const targetId = normalizeSlackUserId(userId);
 

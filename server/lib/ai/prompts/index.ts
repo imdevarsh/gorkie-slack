@@ -1,38 +1,31 @@
-import type { RequestHints } from '~/types';
-import { corePrompt } from './core';
-import { examplesPrompt } from './examples';
-import { personalityPrompt } from './personality';
-import { replyPrompt } from './tasks';
-import { toolsPrompt } from './tools';
+import type { RequestHints, SlackMessageContext } from '~/types';
+import { chatPrompt } from './chat';
+import { sandboxPrompt } from './sandbox';
 
-export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
-<context>
-The current date and time is ${requestHints.time}.
-You're in the ${requestHints.server} Slack workspace, inside the ${
-  requestHints.channel
-} channel.
-You joined the server on ${new Date(requestHints.joined).toLocaleDateString()}.
-Your current status is ${requestHints.status} and your activity is ${
-  requestHints.activity
-}.
-</context>`;
-
-export const systemPrompt = ({
-  requestHints,
-}: {
-  requestHints: RequestHints;
-}) => {
-  const requestPrompt = getRequestPromptFromHints(requestHints);
-
-  return [
-    corePrompt,
-    personalityPrompt,
-    examplesPrompt,
-    requestPrompt,
-    toolsPrompt,
-    replyPrompt,
-  ]
-    .filter(Boolean)
-    .join('\n')
-    .trim();
-};
+export function systemPrompt(
+  opts:
+    | {
+        agent: 'chat';
+        requestHints: RequestHints;
+        context: SlackMessageContext;
+      }
+    | {
+        agent: 'sandbox';
+      }
+): string {
+  switch (opts.agent) {
+    case 'chat':
+      return chatPrompt({
+        requestHints: opts.requestHints,
+        context: opts.context,
+      });
+    case 'sandbox':
+      return sandboxPrompt();
+    default: {
+      const _exhaustive: never = opts;
+      throw new Error(
+        `Unknown agent type: ${(_exhaustive as { agent: string }).agent}`
+      );
+    }
+  }
+}
