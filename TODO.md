@@ -6,3 +6,4 @@
 - Check With User DMs
 - Fix ratelimiting
 - The Sandbox System for tools is incredbily cursed the bash tool literally does everything
+- fix lint
