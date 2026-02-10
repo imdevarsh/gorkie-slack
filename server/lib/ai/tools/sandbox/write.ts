@@ -43,7 +43,7 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
 
         return response;
       } catch (error) {
-        logger.error({ error, path }, 'Failed to write file in sandbox');
+        logger.error({ error, path, ctxId }, 'Failed to write file in sandbox');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

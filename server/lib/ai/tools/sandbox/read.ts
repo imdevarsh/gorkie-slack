@@ -70,7 +70,10 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
 
         return response;
       } catch (error) {
-        logger.error({ error, path }, 'Failed to read file from sandbox');
+        logger.error(
+          { error, path, ctxId },
+          'Failed to read file from sandbox'
+        );
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

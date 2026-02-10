@@ -20,7 +20,7 @@ export const getWeather = tool({
         );
       }
 
-      const weatherData = await response.json();
+      const weatherData: unknown = await response.json();
       return weatherData;
     } catch (error) {
       logger.error({ error }, 'Error in getWeather');

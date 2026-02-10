@@ -41,7 +41,8 @@ export async function transportAttachments(
         return;
       }
 
-      await sandbox.writeFiles([{ path: `${dir}/${file.name}`, content }]);
+      const safeName = file.name.split('/').pop() ?? file.name;
+      await sandbox.writeFiles([{ path: `${dir}/${safeName}`, content }]);
     })
   );
 

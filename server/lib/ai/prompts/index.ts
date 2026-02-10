@@ -2,8 +2,6 @@ import type { RequestHints, SlackMessageContext } from '~/types';
 import { chatPrompt } from './chat';
 import { sandboxPrompt } from './sandbox';
 
-type AgentType = 'chat' | 'sandbox';
-
 export function systemPrompt(
   opts:
     | {
@@ -31,5 +29,3 @@ export function systemPrompt(
     }
   }
 }
-
-export type { AgentType };

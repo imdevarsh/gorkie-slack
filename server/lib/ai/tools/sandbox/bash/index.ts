@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { sandbox as config } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
@@ -8,14 +9,12 @@ import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 import { getOrCreate } from './sandbox';
 
-const MAX_OUTPUT_LENGTH = 16_000;
-
 function truncateOutput(output: string): string {
-  if (output.length <= MAX_OUTPUT_LENGTH) {
+  if (output.length <= config.maxOutputLength) {
     return output;
   }
-  const half = Math.floor(MAX_OUTPUT_LENGTH / 2);
-  const omitted = output.length - MAX_OUTPUT_LENGTH;
+  const half = Math.floor(config.maxOutputLength / 2);
+  const omitted = output.length - config.maxOutputLength;
   return `${output.slice(0, half)}\n\n... (${omitted} characters omitted, full output in agent/turns/) ...\n\n${output.slice(-half)}`;
 }
 
@@ -114,8 +113,8 @@ export const bash = ({
           });
 
         const isTruncated =
-          stdout.length > MAX_OUTPUT_LENGTH ||
-          stderr.length > MAX_OUTPUT_LENGTH;
+          stdout.length > config.maxOutputLength ||
+          stderr.length > config.maxOutputLength;
 
         return {
           stdout: truncateOutput(stdout || '(no output)'),
@@ -124,7 +123,7 @@ export const bash = ({
           ...(isTruncated ? { fullOutput: turnPath } : {}),
         };
       } catch (error) {
-        logger.error({ error, ctxId }, 'Sandbox command failed');
+        logger.error({ error, ctxId, command }, 'Sandbox operation failed');
         await redis.del(redisKeys.sandbox(ctxId));
 
         return {

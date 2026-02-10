@@ -28,8 +28,8 @@ Search queries work best when specific. Use keywords, user names, channel names,
 </tool>
 
 <tool>
-<name>scheduleMessage</name>
-<description>Schedule a message to be delivered to the current user at a future time.</description>
+<name>scheduleReminder</name>
+<description>Schedule a reminder to be delivered to the current user at a future time.</description>
 </tool>
 
 <tool>

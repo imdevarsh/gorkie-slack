@@ -72,7 +72,7 @@ export async function generateResponse(
     await setStatus(context, { status: '' });
     return {
       success: false,
-      error: (e as Error)?.message,
+      error: e instanceof Error ? e.message : String(e),
     };
   } finally {
     snapshotAndStop(ctxId).catch((error: unknown) => {

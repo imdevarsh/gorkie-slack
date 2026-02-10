@@ -107,8 +107,6 @@ export async function getOrCreate(
     );
   }
 
-  await installUtils(instance);
-
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
   await redis.expire(redisKeys.sandbox(ctxId), config.sandboxTtlSeconds);
 
@@ -127,7 +125,9 @@ async function pruneSandboxFiles(
   ctxId: string
 ): Promise<void> {
   const keepPaths = config.keep;
-  const keepMatchers = keepPaths.map((path) => `-name '${path}'`).join(' -o ');
+  const keepMatchers = keepPaths
+    .map((pattern) => `-name '${pattern}'`)
+    .join(' -o ');
   const filter = keepMatchers ? `\\( ${keepMatchers} \\)` : '';
 
   await instance

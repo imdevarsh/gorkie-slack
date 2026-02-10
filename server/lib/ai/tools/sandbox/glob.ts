@@ -5,7 +5,13 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { getOrCreate } from './bash/sandbox';
-import { toBase64Json } from './utils';
+
+const outputSchema = z.object({
+  path: z.string(),
+  count: z.number(),
+  truncated: z.boolean(),
+  output: z.string(),
+});
 
 export const glob = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -38,8 +44,9 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getOrCreate(ctxId);
-        const params = { pattern, path, limit };
-        const payload = toBase64Json(params);
+        const payload = Buffer.from(
+          JSON.stringify({ pattern, path, limit })
+        ).toString('base64');
         const command = `PARAMS='${payload}' python3 agent/bin/glob.py`;
 
         const result = await sandbox.runCommand({
@@ -57,35 +64,31 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
           };
         }
 
-        const data = JSON.parse(stdout || '{}') as {
-          path?: string;
-          count?: number;
-          truncated?: boolean;
-          output?: string;
-        };
-
-        const response = {
-          success: true,
-          path: data.path ?? path,
-          count: data.count ?? 0,
-          truncated: data.truncated ?? false,
-          output: data.output ?? '',
-        };
+        const data = outputSchema.parse(JSON.parse(stdout || '{}'));
 
         logger.debug(
           {
             ctxId,
             pattern,
             path,
-            count: response.count,
-            truncated: response.truncated,
+            count: data.count,
+            truncated: data.truncated,
           },
           'Sandbox glob complete'
         );
 
-        return response;
+        return {
+          success: true,
+          path: data.path,
+          count: data.count,
+          truncated: data.truncated,
+          output: data.output,
+        };
       } catch (error) {
-        logger.error({ error, pattern, path }, 'Failed to glob in sandbox');
+        logger.error(
+          { error, pattern, path, ctxId },
+          'Failed to glob in sandbox'
+        );
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

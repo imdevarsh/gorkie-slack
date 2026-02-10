@@ -9,7 +9,7 @@ import { getOrCreate } from './bash/sandbox';
 export const showFile = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description:
-      'Show a file from the sandbox to the user in Slack. Use after generating files with bash.',
+      'Upload a file from the sandbox to Slack so the user can see or download it.',
     inputSchema: z.object({
       path: z
         .string()
@@ -67,7 +67,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { error, channel: channelId, path },
+          { error, channel: channelId, path, ctxId },
           'Failed to upload sandbox file'
         );
         return {
