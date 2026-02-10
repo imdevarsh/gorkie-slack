@@ -26,7 +26,7 @@ Persistence rules:
 - agent/turns/<message_ts>.json logs are appended per command execution
 
 Output directory:
-- ALWAYS create output/<message_ts>/ and run work there
+- ALWAYS create output/<current_message_ts>/ and run work there
 - Save generated files inside output/<message_ts>/ (never the working directory root)
 - Use showFile with output/<message_ts>/ paths to share results with the user
 - Example: save chart to output/<message_ts>/chart.png, then showFile({ path: "output/<message_ts>/chart.png" })

@@ -74,10 +74,10 @@ export const bash = ({
     }),
     execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
-      const messageTs = context.event.ts;
+      const messageTs = getMessageTs(context);
       const outputDirPath = outputDir(messageTs);
       const turnPath = turnsPath(messageTs);
-      const effectiveWorkdir = workdir ?? outputDirPath;
+      const effectiveWorkdir = normalizeWorkdir(workdir, outputDirPath);
 
       try {
         const sandbox = await getSandbox(
@@ -163,3 +163,20 @@ export const bash = ({
       }
     },
   });
+
+function getMessageTs(context: SlackMessageContext): string {
+  return (context.event as { ts?: string }).ts ?? 'unknown';
+}
+
+function normalizeWorkdir(
+  workdir: string | undefined,
+  defaultWorkdir: string
+): string {
+  if (!workdir || workdir === '.') {
+    return defaultWorkdir;
+  }
+  if (workdir.startsWith('/')) {
+    return workdir;
+  }
+  return `/home/vercel-sandbox/${workdir}`;
+}
