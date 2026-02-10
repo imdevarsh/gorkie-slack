@@ -23,6 +23,5 @@ export const redisKeys = {
   channelCount: (contextId: string) => `gorkie:ctx:channelCount:${contextId}`,
   sandbox: (contextId: string) => `gorkie:ctx:sandbox:${contextId}`,
   snapshot: (contextId: string) => `gorkie:ctx:snapshot:${contextId}`,
-  snapshotMeta: (contextId: string) => `gorkie:ctx:snapshotMeta:${contextId}`,
   snapshotIndex: () => 'gorkie:ctx:snapshotIndex',
 };

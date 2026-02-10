@@ -10,3 +10,4 @@
 - take a look at opencode, and it's tools https://github.com/anomalyco/opencode see what we wanna add to agent
 - Check With User DMs
 - If the size is more than 2.5gb auto nuke the sandbox, the user is messing with us??
+- Fix ratelimiting

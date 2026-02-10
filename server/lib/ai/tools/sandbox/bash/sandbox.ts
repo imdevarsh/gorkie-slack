@@ -26,18 +26,27 @@ async function reconnect(ctxId: string): Promise<Sandbox | null> {
 }
 
 async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
-  const [snapshotId, snapshotMeta] = await Promise.all([
-    redis.get(redisKeys.snapshot(ctxId)),
-    redis.get(redisKeys.snapshotMeta(ctxId)),
-  ]);
-  if (!snapshotId) {
+  const snapshotRaw = await redis.get(redisKeys.snapshot(ctxId));
+  if (!snapshotRaw) {
     return null;
   }
 
-  const createdAt = snapshotMeta ? Number(snapshotMeta) : Number.NaN;
-  if (!Number.isFinite(createdAt)) {
+  let snapshotId: string | null = null;
+  let createdAt = Number.NaN;
+  try {
+    const parsed = JSON.parse(snapshotRaw) as {
+      snapshotId?: string;
+      createdAt?: number;
+    };
+    snapshotId = parsed.snapshotId ?? null;
+    createdAt =
+      typeof parsed.createdAt === 'number' ? parsed.createdAt : Number.NaN;
+  } catch {
+    snapshotId = null;
+  }
+
+  if (!(snapshotId && Number.isFinite(createdAt))) {
     await redis.del(redisKeys.snapshot(ctxId));
-    await redis.del(redisKeys.snapshotMeta(ctxId));
     return null;
   }
 
@@ -45,7 +54,6 @@ async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
   if (isExpired) {
     await deleteSnapshot(snapshotId, ctxId);
     await redis.del(redisKeys.snapshot(ctxId));
-    await redis.del(redisKeys.snapshotMeta(ctxId));
     return null;
   }
 

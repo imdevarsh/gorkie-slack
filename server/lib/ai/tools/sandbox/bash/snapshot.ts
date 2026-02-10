@@ -47,11 +47,12 @@ export async function registerSnapshot(
   snapshotId: string
 ): Promise<void> {
   const now = Date.now();
-  await redis.set(redisKeys.snapshot(ctxId), snapshotId);
-  await redis.set(redisKeys.snapshotMeta(ctxId), now.toString());
+  await redis.set(
+    redisKeys.snapshot(ctxId),
+    JSON.stringify({ snapshotId, createdAt: now })
+  );
   await Promise.all([
     redis.expire(redisKeys.snapshot(ctxId), config.snapshot.ttl),
-    redis.expire(redisKeys.snapshotMeta(ctxId), config.snapshot.ttl),
   ]);
   await redis.zadd(redisKeys.snapshotIndex(), now, `${snapshotId}:${ctxId}`);
 }
