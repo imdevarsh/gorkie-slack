@@ -1,12 +1,11 @@
 import { tool } from 'ai';
-import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { getOrCreate } from './sandbox';
+import { getOrCreate, historySchema, type HistoryEntry } from './sandbox';
 
 const MAX_LINES = 2000;
 const MAX_BYTES = 50 * 1024;
@@ -54,10 +53,8 @@ export const bash = ({
 }: {
   context: SlackMessageContext;
   files?: SlackFile[];
-}) => {
-  let turn = 0;
-
-  return tool({
+}) =>
+  tool({
     description:
       'Run a shell command in a sandboxed Linux VM. Persists per thread, installed tools and files carry over between calls. Supports bash, node, python, curl, npm, dnf.',
     inputSchema: z.object({
@@ -73,10 +70,11 @@ export const bash = ({
     }),
     execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
-      turn++;
       const messageTs = (context.event as { ts?: string }).ts ?? 'unknown';
       const outputDir = `output/${messageTs}`;
       const turnDir = `agent/turns/${messageTs}`;
+      const turnPath = `agent/turns/${messageTs}.json`;
+      const effectiveWorkdir = workdir ?? outputDir;
 
       try {
         const sandbox = await getOrCreate(
@@ -100,7 +98,7 @@ export const bash = ({
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
-          cwd: workdir ?? outputDir,
+          cwd: effectiveWorkdir,
         });
 
         const stdout = await result.stdout();
@@ -112,29 +110,20 @@ export const bash = ({
             ctxId,
             exitCode,
             command,
-            workdir,
+            workdir: effectiveWorkdir,
             status,
           },
           'Sandbox command complete'
         );
 
-        const turnPath = `${turnDir}/${turn}.json`;
-        await sandbox
-          .writeFiles([
-            {
-              path: turnPath,
-              content: Buffer.from(
-                JSON.stringify(
-                  { command, workdir, status, stdout, stderr, exitCode },
-                  null,
-                  2
-                )
-              ),
-            },
-          ])
-          .catch((error: unknown) => {
-            logger.warn({ error, turnPath }, 'Failed to write turn log');
-          });
+        await addHistory(sandbox, turnPath, {
+          command,
+          workdir: effectiveWorkdir,
+          status,
+          stdout,
+          stderr,
+          exitCode,
+        });
 
         const stdoutResult = truncateOutput(stdout || '(no output)', turnPath);
         const stderrResult = truncateOutput(stderr, turnPath);
@@ -159,4 +148,27 @@ export const bash = ({
       }
     },
   });
-};
+
+async function addHistory(
+  sandbox: Awaited<ReturnType<typeof getOrCreate>>,
+  turnPath: string,
+  entry: HistoryEntry
+): Promise<void> {
+  const previous = await sandbox
+    .readFileToBuffer({ path: turnPath })
+    .catch(() => null);
+  const raw = previous?.toString() ?? '[]';
+  const parsed = historySchema.safeParse(JSON.parse(raw) as unknown);
+  const history = parsed.success ? parsed.data : [];
+  history.push(entry);
+  await sandbox
+    .writeFiles([
+      {
+        path: turnPath,
+        content: Buffer.from(JSON.stringify(history, null, 2)),
+      },
+    ])
+    .catch((error: unknown) => {
+      logger.warn({ error, turnPath }, 'Failed to write turn log');
+    });
+}

@@ -1,4 +1,5 @@
 import { Sandbox } from '@vercel/sandbox';
+import { z } from 'zod';
 import { sandbox as config } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
@@ -76,6 +77,19 @@ export interface SandboxAttachments {
   files: SlackFile[];
   messageTs: string;
 }
+
+export const historyEntrySchema = z.object({
+  command: z.string(),
+  workdir: z.string(),
+  status: z.string().optional(),
+  stdout: z.string(),
+  stderr: z.string(),
+  exitCode: z.number(),
+});
+
+export const historySchema = z.array(historyEntrySchema);
+
+export type HistoryEntry = z.infer<typeof historyEntrySchema>;
 
 export async function getOrCreate(
   ctxId: string,
