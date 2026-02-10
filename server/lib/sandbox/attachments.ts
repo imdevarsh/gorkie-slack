@@ -2,6 +2,7 @@ import type { Sandbox } from '@vercel/sandbox';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 import type { SlackFile } from '~/utils/images';
+import { attachmentsDir } from './paths';
 import type { SandboxAttachments } from './types';
 
 export const ATTACHMENTS_DIR = 'attachments';
@@ -22,7 +23,7 @@ export async function syncAttachments(
     return;
   }
 
-  const dir = `${ATTACHMENTS_DIR}/${attachments.messageTs}`;
+  const dir = attachmentsDir(attachments.messageTs);
   await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
 
   await Promise.all(

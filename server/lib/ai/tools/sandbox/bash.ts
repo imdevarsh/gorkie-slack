@@ -6,6 +6,7 @@ import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
 import { addHistory } from '~/lib/sandbox/history';
+import { outputDir, turnsPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
@@ -74,9 +75,9 @@ export const bash = ({
     execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
       const messageTs = context.event.ts;
-      const outputDir = `output/${messageTs}`;
-      const turnPath = `agent/turns/${messageTs}.json`;
-      const effectiveWorkdir = workdir ?? outputDir;
+      const outputDirPath = outputDir(messageTs);
+      const turnPath = turnsPath(messageTs);
+      const effectiveWorkdir = workdir ?? outputDirPath;
 
       try {
         const sandbox = await getSandbox(
@@ -86,7 +87,7 @@ export const bash = ({
         );
         await sandbox.runCommand({
           cmd: 'mkdir',
-          args: ['-p', outputDir, 'agent/turns'],
+          args: ['-p', outputDirPath, '/home/vercel-sandbox/agent/turns'],
         });
         if (status) {
           await setStatus(context, { status, loading: true });
@@ -96,6 +97,18 @@ export const bash = ({
             loading: true,
           });
         }
+
+        logger.debug(
+          {
+            ctxId,
+            command,
+            workdir: effectiveWorkdir,
+            status,
+            outputDir: outputDirPath,
+            turnPath,
+          },
+          'Sandbox command start'
+        );
 
         const result = await sandbox.runCommand({
           cmd: 'sh',
