@@ -11,6 +11,7 @@ Follow these steps for every task:
 
 3. Execute: Run commands and ALWAYS write outputs to output/<message_ts>/.
   Check exit codes and stderr after every command. If something fails, diagnose and retry.
+  Tip: For status messages, do NOT go over 30-40 chars, otherwise slack rejects it...
 
 4. Upload: Call showFile for the finished result.
   Do this immediately when the file is ready, not at the very end.
