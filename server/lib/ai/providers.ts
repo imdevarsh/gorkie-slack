@@ -56,9 +56,26 @@ const summariserModel = createRetryable({
   },
 });
 
+const sandboxModel = createRetryable({
+  model: hackclub('google/gemini-2.5-flash'),
+  retries: [
+    hackclub('openai/gpt-5-mini'),
+    openrouter('google/gemini-3-flash-preview'),
+    openrouter('google/gemini-2.5-flash'),
+    openrouter('openai/gpt-5-mini'),
+  ],
+  onError: (context) => {
+    const { model } = context.current;
+    logger.error(
+      `error with model ${model.provider}/${model.modelId}, switching to next model`
+    );
+  },
+});
+
 export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
+    'sandbox-model': sandboxModel,
     'summariser-model': summariserModel,
   },
 });

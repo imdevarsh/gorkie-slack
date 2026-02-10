@@ -6,8 +6,18 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { transportAttachments } from './attachments';
 import { getOrCreate } from './sandbox';
+
+const MAX_OUTPUT_LENGTH = 16_000;
+
+function truncateOutput(output: string): string {
+  if (output.length <= MAX_OUTPUT_LENGTH) {
+    return output;
+  }
+  const half = Math.floor(MAX_OUTPUT_LENGTH / 2);
+  const omitted = output.length - MAX_OUTPUT_LENGTH;
+  return `${output.slice(0, half)}\n\n... (${omitted} characters omitted, full output in agent/turns/) ...\n\n${output.slice(-half)}`;
+}
 
 export const executeCode = ({
   context,
@@ -16,7 +26,7 @@ export const executeCode = ({
   context: SlackMessageContext;
   files?: SlackFile[];
 }) => {
-  let filesTransported = false;
+  let turn = 0;
 
   return tool({
     description:
@@ -26,15 +36,15 @@ export const executeCode = ({
     }),
     execute: async ({ command }) => {
       const ctxId = getContextId(context);
+      turn++;
 
       try {
-        const sandbox = await getOrCreate(ctxId, context);
+        const sandbox = await getOrCreate(
+          ctxId,
+          context,
+          files?.length ? { files, messageTs: context.event.ts } : undefined
+        );
         await setToolStatus(context, 'is running code in sandbox');
-
-        if (!filesTransported && files?.length) {
-          await transportAttachments(sandbox, context.event.ts, files);
-          filesTransported = true;
-        }
 
         logger.debug({ ctxId, command }, 'Sandbox command starting');
 
@@ -45,16 +55,36 @@ export const executeCode = ({
 
         const stdout = await result.stdout();
         const stderr = await result.stderr();
+        const exitCode = result.exitCode;
 
         logger.debug(
-          { ctxId, exitCode: result.exitCode, stdout, stderr },
+          { ctxId, exitCode, stdout, stderr },
           'Sandbox command finished'
         );
 
+        const turnPath = `agent/turns/${turn}.json`;
+        await sandbox
+          .writeFiles([
+            {
+              path: turnPath,
+              content: Buffer.from(
+                JSON.stringify({ command, stdout, stderr, exitCode }, null, 2)
+              ),
+            },
+          ])
+          .catch((error: unknown) => {
+            logger.warn({ error, turnPath }, 'Failed to write turn log');
+          });
+
+        const isTruncated =
+          stdout.length > MAX_OUTPUT_LENGTH ||
+          stderr.length > MAX_OUTPUT_LENGTH;
+
         return {
-          stdout: stdout || '(no output)',
-          stderr,
-          exitCode: result.exitCode,
+          stdout: truncateOutput(stdout || '(no output)'),
+          stderr: truncateOutput(stderr),
+          exitCode,
+          ...(isTruncated ? { fullOutput: turnPath } : {}),
         };
       } catch (error) {
         logger.error({ error, ctxId }, 'Sandbox command failed');

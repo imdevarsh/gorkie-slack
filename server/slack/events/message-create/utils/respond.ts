@@ -1,22 +1,6 @@
-import { webSearch } from '@exalabs/ai-sdk';
 import type { ModelMessage, UserContent } from 'ai';
-import { generateText, stepCountIs } from 'ai';
-import { systemPrompt } from '~/lib/ai/prompts';
-import { provider } from '~/lib/ai/providers';
-import { executeCode } from '~/lib/ai/tools/execute-code';
+import { createChatAgent } from '~/lib/ai/agents/chat';
 import { snapshotAndStop } from '~/lib/ai/tools/execute-code/sandbox';
-import { getUserInfo } from '~/lib/ai/tools/get-user-info';
-import { getWeather } from '~/lib/ai/tools/get-weather';
-import { leaveChannel } from '~/lib/ai/tools/leave-channel';
-import { mermaid } from '~/lib/ai/tools/mermaid';
-import { react } from '~/lib/ai/tools/react';
-import { reply } from '~/lib/ai/tools/reply';
-import { scheduleReminder } from '~/lib/ai/tools/schedule-reminder';
-import { searchSlack } from '~/lib/ai/tools/search-slack';
-import { showFile } from '~/lib/ai/tools/show-file';
-import { skip } from '~/lib/ai/tools/skip';
-import { summariseThread } from '~/lib/ai/tools/summarise-thread';
-import { successToolCall } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
 import type { RequestHints, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -72,8 +56,9 @@ export async function generateResponse(
       currentMessageContent = replyPrompt;
     }
 
-    const { toolCalls } = await generateText({
-      model: provider.languageModel('chat-model'),
+    const agent = createChatAgent({ context, hints, files });
+
+    const { toolCalls } = await agent.generate({
       messages: [
         ...messages,
         {
@@ -81,50 +66,6 @@ export async function generateResponse(
           content: currentMessageContent,
         },
       ],
-      providerOptions: {
-        openrouter: {
-          reasoning: {
-            enabled: true,
-            exclude: false,
-            effort: 'medium',
-          },
-        },
-      },
-      temperature: 1.1,
-      toolChoice: 'required',
-      tools: {
-        getWeather,
-        searchWeb: webSearch({
-          numResults: 10,
-          type: 'auto',
-        }),
-        searchSlack: searchSlack({ context }),
-        getUserInfo: getUserInfo({ context }),
-        leaveChannel: leaveChannel({ context }),
-        scheduleReminder: scheduleReminder({ context }),
-        summariseThread: summariseThread({ context }),
-        executeCode: executeCode({ context, files }),
-        showFile: showFile({ context }),
-        mermaid: mermaid({ context }),
-        react: react({ context }),
-        reply: reply({ context }),
-        skip: skip({ context }),
-      },
-      system: systemPrompt({ requestHints: hints, context }),
-      stopWhen: [
-        stepCountIs(25),
-        successToolCall('leave-channel'),
-        successToolCall('reply'),
-        // successToolCall('react'),
-        successToolCall('skip'),
-      ],
-      experimental_telemetry: {
-        isEnabled: true,
-        functionId: 'chat',
-        metadata: {
-          userId: userId || 'unknown-user',
-        },
-      },
     });
 
     await context.client.assistant.threads.setStatus({

@@ -1,6 +1,6 @@
 /* cSpell:disable */
 
-export const examplesPrompt = `\
+export const chatExamplesPrompt = `\
 <examples>
 
 <example>
@@ -33,7 +33,7 @@ export const examplesPrompt = `\
 <title>Quick calculation</title>
 <user>What's 44 * 44?</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "echo $((44 * 44))" }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Calculate 44 * 44 and return the result" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["44 * 44 = 1936"] }</input></tool>
 </workflow>
 </example>
@@ -42,10 +42,7 @@ export const examplesPrompt = `\
 <title>Image processing with attachment</title>
 <user>[uploads photo.png] Invert this to black and white</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "ls -lR attachments/" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "sudo dnf install -y ImageMagick" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "convert attachments/1770648887.532179/photo.png -negate output.png" }</input></tool>
-<tool><name>showFile</name><input>{ "path": "output.png", "title": "Black and white version" }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Find the uploaded photo in attachments/ and invert it to black and white using ImageMagick. Save result to output/ and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done! I inverted your image to black and white."] }</input></tool>
 </workflow>
 </example>
@@ -54,9 +51,7 @@ export const examplesPrompt = `\
 <title>Python data analysis</title>
 <user>[uploads data.csv] Analyze this CSV for me</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "find attachments/ -type f -name '*.csv'" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "sudo dnf install -y python3 python3-pip && pip3 install pandas" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "python3 -c \\"import pandas as pd; df = pd.read_csv('attachments/1770648887.532179/data.csv'); print(df.describe())\\"" }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Find the uploaded CSV in attachments/ and analyze it with pandas. Install python3 and pandas if needed. Print summary statistics." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the analysis of your CSV: ..."] }</input></tool>
 </workflow>
 </example>
@@ -65,11 +60,10 @@ export const examplesPrompt = `\
 <title>File from earlier message</title>
 <user>[no attachment in this message] Can you analyze that file I uploaded earlier?</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "ls -lR attachments/" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "cat attachments/1770648793.474479/data.json | head -20" }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "List files in attachments/ to find previously uploaded files, then analyze the data." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Found your file from earlier! Here's what I see: ..."] }</input></tool>
 </workflow>
-Never claim a file is missing without checking attachments/ first. Files from all thread messages persist via snapshots.
+Never claim a file is missing without checking. Files from all thread messages persist via snapshots.
 </example>
 
 <example>
@@ -85,8 +79,7 @@ Never claim a file is missing without checking attachments/ first. Files from al
 <title>Data export from sandbox</title>
 <user>Generate a report of that data as CSV</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "python3 generate_report.py > report.csv && ls -lh report.csv" }</input></tool>
-<tool><name>showFile</name><input>{ "path": "report.csv", "title": "Data Report" }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Generate a CSV report from the data. Save to output/report.csv and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the CSV report."] }</input></tool>
 </workflow>
 </example>

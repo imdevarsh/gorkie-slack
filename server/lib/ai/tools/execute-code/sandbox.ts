@@ -3,7 +3,9 @@ import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import type { SlackFile } from '~/utils/images';
 import { setToolStatus } from '../../utils';
+import { transportAttachments } from './attachments';
 
 async function installPackages(instance: Sandbox): Promise<void> {
   const packages = config.packages;
@@ -19,6 +21,17 @@ async function installPackages(instance: Sandbox): Promise<void> {
     })
     .catch((error: unknown) => {
       logger.warn({ error, packages }, 'Sandbox preinstall failed');
+    });
+}
+
+async function setupDirs(instance: Sandbox): Promise<void> {
+  await instance
+    .runCommand({
+      cmd: 'mkdir',
+      args: ['-p', 'agent/turns', 'output'],
+    })
+    .catch((error: unknown) => {
+      logger.warn({ error }, 'Sandbox dir setup failed');
     });
 }
 
@@ -63,12 +76,25 @@ async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
   return instance;
 }
 
+export interface SandboxAttachments {
+  files: SlackFile[];
+  messageTs: string;
+}
+
 export async function getOrCreate(
   ctxId: string,
-  context?: SlackMessageContext
+  context?: SlackMessageContext,
+  attachments?: SandboxAttachments
 ): Promise<Sandbox> {
   const live = await reconnect(ctxId);
   if (live) {
+    if (attachments?.files.length) {
+      await transportAttachments(
+        live,
+        attachments.messageTs,
+        attachments.files
+      );
+    }
     return live;
   }
 
@@ -95,8 +121,17 @@ export async function getOrCreate(
       await setToolStatus(context, 'is installing packages');
     }
     await installPackages(instance);
+    await setupDirs(instance);
 
     logger.info({ sandboxId: instance.sandboxId, ctxId }, 'Created sandbox');
+  }
+
+  if (attachments?.files.length) {
+    await transportAttachments(
+      instance,
+      attachments.messageTs,
+      attachments.files
+    );
   }
 
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);

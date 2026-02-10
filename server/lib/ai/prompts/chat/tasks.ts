@@ -13,5 +13,3 @@ Keep the summary brief but comprehensive.
 ${instructions ? `\nAdditional instructions: ${instructions}` : ''}
 </task>
 `;
-
-// TODO: the response format manually needs to be passed due to https://github.com/OpenRouterTeam/ai-sdk-provider/issues/120, this issue.

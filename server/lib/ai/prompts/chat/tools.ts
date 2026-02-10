@@ -1,4 +1,4 @@
-export const toolsPrompt = `\
+export const chatToolsPrompt = `\
 <tools>
 Think step-by-step: decide if you need info (web/user), then react/reply.
 
@@ -51,59 +51,25 @@ Returns a structured summary with key points, decisions, action items, and unres
 </tool>
 
 <tool>
-<name>executeCode</name>
+<name>sandbox</name>
 <description>
-Run shell commands in a persistent sandboxed Linux VM (Amazon Linux 2023, Node.js 22).
+Delegate a task to the sandbox agent for code execution, file processing, data analysis, or any task requiring a Linux environment.
 
-Persistence:
-The sandbox persists for the entire thread via snapshots. ALL files (user uploads, your output files, installed packages) carry over between messages. The sandbox is YOUR workspace, if you created a file in a previous message, it's still there.
+The sandbox agent has a persistent Linux VM with pre-installed tools (Node.js, ImageMagick, ffmpeg, tesseract, etc.) and can install additional packages. It runs shell commands, reads files, and uploads results to Slack.
 
-Attachments:
-- User uploads are placed in: attachments/<message_ts>/
-- Attachments from ALL messages in the thread persist, not just the current one
+Use when:
+- User asks you to run code, process files, analyze data, or generate output files
+- User uploads files that need processing (images, CSVs, PDFs, etc.)
+- Any task that requires a shell environment
+- Quick calculations or data transformations
 
-Finding files:
-- When a user references a file from earlier in the thread, it's in the sandbox. Don't ask them to re-upload.
-- Run: find . -type f -not -path '*/node_modules/*' to discover all files
-- Run: ls attachments/ to see uploaded files by message timestamp
-
-Pre-installed tools:
-node (v22), npm, git, curl, openssl, ImageMagick (convert, identify, mogrify), ffmpeg, ghostscript, poppler-utils (pdftotext, pdftoppm), tesseract (OCR), jq, zip/unzip, tar, gzip, bzip2, xz
-
-Additional packages (use dnf):
-  sudo dnf install -y python3 python3-pip    # Python + pip
-  sudo dnf install -y gcc g++ make           # Build tools
-
-After installing python3-pip:
-  pip3 install <package>                     # e.g. pillow, pandas, requests
-
-Node packages:
-  npm install -g <package>
+The sandbox agent handles all the details (finding files, running commands, uploading results) and returns a summary of what it did.
 </description>
 <rules>
-- Most common tools are pre-installed, use them directly without installing first
-- Additional packages persist via snapshots, install once per thread with sudo dnf install -y
-- Commands run via sh -c, pipes, redirection, and shell features work
-- 10-minute timeout per command
-- NEVER say you can't find a file without first running find or ls in the sandbox
+- Provide a clear, specific task description
+- Mention any relevant file names or paths from attachments
+- The sandbox agent will use showFile to upload results before returning
 </rules>
-</tool>
-
-<tool>
-<name>showFile</name>
-<description>
-Upload a file from the sandbox to Slack so the user can see or download it.
-
-Use after generating files with executeCode (images, CSVs, PDFs, charts, etc.). The file must exist in the sandbox filesystem. Use relative paths (e.g. output.png) or full paths (e.g. attachments/1770648887.532179/result.csv).
-</description>
-<rules>
-- Call showFile BEFORE reply so the file appears in the thread.
-- Follow up with reply to add context about the file.
-</rules>
-<examples>
-- After image processing: showFile({ "path": "output.png", "title": "Black and white conversion" })
-- After CSV generation: showFile({ "path": "report.csv", "filename": "analysis-report.csv" })
-</examples>
 </tool>
 
 <tool>
