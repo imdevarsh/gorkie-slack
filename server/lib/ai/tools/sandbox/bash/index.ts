@@ -19,7 +19,7 @@ function truncateOutput(output: string): string {
   return `${output.slice(0, half)}\n\n... (${omitted} characters omitted, full output in agent/turns/) ...\n\n${output.slice(-half)}`;
 }
 
-export const executeCode = ({
+export const bash = ({
   context,
   files,
 }: {

@@ -1,6 +1,6 @@
 import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
-import { snapshotAndStop } from '~/lib/ai/tools/sandbox/execute-code/sandbox';
+import { snapshotAndStop } from '~/lib/ai/tools/sandbox/bash/sandbox';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { RequestHints, SlackMessageContext } from '~/types';

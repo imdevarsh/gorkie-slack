@@ -4,7 +4,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getOrCreate } from './execute-code/sandbox';
+import { getOrCreate } from './bash/sandbox';
 
 export const readFile = ({ context }: { context: SlackMessageContext }) =>
   tool({

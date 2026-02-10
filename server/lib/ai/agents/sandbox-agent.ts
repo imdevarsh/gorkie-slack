@@ -1,7 +1,7 @@
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
-import { executeCode } from '~/lib/ai/tools/sandbox/execute-code';
+import { bash } from '~/lib/ai/tools/sandbox/bash';
 import { readFile } from '~/lib/ai/tools/sandbox/read-file';
 import { showFile } from '~/lib/ai/tools/sandbox/show-file';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
@@ -21,7 +21,7 @@ export const sandboxAgent = ({
     model: provider.languageModel('agent-model'),
     instructions: systemPrompt({ agent: 'sandbox' }),
     tools: {
-      executeCode: executeCode({ context, files }),
+      bash: bash({ context, files }),
       showFile: showFile({ context }),
       readFile: readFile({ context }),
       searchWeb,

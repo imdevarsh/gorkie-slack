@@ -4,12 +4,12 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getOrCreate } from './execute-code/sandbox';
+import { getOrCreate } from './bash/sandbox';
 
 export const showFile = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description:
-      'Show a file from the sandbox to the user in Slack. Use after generating files with executeCode.',
+      'Show a file from the sandbox to the user in Slack. Use after generating files with bash.',
     inputSchema: z.object({
       path: z
         .string()

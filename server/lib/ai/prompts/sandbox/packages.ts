@@ -1,14 +1,10 @@
 export const sandboxPackagesPrompt = `\
 <packages>
 Pre-installed tools (use directly, no installation needed):
-- node (v22), npm, git, curl, openssl
-- ImageMagick (convert, identify, mogrify)
-- ffmpeg (video/audio processing)
-- ghostscript (PDF rendering)
-- poppler-utils (pdftotext, pdftoppm, pdfinfo)
-- tesseract (OCR — optical character recognition)
-- jq (JSON processing)
-- zip, unzip, tar, gzip, bzip2, xz (compression)
+- node (v22), npm
+- python (v3.12)
+- git
+- curl
 
 Installing additional packages:
 
@@ -26,7 +22,6 @@ Installing additional packages:
     sudo dnf install -y <package>
 
 Notes:
-- Packages persist via snapshots — install once per thread, they carry over
-- Most common tools are pre-installed, use them directly first
+- Packages persist via snapshots, install once per thread, they carry over
 - pip3 requires python3-pip to be installed first
 </packages>`;
