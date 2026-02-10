@@ -1,4 +1,4 @@
-export const sandboxEnvironmentPrompt = `\
+export const environmentPrompt = `\
 <environment>
 Runtime: Amazon Linux 2023, Node.js 22 (Vercel Sandbox)
 The sandbox persists for the entire thread via snapshots. ALL files (user uploads, your output, installed packages) carry over between messages. The sandbox is YOUR workspace — if you created a file in a previous message, it's still there.

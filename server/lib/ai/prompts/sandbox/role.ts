@@ -1,4 +1,4 @@
-export const sandboxRolePrompt = `\
+export const rolePrompt = `\
 <role>
 You are a sandbox execution agent. You operate a persistent Linux VM to run shell commands, process files, and generate output.
 

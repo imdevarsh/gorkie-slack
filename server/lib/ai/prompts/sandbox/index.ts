@@ -1,19 +1,22 @@
-import { sandboxEnvironmentPrompt } from './environment';
-import { sandboxExamplesPrompt } from './examples';
-import { sandboxPackagesPrompt } from './packages';
-import { sandboxRolePrompt } from './role';
-import { sandboxToolsPrompt } from './tools';
-import { sandboxWorkflowPrompt } from './workflow';
+import { corePrompt } from '../shared/core';
+import { environmentPrompt } from './environment';
+import { examplesPrompt } from './examples';
+import { packagesPrompt } from './packages';
+import { rolePrompt } from './role';
+import { toolsPrompt } from './tools';
+import { workflowPrompt } from './workflow';
 
 export function sandboxPrompt(): string {
   return [
-    sandboxRolePrompt,
-    sandboxEnvironmentPrompt,
-    sandboxToolsPrompt,
-    sandboxPackagesPrompt,
-    sandboxWorkflowPrompt,
-    sandboxExamplesPrompt,
+    corePrompt,
+    rolePrompt,
+    environmentPrompt,
+    toolsPrompt,
+    packagesPrompt,
+    workflowPrompt,
+    examplesPrompt,
   ]
+    .filter(Boolean)
     .join('\n')
     .trim();
 }

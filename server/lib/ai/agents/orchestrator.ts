@@ -38,7 +38,7 @@ export const orchestratorAgent = ({
         reasoning: { enabled: true, exclude: false, effort: 'medium' },
       },
     },
-    temperature: 1.1,
+    temperature: 1,
     toolChoice: 'required',
     tools: {
       getWeather,

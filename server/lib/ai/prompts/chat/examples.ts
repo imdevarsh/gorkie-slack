@@ -1,6 +1,6 @@
 /* cSpell:disable */
 
-export const chatExamplesPrompt = `\
+export const examplesPrompt = `\
 <examples>
 
 <example>

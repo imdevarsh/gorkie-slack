@@ -2,9 +2,9 @@ import type { RequestHints, SlackMessageContext } from '~/types';
 import { corePrompt } from '../shared/core';
 import { personalityPrompt } from '../shared/personality';
 import { attachmentsPrompt } from './attachments';
-import { chatExamplesPrompt } from './examples';
+import { examplesPrompt } from './examples';
 import { replyPrompt } from './tasks';
-import { chatToolsPrompt } from './tools';
+import { toolsPrompt } from './tools';
 
 const getRequestPrompt = (hints: RequestHints) => `\
 <context>
@@ -24,9 +24,9 @@ export function chatPrompt({
   return [
     corePrompt,
     personalityPrompt,
-    chatExamplesPrompt,
+    examplesPrompt,
     getRequestPrompt(requestHints),
-    chatToolsPrompt,
+    toolsPrompt,
     replyPrompt,
     attachmentsPrompt(context),
   ]

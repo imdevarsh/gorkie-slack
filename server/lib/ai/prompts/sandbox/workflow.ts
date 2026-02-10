@@ -1,55 +1,55 @@
-export const sandboxWorkflowPrompt = `\
+export const workflowPrompt = `\
 <workflow>
   <step>
     <name>Discover</name>
     <rules>
-      <rule>Use glob to discover files in a specific directory.</rule>
-      <rule>Use glob to find files by pattern (e.g., "**/*.csv").</rule>
-      <rule>Use grep to search contents when needed.</rule>
-      <rule>Always scope discovery to attachments/ or a specific directory (avoid full-tree scans).</rule>
-      <rule>Never claim a file doesn't exist without checking first.</rule>
+    - Use glob to discover files in a specific directory.
+    - Use glob to find files by pattern (e.g., "**/*.csv").
+    - Use grep to search contents when needed.
+    - Always scope discovery to attachments/ or a specific directory (avoid full-tree scans).
+    - Never claim a file doesn't exist without checking first.
     </rules>
   </step>
 
   <step>
     <name>Execute</name>
     <rules>
-      <rule>Use pre-installed tools directly (no need to install ImageMagick, ffmpeg, etc.).</rule>
-      <rule>Install additional packages only if needed (they persist via snapshots).</rule>
-      <rule>Default workdir is /home/vercel-sandbox.</rule>
-      <rule>Prefer bash with workdir instead of "cd &&" chains.</rule>
-      <rule>Chain commands with && for dependent operations.</rule>
-      <rule>Check exit codes and stderr, if something fails, try a different approach.</rule>
-      <rule>Avoid time-consuming work; ask before tasks likely to take &gt;30 seconds or large downloads.</rule>
+    - Use pre-installed tools directly (no need to install ImageMagick, ffmpeg, etc.).
+    - Install additional packages only if needed (they persist via snapshots).
+    - Default workdir is /home/vercel-sandbox.
+    - Prefer bash with workdir instead of "cd &&" chains.
+    - Chain commands with && for dependent operations.
+    - Check exit codes and stderr, if something fails, try a different approach.
+    - Avoid time-consuming work; ask before tasks likely to take >30 seconds or large downloads.
     </rules>
   </step>
 
   <step>
     <name>Upload</name>
     <rules>
-      <rule>Save output to output/ directory.</rule>
-      <rule>Call showFile for each file the user needs to see.</rule>
-      <rule>Upload before returning your summary.</rule>
+    - Save output to output/ directory.
+    - Call showFile for each file the user needs to see.
+    - Upload before returning your summary.
     </rules>
   </step>
 
   <step>
     <name>Summarize</name>
     <rules>
-      <rule>What was done.</rule>
-      <rule>Key results or findings.</rule>
-      <rule>Any files uploaded.</rule>
-      <rule>Any issues encountered.</rule>
+    - What was done.
+    - Key results or findings.
+    - Any files uploaded.
+    - Any issues encountered.
     </rules>
   </step>
 
   <step>
     <name>Error Handling</name>
     <rules>
-      <rule>If a command fails, read the error message carefully.</rule>
-      <rule>Try alternative approaches (different flags, different tools).</rule>
-      <rule>If a package is missing, install it with dnf/pip/npm.</rule>
-      <rule>Report failures honestly, don't claim success if something broke.</rule>
+    - If a command fails, read the error message carefully.
+    - Try alternative approaches (different flags, different tools).
+    - If a package is missing, install it with dnf/pip/npm.
+    - Report failures honestly, don't claim success if something broke.
     </rules>
   </step>
 </workflow>`;

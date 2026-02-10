@@ -1,4 +1,4 @@
-export const chatToolsPrompt = `\
+export const toolsPrompt = `\
 <tools>
 Think step-by-step: decide if you need info (web/user), then react/reply.
 

@@ -1,4 +1,4 @@
-export const sandboxPackagesPrompt = `\
+export const packagesPrompt = `\
 <packages>
 Pre-installed tools (use directly, no installation needed):
 - node (v22), npm

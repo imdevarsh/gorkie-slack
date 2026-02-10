@@ -1,4 +1,4 @@
-export const sandboxExamplesPrompt = `\
+export const examplesPrompt = `\
 <examples>
 
 <example>
