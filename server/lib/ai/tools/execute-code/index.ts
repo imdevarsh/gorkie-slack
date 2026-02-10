@@ -26,16 +26,19 @@ export const executeCode = ({
     }),
     execute: async ({ command }) => {
       const ctxId = getContextId(context);
-      await setToolStatus(context, 'is running code in sandbox');
+      const status = (message: string) => setToolStatus(context, message);
+      await status('is preparing sandbox');
 
       try {
-        const sandbox = await getOrCreate(ctxId);
+        const sandbox = await getOrCreate(ctxId, status);
 
         if (!filesTransported && files?.length) {
+          await status('is syncing attachments to sandbox');
           await transportAttachments(sandbox, context.event.ts, files);
           filesTransported = true;
         }
 
+        await status('is running code in sandbox');
         logger.debug({ ctxId, command }, 'Sandbox command starting');
 
         const result = await sandbox.runCommand({
@@ -51,6 +54,7 @@ export const executeCode = ({
           'Sandbox command finished'
         );
 
+        await status('is finishing up');
         return {
           stdout: stdout || '(no output)',
           stderr,

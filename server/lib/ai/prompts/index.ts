@@ -3,6 +3,7 @@ import { attachmentsPrompt } from './attachments';
 import { corePrompt } from './core';
 import { examplesPrompt } from './examples';
 import { personalityPrompt } from './personality';
+import { sandboxPrompt } from './sandbox';
 import { replyPrompt } from './tasks';
 import { toolsPrompt } from './tools';
 
@@ -34,3 +35,5 @@ export const systemPrompt = ({
     .join('\n')
     .trim();
 };
+
+export { sandboxPrompt };

@@ -56,6 +56,7 @@ export const summariseThread = ({
           };
         }
 
+        await setToolStatus(context, 'is summarizing the thread');
         const { text } = await generateText({
           model: provider.languageModel('summariser-model'),
           messages,

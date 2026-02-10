@@ -20,6 +20,7 @@ export function attachmentsPrompt(context: SlackMessageContext): string {
 <attachments>
 Files uploaded to sandbox:
 ${listing}
-Previous attachments from earlier messages may also exist. Run "ls ${ATTACHMENTS_DIR}/" to check.
+Attachments are stored at: ${ATTACHMENTS_DIR}/<message_ts>/filename
+Previous attachments from earlier messages may also exist. Run "ls ${ATTACHMENTS_DIR}/" or "find ${ATTACHMENTS_DIR}/ -type f" to discover files across the thread.
 </attachments>`;
 }

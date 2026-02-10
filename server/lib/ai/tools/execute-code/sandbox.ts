@@ -2,26 +2,37 @@ import { Sandbox } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
-import { setToolStatus } from '../../utils';
 
-async function installPackages(instance: Sandbox): Promise<void> {
+type StatusReporter = (status: string) => Promise<unknown>;
+
+async function installPackages(
+  instance: Sandbox,
+  status?: StatusReporter
+): Promise<void> {
   const packages = config.packages;
   if (!packages.length) {
     return;
+  }
+
+  if (status) {
+    await status('is installing sandbox packages');
   }
 
   await instance
     .runCommand({
       cmd: 'dnf',
       args: ['install', '-y', ...packages],
-      sudo: true
+      sudo: true,
     })
     .catch((error: unknown) => {
       logger.warn({ error, packages }, 'Sandbox preinstall failed');
     });
 }
 
-async function reconnect(ctxId: string): Promise<Sandbox | null> {
+async function reconnect(
+  ctxId: string,
+  status?: StatusReporter
+): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
   if (!sandboxId) {
     return null;
@@ -29,6 +40,9 @@ async function reconnect(ctxId: string): Promise<Sandbox | null> {
 
   const existing = await Sandbox.get({ sandboxId }).catch(() => null);
   if (existing?.status === 'running') {
+    if (status) {
+      await status('is reusing existing sandbox');
+    }
     return existing;
   }
 
@@ -36,10 +50,17 @@ async function reconnect(ctxId: string): Promise<Sandbox | null> {
   return null;
 }
 
-async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
+async function restoreFromSnapshot(
+  ctxId: string,
+  status?: StatusReporter
+): Promise<Sandbox | null> {
   const snapshotId = await redis.get(redisKeys.snapshot(ctxId));
   if (!snapshotId) {
     return null;
+  }
+
+  if (status) {
+    await status('is restoring sandbox snapshot');
   }
 
   const instance = await Sandbox.create({
@@ -62,13 +83,23 @@ async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
   return instance;
 }
 
-export async function getOrCreate(ctxId: string): Promise<Sandbox> {
-  const live = await reconnect(ctxId);
+export async function getOrCreate(
+  ctxId: string,
+  status?: StatusReporter
+): Promise<Sandbox> {
+  if (status) {
+    await status('is preparing sandbox');
+  }
+
+  const live = await reconnect(ctxId, status);
   if (live) {
     return live;
   }
 
-  const restored = await restoreFromSnapshot(ctxId);
+  const restored = await restoreFromSnapshot(ctxId, status);
+  if (status && !restored) {
+    await status('is creating new sandbox');
+  }
   const instance =
     restored ??
     (await Sandbox.create({
@@ -77,7 +108,7 @@ export async function getOrCreate(ctxId: string): Promise<Sandbox> {
     }));
 
   if (!restored) {
-    await installPackages(instance);
+    await installPackages(instance, status);
   }
 
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);

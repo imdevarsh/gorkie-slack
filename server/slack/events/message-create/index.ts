@@ -6,6 +6,7 @@ import { ratelimit, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { SlackMessageContext } from '~/types';
+import { relevanceAgent } from '~/lib/ai/agents';
 import { buildChatContext, getContextId } from '~/utils/context';
 import { logReply } from '~/utils/log';
 import {
@@ -133,6 +134,18 @@ async function handleMessage(args: MessageEventArgs) {
       },
       `[${ctxId}] Triggered by ${trigger.type}`
     );
+
+    const relevance = await relevanceAgent({ context: messageContext }).generate({
+      prompt: `Message: ${content}\nTrigger: ${trigger.type ?? 'none'}\nChannelType: ${messageContext.event.channel_type ?? 'unknown'}\nIsDM: ${messageContext.event.channel_type === 'im'}`,
+    });
+
+    if (!relevance.output?.relevant) {
+      logger.info(
+        { ctxId, reason: relevance.output?.reason ?? 'unknown' },
+        'Relevance agent skipped reply'
+      );
+      return;
+    }
 
     const result = await generateResponse(messageContext, messages, hints);
 

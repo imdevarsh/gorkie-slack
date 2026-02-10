@@ -16,6 +16,7 @@ export function getContextId(context: SlackMessageContext): string {
   return `${channel}:${threadTs}`;
 }
 
+
 async function resolveChannelName(ctx: SlackMessageContext): Promise<string> {
   const channelId = (ctx.event as { channel?: string }).channel;
   if (!channelId) {

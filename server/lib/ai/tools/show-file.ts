@@ -24,7 +24,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         .describe('Title or description for the file'),
     }),
     execute: async ({ path, filename, title }) => {
-      await setToolStatus(context, 'is uploading file');
+      await setToolStatus(context, 'is reading file from sandbox');
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;
@@ -42,6 +42,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
           return { success: false, error: `File not found: ${path}` };
         }
 
+        await setToolStatus(context, 'is uploading file');
         const uploadFilename = filename ?? path.split('/').pop() ?? 'file';
 
         await context.client.files.uploadV2({

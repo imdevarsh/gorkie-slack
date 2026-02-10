@@ -30,6 +30,15 @@ export const examplesPrompt = `\
 </example>
 
 <example>
+<title>Time-sensitive lookup</title>
+<user>What's the latest version of Node.js?</user>
+<workflow>
+<tool><name>searchWeb</name><input>{ "query": "latest Node.js version" }</input></tool>
+<tool><name>reply</name><input>{ "content": ["The latest Node.js release is ... (source: web search)."] }</input></tool>
+</workflow>
+</example>
+
+<example>
 <title>Quick calculation</title>
 <user>What's 44 * 44?</user>
 <workflow>
@@ -70,6 +79,16 @@ export const examplesPrompt = `\
 <tool><name>reply</name><input>{ "content": ["Found your file from earlier! Here's what I see: ..."] }</input></tool>
 </workflow>
 Never claim a file is missing without checking attachments/ first. Files from all thread messages persist via snapshots.
+</example>
+
+<example>
+<title>Find attachment by name</title>
+<user>Use the PDF I attached earlier</user>
+<workflow>
+<tool><name>executeCode</name><input>{ "command": "find attachments/ -type f -name '*.pdf'" }</input></tool>
+<tool><name>executeCode</name><input>{ "command": "python3 extract_text.py attachments/1770648793.474479/report.pdf" }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Processed the PDF and extracted text."] }</input></tool>
+</workflow>
 </example>
 
 <example>
