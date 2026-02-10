@@ -56,7 +56,6 @@ export const bash = ({
   files?: SlackFile[];
 }) => {
   let turn = 0;
-  const defaultWorkdir = '/home/vercel-sandbox';
 
   return tool({
     description:
@@ -75,6 +74,9 @@ export const bash = ({
     execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
       turn++;
+      const messageTs = (context.event as { ts?: string }).ts ?? 'unknown';
+      const outputDir = `output/${messageTs}`;
+      const turnDir = `agent/turns/${messageTs}`;
 
       try {
         const sandbox = await getOrCreate(
@@ -82,6 +84,10 @@ export const bash = ({
           context,
           files?.length ? { files, messageTs: context.event.ts } : undefined
         );
+        await sandbox.runCommand({
+          cmd: 'mkdir',
+          args: ['-p', outputDir, turnDir],
+        });
         if (status) {
           await setStatus(context, { status, loading: true });
         } else {
@@ -94,7 +100,7 @@ export const bash = ({
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
-          cwd: workdir ?? defaultWorkdir,
+          cwd: workdir ?? outputDir,
         });
 
         const stdout = await result.stdout();
@@ -106,13 +112,13 @@ export const bash = ({
             ctxId,
             exitCode,
             command,
-            workdir: workdir ?? defaultWorkdir,
+            workdir,
             status,
           },
           'Sandbox command complete'
         );
 
-        const turnPath = `agent/turns/${turn}.json`;
+        const turnPath = `${turnDir}/${turn}.json`;
         await sandbox
           .writeFiles([
             {

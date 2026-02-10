@@ -10,13 +10,13 @@ attachments/             # User uploads (auto-managed, read-only)
     photo.png
     data.csv
 output/                  # Generated files go here
-  <message_ts>/
+  <message_ts>/          # Create a subfolder per message
     result.png
     report.csv
 agent/                   # Execution metadata (auto-managed)
   turns/
-   <message_ts>/
-      1.json               # { command, stdout, stderr, exitCode }
+    <message_ts>/
+      1.json             # { command, stdout, stderr, exitCode }
       2.json
 \`\`\`
 
@@ -27,12 +27,14 @@ Persistence rules:
 - agent/turns/ logs are auto-created per command execution
 
 Output directory:
-- ALWAYS save generated files to output/ (never the working directory root)
-- Use showFile with output/ paths to share results with the user
-- Example: save chart to output/chart.png, then showFile({ path: "output/chart.png" })
+- ALWAYS create output/<message_ts>/ and run work there
+- Save generated files inside output/<message_ts>/ (never the working directory root)
+- Use showFile with output/<message_ts>/ paths to share results with the user
+- Example: save chart to output/<message_ts>/chart.png, then showFile({ path: "output/<message_ts>/chart.png" })
 
 Execution logs:
-- Every command is logged to agent/turns/<n>.json with full stdout/stderr
+- Every command is logged to agent/turns/<message_ts>/<n>.json with full stdout/stderr
+- Turn numbers increment per message, ordered by <n>.json
 - If output was truncated, the fullOutput field in the result has the log path
 - To recover truncated output: read agent/turns/<n>.json
 </environment>`;
