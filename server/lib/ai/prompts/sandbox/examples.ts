@@ -18,7 +18,7 @@ Summary: "Converted photo.png to grayscale and uploaded the result."
 <workflow>
 <tool><name>glob</name><input>{ "pattern": "**/*.csv", "path": "attachments", "status": "is locating the CSV" }</input></tool>
 <tool><name>bash</name><input>{ "command": "sudo dnf install -y python3 python3-pip && pip3 install pandas", "status": "is installing dependencies" }</input></tool>
-<tool><name>bash</name><input>{ "command": "python3 -c \"import pandas as pd; df = pd.read_csv('attachments/.../data.csv'); print(df.describe())\"", "status": "is analyzing the CSV" }</input></tool>
+<tool><name>bash</name><input>{ "command": "python3 -c "import pandas as pd; df = pd.read_csv('attachments/.../data.csv'); print(df.describe())"", "status": "is analyzing the CSV" }</input></tool>
 Summary: "The CSV has 1000 rows and 5 columns. Here are the stats: ..."
 </workflow>
 </example>

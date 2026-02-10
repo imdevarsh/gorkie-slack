@@ -14,8 +14,6 @@ export async function generateResponse(
   hints: RequestHints
 ) {
   const ctxId = getContextId(context);
-  const threadTs =
-    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
 
   try {
     await setStatus(context, {

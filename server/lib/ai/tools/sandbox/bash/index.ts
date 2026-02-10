@@ -83,16 +83,16 @@ export const bash = ({
             'Sandbox command failed'
           );
         } else {
-        logger.debug(
-          {
-            ctxId,
-            exitCode,
-            command,
-            workdir: workdir ?? defaultWorkdir,
-            status,
-          },
-          'Sandbox command complete'
-        );
+          logger.debug(
+            {
+              ctxId,
+              exitCode,
+              command,
+              workdir: workdir ?? defaultWorkdir,
+              status,
+            },
+            'Sandbox command complete'
+          );
         }
 
         const turnPath = `agent/turns/${turn}.json`;

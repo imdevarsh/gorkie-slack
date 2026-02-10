@@ -6,10 +6,6 @@ import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { getOrCreate } from './bash/sandbox';
 
-function toBase64(value: string): string {
-  return Buffer.from(value).toString('base64');
-}
-
 export const edit = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Edit a file by exact string replacement.',

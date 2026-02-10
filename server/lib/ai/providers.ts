@@ -63,7 +63,7 @@ const agentModel = createRetryable({
   model: openai('gpt-5.2-codex'),
   retries: [
     hackclub('openai/gpt-5.2-codex'),
-    openrouter('openai/gpt-5.2-codex')
+    openrouter('openai/gpt-5.2-codex'),
   ],
   onError: (context) => {
     const { model } = context.current;
@@ -76,7 +76,7 @@ const agentModel = createRetryable({
 export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
-    'summariser-model': summariserModel,    
+    'summariser-model': summariserModel,
     'agent-model': agentModel,
   },
 });

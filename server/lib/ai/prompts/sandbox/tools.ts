@@ -99,7 +99,7 @@ Edit a file by exact string replacement.
 - If oldString appears multiple times, set replaceAll=true or make oldString more specific
 </rules>
 <examples>
-- edit({ "path": "output/config.json", "oldString": "\"enabled\": false", "newString": "\"enabled\": true" })
+- edit({ "path": "output/config.json", "oldString": ""enabled": false", "newString": ""enabled": true" })
 - edit({ "path": "output/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
 </examples>
 </tool>

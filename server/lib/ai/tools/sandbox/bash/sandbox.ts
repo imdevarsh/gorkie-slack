@@ -1,11 +1,10 @@
 import { Sandbox, Snapshot } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
-import { env } from '~/env';
+import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
-import { setStatus } from '~/lib/ai/utils/status';
 import { transportAttachments } from './attachments';
 import { installUtils, makeFolders } from './bootstrap';
 
@@ -128,9 +127,7 @@ async function pruneSandboxFiles(
   ctxId: string
 ): Promise<void> {
   const keepPaths = config.keep;
-  const keepMatchers = keepPaths
-    .map((path) => `-name '${path}'`)
-    .join(' -o ');
+  const keepMatchers = keepPaths.map((path) => `-name '${path}'`).join(' -o ');
   const filter = keepMatchers ? `\\( ${keepMatchers} \\)` : '';
 
   await instance
@@ -148,10 +145,13 @@ async function pruneSandboxFiles(
     });
 }
 
-async function deleteSnapshot(snapshotId: string, ctxId: string): Promise<void> {
+async function deleteSnapshot(
+  snapshotId: string,
+  ctxId: string
+): Promise<void> {
   try {
     const snapshot = await Snapshot.get({
-      snapshotId
+      snapshotId,
     });
     await snapshot.delete();
     logger.info({ snapshotId, ctxId }, 'Deleted previous snapshot');
