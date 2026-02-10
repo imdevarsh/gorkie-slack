@@ -30,7 +30,7 @@ export const env = createEnv({
     // Vercel Sandbox (https://docs.vercel.com/docs/rest-api/reference/welcome#creating-an-access-token)
     VERCEL_TEAM_ID: z.string().min(1).startsWith('team_'),
     VERCEL_PROJECT_ID: z.string().min(1).startsWith('prj_'),
-    VERCEL_OIDC_TOKEN: z.string().min(1),
+    VERCEL_TOKEN: z.string().min(1),
   },
 
   /**

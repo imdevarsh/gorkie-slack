@@ -87,7 +87,7 @@ export const historySchema = z.array(historyEntrySchema);
 
 export type HistoryEntry = z.infer<typeof historyEntrySchema>;
 
-export async function getOrCreate(
+export async function getSandbox(
   ctxId: string,
   context?: SlackMessageContext,
   attachments?: SandboxAttachments
@@ -157,7 +157,7 @@ async function forceStop(sandboxId: string): Promise<void> {
   }
 }
 
-export async function snapshotAndStop(ctxId: string): Promise<void> {
+export async function stopSandbox(ctxId: string): Promise<void> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
   if (!sandboxId) {
     return;

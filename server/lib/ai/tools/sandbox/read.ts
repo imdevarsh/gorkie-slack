@@ -4,7 +4,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getOrCreate } from './bash/sandbox';
+import { getSandbox } from './bash/sandbox';
 export const read = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description:
@@ -37,7 +37,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getOrCreate(ctxId);
+        const sandbox = await getSandbox(ctxId);
         const fileBuffer = await sandbox.readFileToBuffer({ path });
 
         if (!fileBuffer) {

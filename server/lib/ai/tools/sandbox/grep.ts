@@ -4,7 +4,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getOrCreate } from './bash/sandbox';
+import { getSandbox } from './bash/sandbox';
 
 const outputSchema = z.object({
   path: z.string(),
@@ -47,7 +47,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getOrCreate(ctxId);
+        const sandbox = await getSandbox(ctxId);
         const payload = Buffer.from(
           JSON.stringify({ pattern, path, include, limit })
         ).toString('base64');

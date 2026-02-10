@@ -4,7 +4,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getOrCreate } from './bash/sandbox';
+import { getSandbox } from './bash/sandbox';
 
 export const showFile = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -34,7 +34,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
       }
 
       try {
-        const sandbox = await getOrCreate(ctxId, context);
+        const sandbox = await getSandbox(ctxId, context);
         await setStatus(context, {
           status: 'is uploading a file',
           loading: true,

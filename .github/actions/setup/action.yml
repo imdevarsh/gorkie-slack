@@ -38,6 +38,6 @@ runs:
         LOG_DIRECTORY="logs"
         LOG_LEVEL="info"
         EXA_API_KEY=""
-        VERCEL_OIDC_TOKEN="your-vercel-oidc-token"
+        VERCEL_TOKEN="your-vercel-oidc-token"
         VERCEL_PROJECT_ID="prj_abc"
         EOF

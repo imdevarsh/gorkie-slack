@@ -1,6 +1,6 @@
 import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
-import { snapshotAndStop } from '~/lib/ai/tools/sandbox/bash/sandbox';
+import { stopSandbox } from '~/lib/ai/tools/sandbox/bash/sandbox';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { RequestHints, SlackMessageContext } from '~/types';
@@ -75,7 +75,7 @@ export async function generateResponse(
       error: e instanceof Error ? e.message : String(e),
     };
   } finally {
-    snapshotAndStop(ctxId).catch((error: unknown) => {
+    stopSandbox(ctxId).catch((error: unknown) => {
       logger.warn({ error, ctxId }, 'Sandbox snapshot failed');
     });
   }

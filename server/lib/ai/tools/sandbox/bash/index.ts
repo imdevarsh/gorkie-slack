@@ -6,7 +6,7 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { getOrCreate, type HistoryEntry, historySchema } from './sandbox';
+import { getSandbox, type HistoryEntry, historySchema } from './sandbox';
 
 const MAX_LINES = 2000;
 const MAX_BYTES = 50 * 1024;
@@ -78,7 +78,7 @@ export const bash = ({
       const effectiveWorkdir = workdir ?? outputDir;
 
       try {
-        const sandbox = await getOrCreate(
+        const sandbox = await getSandbox(
           ctxId,
           context,
           files?.length ? { files, messageTs: context.event.ts } : undefined
@@ -151,7 +151,7 @@ export const bash = ({
   });
 
 async function addHistory(
-  sandbox: Awaited<ReturnType<typeof getOrCreate>>,
+  sandbox: Awaited<ReturnType<typeof getSandbox>>,
   turnPath: string,
   entry: HistoryEntry
 ): Promise<void> {
