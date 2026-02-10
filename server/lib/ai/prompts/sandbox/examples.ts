@@ -3,23 +3,24 @@ export const examplesPrompt = `\
 
 <example>
 <title>Image processing</title>
-<task>Convert the uploaded photo to black and white</task>
+<task>Convert the uploaded image to black and white</task>
 <workflow>
-<tool><name>glob</name><input>{ "pattern": "**/*.png", "path": "attachments", "status": "is locating the photo" }</input></tool>
-<tool><name>bash</name><input>{ "command": "convert attachments/<id>/photo.png -colorspace Gray output/<id>/bw.png", "status": "is converting the image" }</input></tool>
+<tool><name>glob</name><input>{ "pattern": "**/*.png", "path": "attachments", "status": "is locating the image" }</input></tool>
+<tool><name>bash</name><input>{ "command": "mkdir -p output/<id> && convert attachments/<id>/photo.png -colorspace Gray output/<id>/bw.png", "status": "is converting the image" }</input></tool>
 <tool><name>showFile</name><input>{ "path": "output/<id>/bw.png", "title": "Black and white" }</input></tool>
 Summary: "Converted photo.png to grayscale and uploaded the result."
 </workflow>
 </example>
 
 <example>
-<title>CSV analysis with Python</title>
-<task>Analyze this CSV and show summary statistics</task>
+<title>CSV analysis</title>
+<task>Analyze this CSV and export a summary report</task>
 <workflow>
 <tool><name>glob</name><input>{ "pattern": "**/*.csv", "path": "attachments", "status": "is locating the CSV" }</input></tool>
 <tool><name>bash</name><input>{ "command": "sudo dnf install -y python3 python3-pip && pip3 install pandas", "status": "is installing dependencies" }</input></tool>
-<tool><name>bash</name><input>{ "command": "python3 -c "import pandas as pd; df = pd.read_csv('attachments/.../data.csv'); print(df.describe())"", "status": "is analyzing the CSV" }</input></tool>
-Summary: "The CSV has 1000 rows and 5 columns. Here are the stats: ..."
+<tool><name>bash</name><input>{ "command": "python3 - <<'PY'\nimport pandas as pd\nimport pathlib\ncsv = next(pathlib.Path('attachments/<id>').glob('*.csv'))\ndf = pd.read_csv(csv)\nsummary = df.describe(include='all')\nsummary.to_csv('output/<id>/summary.csv')\nPY", "status": "is analyzing the CSV" }</input></tool>
+<tool><name>showFile</name><input>{ "path": "output/<id>/summary.csv", "title": "Summary report" }</input></tool>
+Summary: "Generated summary.csv and uploaded it."
 </workflow>
 </example>
 
@@ -43,16 +44,6 @@ Summary: "Extracted 5 pages of text from document.pdf."
 <tool><name>bash</name><input>{ "command": "convert attachments/<id>/diagram.png -negate output/<id>/diagram.png", "status": "is processing the image" }</input></tool>
 <tool><name>showFile</name><input>{ "path": "output/<id>/diagram.png", "title": "Processed diagram" }</input></tool>
 Summary: "Found your diagram from an earlier message and processed it."
-</workflow>
-</example>
-
-<example>
-<title>Generate and export data</title>
-<task>Generate a report as CSV</task>
-<workflow>
-<tool><name>bash</name><input>{ "command": "python3 script.py > output/<id>/report.csv", "workdir": "/home/vercel-sandbox", "status": "is generating the report" }</input></tool>
-<tool><name>showFile</name><input>{ "path": "output/<id>/report.csv", "title": "Report" }</input></tool>
-Summary: "Generated a CSV report with 500 rows."
 </workflow>
 </example>
 
