@@ -6,15 +6,16 @@ import { ratelimit, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { SlackMessageContext } from '~/types';
-import { relevanceAgent } from '~/lib/ai/agents';
 import { buildChatContext, getContextId } from '~/utils/context';
 import { logReply } from '~/utils/log';
 import {
   checkMessageQuota,
+  handleMessageCount,
   resetMessageCount,
 } from '~/utils/message-rate-limiter';
 import { shouldUse } from '~/utils/messages';
 import { getTrigger } from '~/utils/triggers';
+import { assessRelevance } from './utils/relevance';
 import { generateResponse } from './utils/respond';
 
 export const name = 'message';
@@ -135,18 +136,6 @@ async function handleMessage(args: MessageEventArgs) {
       `[${ctxId}] Triggered by ${trigger.type}`
     );
 
-    const relevance = await relevanceAgent({ context: messageContext }).generate({
-      prompt: `Message: ${content}\nTrigger: ${trigger.type ?? 'none'}\nChannelType: ${messageContext.event.channel_type ?? 'unknown'}\nIsDM: ${messageContext.event.channel_type === 'im'}`,
-    });
-
-    if (relevance.output?.relevant === false) {
-      logger.info(
-        { ctxId, reason: relevance.output?.reason ?? 'unknown' },
-        'Relevance agent skipped reply'
-      );
-      return;
-    }
-
     const result = await generateResponse(messageContext, messages, hints);
 
     logReply(ctxId, authorName, result, 'trigger');
@@ -167,6 +156,25 @@ async function handleMessage(args: MessageEventArgs) {
     logger.debug(
       `[${ctxId}] Quota exhausted (${idleCount}/${messageThreshold})`
     );
+    return;
+  }
+
+  const { probability, reason } = await assessRelevance(
+    messageContext,
+    messages,
+    hints
+  );
+
+  logger.info(
+    { reason, probability, message: `${authorName}: ${content}` },
+    `[${ctxId}] Relevance check`
+  );
+
+  const willReply = probability > 0.5;
+  await handleMessageCount(ctxId, willReply);
+
+  if (!willReply) {
+    logger.debug(`[${ctxId}] Low relevance — ignoring`);
     return;
   }
 }

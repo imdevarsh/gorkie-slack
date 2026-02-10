@@ -80,6 +80,7 @@ export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
     'summariser-model': summariserModel,
+    'relevance-model': summariserModel,
     'code-model': codeModel,
   },
 });

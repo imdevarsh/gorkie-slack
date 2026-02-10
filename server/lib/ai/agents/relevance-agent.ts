@@ -1,12 +1,7 @@
-import { Output, ToolLoopAgent, stepCountIs } from 'ai';
-import { z } from 'zod';
+import { ToolLoopAgent, stepCountIs, tool } from 'ai';
 import { provider } from '~/lib/ai/providers';
 import type { SlackMessageContext } from '~/types';
-
-const relevanceSchema = z.object({
-  relevant: z.boolean(),
-  reason: z.string(),
-});
+import { probabilitySchema } from '~/lib/validators/probability';
 
 export const relevanceAgent = ({
   context,
@@ -14,12 +9,27 @@ export const relevanceAgent = ({
   context: SlackMessageContext;
 }) =>
   new ToolLoopAgent({
-    model: provider.languageModel('chat-model'),
+    model: provider.languageModel('relevance-model'),
     instructions: `You decide whether Gorkie should respond to a message.
-Return relevant=true if the user is asking for help, addressing Gorkie, or if the message is in a DM.
-Return relevant=false for low-value messages ("gm", emojis), unrelated chatter, or messages not directed to Gorkie.
-Always prefer responding when unsure.`,
-    output: Output.object({ schema: relevanceSchema }),
-    stopWhen: [stepCountIs(5)],
+Return a probability between 0 and 1.
+Responding is preferred when unsure.`,
+    tools: {
+      relevance: tool({
+        description:
+          'Assess the relevance of a message for Gorkie to respond to.',
+        inputSchema: probabilitySchema,
+      }),
+    },
+    prepareStep: async ({ stepNumber }) => {
+      if (stepNumber === 0) {
+        return {
+          toolChoice: { type: 'tool', toolName: 'relevance' },
+        };
+      }
+
+      return {};
+    },
+    toolChoice: 'required',
+    stopWhen: [stepCountIs(6)],
     temperature: 0,
   });

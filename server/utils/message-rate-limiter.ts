@@ -11,6 +11,20 @@ export async function resetMessageCount(ctxId: string): Promise<void> {
   await redis.del(redisKeys.messageCount(ctxId));
 }
 
+export async function handleMessageCount(
+  ctxId: string,
+  willReply: boolean
+): Promise<void> {
+  if (willReply) {
+    await resetMessageCount(ctxId);
+    return;
+  }
+
+  const key = redisKeys.messageCount(ctxId);
+  await redis.incr(key);
+  await redis.expire(key, 30 * 60);
+}
+
 export async function checkMessageQuota(ctxId: string): Promise<{
   count: number;
   hasQuota: boolean;
