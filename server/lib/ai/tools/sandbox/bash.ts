@@ -66,7 +66,7 @@ export const bash = ({
       workdir: z
         .string()
         .optional()
-        .describe('Working directory (relative). Prefer this over "cd &&"'),
+        .describe('Working directory (relative)'),
       status: z
         .string()
         .describe('Status text formatted like "is xyz"')
