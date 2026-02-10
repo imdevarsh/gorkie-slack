@@ -55,7 +55,7 @@ Returns a structured summary with key points, decisions, action items, and unres
 <description>
 Delegate a task to the sandbox agent for code execution, file processing, data analysis, or any task requiring a Linux environment.
 
-The sandbox agent has a persistent Linux VM with pre-installed tools (Node.js, ImageMagick, ffmpeg, tesseract, etc.) and can install additional packages. It runs shell commands, reads files, and uploads results to Slack.
+The sandbox agent runs tasks in a Linux VM with pre-installed tools (Node.js, ImageMagick, ffmpeg, tesseract, etc.) and can install additional packages. It runs shell commands, reads files, and uploads results to Slack.
 
 Use when:
 - User asks you to run code, process files, analyze data, or generate output files

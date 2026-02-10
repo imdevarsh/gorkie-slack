@@ -44,7 +44,6 @@ Summary: "Extracted 5 pages of text from document.pdf."
 <tool><name>showFile</name><input>{ "path": "output/diagram.png", "title": "Processed diagram" }</input></tool>
 Summary: "Found your diagram from an earlier message and processed it."
 </workflow>
-Files from all thread messages persist via snapshots. Never claim a file is missing without checking.
 </example>
 
 <example>

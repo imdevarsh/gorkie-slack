@@ -5,5 +5,5 @@ export const sandbox = {
   timeoutMs: 10 * 60 * 1000,
   sandboxTtlSeconds: 10 * 60,
   snapshotTtlSeconds: 24 * 60 * 60,
-  keep: ['attachments'] as const,
+  keep: ['attachments', 'output', 'agent'] as const,
 };

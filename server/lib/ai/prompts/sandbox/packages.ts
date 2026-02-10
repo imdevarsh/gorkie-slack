@@ -18,6 +18,6 @@ Installing additional packages:
     sudo dnf install -y <package>
 
 Notes:
-- Packages persist via snapshots, install once per thread, they carry over
+- Packages do NOT persist between messages, install as needed
 - pip3 requires python3-pip to be installed first
 </packages>`;

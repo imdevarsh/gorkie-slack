@@ -80,6 +80,7 @@ export async function getOrCreate(
   let instance: Sandbox;
   if (restored) {
     instance = restored;
+    await installUtils(instance);
   } else {
     if (context) {
       await setStatus(context, {
@@ -124,22 +125,18 @@ async function pruneSandboxFiles(
   instance: Sandbox,
   ctxId: string
 ): Promise<void> {
-  const keepPaths = config.keep;
-  const keepMatchers = keepPaths
-    .map((pattern) => `-name '${pattern}'`)
-    .join(' -o ');
-  const filter = keepMatchers ? `\\( ${keepMatchers} \\)` : '';
+  const result = await instance.runCommand({ cmd: 'ls', args: ['-1'] });
+  const stdout = await result.stdout();
+  const entries = stdout.split('\n').filter(Boolean);
+  const keep = new Set<string>(config.keep);
+  const toRemove = entries.filter((entry) => !keep.has(entry));
+
+  if (toRemove.length === 0) {
+    return;
+  }
 
   await instance
-    .runCommand({
-      cmd: 'sh',
-      args: [
-        '-c',
-        `find . -mindepth 1 -maxdepth 1 ${
-          filter ? `! ${filter}` : ''
-        } -exec rm -rf {} +`,
-      ],
-    })
+    .runCommand({ cmd: 'rm', args: ['-rf', ...toRemove] })
     .catch((error: unknown) => {
       logger.warn({ error, ctxId }, 'Sandbox prune failed');
     });

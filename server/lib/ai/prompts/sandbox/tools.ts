@@ -4,7 +4,7 @@ export const toolsPrompt = `\
 <tool>
 <name>bash</name>
 <description>
-Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.
+Executes a given bash command in a sandboxed Linux VM.
 </description>
 <rules>
 - All commands run in /home/vercel-sandbox by default. Use workdir to run in a different directory. Avoid "cd &&" chains.
@@ -13,6 +13,7 @@ Executes a given bash command in a persistent shell session with optional timeou
 - Always quote file paths that contain spaces with double quotes.
 - If output is truncated, the full log is in agent/turns/<n>.json.
 - Avoid using bash with find/grep/cat/head/tail/sed/awk/echo unless explicitly required.
+- Do not assume packages or files outside output/ and attachments/ will be available across messages.
 </rules>
 <examples>
 - Simple: bash({ "command": "echo $((44 * 44))" })
@@ -108,7 +109,7 @@ Performs exact string replacements in files.
 - Use replaceAll for replacing and renaming strings across the file.
 </rules>
 <examples>
-- edit({ "path": "output/config.json", "oldString": "\"enabled\": false", "newString": "\"enabled\": true" })
+- edit({ "path": "output/config.json", "oldString": ""enabled": false", "newString": ""enabled": true" })
 - edit({ "path": "output/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
 </examples>
 </tool>
