@@ -12,21 +12,21 @@ export const examplesPrompt = `\
 4. showFile({ "path": "/home/vercel-sandbox/output/1770648887.532179/bw.png", "title": "Black and white" })
 Summary: "Converted photo.png to grayscale and uploaded the result."
 </steps>
+<note>ALWAYS write the output to output/<message_ts>/, never modify files in attachments/.</note>
 </example>
 
 <example>
-<description>Continuing from an earlier message. The sandbox_files block tells you what already exists — no need to glob for it.</description>
+<description>Continuing from an earlier message. The sandbox_files block tells you what already exists, no need to glob for it.</description>
 <context>
 <sandbox_files>
 Files already in the sandbox (newest first):
 2026-02-10 14:32:05  output/1770648887.532179/bw.png
 2026-02-10 14:31:58  attachments/1770648887.532179/photo.png
 </sandbox_files>
-
-<recent_thread_context>
+<recent_messages>
 User: convert my image to black and white
 Assistant: Done! Converted photo.png to grayscale.
-</recent_thread_context>
+</recent_messages>
 </context>
 <task>Now invert it</task>
 <steps>
@@ -34,7 +34,7 @@ Assistant: Done! Converted photo.png to grayscale.
 2. showFile({ "path": "/home/vercel-sandbox/output/1770650000.000000/inverted.png", "title": "Inverted" })
 Summary: "Inverted the black and white image and uploaded."
 </steps>
-<note>The agent used the file listing to find the previous output directly — no glob needed. Output goes to the current message_ts directory.</note>
+<note>The agent used the file listing to find the previous output directly, no glob needed. Output goes to the current message_ts directory.</note>
 </example>
 
 <example>

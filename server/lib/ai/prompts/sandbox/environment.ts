@@ -10,7 +10,8 @@ attachments/<message_ts>/
   Example: attachments/1770648887.532179/photo.png
 
 output/<message_ts>/
-  Your output directory. Write ALL generated files here.
+  Your output directory. Always write ALL generated files here.
+  If you DO NOT write your files here, on follow up messages you won't be able to find them, so this is VERY IMPORTANT.
   This is where showFile looks for files to upload.
   Example: output/1770648887.532179/result.png
 
