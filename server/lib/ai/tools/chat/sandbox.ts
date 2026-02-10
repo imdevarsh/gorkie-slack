@@ -25,7 +25,7 @@ export const sandbox = ({
     }),
     execute: async ({ task }) => {
       await setStatus(context, {
-        status: 'is delegating task to sandbox',
+        status: 'is delegating a task to the sandbox',
         loading: true,
       });
 

@@ -91,7 +91,7 @@ export const bash = ({
           await setStatus(context, { status, loading: true });
         } else {
           await setStatus(context, {
-            status: 'is running commands in sandbox',
+            status: 'is running commands in the sandbox',
             loading: true,
           });
         }

@@ -105,7 +105,10 @@ export async function getOrCreate(
   }
 
   if (context) {
-    await setStatus(context, { status: 'is restoring sandbox', loading: true });
+    await setStatus(context, {
+      status: 'is restoring the sandbox',
+      loading: true,
+    });
   }
 
   const restored = await restoreFromSnapshot(ctxId);
@@ -117,7 +120,7 @@ export async function getOrCreate(
   } else {
     if (context) {
       await setStatus(context, {
-        status: 'is setting up sandbox',
+        status: 'is setting up the sandbox',
         loading: true,
       });
     }
