@@ -77,7 +77,7 @@ export const bash = ({
       const messageTs = getMessageTs(context);
       const outputDirPath = outputDir(messageTs);
       const turnPath = turnsPath(messageTs);
-      const effectiveWorkdir = normalizeWorkdir(workdir, outputDirPath);
+      const effectiveWorkdir = normalizeWorkdir(workdir);
 
       try {
         const sandbox = await getSandbox(
@@ -168,12 +168,9 @@ function getMessageTs(context: SlackMessageContext): string {
   return (context.event as { ts?: string }).ts ?? 'unknown';
 }
 
-function normalizeWorkdir(
-  workdir: string | undefined,
-  defaultWorkdir: string
-): string {
+function normalizeWorkdir(workdir: string | undefined): string {
   if (!workdir || workdir === '.') {
-    return defaultWorkdir;
+    return '/home/vercel-sandbox';
   }
   if (workdir.startsWith('/')) {
     return workdir;

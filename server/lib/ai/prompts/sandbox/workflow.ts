@@ -17,6 +17,7 @@ export const workflowPrompt = `\
     - Use pre-installed tools directly (no need to install ImageMagick, ffmpeg, etc.).
     - Install additional packages only if needed (they persist via snapshots).
     - Create output/<message_ts>/ and set workdir to that path.
+    - The default workdir is /home/vercel-sandbox.
     - Always write generated files to output/<message_ts>/, never to attachments/ or the root.
     - Chain commands with && for dependent operations.
     - Check exit codes and stderr, if something fails, try a different approach.

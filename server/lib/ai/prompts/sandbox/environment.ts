@@ -31,6 +31,11 @@ Output directory:
 - Use showFile with output/<message_ts>/ paths to share results with the user
 - Example: save chart to output/<message_ts>/chart.png, then showFile({ path: "output/<message_ts>/chart.png" })
 
+Default workdir:
+- The bash tool defaults to /home/vercel-sandbox
+- If you pass workdir=".", it will be treated as /home/vercel-sandbox
+- Relative workdir paths are resolved under /home/vercel-sandbox
+
 Execution logs:
 - Every command is logged to agent/turns/<message_ts>.json with full stdout/stderr
 - Entries are appended in order of execution

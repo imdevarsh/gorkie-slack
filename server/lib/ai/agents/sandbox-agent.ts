@@ -22,10 +22,7 @@ export const sandboxAgent = ({
 }) =>
   new ToolLoopAgent({
     model: provider.languageModel('agent-model'),
-    instructions: [
-      systemPrompt({ agent: 'sandbox' }),
-      `Current message_ts: ${context.event.ts}`,
-    ].join('\n'),
+    instructions: systemPrompt({ agent: 'sandbox', context }),
     tools: {
       bash: bash({ context, files }),
       glob: glob({ context }),

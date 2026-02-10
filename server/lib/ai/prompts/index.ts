@@ -11,6 +11,7 @@ export function systemPrompt(
       }
     | {
         agent: 'sandbox';
+        context?: SlackMessageContext;
       }
 ): string {
   switch (opts.agent) {
@@ -20,7 +21,7 @@ export function systemPrompt(
         context: opts.context,
       });
     case 'sandbox':
-      return sandboxPrompt();
+      return sandboxPrompt(opts.context);
     default: {
       const _exhaustive: never = opts;
       throw new Error(
