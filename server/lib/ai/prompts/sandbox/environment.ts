@@ -1,32 +1,33 @@
 export const environmentPrompt = `\
 <environment>
-Sandbox runtime, persistence, and paths.
+<filesystem>
+All paths are relative to /home/vercel-sandbox (the default working directory).
 
-Runtime: Amazon Linux 2023, Node.js 22 (Vercel Sandbox)
-Message ID: <id> (Slack message timestamp)
+attachments/<message_ts>/
+  User-uploaded files from Slack. Read-only — never write here.
+  Files from earlier messages in the thread also live here under their respective message_ts.
+  Example: attachments/1770648887.532179/photo.png
 
-Persistence:
-- Snapshots persist across messages in the same thread
-- Sandboxes expire after 24 hours
-- Installed packages persist per thread
+output/<message_ts>/
+  Your output directory. Write ALL generated files here.
+  This is where showFile looks for files to upload.
+  Example: output/1770648887.532179/result.png
 
-Paths:
-- attachments/<id>/ (read-only uploads)
-- output/<id>/ (write outputs here)
-- agent/turns/<id>.json (stdout/stderr log)
-- Latest output/logs correspond to the most recent message in the thread
+agent/turns/<message_ts>.json
+  Automatic log of each bash command's stdout, stderr, and exit code.
+  If bash output was truncated, read this file for the full content.
+</filesystem>
 
-Output rules:
-- Write outputs to output/<current_id>/
-- Never write outputs into attachments/
-- Use showFile with output/<id>/ paths
+<packages>
+Do not assume any tool is pre-installed beyond the base OS, Node.js, and Python 3.
+Always install before first use:
 
-Workdir:
-- Default is /home/vercel-sandbox
-- workdir="." maps to /home/vercel-sandbox
-- Relative paths resolve under /home/vercel-sandbox
+  System packages: sudo dnf install -y <package>
+  Python packages: pip3 install <package>
+  Node packages:   npm install -g <package>
 
-Logs:
-- Commands are logged to agent/turns/<id>.json
-- If output was truncated, read agent/turns/<id>.json
+Common installs:
+  sudo dnf install -y ImageMagick poppler-utils tesseract ffmpeg
+  pip3 install pandas matplotlib pillow requests
+</packages>
 </environment>`;

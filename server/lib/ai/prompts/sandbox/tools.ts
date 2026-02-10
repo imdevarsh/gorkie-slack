@@ -3,130 +3,47 @@ export const toolsPrompt = `\
 
 <tool>
 <name>bash</name>
-<description>
-Executes a given bash command in a persistent shell session, ensuring proper handling and security measures.
-</description>
-<rules>
-- All commands run in /home/vercel-sandbox by default. Use workdir to run in a different directory. Avoid "cd &&" chains.
-- This tool is for terminal operations like git, npm, docker, etc. Do not use it for file operations (reading, writing, editing, searching, finding files) - use the specialized tools instead.
-- Before executing a command, verify the parent directory exists if creating new files or folders.
-- Always quote file paths that contain spaces with double quotes.
-- If output is truncated, the full log is in agent/turns/<n>.json.
-- Avoid using bash with find/grep/cat/head/tail/sed/awk/echo unless explicitly required.
-</rules>
-<examples>
-- Simple: bash({ "command": "echo $((44 * 44))" })
-- Pipeline: bash({ "command": "cat data.csv | head -5 | column -t -s','" })
-- With workdir: bash({ "command": "convert ../attachments/*/photo.png -negate result.png && ls -lh result.png", "workdir": "output" })
-</examples>
+Run shell commands. Use workdir instead of "cd &&" chains.
+For file operations (read, write, search), prefer the dedicated tools below — they are faster and produce structured output.
+If output is truncated, the full log is in agent/turns/<message_ts>.json — use read to view it.
 </tool>
 
 <tool>
 <name>glob</name>
-<description>
-- Fast file pattern matching tool that works with any codebase size.
-- Supports glob patterns like "**/*.js" or "src/**/*.ts".
-- Returns matching file paths sorted by modification time.
-</description>
-<rules>
-- Use this tool when you need to find files by name patterns.
-- When you are doing an open-ended search that may require multiple rounds of globbing and grepping, narrow your pattern.
-</rules>
-<examples>
-- glob({ "pattern": "**/*.csv", "path": "attachments" })
-- glob({ "pattern": "*.{ts,tsx}", "path": "src" })
-</examples>
+Find files by pattern. Returns paths sorted by modification time (newest first).
+Use to discover what files exist before operating on them.
+Example: glob({ "pattern": "**/*.png", "path": "attachments" })
 </tool>
 
 <tool>
 <name>grep</name>
-<description>
-- Fast content search tool that works with any codebase size.
-- Searches file contents using regular expressions.
-- Supports full regex syntax (e.g., "log.*Error", "function\\s+\\w+").
-- Filter files by pattern with include.
-</description>
-<rules>
-- Use this tool when you need to find files containing specific patterns.
-- If you need to count matches, consider bash with rg directly.
-- When you are doing an open-ended search that may require multiple rounds of globbing and grepping, narrow your scope.
-</rules>
-<examples>
-- grep({ "pattern": "TODO|FIXME", "path": ".", "include": "**/*.ts" })
-- grep({ "pattern": "SLACK_", "path": "server", "include": "**/*.ts" })
-</examples>
+Search file contents by regex. Returns matching lines with file paths and line numbers.
+Example: grep({ "pattern": "TODO|FIXME", "path": ".", "include": "**/*.ts" })
 </tool>
 
 <tool>
 <name>read</name>
-<description>
-Reads a file from the local filesystem. You can access any file directly by using this tool.
-</description>
-<rules>
-- Assume this tool is able to read all files on the machine. If the user provides a path, assume it is valid.
-- By default, it reads up to 2000 lines starting from the beginning of the file.
-- You can optionally specify a line offset and limit.
-- Any lines longer than 2000 characters will be truncated.
-- Results are returned using cat -n format, with line numbers starting at 1.
-- If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.
-</rules>
-<examples>
-- read({ "path": "output/<id>/data.json" })
-- read({ "path": "output/<id>/log.txt", "offset": 100, "limit": 50 })
-</examples>
+Read a file with line numbers (cat -n format). Supports offset and limit for large files.
+Lines over 2000 characters are truncated. Max 2000 lines per call.
 </tool>
 
 <tool>
 <name>write</name>
-<description>
-Writes a file to the local filesystem.
-</description>
-<rules>
-- This tool will overwrite the existing file if there is one at the provided path.
-- If this is an existing file, you MUST use the Read tool first to read the file's contents.
-- ALWAYS prefer editing existing files. NEVER write new files unless explicitly required.
-- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the user.
-- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
-</rules>
-<examples>
-- write({ "path": "output/<id>/report.csv", "content": "a,b\\n1,2\\n" })
-- write({ "path": "output/<id>/notes.txt", "content": "Draft ideas..." })
-</examples>
+Write or overwrite a file. Always write outputs to output/<message_ts>/.
+If editing an existing file, prefer the edit tool instead.
 </tool>
 
 <tool>
 <name>edit</name>
-<description>
-Performs exact string replacements in files.
-</description>
-<rules>
-- You must use your Read tool at least once in the conversation before editing.
-- Preserve the exact indentation from Read output (line numbers are not part of the content).
-- The edit will fail if oldString is not found.
-- The edit will fail if oldString is found multiple times unless replaceAll is true.
-- Use replaceAll for replacing and renaming strings across the file.
-</rules>
-<examples>
-- edit({ "path": "output/<id>/config.json", "oldString": ""enabled": false", "newString": ""enabled": true" })
-- edit({ "path": "output/<id>/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
-</examples>
+Replace an exact string in a file. You must read the file first.
+Fails if the string is not found or is ambiguous (found multiple times without replaceAll).
 </tool>
 
 <tool>
 <name>showFile</name>
-<description>
-Upload a file from the sandbox to Slack so the user can see or download it.
-The file must exist in the sandbox filesystem. Generated files live in output/<id>/, user uploads in attachments/<id>/.
-</description>
-<rules>
-- Call showFile as soon as the file is ready — don't wait until the end
-- Use relative paths: output/<id>/result.png, attachments/1770648887.532179/photo.png
-- Only upload user-requested results, or the single most relevant result if there are multiple outputs.
-- Never write outputs into attachments/.
-</rules>
-<examples>
-- showFile({ "path": "output/<id>/result.png", "title": "Processed image" })
-- showFile({ "path": "output/<id>/report.csv", "filename": "analysis-report.csv" })
-</examples>
+Upload a file from the sandbox to Slack. Call this as soon as a result is ready.
+Only upload files the user asked for, or the single most relevant output.
+Path must point to an existing file — typically output/<message_ts>/filename.
 </tool>
+
 </tools>`;

@@ -1,44 +1,19 @@
 export const workflowPrompt = `\
 <workflow>
-  <step>
-    <name>Discover</name>
-    <rules>
-    - Use glob to discover files in a specific directory.
-    - Use glob to find files by pattern (e.g., "**/*.csv").
-    - Use grep to search contents when needed.
-    - Always scope discovery to attachments/ or a specific directory (avoid full-tree scans).
-    - Never claim a file doesn't exist without checking first.
-    </rules>
-  </step>
+Follow these steps for every task:
 
-  <step>
-    <name>Execute</name>
-    <rules>
-    - ALWAYS install required tools before first use (dnf/pip/npm). NEVER assume a tool is available.
-    - Create output/<id>/ and write outputs there.
-    - Never write outputs into attachments/ (read-only).
-    - The default workdir is /home/vercel-sandbox.
-    - Check exit codes and stderr. If a command fails, retry with a new approach.
-    - Ask before tasks likely to take >30 seconds or large downloads.
-    </rules>
-  </step>
+1. Discover — Find the relevant files before doing anything.
+   Use glob to locate uploads in attachments/ or outputs from earlier messages.
+   Never claim a file does not exist without checking first.
 
-  <step>
-    <name>Upload</name>
-    <rules>
-    - Save output to output/<id>/ directory.
-    - Call showFile only for files the user explicitly asked for or that are required to complete the task.
-    - Upload before returning your summary.
-    </rules>
-  </step>
+2. Install — Install any tools you need before first use.
+   The base image is minimal. If you need ImageMagick, pandas, ffmpeg, etc., install them.
 
-  <step>
-    <name>Summarize</name>
-    <rules>
-    - What was done.
-    - Key results.
-    - Files uploaded.
-    - Issues encountered (if any).
-    </rules>
-  </step>
+3. Execute — Run commands and write outputs to output/<message_ts>/.
+   Check exit codes and stderr after every command. If something fails, diagnose and retry.
+
+4. Upload — Call showFile for the finished result.
+   Do this immediately when the file is ready, not at the very end.
+
+5. Summarize — Return a short summary: what you did, results, files uploaded, issues if any.
 </workflow>`;
