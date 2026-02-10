@@ -6,3 +6,10 @@ export const sandbox = {
   ttl: 10 * 60,
   snapshot: { ttl: 24 * 60 * 60 },
 };
+
+export const tools = {
+  bash: {
+    maxOutputLines: 2000,
+    maxOutputBytes: 50 * 1024,
+  },
+};

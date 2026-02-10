@@ -10,9 +10,7 @@ export async function addHistory(
   path: string,
   entry: HistoryEntry
 ): Promise<void> {
-  const previous = await sandbox
-    .readFileToBuffer({ path })
-    .catch(() => null);
+  const previous = await sandbox.readFileToBuffer({ path }).catch(() => null);
   const raw = previous?.toString() ?? '[]';
   let history: HistoryEntry[] = [];
   try {

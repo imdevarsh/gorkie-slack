@@ -2,9 +2,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
+import { getSandbox } from '~/lib/sandbox';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getSandbox } from './bash/sandbox';
 
 export const edit = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -30,7 +30,7 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(ctxId);
+        const sandbox = await getSandbox(ctxId, context);
         const fileBuffer = await sandbox.readFileToBuffer({ path });
 
         if (!fileBuffer) {

@@ -1,16 +1,14 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { tools } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
+import { getSandbox } from '~/lib/sandbox';
+import { addHistory } from '~/lib/sandbox/history';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { getSandbox } from './sandbox';
-import { addHistory } from './utils/history';
-
-const MAX_LINES = 2000;
-const MAX_BYTES = 50 * 1024;
 
 function truncateOutput(
   output: string,
@@ -19,7 +17,10 @@ function truncateOutput(
   const lines = output.split('\n');
   const totalBytes = Buffer.byteLength(output, 'utf-8');
 
-  if (lines.length <= MAX_LINES && totalBytes <= MAX_BYTES) {
+  if (
+    lines.length <= tools.bash.maxOutputLines &&
+    totalBytes <= tools.bash.maxOutputBytes
+  ) {
     return { content: output, truncated: false };
   }
 
@@ -27,10 +28,10 @@ function truncateOutput(
   let bytes = 0;
   let hitBytes = false;
 
-  for (let i = 0; i < lines.length && i < MAX_LINES; i++) {
+  for (let i = 0; i < lines.length && i < tools.bash.maxOutputLines; i++) {
     const line = lines[i] ?? '';
     const size = Buffer.byteLength(line, 'utf-8') + (i > 0 ? 1 : 0);
-    if (bytes + size > MAX_BYTES) {
+    if (bytes + size > tools.bash.maxOutputBytes) {
       hitBytes = true;
       break;
     }
