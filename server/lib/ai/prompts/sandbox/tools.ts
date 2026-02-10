@@ -107,7 +107,7 @@ Performs exact string replacements in files.
 - Use replaceAll for replacing and renaming strings across the file.
 </rules>
 <examples>
-- edit({ "path": "output/<message_ts>/config.json", "oldString": "\"enabled\": false", "newString": "\"enabled\": true" })
+- edit({ "path": "output/<message_ts>/config.json", "oldString": ""enabled": false", "newString": ""enabled": true" })
 - edit({ "path": "output/<message_ts>/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
 </examples>
 </tool>

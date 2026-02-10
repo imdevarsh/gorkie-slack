@@ -15,7 +15,7 @@ export const sandbox = ({
 }) =>
   tool({
     description:
-      'Delegate a task to the sandbox agent for code execution, file processing, or data analysis in a persistent Linux VM.',
+      'Delegate a task to the sandbox agent for code execution, file processing, or data analysis.',
     inputSchema: z.object({
       task: z
         .string()

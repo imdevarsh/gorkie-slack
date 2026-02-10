@@ -3,7 +3,6 @@ import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 
-
 export async function deleteSnapshot(
   snapshotId: string,
   ctxId: string
@@ -32,7 +31,7 @@ export async function cleanupSnapshots(): Promise<void> {
   await Promise.all(
     expired.map(async (entry) => {
       const [snapshotId, ctxId] = entry.split(':');
-      if (!snapshotId || !ctxId) {
+      if (!(snapshotId && ctxId)) {
         await redis.zrem(redisKeys.snapshotIndex(), entry);
         return;
       }

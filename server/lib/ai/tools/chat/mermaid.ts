@@ -52,7 +52,7 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
     }),
     execute: async ({ code, title }) => {
       await setStatus(context, {
-        status: 'is generating diagram',
+        status: 'is generating a diagram',
         loading: true,
       });
       const channelId = (context.event as { channel?: string }).channel;

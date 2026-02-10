@@ -1,11 +1,12 @@
 import { tool } from 'ai';
+import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { getOrCreate, historySchema, type HistoryEntry } from './sandbox';
+import { getOrCreate, type HistoryEntry, historySchema } from './sandbox';
 
 const MAX_LINES = 2000;
 const MAX_BYTES = 50 * 1024;

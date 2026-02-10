@@ -8,11 +8,7 @@ import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 import { transportAttachments } from './attachments';
 import { installUtils, makeFolders } from './bootstrap';
-import {
-  cleanupSnapshots,
-  deleteSnapshot,
-  registerSnapshot,
-} from './snapshot';
+import { cleanupSnapshots, deleteSnapshot, registerSnapshot } from './snapshot';
 
 async function reconnect(ctxId: string): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));

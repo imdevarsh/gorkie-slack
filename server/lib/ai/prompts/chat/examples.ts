@@ -42,7 +42,7 @@ export const examplesPrompt = `\
 <title>Image processing with attachment</title>
 <user>[uploads photo.png] Invert this to black and white</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Find the uploaded \"photo.png\" in attachments/ and invert it to black and white using ImageMagick. Save result and upload to Slack with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Find the uploaded "photo.png" in attachments/ and invert it to black and white using ImageMagick. Save result and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done! I inverted your image to black and white."] }</input></tool>
 </workflow>
 </example>
