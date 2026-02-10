@@ -5,6 +5,6 @@
 - take a look at opencode, and it's tools https://github.com/anomalyco/opencode see what we wanna add to agent
 - Check With User DMs
 - Fix ratelimiting
-- The Sandbox System for tools is incredbily cursed the bash tool literally does everything
 - fix lint
 - it shows restoring snadbox even when its not for a split sec
+- enforce gorkie to SEND THE ENTIRE PROMPT to the sandbox agent not split it into smaller bits
