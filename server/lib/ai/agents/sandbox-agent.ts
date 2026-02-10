@@ -43,7 +43,6 @@ export function sandboxAgent({
       getUserInfo: getUserInfo({ context }),
     },
     stopWhen: stepCountIs(30),
-    temperature: 0.7,
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'sandbox',
