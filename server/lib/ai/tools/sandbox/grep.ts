@@ -49,6 +49,10 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
+        logger.debug(
+          { ctxId, pattern, path, include, limit, status },
+          'Sandbox grep starting'
+        );
         const sandbox = await getOrCreate(ctxId);
         const params = { pattern, path, include, limit };
         const payload = toBase64Json(params);
@@ -76,13 +80,27 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
           output?: string;
         };
 
-        return {
+        const response = {
           success: true,
           path: data.path ?? path,
           count: data.count ?? 0,
           truncated: data.truncated ?? false,
           output: data.output ?? '',
         };
+
+        logger.debug(
+          {
+            ctxId,
+            pattern,
+            path,
+            include,
+            count: response.count,
+            truncated: response.truncated,
+          },
+          'Sandbox grep complete'
+        );
+
+        return response;
       } catch (error) {
         logger.error({ error, pattern, path }, 'Failed to grep in sandbox');
         return {

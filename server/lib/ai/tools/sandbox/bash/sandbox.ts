@@ -7,8 +7,7 @@ import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 import { setStatus } from '~/lib/ai/utils/status';
 import { transportAttachments } from './attachments';
-import { installUtils, makeFolders } from '../bootstrap';
-
+import { installUtils, makeFolders } from './bootstrap';
 
 async function reconnect(ctxId: string): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));

@@ -39,6 +39,10 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
+        logger.debug(
+          { ctxId, path, offset, limit, status },
+          'Sandbox read starting'
+        );
         const sandbox = await getOrCreate(ctxId);
 
         const params = { path, offset, limit };
@@ -62,13 +66,25 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         const totalLines = Number.parseInt(lines[0] ?? '0', 10);
         const content = lines.slice(1).join('\n');
 
-        return {
+        const response = {
           success: true,
           content,
           totalLines,
           offset,
           linesReturned: Math.min(limit, Math.max(0, totalLines - offset)),
         };
+
+        logger.debug(
+          {
+            ctxId,
+            path,
+            totalLines: response.totalLines,
+            linesReturned: response.linesReturned,
+          },
+          'Sandbox read complete'
+        );
+
+        return response;
       } catch (error) {
         logger.error({ error, path }, 'Failed to read file from sandbox');
         return {

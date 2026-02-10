@@ -44,6 +44,10 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
+        logger.debug(
+          { ctxId, pattern, path, limit, status },
+          'Sandbox glob starting'
+        );
         const sandbox = await getOrCreate(ctxId);
         const params = { pattern, path, limit };
         const payload = toBase64Json(params);
@@ -71,13 +75,26 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
           output?: string;
         };
 
-        return {
+        const response = {
           success: true,
           path: data.path ?? path,
           count: data.count ?? 0,
           truncated: data.truncated ?? false,
           output: data.output ?? '',
         };
+
+        logger.debug(
+          {
+            ctxId,
+            pattern,
+            path,
+            count: response.count,
+            truncated: response.truncated,
+          },
+          'Sandbox glob complete'
+        );
+
+        return response;
       } catch (error) {
         logger.error({ error, pattern, path }, 'Failed to glob in sandbox');
         return {

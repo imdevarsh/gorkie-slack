@@ -61,7 +61,10 @@ export const bash = ({
           });
         }
 
-        logger.debug({ ctxId, command, status }, 'Sandbox command starting');
+        logger.debug(
+          { ctxId, command, workdir, status },
+          'Sandbox command starting'
+        );
 
         const result = await sandbox.runCommand({
           cmd: 'sh',
@@ -75,8 +78,13 @@ export const bash = ({
 
         if (exitCode !== 0) {
           logger.debug(
-            { ctxId, exitCode, command, status },
+            { ctxId, exitCode, command, workdir, status },
             'Sandbox command failed'
+          );
+        } else {
+          logger.debug(
+            { ctxId, exitCode, command, workdir, status },
+            'Sandbox command complete'
           );
         }
 

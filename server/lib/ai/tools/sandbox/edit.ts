@@ -41,6 +41,10 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
+        logger.debug(
+          { ctxId, path, replaceAll, status },
+          'Sandbox edit starting'
+        );
         const sandbox = await getOrCreate(ctxId);
         const params = {
           path,
@@ -67,11 +71,18 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
 
         const parsed = JSON.parse(stdout || '{}') as { replaced?: number };
 
-        return {
+        const response = {
           success: true,
           path,
           replaced: parsed.replaced ?? 0,
         };
+
+        logger.debug(
+          { ctxId, path, replaced: response.replaced },
+          'Sandbox edit complete'
+        );
+
+        return response;
       } catch (error) {
         logger.error({ error, path }, 'Failed to edit file in sandbox');
         return {
