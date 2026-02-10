@@ -73,7 +73,6 @@ export const bash = ({
       const ctxId = getContextId(context);
       const messageTs = (context.event as { ts?: string }).ts ?? 'unknown';
       const outputDir = `output/${messageTs}`;
-      const turnDir = `agent/turns/${messageTs}`;
       const turnPath = `agent/turns/${messageTs}.json`;
       const effectiveWorkdir = workdir ?? outputDir;
 
@@ -85,7 +84,7 @@ export const bash = ({
         );
         await sandbox.runCommand({
           cmd: 'mkdir',
-          args: ['-p', outputDir, turnDir],
+          args: ['-p', outputDir, 'agent/turns'],
         });
         if (status) {
           await setStatus(context, { status, loading: true });
