@@ -98,18 +98,6 @@ export const bash = ({
           });
         }
 
-        logger.debug(
-          {
-            ctxId,
-            command,
-            workdir: effectiveWorkdir,
-            status,
-            outputDir: outputDirPath,
-            turnPath,
-          },
-          'Sandbox command start'
-        );
-
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
@@ -124,11 +112,9 @@ export const bash = ({
           {
             ctxId,
             exitCode,
-            command,
-            workdir: effectiveWorkdir,
-            status,
+            ok: exitCode === 0,
           },
-          'Sandbox command complete'
+          'Sandbox command result'
         );
 
         await addHistory(sandbox, turnPath, {

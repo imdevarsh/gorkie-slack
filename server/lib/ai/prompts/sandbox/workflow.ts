@@ -14,7 +14,7 @@ export const workflowPrompt = `\
   <step>
     <name>Execute</name>
     <rules>
-    - Install tools when needed; do not assume ImageMagick/ffmpeg exist.
+    - ALWAYS install tools before executing commands... NEVER assume a tool is available.
     - Create output/<id>/ and write outputs there.
     - Never write outputs into attachments/ (read-only).
     - The default workdir is /home/vercel-sandbox.
