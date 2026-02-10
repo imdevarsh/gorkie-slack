@@ -130,6 +130,23 @@ async function forceStop(sandboxId: string): Promise<void> {
   }
 }
 
+async function pruneSandboxFiles(
+  instance: Sandbox,
+  ctxId: string
+): Promise<void> {
+  await instance
+    .runCommand({
+      cmd: 'sh',
+      args: [
+        '-c',
+        "find . -mindepth 1 -maxdepth 1 ! -name 'output' ! -name 'attachments' -exec rm -rf {} +",
+      ],
+    })
+    .catch((error: unknown) => {
+      logger.warn({ error, ctxId }, 'Sandbox prune failed');
+    });
+}
+
 async function deleteSnapshot(snapshotId: string, ctxId: string): Promise<void> {
   try {
     const snapshot = await Snapshot.get({
@@ -155,6 +172,8 @@ export async function snapshotAndStop(ctxId: string): Promise<void> {
   if (!instance || instance.status !== 'running') {
     return;
   }
+
+  await pruneSandboxFiles(instance, ctxId);
 
   const snap = await instance.snapshot().catch((error: unknown) => {
     logger.warn({ sandboxId, error, ctxId }, 'Snapshot failed');

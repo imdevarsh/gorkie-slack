@@ -8,6 +8,7 @@ async function run(): Promise<void> {
 
   let totalDeleted = 0;
   let iteration = 0;
+  let cursor: number | null | undefined;
 
   while (true) {
     iteration++;
@@ -15,7 +16,8 @@ async function run(): Promise<void> {
       limit: 100,
       projectId,
       teamId,
-      token
+      token,
+      ...(cursor ? { until: cursor } : {}),
     });
 
     const snapshots = response.json.snapshots;
@@ -23,7 +25,12 @@ async function run(): Promise<void> {
       break;
     }
 
+    console.log(response.json)
+
     for (const snap of snapshots) {
+      if (snap.status === 'deleted') {
+        continue;
+      }
       try {
         const snapshot = await Snapshot.get({
           snapshotId: snap.id,
@@ -36,12 +43,31 @@ async function run(): Promise<void> {
 
         console.log(`Deleted snapshot ${snap.id}`);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.log(`Failed to delete snapshot ${snap.id}: ${message}`);
+        const err = error as {
+          message?: string;
+          text?: string;
+          json?: { error?: { message?: string; code?: string } };
+          response?: { status?: number };
+        };
+        const message = err.message ?? String(error);
+        const status = err.response?.status;
+        const apiMessage = err.json?.error?.message ?? err.text;
+        console.log(
+          `Failed to delete snapshot ${snap.id}: ${message}${
+            status ? ` (status ${status})` : ''
+          }${apiMessage ? ` | ${apiMessage}` : ''}`
+        );
       }
     }
 
-    console.log(`Iteration ${iteration} complete. Deleted so far: ${totalDeleted}`);
+    console.log(
+      `Iteration ${iteration} complete. Deleted so far: ${totalDeleted}`
+    );
+
+    cursor = response.json.pagination.next;
+    if (!cursor) {
+      break;
+    }
   }
 
   console.log(`Done. Deleted ${totalDeleted} snapshots.`);

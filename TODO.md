@@ -12,3 +12,4 @@
 - Add a output truncation or something into the tool input so it doesnt get a huge blob of responses (refer http://github.com/techwithanirudh/discord-ai-bot)
 - take a look at opencode, and it's tools https://github.com/anomalyco/opencode see what we wanna add to agent
 - also make AI pass reason / text on what it's doing so we can show in sandbox
+- like claude code store the turns in assistant/turns or whatever so it can see what output etc in json files
