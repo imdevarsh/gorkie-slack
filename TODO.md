@@ -8,3 +8,4 @@
 - fix lint
 - it shows restoring snadbox even when its not for a split sec
 - enforce gorkie to SEND THE ENTIRE PROMPT to the sandbox agent not split it into smaller bits
+- add is thinking tool on prepareStep / tool finish lol bcs when tis writing hug files its stuck at the previous tool
