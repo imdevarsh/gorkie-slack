@@ -30,10 +30,6 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        logger.debug(
-          { ctxId, path, contentBytes: Buffer.byteLength(content), status },
-          'Sandbox write starting'
-        );
         const sandbox = await getOrCreate(ctxId);
         const params = { path, content: toBase64(content) };
         const payload = toBase64Json(params);
@@ -61,7 +57,7 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
 
         logger.debug(
           { ctxId, path, output: response.output },
-          'Sandbox write complete'
+          'Write complete'
         );
 
         return response;

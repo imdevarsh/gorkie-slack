@@ -34,10 +34,6 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
       }
 
       try {
-        logger.debug(
-          { ctxId, path, filename, title },
-          'Sandbox showFile starting'
-        );
         const sandbox = await getOrCreate(ctxId, context);
         await setStatus(context, {
           status: 'is uploading file',
@@ -63,11 +59,6 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         logger.info(
           { channel: channelId, path, size: fileBuffer.length },
           'Uploaded sandbox file to Slack'
-        );
-
-        logger.debug(
-          { ctxId, path, size: fileBuffer.length },
-          'Sandbox showFile complete'
         );
 
         return {

@@ -39,10 +39,6 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        logger.debug(
-          { ctxId, path, offset, limit, status },
-          'Sandbox read starting'
-        );
         const sandbox = await getOrCreate(ctxId);
 
         const params = { path, offset, limit };
@@ -81,7 +77,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
             totalLines: response.totalLines,
             linesReturned: response.linesReturned,
           },
-          'Sandbox read complete'
+          'Read complete'
         );
 
         return response;

@@ -41,10 +41,6 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        logger.debug(
-          { ctxId, path, replaceAll, status },
-          'Sandbox edit starting'
-        );
         const sandbox = await getOrCreate(ctxId);
         const params = {
           path,

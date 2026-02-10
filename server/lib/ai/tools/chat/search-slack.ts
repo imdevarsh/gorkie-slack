@@ -48,7 +48,10 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
         };
       }
 
-      logger.debug({ messages: res.results.messages }, 'Search results');
+      logger.debug(
+        { query, count: res.results.messages.length },
+        'Search Slack complete'
+      );
 
       return {
         messages: res.results.messages,

@@ -49,10 +49,6 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        logger.debug(
-          { ctxId, pattern, path, include, limit, status },
-          'Sandbox grep starting'
-        );
         const sandbox = await getOrCreate(ctxId);
         const params = { pattern, path, include, limit };
         const payload = toBase64Json(params);
@@ -97,7 +93,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
             count: response.count,
             truncated: response.truncated,
           },
-          'Sandbox grep complete'
+          'Grep complete'
         );
 
         return response;

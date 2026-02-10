@@ -44,10 +44,6 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        logger.debug(
-          { ctxId, pattern, path, limit, status },
-          'Sandbox glob starting'
-        );
         const sandbox = await getOrCreate(ctxId);
         const params = { pattern, path, limit };
         const payload = toBase64Json(params);
