@@ -1,3 +1,4 @@
+import { openai } from '@ai-sdk/openai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { customProvider, wrapLanguageModel } from 'ai';
 import { createRetryable } from 'ai-retry';
@@ -25,8 +26,9 @@ const hackclub = (modelId: string) =>
   });
 
 const chatModel = createRetryable({
-  model: hackclub('google/gemini-2.5-flash'),
+  model: openai('gpt-5-mini'),
   retries: [
+    hackclub('google/gemini-2.5-flash'),
     hackclub('openai/gpt-5-mini'),
     openrouter('google/gemini-3-flash-preview'),
     openrouter('google/gemini-2.5-flash'),
@@ -41,8 +43,9 @@ const chatModel = createRetryable({
 });
 
 const summariserModel = createRetryable({
-  model: hackclub('google/gemini-3-flash-preview'),
+  model: openai('gpt-5-nano'),
   retries: [
+    hackclub('google/gemini-3-flash-preview'),
     hackclub('google/gemini-2.5-flash'),
     hackclub('openai/gpt-5-mini'),
     openrouter('google/gemini-2.5-flash-lite-preview-09-2025'),
@@ -57,12 +60,10 @@ const summariserModel = createRetryable({
 });
 
 const agentModel = createRetryable({
-  model: hackclub('google/gemini-2.5-flash'),
+  model: openai('gpt-5.2-codex'),
   retries: [
-    hackclub('openai/gpt-5-mini'),
-    openrouter('google/gemini-3-flash-preview'),
-    openrouter('google/gemini-2.5-flash'),
-    openrouter('openai/gpt-5-mini'),
+    hackclub('openai/gpt-5.2-codex'),
+    openrouter('openai/gpt-5.2-codex')
   ],
   onError: (context) => {
     const { model } = context.current;
@@ -75,7 +76,7 @@ const agentModel = createRetryable({
 export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
+    'summariser-model': summariserModel,    
     'agent-model': agentModel,
-    'summariser-model': summariserModel,
   },
 });

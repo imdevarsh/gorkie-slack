@@ -1,4 +1,4 @@
-import { ATTACHMENTS_DIR } from '~/lib/ai/tools/execute-code/attachments';
+import { ATTACHMENTS_DIR } from '~/lib/ai/tools/sandbox/execute-code/attachments';
 import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 

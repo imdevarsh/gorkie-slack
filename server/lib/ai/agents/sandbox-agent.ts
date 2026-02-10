@@ -1,11 +1,14 @@
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
-import { executeCode } from '~/lib/ai/tools/execute-code';
-import { readFile } from '~/lib/ai/tools/read-file';
-import { showFile } from '~/lib/ai/tools/show-file';
+import { executeCode } from '~/lib/ai/tools/sandbox/execute-code';
+import { readFile } from '~/lib/ai/tools/sandbox/read-file';
+import { showFile } from '~/lib/ai/tools/sandbox/show-file';
+import { searchWeb } from '~/lib/ai/tools/shared/search-web';
 import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
+import { getUserInfo } from '../tools/shared/get-user-info';
+import { getWeather } from '../tools/shared/get-weather';
 
 export const sandboxAgent = ({
   context,
@@ -21,6 +24,9 @@ export const sandboxAgent = ({
       executeCode: executeCode({ context, files }),
       showFile: showFile({ context }),
       readFile: readFile({ context }),
+      searchWeb,
+      getUserInfo: getUserInfo({ context }),
+      getWeather,
     },
     stopWhen: stepCountIs(15),
     temperature: 0.7,

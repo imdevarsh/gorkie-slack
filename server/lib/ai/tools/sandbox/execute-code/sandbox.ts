@@ -7,23 +7,6 @@ import type { SlackFile } from '~/utils/images';
 import { setToolStatus } from '../../utils';
 import { transportAttachments } from './attachments';
 
-async function installPackages(instance: Sandbox): Promise<void> {
-  const packages = config.packages;
-  if (!packages.length) {
-    return;
-  }
-
-  await instance
-    .runCommand({
-      cmd: 'dnf',
-      args: ['install', '-y', ...packages],
-      sudo: true,
-    })
-    .catch((error: unknown) => {
-      logger.warn({ error, packages }, 'Sandbox preinstall failed');
-    });
-}
-
 async function setupDirs(instance: Sandbox): Promise<void> {
   await instance
     .runCommand({
@@ -117,10 +100,6 @@ export async function getOrCreate(
       timeout: config.timeoutMs,
     });
 
-    if (context) {
-      await setToolStatus(context, 'is installing packages');
-    }
-    await installPackages(instance);
     await setupDirs(instance);
 
     logger.info({ sandboxId: instance.sandboxId, ctxId }, 'Created sandbox');

@@ -5,18 +5,4 @@ export const sandbox = {
   timeoutMs: 10 * 60 * 1000,
   sandboxTtlSeconds: 10 * 60,
   snapshotTtlSeconds: 7 * 24 * 60 * 60,
-  packages: [
-    'imagemagick',
-    'ffmpeg',
-    'ghostscript',
-    'poppler-utils',
-    'tesseract',
-    'jq',
-    'zip',
-    'unzip',
-    'tar',
-    'gzip',
-    'bzip2',
-    'xz',
-  ],
 };

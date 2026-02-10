@@ -33,8 +33,12 @@ export const executeCode = ({
       'Run a shell command in a sandboxed Linux VM. Persists per thread, installed tools and files carry over between calls. Supports bash, node, python, curl, npm, dnf.',
     inputSchema: z.object({
       command: z.string().describe('Shell command (runs via sh -c)'),
+      status: z
+        .string()
+        .describe('Status text formatted like "is xyz"')
+        .optional(),
     }),
-    execute: async ({ command }) => {
+    execute: async ({ command, status }) => {
       const ctxId = getContextId(context);
       turn++;
 
@@ -44,9 +48,13 @@ export const executeCode = ({
           context,
           files?.length ? { files, messageTs: context.event.ts } : undefined
         );
-        await setToolStatus(context, 'is running code in sandbox');
+        if (status) {
+          await setToolStatus(context, status);
+        } else {
+          await setToolStatus(context, 'is running commands in sandbox');
+        }
 
-        logger.debug({ ctxId, command }, 'Sandbox command starting');
+        logger.debug({ ctxId, command, status }, 'Sandbox command starting');
 
         const result = await sandbox.runCommand({
           cmd: 'sh',
@@ -57,10 +65,12 @@ export const executeCode = ({
         const stderr = await result.stderr();
         const exitCode = result.exitCode;
 
-        logger.debug(
-          { ctxId, exitCode, stdout, stderr },
-          'Sandbox command finished'
-        );
+        if (exitCode !== 0) {
+          logger.debug(
+            { ctxId, exitCode, command, status },
+            'Sandbox command failed'
+          );
+        }
 
         const turnPath = `agent/turns/${turn}.json`;
         await sandbox
@@ -68,7 +78,11 @@ export const executeCode = ({
             {
               path: turnPath,
               content: Buffer.from(
-                JSON.stringify({ command, stdout, stderr, exitCode }, null, 2)
+                JSON.stringify(
+                  { command, status, stdout, stderr, exitCode },
+                  null,
+                  2
+                )
               ),
             },
           ])
