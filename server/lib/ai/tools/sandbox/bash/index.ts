@@ -6,7 +6,8 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { getSandbox, type HistoryEntry, historySchema } from './sandbox';
+import { getSandbox } from './sandbox';
+import { addHistory } from './utils/history';
 
 const MAX_LINES = 2000;
 const MAX_BYTES = 50 * 1024;
@@ -148,27 +149,3 @@ export const bash = ({
       }
     },
   });
-
-async function addHistory(
-  sandbox: Awaited<ReturnType<typeof getSandbox>>,
-  turnPath: string,
-  entry: HistoryEntry
-): Promise<void> {
-  const previous = await sandbox
-    .readFileToBuffer({ path: turnPath })
-    .catch(() => null);
-  const raw = previous?.toString() ?? '[]';
-  const parsed = historySchema.safeParse(JSON.parse(raw) as unknown);
-  const history = parsed.success ? parsed.data : [];
-  history.push(entry);
-  await sandbox
-    .writeFiles([
-      {
-        path: turnPath,
-        content: Buffer.from(JSON.stringify(history, null, 2)),
-      },
-    ])
-    .catch((error: unknown) => {
-      logger.warn({ error, turnPath }, 'Failed to write turn log');
-    });
-}

@@ -1,14 +1,18 @@
 import { Sandbox } from '@vercel/sandbox';
-import { z } from 'zod';
 import { sandbox as config } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
+import { snapshotRecordSchema } from '~/lib/validators/sandbox/snapshot';
 import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 import { transportAttachments } from './attachments';
 import { installUtils, makeFolders } from './bootstrap';
-import { cleanupSnapshots, deleteSnapshot, registerSnapshot } from './snapshot';
+import {
+  cleanupSnapshots,
+  deleteSnapshot,
+  registerSnapshot,
+} from './utils/snapshot';
 
 async function reconnect(ctxId: string): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
@@ -34,13 +38,11 @@ async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
   let snapshotId: string | null = null;
   let createdAt = Number.NaN;
   try {
-    const parsed = JSON.parse(snapshotRaw) as {
-      snapshotId?: string;
-      createdAt?: number;
-    };
-    snapshotId = parsed.snapshotId ?? null;
-    createdAt =
-      typeof parsed.createdAt === 'number' ? parsed.createdAt : Number.NaN;
+    const parsed = snapshotRecordSchema.parse(
+      JSON.parse(snapshotRaw) as unknown
+    );
+    snapshotId = parsed.snapshotId;
+    createdAt = parsed.createdAt;
   } catch {
     snapshotId = null;
   }
@@ -81,19 +83,6 @@ export interface SandboxAttachments {
   files: SlackFile[];
   messageTs: string;
 }
-
-export const historyEntrySchema = z.object({
-  command: z.string(),
-  workdir: z.string(),
-  status: z.string().optional(),
-  stdout: z.string(),
-  stderr: z.string(),
-  exitCode: z.number(),
-});
-
-export const historySchema = z.array(historyEntrySchema);
-
-export type HistoryEntry = z.infer<typeof historyEntrySchema>;
 
 export async function getSandbox(
   ctxId: string,
