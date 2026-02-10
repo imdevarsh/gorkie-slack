@@ -15,16 +15,15 @@ output/                  # Generated files go here
     report.csv
 agent/                   # Execution metadata (auto-managed)
   turns/
-    <message_ts>/
-      1.json             # { command, stdout, stderr, exitCode }
-      2.json
+    <message_ts>.json    # [{ command, stdout, stderr, exitCode }, ...]
 \`\`\`
 
 Persistence rules:
 - The sandbox persists via snapshots between messages in the same thread
+- Sandbox files expire after 24 hours
 - Installed packages persist, install once per thread with sudo dnf install -y
 - Files in output/ and attachments/ persist across messages
-- agent/turns/ logs are auto-created per command execution
+- agent/turns/<message_ts>.json logs are appended per command execution
 
 Output directory:
 - ALWAYS create output/<message_ts>/ and run work there
@@ -33,8 +32,8 @@ Output directory:
 - Example: save chart to output/<message_ts>/chart.png, then showFile({ path: "output/<message_ts>/chart.png" })
 
 Execution logs:
-- Every command is logged to agent/turns/<message_ts>/<n>.json with full stdout/stderr
-- Turn numbers increment per message, ordered by <n>.json
+- Every command is logged to agent/turns/<message_ts>.json with full stdout/stderr
+- Entries are appended in order of execution
 - If output was truncated, the fullOutput field in the result has the log path
-- To recover truncated output: read agent/turns/<n>.json
+- To recover truncated output: read agent/turns/<message_ts>.json
 </environment>`;

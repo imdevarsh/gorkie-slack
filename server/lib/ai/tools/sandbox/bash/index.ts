@@ -40,7 +40,7 @@ function truncateOutput(
   const unit = hitBytes ? 'bytes' : 'lines';
   const hint =
     `The tool call succeeded but the output was truncated. Full output saved to: ${turnPath}\n` +
-    'Use Grep to search the full content or Read with offset/limit to view specific sections.';
+    'Use Read on that file with offset/limit, or Grep to search the full content.';
 
   const message = `${preview.join('\n')}\n\n...${removed} ${unit} truncated...\n\n${hint}`;
 

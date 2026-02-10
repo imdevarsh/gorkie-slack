@@ -18,7 +18,7 @@
 
 - [ ] Changes are limited to a single feature, bugfix or chore (split larger changes into separate PRs)
 - [ ] `bun check` without any issues
-- [ ] I have reviewed [contributor guidelines](https://github.com/techwithanirudh/discord-ai-bot/blob/main/CONTRIBUTING.md)
+- [ ] I have reviewed [contributor guidelines](https://github.com/imdevarsh/gorkie-slack/blob/main/CONTRIBUTING.md)
 
 ### Additional Notes
 

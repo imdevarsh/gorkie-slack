@@ -42,7 +42,7 @@ export const examplesPrompt = `\
 <title>Image processing with attachment</title>
 <user>[uploads photo.png] Invert this to black and white</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Find the uploaded photo in attachments/ and invert it to black and white using ImageMagick. Save result to output/ and upload to Slack with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Find the uploaded \"photo.png\" in attachments/ and invert it to black and white using ImageMagick. Save result and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done! I inverted your image to black and white."] }</input></tool>
 </workflow>
 </example>
@@ -51,7 +51,7 @@ export const examplesPrompt = `\
 <title>Python data analysis</title>
 <user>[uploads data.csv] Analyze this CSV for me</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Find the uploaded CSV in attachments/ and analyze it with pandas. Install python3 and pandas if needed. Print summary statistics." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Find the uploaded "data.csv" in attachments/ and analyze it with pandas. Install python3 and pandas if needed. Print summary statistics." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the analysis of your CSV: ..."] }</input></tool>
 </workflow>
 </example>
@@ -63,7 +63,6 @@ export const examplesPrompt = `\
 <tool><name>sandbox</name><input>{ "task": "List files in attachments/ to find previously uploaded files, then analyze the data." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Found your file from earlier! Here's what I see: ..."] }</input></tool>
 </workflow>
-Never claim a file is missing without checking. Files from all thread messages persist via snapshots.
 </example>
 
 <example>
@@ -79,7 +78,7 @@ Never claim a file is missing without checking. Files from all thread messages p
 <title>Data export from sandbox</title>
 <user>Generate a report of that data as CSV</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Generate a CSV report from the data. Save to output/report.csv and upload to Slack with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Generate a CSV report from the data. Save result and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the CSV report."] }</input></tool>
 </workflow>
 </example>

@@ -69,11 +69,10 @@ Reads a file from the local filesystem. You can access any file directly by usin
 - Any lines longer than 2000 characters will be truncated.
 - Results are returned using cat -n format, with line numbers starting at 1.
 - If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.
-- You can read image files using this tool.
 </rules>
 <examples>
-- read({ "path": "output/data.json" })
-- read({ "path": "output/log.txt", "offset": 100, "limit": 50 })
+- read({ "path": "output/<message_ts>/data.json" })
+- read({ "path": "output/<message_ts>/log.txt", "offset": 100, "limit": 50 })
 </examples>
 </tool>
 
@@ -90,8 +89,8 @@ Writes a file to the local filesystem.
 - Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
 </rules>
 <examples>
-- write({ "path": "output/report.csv", "content": "a,b\\n1,2\\n" })
-- write({ "path": "notes.txt", "content": "Draft ideas..." })
+- write({ "path": "output/<message_ts>/report.csv", "content": "a,b\\n1,2\\n" })
+- write({ "path": "output/<message_ts>/notes.txt", "content": "Draft ideas..." })
 </examples>
 </tool>
 
@@ -108,8 +107,8 @@ Performs exact string replacements in files.
 - Use replaceAll for replacing and renaming strings across the file.
 </rules>
 <examples>
-- edit({ "path": "output/config.json", "oldString": "\"enabled\": false", "newString": "\"enabled\": true" })
-- edit({ "path": "output/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
+- edit({ "path": "output/<message_ts>/config.json", "oldString": "\"enabled\": false", "newString": "\"enabled\": true" })
+- edit({ "path": "output/<message_ts>/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
 </examples>
 </tool>
 
@@ -117,16 +116,16 @@ Performs exact string replacements in files.
 <name>showFile</name>
 <description>
 Upload a file from the sandbox to Slack so the user can see or download it.
-The file must exist in the sandbox filesystem. Generated files live in output/, user uploads in attachments/<message_ts>/.
+The file must exist in the sandbox filesystem. Generated files live in output/<message_ts>/, user uploads in attachments/<message_ts>/.
 </description>
 <rules>
 - Call showFile as soon as the file is ready — don't wait until the end
-- Use relative paths: output/result.png, attachments/1770648887.532179/photo.png
+- Use relative paths: output/<message_ts>/result.png, attachments/1770648887.532179/photo.png
 - Only upload user-requested results, or the single most relevant result if there are multiple outputs.
 </rules>
 <examples>
-- showFile({ "path": "output/result.png", "title": "Processed image" })
-- showFile({ "path": "output/report.csv", "filename": "analysis-report.csv" })
+- showFile({ "path": "output/<message_ts>/result.png", "title": "Processed image" })
+- showFile({ "path": "output/<message_ts>/report.csv", "filename": "analysis-report.csv" })
 </examples>
 </tool>
 </tools>`;
