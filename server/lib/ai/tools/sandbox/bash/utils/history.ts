@@ -7,11 +7,11 @@ import {
 
 export async function addHistory(
   sandbox: Sandbox,
-  turnPath: string,
+  path: string,
   entry: HistoryEntry
 ): Promise<void> {
   const previous = await sandbox
-    .readFileToBuffer({ path: turnPath })
+    .readFileToBuffer({ path })
     .catch(() => null);
   const raw = previous?.toString() ?? '[]';
   let history: HistoryEntry[] = [];
@@ -24,11 +24,11 @@ export async function addHistory(
   await sandbox
     .writeFiles([
       {
-        path: turnPath,
+        path,
         content: Buffer.from(JSON.stringify(history, null, 2)),
       },
     ])
     .catch((error: unknown) => {
-      logger.warn({ error, turnPath }, 'Failed to write turn log');
+      logger.warn({ error, path }, 'Failed to write turn log');
     });
 }

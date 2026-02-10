@@ -72,7 +72,7 @@ export const bash = ({
     }),
     execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
-      const messageTs = (context.event as { ts?: string }).ts ?? 'unknown';
+      const messageTs = context.event.ts;
       const outputDir = `output/${messageTs}`;
       const turnPath = `agent/turns/${messageTs}.json`;
       const effectiveWorkdir = workdir ?? outputDir;
