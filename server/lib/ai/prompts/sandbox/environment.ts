@@ -1,40 +1,32 @@
 export const environmentPrompt = `\
 <environment>
+Sandbox runtime, persistence, and paths.
+
 Runtime: Amazon Linux 2023, Node.js 22 (Vercel Sandbox)
-The sandbox persists for the thread via snapshots. Files expire after 24 hours.
+Message ID: <id> (Slack message timestamp)
 
-Filesystem layout:
-\`\`\`
-attachments/             # User uploads (auto-managed, read-only)
-  <message_ts>/          # Grouped by message timestamp
-    photo.png
-    data.csv
-output/                  # Generated files go here
-  <message_ts>/          # Create a subfolder per message
-    result.png
-    report.csv
-agent/                   # Execution metadata (auto-managed)
-  turns/
-    <message_ts>.json    # [{ command, stdout, stderr, exitCode }, ...]
-\`\`\`
-
-The latest file/folder in persistance, and execution logs is the latest message in the thread.
-
-Persistence rules:
+Persistence:
 - Snapshots persist across messages in the same thread
 - Sandboxes expire after 24 hours
 - Installed packages persist per thread
 
-Output directory:
-- Create output/<current_message_ts>/ and write outputs there
-- Use showFile with output/<message_ts>/ paths
+Paths:
+- attachments/<id>/ (read-only uploads)
+- output/<id>/ (write outputs here)
+- agent/turns/<id>.json (stdout/stderr log)
+- Latest output/logs correspond to the most recent message in the thread
 
-Default workdir:
+Output rules:
+- Write outputs to output/<current_id>/
+- Never write outputs into attachments/
+- Use showFile with output/<id>/ paths
+
+Workdir:
 - Default is /home/vercel-sandbox
 - workdir="." maps to /home/vercel-sandbox
 - Relative paths resolve under /home/vercel-sandbox
 
-Execution logs:
-- Commands are logged to agent/turns/<message_ts>.json (stdout/stderr)
-- If output was truncated, read agent/turns/<message_ts>.json
+Logs:
+- Commands are logged to agent/turns/<id>.json
+- If output was truncated, read agent/turns/<id>.json
 </environment>`;

@@ -7,6 +7,6 @@ export function contextPrompt(context?: SlackMessageContext): string {
   }
   return `\
 <context>
-The current message_ts is: ${messageTs}
+The current Message ID / Message TS is: ${messageTs}
 </context>`;
 }

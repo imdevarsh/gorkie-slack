@@ -71,8 +71,8 @@ Reads a file from the local filesystem. You can access any file directly by usin
 - If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.
 </rules>
 <examples>
-- read({ "path": "output/<message_ts>/data.json" })
-- read({ "path": "output/<message_ts>/log.txt", "offset": 100, "limit": 50 })
+- read({ "path": "output/<id>/data.json" })
+- read({ "path": "output/<id>/log.txt", "offset": 100, "limit": 50 })
 </examples>
 </tool>
 
@@ -89,8 +89,8 @@ Writes a file to the local filesystem.
 - Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
 </rules>
 <examples>
-- write({ "path": "output/<message_ts>/report.csv", "content": "a,b\\n1,2\\n" })
-- write({ "path": "output/<message_ts>/notes.txt", "content": "Draft ideas..." })
+- write({ "path": "output/<id>/report.csv", "content": "a,b\\n1,2\\n" })
+- write({ "path": "output/<id>/notes.txt", "content": "Draft ideas..." })
 </examples>
 </tool>
 
@@ -107,8 +107,8 @@ Performs exact string replacements in files.
 - Use replaceAll for replacing and renaming strings across the file.
 </rules>
 <examples>
-- edit({ "path": "output/<message_ts>/config.json", "oldString": ""enabled": false", "newString": ""enabled": true" })
-- edit({ "path": "output/<message_ts>/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
+- edit({ "path": "output/<id>/config.json", "oldString": ""enabled": false", "newString": ""enabled": true" })
+- edit({ "path": "output/<id>/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
 </examples>
 </tool>
 
@@ -116,16 +116,17 @@ Performs exact string replacements in files.
 <name>showFile</name>
 <description>
 Upload a file from the sandbox to Slack so the user can see or download it.
-The file must exist in the sandbox filesystem. Generated files live in output/<message_ts>/, user uploads in attachments/<message_ts>/.
+The file must exist in the sandbox filesystem. Generated files live in output/<id>/, user uploads in attachments/<id>/.
 </description>
 <rules>
 - Call showFile as soon as the file is ready — don't wait until the end
-- Use relative paths: output/<message_ts>/result.png, attachments/1770648887.532179/photo.png
+- Use relative paths: output/<id>/result.png, attachments/1770648887.532179/photo.png
 - Only upload user-requested results, or the single most relevant result if there are multiple outputs.
+- Never write outputs into attachments/.
 </rules>
 <examples>
-- showFile({ "path": "output/<message_ts>/result.png", "title": "Processed image" })
-- showFile({ "path": "output/<message_ts>/report.csv", "filename": "analysis-report.csv" })
+- showFile({ "path": "output/<id>/result.png", "title": "Processed image" })
+- showFile({ "path": "output/<id>/report.csv", "filename": "analysis-report.csv" })
 </examples>
 </tool>
 </tools>`;

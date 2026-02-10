@@ -15,7 +15,8 @@ export const workflowPrompt = `\
     <name>Execute</name>
     <rules>
     - Install tools when needed; do not assume ImageMagick/ffmpeg exist.
-    - Create output/<message_ts>/ and write outputs there.
+    - Create output/<id>/ and write outputs there.
+    - Never write outputs into attachments/ (read-only).
     - The default workdir is /home/vercel-sandbox.
     - Check exit codes and stderr. If a command fails, retry with a new approach.
     - Ask before tasks likely to take >30 seconds or large downloads.
@@ -25,7 +26,7 @@ export const workflowPrompt = `\
   <step>
     <name>Upload</name>
     <rules>
-    - Save output to output/<message_ts>/ directory.
+    - Save output to output/<id>/ directory.
     - Call showFile only for files the user explicitly asked for or that are required to complete the task.
     - Upload before returning your summary.
     </rules>
