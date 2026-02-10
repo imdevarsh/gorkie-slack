@@ -17,7 +17,7 @@ import { successToolCall } from '~/lib/ai/utils';
 import type { RequestHints, SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 
-export function createChatAgent({
+export const orchestratorAgent = ({
   context,
   hints,
   files,
@@ -25,8 +25,8 @@ export function createChatAgent({
   context: SlackMessageContext;
   hints: RequestHints;
   files?: SlackFile[];
-}) {
-  return new ToolLoopAgent({
+}) =>
+  new ToolLoopAgent({
     model: provider.languageModel('chat-model'),
     instructions: systemPrompt({
       agent: 'chat',
@@ -62,7 +62,6 @@ export function createChatAgent({
     ],
     experimental_telemetry: {
       isEnabled: true,
-      functionId: 'chat',
+      functionId: 'orchestrator',
     },
   });
-}

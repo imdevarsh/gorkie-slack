@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createSandboxAgent } from '~/lib/ai/agents/sandbox';
+import { sandboxAgent } from '~/lib/ai/agents';
 import { setToolStatus } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
@@ -27,7 +27,7 @@ export const sandbox = ({
       await setToolStatus(context, 'is working in sandbox');
 
       try {
-        const agent = createSandboxAgent({ context, files });
+        const agent = sandboxAgent({ context, files });
         const result = await agent.generate({ prompt: task });
 
         logger.info({ steps: result.steps.length }, 'Sandbox agent completed');

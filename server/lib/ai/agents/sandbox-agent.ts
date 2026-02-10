@@ -7,15 +7,15 @@ import { showFile } from '~/lib/ai/tools/show-file';
 import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 
-export function createSandboxAgent({
+export const sandboxAgent = ({
   context,
   files,
 }: {
   context: SlackMessageContext;
   files?: SlackFile[];
-}) {
-  return new ToolLoopAgent({
-    model: provider.languageModel('sandbox-model'),
+}) =>
+  new ToolLoopAgent({
+    model: provider.languageModel('agent-model'),
     instructions: systemPrompt({ agent: 'sandbox' }),
     tools: {
       executeCode: executeCode({ context, files }),
@@ -29,4 +29,3 @@ export function createSandboxAgent({
       functionId: 'sandbox',
     },
   });
-}

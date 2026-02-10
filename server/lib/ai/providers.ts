@@ -56,7 +56,7 @@ const summariserModel = createRetryable({
   },
 });
 
-const sandboxModel = createRetryable({
+const agentModel = createRetryable({
   model: hackclub('google/gemini-2.5-flash'),
   retries: [
     hackclub('openai/gpt-5-mini'),
@@ -75,7 +75,7 @@ const sandboxModel = createRetryable({
 export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
-    'sandbox-model': sandboxModel,
+    'agent-model': agentModel,
     'summariser-model': summariserModel,
   },
 });
