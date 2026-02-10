@@ -44,7 +44,7 @@ Example: read({ "path": "agent/turns/1770648887.532179.json", "offset": 0, "limi
 <tool>
 <name>write</name>
 Create or overwrite a file with the given content.
-- Always write generated outputs to output/<message_ts>/.
+- ALWAYS write generated outputs to output/<message_ts>/.
 - If modifying an existing file, prefer the edit tool, it is safer because it only changes the specific string you target.
 - Use write for new files or when you need to replace the entire content.
 Example: write({ "path": "output/1770648887.532179/report.csv", "content": "name,value\\nfoo,42\\n" })

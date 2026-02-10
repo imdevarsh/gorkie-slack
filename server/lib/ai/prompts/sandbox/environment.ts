@@ -1,10 +1,11 @@
 export const environmentPrompt = `\
 <environment>
 <filesystem>
-All paths are relative to /home/vercel-sandbox (the default working directory).
+Use absolute paths (starting with /home/vercel-sandbox) in bash commands and showFile inputs to avoid workdir-related mistakes.
+Relative paths are allowed, but absolute paths are preferred for reliability.
 
 attachments/<message_ts>/
-  User-uploaded files from Slack. Read-only — never write here.
+  User-uploaded files from Slack. Read-only, NEVER ever write here.
   Files from earlier messages in the thread also live here under their respective message_ts.
   Example: attachments/1770648887.532179/photo.png
 
