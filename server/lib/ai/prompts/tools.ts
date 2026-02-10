@@ -67,14 +67,11 @@ Finding files:
 - Run: find . -type f -not -path '*/node_modules/*' to discover all files
 - Run: ls attachments/ to see uploaded files by message timestamp
 
-Pre-installed:
-node (v22), npm, git, curl, tar, gzip, bzip2, unzip, which, openssl
+Pre-installed tools:
+node (v22), npm, git, curl, openssl, ImageMagick (convert, identify, mogrify), ffmpeg, ghostscript, poppler-utils (pdftotext, pdftoppm), tesseract (OCR), jq, zip/unzip, tar, gzip, bzip2, xz
 
-To install packages (use dnf):
-  sudo dnf install -y python3 python3-pip    # Python 3 + pip
-  sudo dnf install -y ImageMagick            # convert, identify, mogrify
-  sudo dnf install -y jq                     # JSON processor
-  sudo dnf install -y ffmpeg                 # Video/audio processing
+Additional packages (use dnf):
+  sudo dnf install -y python3 python3-pip    # Python + pip
   sudo dnf install -y gcc g++ make           # Build tools
 
 After installing python3-pip:
@@ -84,7 +81,8 @@ Node packages:
   npm install -g <package>
 </description>
 <rules>
-- Packages persist via snapshots, install once per thread
+- Most common tools are pre-installed, use them directly without installing first
+- Additional packages persist via snapshots, install once per thread with sudo dnf install -y
 - Commands run via sh -c, pipes, redirection, and shell features work
 - 10-minute timeout per command
 - NEVER say you can't find a file without first running find or ls in the sandbox

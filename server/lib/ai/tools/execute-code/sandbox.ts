@@ -2,6 +2,7 @@ import { Sandbox } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
+import type { SlackMessageContext } from '~/types';
 import { setToolStatus } from '../../utils';
 
 async function installPackages(instance: Sandbox): Promise<void> {
@@ -14,7 +15,7 @@ async function installPackages(instance: Sandbox): Promise<void> {
     .runCommand({
       cmd: 'dnf',
       args: ['install', '-y', ...packages],
-      sudo: true
+      sudo: true,
     })
     .catch((error: unknown) => {
       logger.warn({ error, packages }, 'Sandbox preinstall failed');
@@ -62,30 +63,44 @@ async function restoreFromSnapshot(ctxId: string): Promise<Sandbox | null> {
   return instance;
 }
 
-export async function getOrCreate(ctxId: string): Promise<Sandbox> {
+export async function getOrCreate(
+  ctxId: string,
+  context?: SlackMessageContext
+): Promise<Sandbox> {
   const live = await reconnect(ctxId);
   if (live) {
     return live;
   }
 
+  if (context) {
+    await setToolStatus(context, 'is restoring sandbox');
+  }
+
   const restored = await restoreFromSnapshot(ctxId);
-  const instance =
-    restored ??
-    (await Sandbox.create({
+
+  let instance: Sandbox;
+  if (restored) {
+    instance = restored;
+  } else {
+    if (context) {
+      await setToolStatus(context, 'is setting up sandbox');
+    }
+
+    instance = await Sandbox.create({
       runtime: config.runtime,
       timeout: config.timeoutMs,
-    }));
+    });
 
-  if (!restored) {
+    if (context) {
+      await setToolStatus(context, 'is installing packages');
+    }
     await installPackages(instance);
+
+    logger.info({ sandboxId: instance.sandboxId, ctxId }, 'Created sandbox');
   }
 
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
   await redis.expire(redisKeys.sandbox(ctxId), config.sandboxTtlSeconds);
-
-  if (!restored) {
-    logger.info({ sandboxId: instance.sandboxId, ctxId }, 'Created sandbox');
-  }
 
   return instance;
 }

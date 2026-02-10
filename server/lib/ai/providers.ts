@@ -26,9 +26,8 @@ const hackclub = (modelId: string) =>
   });
 
 const chatModel = createRetryable({
-  model: openai('gpt-5-mini'),
+  model: hackclub('google/gemini-2.5-flash'),
   retries: [
-    hackclub('google/gemini-2.5-flash'),
     hackclub('openai/gpt-5-mini'),
     openrouter('google/gemini-3-flash-preview'),
     openrouter('google/gemini-2.5-flash'),
@@ -43,9 +42,9 @@ const chatModel = createRetryable({
 });
 
 const summariserModel = createRetryable({
-  model: openai('gpt-5-nano'),
-  retries: [
+  model:
     hackclub('google/gemini-3-flash-preview'),
+  retries: [
     hackclub('google/gemini-2.5-flash'),
     hackclub('openai/gpt-5-mini'),
     openrouter('google/gemini-2.5-flash-lite-preview-09-2025'),

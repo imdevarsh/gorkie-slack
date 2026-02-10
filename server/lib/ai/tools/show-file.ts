@@ -24,7 +24,6 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         .describe('Title or description for the file'),
     }),
     execute: async ({ path, filename, title }) => {
-      await setToolStatus(context, 'is uploading file');
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;
@@ -35,7 +34,9 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
       }
 
       try {
-        const sandbox = await getOrCreate(ctxId);
+        const sandbox = await getOrCreate(ctxId, context);
+        await setToolStatus(context, 'is uploading file');
+
         const fileBuffer = await sandbox.readFileToBuffer({ path });
 
         if (!fileBuffer) {

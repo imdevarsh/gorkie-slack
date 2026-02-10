@@ -26,10 +26,10 @@ export const executeCode = ({
     }),
     execute: async ({ command }) => {
       const ctxId = getContextId(context);
-      await setToolStatus(context, 'is running code in sandbox');
 
       try {
-        const sandbox = await getOrCreate(ctxId);
+        const sandbox = await getOrCreate(ctxId, context);
+        await setToolStatus(context, 'is running code in sandbox');
 
         if (!filesTransported && files?.length) {
           await transportAttachments(sandbox, context.event.ts, files);
