@@ -14,7 +14,7 @@ export const workflowPrompt = `\
   <step>
     <name>Execute</name>
     <rules>
-    - Use pre-installed tools directly (no need to install ImageMagick, ffmpeg, etc.).
+    - Install tools when needed. Do NOT assume ImageMagick/ffmpeg are pre-installed.
     - Install additional packages only if needed (they persist via snapshots).
     - Create output/<message_ts>/ and set workdir to that path.
     - The default workdir is /home/vercel-sandbox.
