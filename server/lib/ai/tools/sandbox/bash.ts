@@ -60,7 +60,7 @@ export const bash = ({
 }) =>
   tool({
     description:
-      'Run a shell command in a sandboxed Linux VM. Persists per thread, installed tools and files carry over between calls. Supports bash, node, python, curl, npm, dnf.',
+      'Run a shell command.',
     inputSchema: z.object({
       command: z.string().describe('Shell command (runs via sh -c)'),
       workdir: z
