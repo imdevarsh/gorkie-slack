@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setToolStatus } from '~/lib/ai/utils';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -35,7 +35,10 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getOrCreate(ctxId, context);
-        await setToolStatus(context, 'is uploading file');
+        await setStatus(context, {
+          status: 'is uploading file',
+          loading: true,
+        });
 
         const fileBuffer = await sandbox.readFileToBuffer({ path });
 

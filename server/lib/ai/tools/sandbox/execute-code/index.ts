@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setToolStatus } from '~/lib/ai/utils';
+import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
@@ -49,9 +49,12 @@ export const executeCode = ({
           files?.length ? { files, messageTs: context.event.ts } : undefined
         );
         if (status) {
-          await setToolStatus(context, status);
+          await setStatus(context, { status, loading: true });
         } else {
-          await setToolStatus(context, 'is running commands in sandbox');
+          await setStatus(context, {
+            status: 'is running commands in sandbox',
+            loading: true,
+          });
         }
 
         logger.debug({ ctxId, command, status }, 'Sandbox command starting');

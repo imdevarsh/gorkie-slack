@@ -1,10 +1,11 @@
-import { Sandbox } from '@vercel/sandbox';
+import { Sandbox, Snapshot } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
+import { env } from '~/env';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
-import { setToolStatus } from '../../utils';
+import { setStatus } from '~/lib/ai/utils/status';
 import { transportAttachments } from './attachments';
 
 async function setupDirs(instance: Sandbox): Promise<void> {
@@ -82,7 +83,7 @@ export async function getOrCreate(
   }
 
   if (context) {
-    await setToolStatus(context, 'is restoring sandbox');
+    await setStatus(context, { status: 'is restoring sandbox', loading: true });
   }
 
   const restored = await restoreFromSnapshot(ctxId);
@@ -92,7 +93,10 @@ export async function getOrCreate(
     instance = restored;
   } else {
     if (context) {
-      await setToolStatus(context, 'is setting up sandbox');
+      await setStatus(context, {
+        status: 'is setting up sandbox',
+        loading: true,
+      });
     }
 
     instance = await Sandbox.create({
@@ -126,6 +130,18 @@ async function forceStop(sandboxId: string): Promise<void> {
   }
 }
 
+async function deleteSnapshot(snapshotId: string, ctxId: string): Promise<void> {
+  try {
+    const snapshot = await Snapshot.get({
+      snapshotId
+    });
+    await snapshot.delete();
+    logger.info({ snapshotId, ctxId }, 'Deleted previous snapshot');
+  } catch (error) {
+    logger.warn({ snapshotId, error, ctxId }, 'Failed to delete snapshot');
+  }
+}
+
 export async function snapshotAndStop(ctxId: string): Promise<void> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
   if (!sandboxId) {
@@ -133,6 +149,7 @@ export async function snapshotAndStop(ctxId: string): Promise<void> {
   }
 
   await redis.del(redisKeys.sandbox(ctxId));
+  const previousSnapshotId = await redis.get(redisKeys.snapshot(ctxId));
 
   const instance = await Sandbox.get({ sandboxId }).catch(() => null);
   if (!instance || instance.status !== 'running') {
@@ -147,6 +164,10 @@ export async function snapshotAndStop(ctxId: string): Promise<void> {
   if (!snap) {
     await forceStop(sandboxId);
     return;
+  }
+
+  if (previousSnapshotId && previousSnapshotId !== snap.snapshotId) {
+    await deleteSnapshot(previousSnapshotId, ctxId);
   }
 
   await redis.set(redisKeys.snapshot(ctxId), snap.snapshotId);

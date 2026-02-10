@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setToolStatus } from '~/lib/ai/utils';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -27,7 +27,7 @@ export const readFile = ({ context }: { context: SlackMessageContext }) =>
         .describe('Maximum lines to return (default: 200, max: 500)'),
     }),
     execute: async ({ path, offset = 0, limit = 200 }) => {
-      await setToolStatus(context, 'is reading file');
+      await setStatus(context, { status: 'is reading file', loading: true });
       const ctxId = getContextId(context);
 
       try {

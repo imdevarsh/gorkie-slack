@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { sandboxAgent } from '~/lib/ai/agents';
-import { setToolStatus } from '~/lib/ai/utils';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
@@ -24,7 +24,10 @@ export const sandbox = ({
         ),
     }),
     execute: async ({ task }) => {
-      await setToolStatus(context, 'is working in sandbox');
+      await setStatus(context, {
+        status: 'is working in sandbox',
+        loading: true,
+      });
 
       try {
         const agent = sandboxAgent({ context, files });

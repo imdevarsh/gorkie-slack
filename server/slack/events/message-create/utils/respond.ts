@@ -1,6 +1,7 @@
 import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
 import { snapshotAndStop } from '~/lib/ai/tools/sandbox/execute-code/sandbox';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { RequestHints, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -17,11 +18,9 @@ export async function generateResponse(
     (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
 
   try {
-    await context.client.assistant.threads.setStatus({
-      channel_id: context.event.channel,
-      thread_ts: threadTs,
+    await setStatus(context, {
       status: 'is thinking',
-      loading_messages: [
+      loading: [
         'is pondering your question',
         'is working on it',
         'is putting thoughts together',
@@ -68,23 +67,11 @@ export async function generateResponse(
       ],
     });
 
-    await context.client.assistant.threads.setStatus({
-      channel_id: context.event.channel,
-      thread_ts: threadTs,
-      status: '',
-    });
+    await setStatus(context, { status: '' });
 
     return { success: true, toolCalls };
   } catch (e) {
-    try {
-      await context.client.assistant.threads.setStatus({
-        channel_id: context.event.channel,
-        thread_ts: threadTs,
-        status: '',
-      });
-    } catch {
-      // ignore errors
-    }
+    await setStatus(context, { status: '' });
     return {
       success: false,
       error: (e as Error)?.message,

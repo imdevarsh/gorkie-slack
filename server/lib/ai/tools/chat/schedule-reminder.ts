@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setToolStatus } from '~/lib/ai/utils';
+import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 
@@ -29,7 +29,10 @@ export const scheduleReminder = ({
         ),
     }),
     execute: async ({ text, seconds }) => {
-      await setToolStatus(context, 'is scheduling reminder');
+      await setStatus(context, {
+        status: 'is scheduling reminder',
+        loading: true,
+      });
       const userId = (context.event as { user?: string }).user;
 
       if (!userId) {
