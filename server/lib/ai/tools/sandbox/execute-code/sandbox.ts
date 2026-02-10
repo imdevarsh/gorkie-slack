@@ -134,12 +134,20 @@ async function pruneSandboxFiles(
   instance: Sandbox,
   ctxId: string
 ): Promise<void> {
+  const keepPaths = config.keep;
+  const keepMatchers = keepPaths
+    .map((path) => `-name '${path}'`)
+    .join(' -o ');
+  const filter = keepMatchers ? `\\( ${keepMatchers} \\)` : '';
+
   await instance
     .runCommand({
       cmd: 'sh',
       args: [
         '-c',
-        "find . -mindepth 1 -maxdepth 1 ! -name 'output' ! -name 'attachments' -exec rm -rf {} +",
+        `find . -mindepth 1 -maxdepth 1 ${
+          filter ? `! ${filter}` : ''
+        } -exec rm -rf {} +`,
       ],
     })
     .catch((error: unknown) => {
