@@ -6,6 +6,7 @@ export const examplesPrompt = `\
 <task>Convert the uploaded image to black and white</task>
 <workflow>
 <tool><name>glob</name><input>{ "pattern": "**/*.png", "path": "attachments", "status": "is locating the image" }</input></tool>
+<tool><name>bash</name><input>{ "command": "sudo dnf install -y ImageMagick", "status": "is installing ImageMagick" }</input></tool>
 <tool><name>bash</name><input>{ "command": "mkdir -p output/<id> && convert attachments/<id>/photo.png -colorspace Gray output/<id>/bw.png", "status": "is converting the image" }</input></tool>
 <tool><name>showFile</name><input>{ "path": "output/<id>/bw.png", "title": "Black and white" }</input></tool>
 Summary: "Converted photo.png to grayscale and uploaded the result."

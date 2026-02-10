@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
@@ -28,6 +29,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;
       const ctxId = getContextId(context);
+      const resolvedPath = sandboxPath(path);
 
       if (!channelId) {
         return { success: false, error: 'Missing Slack channel' };
@@ -40,10 +42,12 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
           loading: true,
         });
 
-        const fileBuffer = await sandbox.readFileToBuffer({ path });
+        const fileBuffer = await sandbox.readFileToBuffer({
+          path: resolvedPath,
+        });
 
         if (!fileBuffer) {
-          return { success: false, error: `File not found: ${path}` };
+          return { success: false, error: `File not found: ${resolvedPath}` };
         }
 
         const uploadFilename = filename ?? path.split('/').pop() ?? 'file';
@@ -57,7 +61,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         });
 
         logger.info(
-          { channel: channelId, path, size: fileBuffer.length },
+          { channel: channelId, path: resolvedPath, size: fileBuffer.length },
           'Uploaded sandbox file to Slack'
         );
 

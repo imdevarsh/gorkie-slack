@@ -6,7 +6,7 @@ import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
 import { addHistory } from '~/lib/sandbox/history';
-import { outputDir, turnsPath } from '~/lib/sandbox/paths';
+import { outputDir, sandboxPath, turnsPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
@@ -77,7 +77,7 @@ export const bash = ({
       const messageTs = getMessageTs(context);
       const outputDirPath = outputDir(messageTs);
       const turnPath = turnsPath(messageTs);
-      const effectiveWorkdir = normalizeWorkdir(workdir);
+      const effectiveWorkdir = sandboxPath(workdir ?? '.');
 
       try {
         const sandbox = await getSandbox(
@@ -97,6 +97,16 @@ export const bash = ({
             loading: true,
           });
         }
+
+        logger.debug(
+          {
+            ctxId,
+            command,
+            workdir: effectiveWorkdir,
+            status,
+          },
+          'Sandbox command start'
+        );
 
         const result = await sandbox.runCommand({
           cmd: 'sh',
@@ -152,14 +162,4 @@ export const bash = ({
 
 function getMessageTs(context: SlackMessageContext): string {
   return (context.event as { ts?: string }).ts ?? 'unknown';
-}
-
-function normalizeWorkdir(workdir: string | undefined): string {
-  if (!workdir || workdir === '.') {
-    return '/home/vercel-sandbox';
-  }
-  if (workdir.startsWith('/')) {
-    return workdir;
-  }
-  return `/home/vercel-sandbox/${workdir}`;
 }
