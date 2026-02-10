@@ -10,7 +10,6 @@ import { installUtils, makeFolders } from './bootstrap';
 import {
   cleanupSnapshots,
   deleteSnapshot,
-  logSnapshotSizes,
   registerSnapshot,
 } from './snapshot';
 
@@ -160,8 +159,6 @@ export async function snapshotAndStop(ctxId: string): Promise<void> {
   }
 
   await cleanupSnapshots();
-  await logSnapshotSizes(instance, ctxId, sandboxId);
-
   const snap = await instance.snapshot().catch((error: unknown) => {
     logger.warn({ sandboxId, error, ctxId }, 'Snapshot failed');
     return null;
