@@ -3,13 +3,16 @@ export const sandboxWorkflowPrompt = `\
 Follow this process for every task:
 
 1. DISCOVER — Find relevant files before doing anything
-   - Run: find . -type f -not -path '*/node_modules/*' | head -30
-   - Run: ls attachments/ to see uploaded files by message timestamp
+   - Use glob to discover files in a specific directory
+   - Use glob to find files by pattern (e.g., "**/*.csv")
+   - Use grep to search contents when needed
+   - Always scope discovery to attachments/ or a specific directory (avoid full-tree scans)
    - NEVER claim a file doesn't exist without checking first
 
 2. EXECUTE — Run the necessary commands
    - Use pre-installed tools directly (no need to install ImageMagick, ffmpeg, etc.)
    - Install additional packages only if needed (they persist via snapshots)
+   - Prefer bash with workdir instead of "cd &&" chains
    - Chain commands with && for dependent operations
    - Check exit codes and stderr — if something fails, try a different approach
 

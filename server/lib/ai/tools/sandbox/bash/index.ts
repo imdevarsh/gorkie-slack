@@ -33,12 +33,16 @@ export const bash = ({
       'Run a shell command in a sandboxed Linux VM. Persists per thread, installed tools and files carry over between calls. Supports bash, node, python, curl, npm, dnf.',
     inputSchema: z.object({
       command: z.string().describe('Shell command (runs via sh -c)'),
+      workdir: z
+        .string()
+        .optional()
+        .describe('Working directory (relative). Prefer this over "cd &&"'),
       status: z
         .string()
         .describe('Status text formatted like "is xyz"')
         .optional(),
     }),
-    execute: async ({ command, status }) => {
+    execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
       turn++;
 
@@ -62,6 +66,7 @@ export const bash = ({
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
+          ...(workdir ? { cwd: workdir } : {}),
         });
 
         const stdout = await result.stdout();
@@ -82,7 +87,7 @@ export const bash = ({
               path: turnPath,
               content: Buffer.from(
                 JSON.stringify(
-                  { command, status, stdout, stderr, exitCode },
+                  { command, workdir, status, stdout, stderr, exitCode },
                   null,
                   2
                 )

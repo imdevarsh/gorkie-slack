@@ -7,17 +7,8 @@ import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 import { setStatus } from '~/lib/ai/utils/status';
 import { transportAttachments } from './attachments';
+import { installUtils, makeFolders } from '../bootstrap';
 
-async function setupDirs(instance: Sandbox): Promise<void> {
-  await instance
-    .runCommand({
-      cmd: 'mkdir',
-      args: ['-p', 'agent/turns', 'output'],
-    })
-    .catch((error: unknown) => {
-      logger.warn({ error }, 'Sandbox dir setup failed');
-    });
-}
 
 async function reconnect(ctxId: string): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
@@ -104,7 +95,8 @@ export async function getOrCreate(
       timeout: config.timeoutMs,
     });
 
-    await setupDirs(instance);
+    await makeFolders(instance);
+    await installUtils(instance);
 
     logger.info({ sandboxId: instance.sandboxId, ctxId }, 'Created sandbox');
   }
@@ -116,6 +108,8 @@ export async function getOrCreate(
       attachments.files
     );
   }
+
+  await installUtils(instance);
 
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
   await redis.expire(redisKeys.sandbox(ctxId), config.sandboxTtlSeconds);
