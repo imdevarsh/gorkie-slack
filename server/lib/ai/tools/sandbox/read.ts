@@ -8,7 +8,7 @@ import { getOrCreate } from './bash/sandbox';
 export const read = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description:
-      'Read file contents from the sandbox filesystem with optional pagination.',
+      'Reads a file from the sandbox filesystem. You can access any file directly by using this tool.',
     inputSchema: z.object({
       path: z.string().describe('File path in sandbox (relative)'),
       offset: z
@@ -21,9 +21,9 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         .number()
         .int()
         .min(1)
-        .max(500)
-        .default(200)
-        .describe('Maximum lines to return (default: 200, max: 500)'),
+        .max(2000)
+        .default(2000)
+        .describe('Maximum lines to return (default: 2000, max: 2000)'),
       status: z
         .string()
         .optional()
@@ -48,7 +48,17 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         const totalLines = lines.length;
         const start = Math.max(0, offset);
         const end = Math.min(totalLines, start + limit);
-        const content = lines.slice(start, end).join('\n');
+        const numbered: string[] = [];
+
+        for (let i = start; i < end; i++) {
+          const line = lines[i] ?? '';
+          const truncated =
+            line.length > 2000 ? `${line.slice(0, 2000)}...` : line;
+          const lineNo = String(i + 1).padStart(6, ' ');
+          numbered.push(`${lineNo}\t${truncated}`);
+        }
+
+        const content = numbered.join('\n');
 
         const response = {
           success: true,

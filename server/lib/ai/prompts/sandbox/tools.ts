@@ -4,22 +4,15 @@ export const toolsPrompt = `\
 <tool>
 <name>bash</name>
 <description>
-Run a shell command (via sh -c). Supports bash, pipes, redirection, and all shell features.
-Commands have a 10-minute timeout. Exit code, stdout, and stderr are all returned.
+Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.
 </description>
 <rules>
-- Commands run via sh -c: pipes, redirection, subshells, and all shell features work
-- 10-minute timeout per command
-- Always save generated files to output/, never to the working directory root
-- If output is truncated, the full log is in agent/turns/<n>.json
-- Prefer ls/glob/grep/read/write/edit for filesystem tasks instead of bash when possible
-- Avoid full-tree searches. Scope discovery to attachments/, output/, or a specific directory.
-- For content search, prefer the grep tool scoped to a directory.
-- Prefer read for inspecting file contents instead of cat/head/tail.
-- Quote paths with spaces using double quotes.
-- Use && for dependent steps and check stderr/exit codes.
-- Default workdir is /home/vercel-sandbox.
-- Prefer the workdir parameter instead of "cd &&" chains when using a different directory.
+- All commands run in /home/vercel-sandbox by default. Use workdir to run in a different directory. Avoid "cd &&" chains.
+- This tool is for terminal operations like git, npm, docker, etc. Do not use it for file operations (reading, writing, editing, searching, finding files) - use the specialized tools instead.
+- Before executing a command, verify the parent directory exists if creating new files or folders.
+- Always quote file paths that contain spaces with double quotes.
+- If output is truncated, the full log is in agent/turns/<n>.json.
+- Avoid using bash with find/grep/cat/head/tail/sed/awk/echo unless explicitly required.
 </rules>
 <examples>
 - Simple: bash({ "command": "echo $((44 * 44))" })
@@ -31,11 +24,13 @@ Commands have a 10-minute timeout. Exit code, stdout, and stderr are all returne
 <tool>
 <name>glob</name>
 <description>
-Find files by glob pattern within a directory.
+- Fast file pattern matching tool that works with any codebase size.
+- Supports glob patterns like "**/*.js" or "src/**/*.ts".
+- Returns matching file paths sorted by modification time.
 </description>
 <rules>
-- Use when you know the filename pattern (e.g., "*.csv", "**/*.png")
-- Provide a path to scope the search
+- Use this tool when you need to find files by name patterns.
+- When you are doing an open-ended search that may require multiple rounds of globbing and grepping, narrow your pattern.
 </rules>
 <examples>
 - glob({ "pattern": "**/*.csv", "path": "attachments" })
@@ -46,11 +41,15 @@ Find files by glob pattern within a directory.
 <tool>
 <name>grep</name>
 <description>
-Search file contents using a regex pattern.
+- Fast content search tool that works with any codebase size.
+- Searches file contents using regular expressions.
+- Supports full regex syntax (e.g., "log.*Error", "function\\s+\\w+").
+- Filter files by pattern with include.
 </description>
 <rules>
-- Provide an include pattern when possible to narrow results
-- Scope the search to a specific directory
+- Use this tool when you need to find files containing specific patterns.
+- If you need to count matches, consider bash with rg directly.
+- When you are doing an open-ended search that may require multiple rounds of globbing and grepping, narrow your scope.
 </rules>
 <examples>
 - grep({ "pattern": "TODO|FIXME", "path": ".", "include": "**/*.ts" })
@@ -61,12 +60,16 @@ Search file contents using a regex pattern.
 <tool>
 <name>read</name>
 <description>
-Read file contents from the sandbox filesystem with optional pagination.
+Reads a file from the local filesystem. You can access any file directly by using this tool.
 </description>
 <rules>
-- Default: 200 lines from the start
-- Use offset to skip lines, limit to cap output (max 500 lines)
-- Returns totalLines so you know the full file size
+- Assume this tool is able to read all files on the machine. If the user provides a path, assume it is valid.
+- By default, it reads up to 2000 lines starting from the beginning of the file.
+- You can optionally specify a line offset and limit.
+- Any lines longer than 2000 characters will be truncated.
+- Results are returned using cat -n format, with line numbers starting at 1.
+- If you read a file that exists but has empty contents you will receive a system reminder warning in place of file contents.
+- You can read image files using this tool.
 </rules>
 <examples>
 - read({ "path": "output/data.json" })
@@ -77,11 +80,14 @@ Read file contents from the sandbox filesystem with optional pagination.
 <tool>
 <name>write</name>
 <description>
-Write a file to the sandbox filesystem.
+Writes a file to the local filesystem.
 </description>
 <rules>
-- Use for creating or overwriting files
-- Prefer writing generated outputs to output/
+- This tool will overwrite the existing file if there is one at the provided path.
+- If this is an existing file, you MUST use the Read tool first to read the file's contents.
+- ALWAYS prefer editing existing files. NEVER write new files unless explicitly required.
+- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the user.
+- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
 </rules>
 <examples>
 - write({ "path": "output/report.csv", "content": "a,b\\n1,2\\n" })
@@ -92,14 +98,17 @@ Write a file to the sandbox filesystem.
 <tool>
 <name>edit</name>
 <description>
-Edit a file by exact string replacement.
+Performs exact string replacements in files.
 </description>
 <rules>
-- Use for small, surgical edits
-- If oldString appears multiple times, set replaceAll=true or make oldString more specific
+- You must use your Read tool at least once in the conversation before editing.
+- Preserve the exact indentation from Read output (line numbers are not part of the content).
+- The edit will fail if oldString is not found.
+- The edit will fail if oldString is found multiple times unless replaceAll is true.
+- Use replaceAll for replacing and renaming strings across the file.
 </rules>
 <examples>
-- edit({ "path": "output/config.json", "oldString": ""enabled": false", "newString": ""enabled": true" })
+- edit({ "path": "output/config.json", "oldString": "\"enabled\": false", "newString": "\"enabled\": true" })
 - edit({ "path": "output/log.txt", "oldString": "ERROR", "newString": "WARN", "replaceAll": true })
 </examples>
 </tool>

@@ -51,7 +51,7 @@ def main():
     matches = matches[:limit]
     truncated = True
 
-  paths = [os.path.relpath(p, path) for p, _ in matches]
+  paths = [os.path.normpath(p) for p, _ in matches]
   output = "\n".join(paths) if paths else "No files found"
 
   print(json.dumps({

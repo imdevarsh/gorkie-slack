@@ -32,5 +32,5 @@ Output directory:
 Execution logs:
 - Every command is logged to agent/turns/<n>.json with full stdout/stderr
 - If output was truncated, the fullOutput field in the result has the log path
-- To recover truncated output: cat agent/turns/<n>.json
+- To recover truncated output: read agent/turns/<n>.json
 </environment>`;

@@ -1,6 +1,5 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { sandbox as config } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
@@ -9,13 +8,44 @@ import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 import { getOrCreate } from './sandbox';
 
-function truncateOutput(output: string): string {
-  if (output.length <= config.maxOutputLength) {
-    return output;
+const MAX_LINES = 2000;
+const MAX_BYTES = 50 * 1024;
+
+function truncateOutput(
+  output: string,
+  turnPath: string
+): { content: string; truncated: boolean } {
+  const lines = output.split('\n');
+  const totalBytes = Buffer.byteLength(output, 'utf-8');
+
+  if (lines.length <= MAX_LINES && totalBytes <= MAX_BYTES) {
+    return { content: output, truncated: false };
   }
-  const half = Math.floor(config.maxOutputLength / 2);
-  const omitted = output.length - config.maxOutputLength;
-  return `${output.slice(0, half)}\n\n... (${omitted} characters omitted, full output in agent/turns/) ...\n\n${output.slice(-half)}`;
+
+  const preview: string[] = [];
+  let bytes = 0;
+  let hitBytes = false;
+
+  for (let i = 0; i < lines.length && i < MAX_LINES; i++) {
+    const line = lines[i] ?? '';
+    const size = Buffer.byteLength(line, 'utf-8') + (i > 0 ? 1 : 0);
+    if (bytes + size > MAX_BYTES) {
+      hitBytes = true;
+      break;
+    }
+    preview.push(line);
+    bytes += size;
+  }
+
+  const removed = hitBytes ? totalBytes - bytes : lines.length - preview.length;
+  const unit = hitBytes ? 'bytes' : 'lines';
+  const hint =
+    `The tool call succeeded but the output was truncated. Full output saved to: ${turnPath}\n` +
+    'Use Grep to search the full content or Read with offset/limit to view specific sections.';
+
+  const message = `${preview.join('\n')}\n\n...${removed} ${unit} truncated...\n\n${hint}`;
+
+  return { content: message, truncated: true };
 }
 
 export const bash = ({
@@ -61,11 +91,6 @@ export const bash = ({
           });
         }
 
-        logger.debug(
-          { ctxId, command, workdir, status },
-          'Sandbox command starting'
-        );
-
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
@@ -76,23 +101,16 @@ export const bash = ({
         const stderr = await result.stderr();
         const exitCode = result.exitCode;
 
-        if (exitCode !== 0) {
-          logger.debug(
-            { ctxId, exitCode, command, workdir, status },
-            'Sandbox command failed'
-          );
-        } else {
-          logger.debug(
-            {
-              ctxId,
-              exitCode,
-              command,
-              workdir: workdir ?? defaultWorkdir,
-              status,
-            },
-            'Sandbox command complete'
-          );
-        }
+        logger.debug(
+          {
+            ctxId,
+            exitCode,
+            command,
+            workdir: workdir ?? defaultWorkdir,
+            status,
+          },
+          'Sandbox command complete'
+        );
 
         const turnPath = `agent/turns/${turn}.json`;
         await sandbox
@@ -112,15 +130,16 @@ export const bash = ({
             logger.warn({ error, turnPath }, 'Failed to write turn log');
           });
 
-        const isTruncated =
-          stdout.length > config.maxOutputLength ||
-          stderr.length > config.maxOutputLength;
+        const stdoutResult = truncateOutput(stdout || '(no output)', turnPath);
+        const stderrResult = truncateOutput(stderr, turnPath);
 
         return {
-          stdout: truncateOutput(stdout || '(no output)'),
-          stderr: truncateOutput(stderr),
+          stdout: stdoutResult.content,
+          stderr: stderrResult.content,
           exitCode,
-          ...(isTruncated ? { fullOutput: turnPath } : {}),
+          ...(stdoutResult.truncated || stderrResult.truncated
+            ? { fullOutput: turnPath }
+            : {}),
         };
       } catch (error) {
         logger.error({ error, ctxId, command }, 'Sandbox operation failed');
