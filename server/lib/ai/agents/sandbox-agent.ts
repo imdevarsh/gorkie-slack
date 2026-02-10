@@ -1,5 +1,5 @@
 import { ToolLoopAgent, stepCountIs } from 'ai';
-import { sandboxPrompt } from '~/lib/ai/prompts';
+import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
 import { executeCode } from '~/lib/ai/tools/execute-code';
 import { showFile } from '~/lib/ai/tools/show-file';
@@ -16,8 +16,12 @@ export const sandboxAgent = ({
   files?: SlackFile[];
 }) =>
   new ToolLoopAgent({
-    model: provider.languageModel('chat-model'),
-    instructions: sandboxPrompt({ requestHints: hints, context }),
+    model: provider.languageModel('code-model'),
+    instructions: systemPrompt({
+      requestHints: hints,
+      context,
+      model: 'code-model',
+    }),
     tools: {
       executeCode: executeCode({ context, files }),
       showFile: showFile({ context }),

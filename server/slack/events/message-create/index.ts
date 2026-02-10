@@ -139,7 +139,7 @@ async function handleMessage(args: MessageEventArgs) {
       prompt: `Message: ${content}\nTrigger: ${trigger.type ?? 'none'}\nChannelType: ${messageContext.event.channel_type ?? 'unknown'}\nIsDM: ${messageContext.event.channel_type === 'im'}`,
     });
 
-    if (!relevance.output?.relevant) {
+    if (relevance.output?.relevant === false) {
       logger.info(
         { ctxId, reason: relevance.output?.reason ?? 'unknown' },
         'Relevance agent skipped reply'

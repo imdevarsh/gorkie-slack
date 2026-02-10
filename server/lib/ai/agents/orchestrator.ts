@@ -2,7 +2,6 @@ import { webSearch } from '@exalabs/ai-sdk';
 import { ToolLoopAgent, stepCountIs } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
-import { executeCode } from '~/lib/ai/tools/execute-code';
 import { getUserInfo } from '~/lib/ai/tools/get-user-info';
 import { getWeather } from '~/lib/ai/tools/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/leave-channel';
@@ -12,7 +11,6 @@ import { reply } from '~/lib/ai/tools/reply';
 import { sandboxAgentTool } from '~/lib/ai/tools/sandbox-agent';
 import { scheduleReminder } from '~/lib/ai/tools/schedule-reminder';
 import { searchSlack } from '~/lib/ai/tools/search-slack';
-import { showFile } from '~/lib/ai/tools/show-file';
 import { skip } from '~/lib/ai/tools/skip';
 import { summariseThread } from '~/lib/ai/tools/summarise-thread';
 import { successToolCall } from '~/lib/ai/utils';
@@ -30,7 +28,11 @@ export const orchestratorAgent = ({
 }) =>
   new ToolLoopAgent({
     model: provider.languageModel('chat-model'),
-    instructions: systemPrompt({ requestHints: hints, context }),
+    instructions: systemPrompt({
+      requestHints: hints,
+      context,
+      model: 'chat-model',
+    }),
     toolChoice: 'required',
     tools: {
       getWeather,
@@ -43,8 +45,6 @@ export const orchestratorAgent = ({
       leaveChannel: leaveChannel({ context }),
       scheduleReminder: scheduleReminder({ context }),
       summariseThread: summariseThread({ context }),
-      executeCode: executeCode({ context, files }),
-      showFile: showFile({ context }),
       mermaid: mermaid({ context }),
       sandboxAgent: sandboxAgentTool({ context, hints, files }),
       react: react({ context }),

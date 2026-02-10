@@ -1,6 +1,6 @@
 import { generateText, tool } from 'ai';
 import { z } from 'zod';
-import { summariseThreadPrompt } from '~/lib/ai/prompts/tasks';
+import { summariseThreadPrompt } from '~/lib/ai/prompts/chat/tasks';
 import { provider } from '~/lib/ai/providers';
 import { setToolStatus } from '~/lib/ai/utils';
 import logger from '~/lib/logger';

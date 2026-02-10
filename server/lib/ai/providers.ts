@@ -59,9 +59,27 @@ const summariserModel = createRetryable({
   },
 });
 
+const codeModel = createRetryable({
+  model: openai('gpt-5'),
+  retries: [
+    hackclub('openai/gpt-5'),
+    openrouter('openai/gpt-5'),
+    hackclub('openai/gpt-5-mini'),
+    openrouter('openai/gpt-5-mini'),
+    openrouter('google/gemini-2.5-pro'),
+  ],
+  onError: (context) => {
+    const { model } = context.current;
+    logger.error(
+      `error with model ${model.provider}/${model.modelId}, switching to next model`
+    );
+  },
+});
+
 export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
     'summariser-model': summariserModel,
+    'code-model': codeModel,
   },
 });

@@ -42,7 +42,6 @@ export const examplesPrompt = `\
 <title>Quick calculation</title>
 <user>What's 44 * 44?</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "echo $((44 * 44))" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["44 * 44 = 1936"] }</input></tool>
 </workflow>
 </example>
@@ -51,10 +50,7 @@ export const examplesPrompt = `\
 <title>Image processing with attachment</title>
 <user>[uploads photo.png] Invert this to black and white</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "ls -lR attachments/" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "sudo dnf install -y ImageMagick" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "convert attachments/1770648887.532179/photo.png -negate output.png" }</input></tool>
-<tool><name>showFile</name><input>{ "path": "output.png", "title": "Black and white version" }</input></tool>
+<tool><name>sandboxAgent</name><input>{ "task": "Invert the uploaded photo to black and white and upload the result to Slack.", "context": "The file is in attachments/<message_ts>/photo.png" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done! I inverted your image to black and white."] }</input></tool>
 </workflow>
 </example>
@@ -63,9 +59,7 @@ export const examplesPrompt = `\
 <title>Python data analysis</title>
 <user>[uploads data.csv] Analyze this CSV for me</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "find attachments/ -type f -name '*.csv'" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "sudo dnf install -y python3 python3-pip && pip3 install pandas" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "python3 -c \\"import pandas as pd; df = pd.read_csv('attachments/1770648887.532179/data.csv'); print(df.describe())\\"" }</input></tool>
+<tool><name>sandboxAgent</name><input>{ "task": "Analyze the uploaded CSV and summarize key stats.", "context": "The file is in attachments/<message_ts>/data.csv" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the analysis of your CSV: ..."] }</input></tool>
 </workflow>
 </example>
@@ -74,8 +68,7 @@ export const examplesPrompt = `\
 <title>File from earlier message</title>
 <user>[no attachment in this message] Can you analyze that file I uploaded earlier?</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "ls -lR attachments/" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "cat attachments/1770648793.474479/data.json | head -20" }</input></tool>
+<tool><name>sandboxAgent</name><input>{ "task": "Find the file uploaded earlier in this thread and analyze it.", "context": "Search attachments/ for the most recent data file" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Found your file from earlier! Here's what I see: ..."] }</input></tool>
 </workflow>
 Never claim a file is missing without checking attachments/ first. Files from all thread messages persist via snapshots.
@@ -85,8 +78,7 @@ Never claim a file is missing without checking attachments/ first. Files from al
 <title>Find attachment by name</title>
 <user>Use the PDF I attached earlier</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "find attachments/ -type f -name '*.pdf'" }</input></tool>
-<tool><name>executeCode</name><input>{ "command": "python3 extract_text.py attachments/1770648793.474479/report.pdf" }</input></tool>
+<tool><name>sandboxAgent</name><input>{ "task": "Find the PDF in attachments and extract its text.", "context": "Search attachments/ for *.pdf" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Processed the PDF and extracted text."] }</input></tool>
 </workflow>
 </example>
@@ -104,8 +96,7 @@ Never claim a file is missing without checking attachments/ first. Files from al
 <title>Data export from sandbox</title>
 <user>Generate a report of that data as CSV</user>
 <workflow>
-<tool><name>executeCode</name><input>{ "command": "python3 generate_report.py > report.csv && ls -lh report.csv" }</input></tool>
-<tool><name>showFile</name><input>{ "path": "report.csv", "title": "Data Report" }</input></tool>
+<tool><name>sandboxAgent</name><input>{ "task": "Generate a CSV report from the data and upload it.", "context": "Write report.csv in the sandbox" }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the CSV report."] }</input></tool>
 </workflow>
 </example>

@@ -14,7 +14,7 @@ export const relevanceAgent = ({
   context: SlackMessageContext;
 }) =>
   new ToolLoopAgent({
-    model: provider.languageModel('agent-model'),
+    model: provider.languageModel('chat-model'),
     instructions: `You decide whether Gorkie should respond to a message.
 Return relevant=true if the user is asking for help, addressing Gorkie, or if the message is in a DM.
 Return relevant=false for low-value messages ("gm", emojis), unrelated chatter, or messages not directed to Gorkie.
