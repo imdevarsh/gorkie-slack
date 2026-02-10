@@ -133,7 +133,7 @@ export async function getOrCreate(
   }
 
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
-  await redis.expire(redisKeys.sandbox(ctxId), config.sandbox.ttl);
+  await redis.expire(redisKeys.sandbox(ctxId), config.ttl);
 
   return instance;
 }
