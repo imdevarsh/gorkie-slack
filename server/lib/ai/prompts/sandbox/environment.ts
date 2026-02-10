@@ -18,24 +18,23 @@ agent/                   # Execution metadata (auto-managed)
     <message_ts>.json    # [{ command, stdout, stderr, exitCode }, ...]
 \`\`\`
 
+The latest file/folder in persistance, and execution logs is the latest message in the thread.
+
 Persistence rules:
 - Snapshots persist across messages in the same thread
 - Sandboxes expire after 24 hours
 - Installed packages persist per thread
 
 Output directory:
-- ALWAYS create output/<current_message_ts>/ and run work there
-- Save generated files inside output/<message_ts>/ (never the working directory root)
-- Use showFile with output/<message_ts>/ paths to share results with the user
-- Example: save chart to output/<message_ts>/chart.png, then showFile({ path: "output/<message_ts>/chart.png" })
+- Create output/<current_message_ts>/ and write outputs there
+- Use showFile with output/<message_ts>/ paths
 
 Default workdir:
-- The bash tool defaults to /home/vercel-sandbox
-- If you pass workdir=".", it will be treated as /home/vercel-sandbox
-- Relative workdir paths are resolved under /home/vercel-sandbox
+- Default is /home/vercel-sandbox
+- workdir="." maps to /home/vercel-sandbox
+- Relative paths resolve under /home/vercel-sandbox
 
 Execution logs:
 - Commands are logged to agent/turns/<message_ts>.json (stdout/stderr)
-- Entries are appended in order of execution
 - If output was truncated, read agent/turns/<message_ts>.json
 </environment>`;
