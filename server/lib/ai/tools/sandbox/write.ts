@@ -5,11 +5,6 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { getOrCreate } from './bash/sandbox';
-import { toBase64Json } from './utils';
-
-function toBase64(value: string): string {
-  return Buffer.from(value).toString('base64');
-}
 
 export const write = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -31,28 +26,14 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getOrCreate(ctxId);
-        const params = { path, content: toBase64(content) };
-        const payload = toBase64Json(params);
-
-        const result = await sandbox.runCommand({
-          cmd: 'sh',
-          args: ['-c', `PARAMS_B64='${payload}' python3 agent/bin/write.py`],
-        });
-
-        const stdout = await result.stdout();
-        const stderr = await result.stderr();
-
-        if (result.exitCode !== 0) {
-          return {
-            success: false,
-            error: stderr || `Failed to write file: ${path}`,
-          };
-        }
+        await sandbox.writeFiles([
+          { path, content: Buffer.from(content, 'utf-8') },
+        ]);
 
         const response = {
           success: true,
           path,
-          output: stdout.trim() || 'ok',
+          output: 'ok',
         };
 
         logger.debug(

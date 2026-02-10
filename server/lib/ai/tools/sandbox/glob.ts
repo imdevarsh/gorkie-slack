@@ -7,8 +7,6 @@ import { getContextId } from '~/utils/context';
 import { getOrCreate } from './bash/sandbox';
 import { toBase64Json } from './utils';
 
-const DEFAULT_LIMIT = 100;
-
 export const glob = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Find files by glob pattern in the sandbox.',
@@ -16,26 +14,21 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       pattern: z.string().describe('Glob pattern to match (e.g. "**/*.ts")'),
       path: z
         .string()
-        .optional()
+        .default('.')
         .describe('Directory path in sandbox (relative, default: .)'),
       limit: z
         .number()
         .int()
         .min(1)
         .max(500)
-        .optional()
+        .default(100)
         .describe('Max matches to return (default: 100, max: 500)'),
       status: z
         .string()
         .optional()
         .describe('Status text formatted like "is xyz"'),
     }),
-    execute: async ({
-      pattern,
-      path = '.',
-      limit = DEFAULT_LIMIT,
-      status,
-    }) => {
+    execute: async ({ pattern, path, limit, status }) => {
       await setStatus(context, {
         status: status ?? 'is finding files',
         loading: true,
@@ -47,7 +40,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
         const sandbox = await getOrCreate(ctxId);
         const params = { pattern, path, limit };
         const payload = toBase64Json(params);
-        const command = `PARAMS_B64='${payload}' python3 agent/bin/glob.py`;
+        const command = `PARAMS='${payload}' python3 agent/bin/glob.py`;
 
         const result = await sandbox.runCommand({
           cmd: 'sh',

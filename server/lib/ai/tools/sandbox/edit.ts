@@ -5,7 +5,6 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { getOrCreate } from './bash/sandbox';
-import { toBase64Json } from './utils';
 
 function toBase64(value: string): string {
   return Buffer.from(value).toString('base64');
@@ -20,20 +19,14 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
       newString: z.string().describe('Replacement string'),
       replaceAll: z
         .boolean()
-        .optional()
+        .default(false)
         .describe('Replace all occurrences (default: false)'),
       status: z
         .string()
         .optional()
         .describe('Status text formatted like "is xyz"'),
     }),
-    execute: async ({
-      path,
-      oldString,
-      newString,
-      replaceAll = false,
-      status,
-    }) => {
+    execute: async ({ path, oldString, newString, replaceAll, status }) => {
       await setStatus(context, {
         status: status ?? 'is editing file',
         loading: true,
@@ -42,35 +35,38 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getOrCreate(ctxId);
-        const params = {
-          path,
-          oldString: toBase64(oldString),
-          newString: toBase64(newString),
-          replaceAll,
-        };
+        const fileBuffer = await sandbox.readFileToBuffer({ path });
 
-        const payload = toBase64Json(params);
-        const result = await sandbox.runCommand({
-          cmd: 'sh',
-          args: ['-c', `PARAMS_B64='${payload}' python3 agent/bin/edit.py`],
-        });
+        if (!fileBuffer) {
+          return { success: false, error: `File not found: ${path}` };
+        }
 
-        const stdout = await result.stdout();
-        const stderr = await result.stderr();
+        const data = fileBuffer.toString('utf-8');
+        const count = data.split(oldString).length - 1;
 
-        if (result.exitCode !== 0) {
+        if (count === 0) {
+          return { success: false, error: 'oldString not found' };
+        }
+
+        if (count > 1 && !replaceAll) {
           return {
             success: false,
-            error: stderr || `Failed to edit file: ${path}`,
+            error: 'oldString found multiple times and replaceAll is false',
           };
         }
 
-        const parsed = JSON.parse(stdout || '{}') as { replaced?: number };
+        const updated = replaceAll
+          ? data.split(oldString).join(newString)
+          : data.replace(oldString, newString);
+
+        await sandbox.writeFiles([
+          { path, content: Buffer.from(updated, 'utf-8') },
+        ]);
 
         const response = {
           success: true,
           path,
-          replaced: parsed.replaced ?? 0,
+          replaced: replaceAll ? count : 1,
         };
 
         logger.debug(

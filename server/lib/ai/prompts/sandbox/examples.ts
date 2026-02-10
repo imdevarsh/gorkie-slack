@@ -51,7 +51,7 @@ Files from all thread messages persist via snapshots. Never claim a file is miss
 <title>Generate and export data</title>
 <task>Generate a report as CSV</task>
 <workflow>
-<tool><name>bash</name><input>{ "command": "python3 script.py > output/report.csv", "status": "is generating the report" }</input></tool>
+<tool><name>bash</name><input>{ "command": "python3 script.py > output/report.csv", "workdir": "/home/vercel-sandbox", "status": "is generating the report" }</input></tool>
 <tool><name>showFile</name><input>{ "path": "output/report.csv", "title": "Report" }</input></tool>
 Summary: "Generated a CSV report with 500 rows."
 </workflow>

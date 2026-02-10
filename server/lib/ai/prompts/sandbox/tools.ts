@@ -18,7 +18,8 @@ Commands have a 10-minute timeout. Exit code, stdout, and stderr are all returne
 - Prefer read for inspecting file contents instead of cat/head/tail.
 - Quote paths with spaces using double quotes.
 - Use && for dependent steps and check stderr/exit codes.
-- Prefer the workdir parameter instead of "cd &&" chains.
+- Default workdir is /home/vercel-sandbox.
+- Prefer the workdir parameter instead of "cd &&" chains when using a different directory.
 </rules>
 <examples>
 - Simple: bash({ "command": "echo $((44 * 44))" })

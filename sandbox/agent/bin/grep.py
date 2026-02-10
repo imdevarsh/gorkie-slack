@@ -19,7 +19,7 @@ def expand_braces(value):
   return [prefix + opt + suffix for opt in options]
 
 def main():
-  params = json.loads(base64.b64decode(os.environ.get("PARAMS_B64", "")) or b"{}")
+  params = json.loads(base64.b64decode(os.environ.get("PARAMS", "")) or b"{}")
   pattern = params.get("pattern") or ""
   path = params.get("path") or "."
   include = params.get("include")

@@ -7,8 +7,6 @@ import { getContextId } from '~/utils/context';
 import { getOrCreate } from './bash/sandbox';
 import { toBase64Json } from './utils';
 
-const DEFAULT_LIMIT = 100;
-
 export const grep = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Search file contents in the sandbox using a regex pattern.',
@@ -16,7 +14,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       pattern: z.string().describe('Regex pattern to search for'),
       path: z
         .string()
-        .optional()
+        .default('.')
         .describe('Directory path in sandbox (relative, default: .)'),
       include: z
         .string()
@@ -27,20 +25,14 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
         .int()
         .min(1)
         .max(500)
-        .optional()
+        .default(100)
         .describe('Max matches to return (default: 100, max: 500)'),
       status: z
         .string()
         .optional()
         .describe('Status text formatted like "is xyz"'),
     }),
-    execute: async ({
-      pattern,
-      path = '.',
-      include,
-      limit = DEFAULT_LIMIT,
-      status,
-    }) => {
+    execute: async ({ pattern, path, include, limit, status }) => {
       await setStatus(context, {
         status: status ?? 'is searching files',
         loading: true,
@@ -52,7 +44,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
         const sandbox = await getOrCreate(ctxId);
         const params = { pattern, path, include, limit };
         const payload = toBase64Json(params);
-        const command = `PARAMS_B64='${payload}' python3 agent/bin/grep.py`;
+        const command = `PARAMS='${payload}' python3 agent/bin/grep.py`;
 
         const result = await sandbox.runCommand({
           cmd: 'sh',

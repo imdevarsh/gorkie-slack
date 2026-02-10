@@ -27,6 +27,7 @@ export const bash = ({
   files?: SlackFile[];
 }) => {
   let turn = 0;
+  const defaultWorkdir = '/home/vercel-sandbox';
 
   return tool({
     description:
@@ -69,7 +70,7 @@ export const bash = ({
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
-          ...(workdir ? { cwd: workdir } : {}),
+          cwd: workdir ?? defaultWorkdir,
         });
 
         const stdout = await result.stdout();
@@ -82,10 +83,16 @@ export const bash = ({
             'Sandbox command failed'
           );
         } else {
-          logger.debug(
-            { ctxId, exitCode, command, workdir, status },
-            'Sandbox command complete'
-          );
+        logger.debug(
+          {
+            ctxId,
+            exitCode,
+            command,
+            workdir: workdir ?? defaultWorkdir,
+            status,
+          },
+          'Sandbox command complete'
+        );
         }
 
         const turnPath = `agent/turns/${turn}.json`;

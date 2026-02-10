@@ -5,8 +5,6 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { getOrCreate } from './bash/sandbox';
-import { toBase64Json } from './utils';
-
 export const read = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description:
@@ -17,21 +15,21 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         .number()
         .int()
         .min(0)
-        .optional()
+        .default(0)
         .describe('Line number to start reading from (0-based, default: 0)'),
       limit: z
         .number()
         .int()
         .min(1)
         .max(500)
-        .optional()
+        .default(200)
         .describe('Maximum lines to return (default: 200, max: 500)'),
       status: z
         .string()
         .optional()
         .describe('Status text formatted like "is xyz"'),
     }),
-    execute: async ({ path, offset = 0, limit = 200, status }) => {
+    execute: async ({ path, offset, limit, status }) => {
       await setStatus(context, {
         status: status ?? 'is reading file',
         loading: true,
@@ -40,34 +38,24 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getOrCreate(ctxId);
+        const fileBuffer = await sandbox.readFileToBuffer({ path });
 
-        const params = { path, offset, limit };
-        const payload = toBase64Json(params);
-        const result = await sandbox.runCommand({
-          cmd: 'sh',
-          args: ['-c', `PARAMS_B64='${payload}' python3 agent/bin/read.py`],
-        });
-
-        const stdout = await result.stdout();
-        const stderr = await result.stderr();
-
-        if (result.exitCode !== 0) {
-          return {
-            success: false,
-            error: stderr || `File not found: ${path}`,
-          };
+        if (!fileBuffer) {
+          return { success: false, error: `File not found: ${path}` };
         }
 
-        const lines = stdout.split('\n');
-        const totalLines = Number.parseInt(lines[0] ?? '0', 10);
-        const content = lines.slice(1).join('\n');
+        const lines = fileBuffer.toString('utf-8').split('\n');
+        const totalLines = lines.length;
+        const start = Math.max(0, offset);
+        const end = Math.min(totalLines, start + limit);
+        const content = lines.slice(start, end).join('\n');
 
         const response = {
           success: true,
           content,
           totalLines,
-          offset,
-          linesReturned: Math.min(limit, Math.max(0, totalLines - offset)),
+          offset: start,
+          linesReturned: Math.max(0, end - start),
         };
 
         logger.debug(
