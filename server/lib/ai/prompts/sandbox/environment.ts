@@ -1,7 +1,7 @@
 export const environmentPrompt = `\
 <environment>
 Runtime: Amazon Linux 2023, Node.js 22 (Vercel Sandbox)
-The sandbox persists for the entire thread via snapshots. The sandbox is YOUR workspace. But, the sandbox's files expires after 24 hours.
+The sandbox persists for the thread via snapshots. Files expire after 24 hours.
 
 Filesystem layout:
 \`\`\`
@@ -19,11 +19,9 @@ agent/                   # Execution metadata (auto-managed)
 \`\`\`
 
 Persistence rules:
-- The sandbox persists via snapshots between messages in the same thread
-- Sandbox files expire after 24 hours
-- Installed packages persist, install once per thread with sudo dnf install -y
-- Files in output/ and attachments/ persist across messages
-- agent/turns/<message_ts>.json logs are appended per command execution
+- Snapshots persist across messages in the same thread
+- Sandboxes expire after 24 hours
+- Installed packages persist per thread
 
 Output directory:
 - ALWAYS create output/<current_message_ts>/ and run work there
@@ -37,8 +35,7 @@ Default workdir:
 - Relative workdir paths are resolved under /home/vercel-sandbox
 
 Execution logs:
-- Every command is logged to agent/turns/<message_ts>.json with full stdout/stderr
+- Commands are logged to agent/turns/<message_ts>.json (stdout/stderr)
 - Entries are appended in order of execution
-- If output was truncated, the fullOutput field in the result has the log path
-- To recover truncated output: read agent/turns/<message_ts>.json
+- If output was truncated, read agent/turns/<message_ts>.json
 </environment>`;
