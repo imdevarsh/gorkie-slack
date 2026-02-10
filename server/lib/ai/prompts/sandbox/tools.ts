@@ -123,6 +123,7 @@ The file must exist in the sandbox filesystem. Generated files live in output/, 
 <rules>
 - Call showFile as soon as the file is ready — don't wait until the end
 - Use relative paths: output/result.png, attachments/1770648887.532179/photo.png
+- Only upload user-requested results. Never upload every file or error logs.
 </rules>
 <examples>
 - showFile({ "path": "output/result.png", "title": "Processed image" })

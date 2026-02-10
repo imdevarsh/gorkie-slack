@@ -29,7 +29,7 @@ export const workflowPrompt = `\
     <name>Upload</name>
     <rules>
     - Save output to output/ directory.
-    - Call showFile for each file the user needs to see.
+    - Call showFile only for files the user explicitly asked for or that are required to complete the task.
     - Upload before returning your summary.
     </rules>
   </step>

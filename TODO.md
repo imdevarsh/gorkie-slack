@@ -8,3 +8,4 @@
 - Update system prompt: require web search usage when needed and avoid assuming alternative access methods.
 - like claude code store the turns in assistant/turns or whatever so it can see what output etc in json files
 - take a look at opencode, and it's tools https://github.com/anomalyco/opencode see what we wanna add to agent
+- Check With User DMs
