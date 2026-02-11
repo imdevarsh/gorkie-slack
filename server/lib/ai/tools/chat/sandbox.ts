@@ -35,8 +35,8 @@ export const sandbox = ({
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(context);
-        await syncAttachments(sandbox, context, files);
+        const instance = await getSandbox(context);
+        await syncAttachments(instance, context, files);
 
         const { messages, requestHints } = await buildSandboxContext(context);
 
@@ -47,7 +47,7 @@ export const sandbox = ({
 
         logger.info(
           { steps: result.steps.length, ctxId },
-          'Sandbox agent completed'
+          '[subagent] [sandbox] completed'
         );
 
         return {
@@ -56,7 +56,7 @@ export const sandbox = ({
           steps: result.steps.length,
         };
       } catch (error) {
-        logger.error({ error, ctxId }, 'Sandbox agent failed');
+        logger.error({ error, ctxId }, '[subagent] [sandbox] failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

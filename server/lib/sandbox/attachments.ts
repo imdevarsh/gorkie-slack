@@ -27,13 +27,6 @@ export async function syncAttachments(
 
   const ctxId = getContextId(context);
   const dir = attachmentsDir(messageTs);
-  const existing = await sandbox
-    .runCommand({ cmd: 'sh', args: ['-c', `ls -A '${dir}' >/dev/null 2>&1`] })
-    .catch(() => null);
-
-  if (existing?.exitCode === 0) {
-    return;
-  }
 
   await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
 

@@ -53,7 +53,7 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         if (exitCode !== 0) {
           logger.debug(
             { ctxId, command, exitCode, stderr: stderr.slice(0, 500) },
-            `Command failed with exit code ${exitCode}`
+            '[sandbox] [bash] exit_nonzero'
           );
         }
 
@@ -76,7 +76,7 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
           ...(out.truncated || err.truncated ? { fullOutput: logPath } : {}),
         };
       } catch (error) {
-        logger.error({ error, command, ctxId }, 'Sandbox crashed mid-command');
+        logger.error({ error, command, ctxId }, '[sandbox] [bash] crash');
         await redis.del(redisKeys.sandbox(ctxId));
 
         return {

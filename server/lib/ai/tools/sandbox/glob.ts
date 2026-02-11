@@ -67,7 +67,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
 
         logger.debug(
           { ctxId, pattern, path, count: data.count },
-          `Found ${data.count} files matching ${pattern}`
+          '[sandbox] [glob] ok'
         );
 
         return {
@@ -80,7 +80,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       } catch (error) {
         logger.error(
           { ctxId, error, pattern, path },
-          `Glob failed for pattern ${pattern}`
+          '[sandbox] [glob] fail'
         );
         return {
           success: false,
