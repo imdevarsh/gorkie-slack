@@ -30,11 +30,11 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
           { path, content: Buffer.from(content, 'utf-8') },
         ]);
 
-        logger.debug({ path, ctxId }, `Wrote ${path}`);
+        logger.debug({ path, ctxId }, '[sandbox] [write] ok');
 
         return { success: true, path };
       } catch (error) {
-        logger.error({ error, path, ctxId }, `Failed to write ${path}`);
+        logger.error({ error, path, ctxId }, '[sandbox] [write] fail');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

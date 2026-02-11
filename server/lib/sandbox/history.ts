@@ -23,6 +23,6 @@ export async function addHistory(
       },
     ])
     .catch((error: unknown) => {
-      logger.warn({ error, path }, 'Failed to write turn log');
+      logger.warn({ error, path }, '[sandbox] [history] write_fail');
     });
 }

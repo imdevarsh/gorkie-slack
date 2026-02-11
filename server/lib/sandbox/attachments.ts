@@ -37,7 +37,7 @@ export async function syncAttachments(
   if (results.some((ok) => !ok)) {
     logger.warn(
       { messageTs, ctxId },
-      'Attachment sync incomplete; will retry on next request'
+      '[sandbox] [attachments] partial'
     );
     return;
   }
@@ -48,7 +48,7 @@ export async function syncAttachments(
       messageTs,
       ctxId,
     },
-    'Transported attachments to sandbox'
+    '[sandbox] [attachments] ok'
   );
 }
 
@@ -74,7 +74,7 @@ async function syncFile(
   } catch (error) {
     logger.warn(
       { error, fileId: file.id, name: file.name, ctxId },
-      'Failed to write attachment to sandbox'
+      '[sandbox] [attachments] write_fail'
     );
     return false;
   }
@@ -92,7 +92,7 @@ async function downloadAttachment(
   if (typeof file.size === 'number' && file.size > MAX_ATTACHMENT_BYTES) {
     logger.warn(
       { fileId: file.id, name: file.name, size: file.size, ctxId },
-      'Attachment exceeds size limit'
+      '[sandbox] [attachments] too_large'
     );
     return null;
   }
@@ -104,7 +104,7 @@ async function downloadAttachment(
   if (!response?.ok) {
     logger.warn(
       { fileId: file.id, name: file.name, status: response?.status, ctxId },
-      'Failed to download attachment'
+      '[sandbox] [attachments] download_fail'
     );
     return null;
   }
@@ -113,7 +113,7 @@ async function downloadAttachment(
   if (content.byteLength > MAX_ATTACHMENT_BYTES) {
     logger.warn(
       { fileId: file.id, name: file.name, size: content.byteLength, ctxId },
-      'Attachment exceeds size limit'
+      '[sandbox] [attachments] too_large'
     );
     return null;
   }
