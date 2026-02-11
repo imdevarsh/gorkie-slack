@@ -11,46 +11,6 @@ import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 
-function truncateOutput(
-  output: string,
-  turnPath: string
-): { content: string; truncated: boolean } {
-  const lines = output.split('\n');
-  const totalBytes = Buffer.byteLength(output, 'utf-8');
-
-  if (
-    lines.length <= tools.bash.maxOutputLines &&
-    totalBytes <= tools.bash.maxOutputBytes
-  ) {
-    return { content: output, truncated: false };
-  }
-
-  const preview: string[] = [];
-  let bytes = 0;
-  let hitBytes = false;
-
-  for (let i = 0; i < lines.length && i < tools.bash.maxOutputLines; i++) {
-    const line = lines[i] ?? '';
-    const size = Buffer.byteLength(line, 'utf-8') + (i > 0 ? 1 : 0);
-    if (bytes + size > tools.bash.maxOutputBytes) {
-      hitBytes = true;
-      break;
-    }
-    preview.push(line);
-    bytes += size;
-  }
-
-  const removed = hitBytes ? totalBytes - bytes : lines.length - preview.length;
-  const unit = hitBytes ? 'bytes' : 'lines';
-  const hint =
-    `The tool call succeeded but the output was truncated. Full output saved to: ${turnPath}\n` +
-    'Use Read on that file with offset/limit, or Grep to search the full content.';
-
-  const message = `${preview.join('\n')}\n\n...${removed} ${unit} truncated...\n\n${hint}`;
-
-  return { content: message, truncated: true };
-}
-
 export const bash = ({
   context,
   files,
@@ -70,11 +30,9 @@ export const bash = ({
     }),
     execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
-      const messageTs = getMessageTs(context);
-      const outputDirPath = outputDir(messageTs);
-      const turnPath = turnsPath(messageTs);
-      const turnsDirPath = sandboxPath('agent/turns');
-      const effectiveWorkdir = sandboxPath(workdir ?? '.');
+      const ts = (context.event as { ts?: string }).ts ?? 'unknown';
+      const cwd = sandboxPath(workdir ?? '.');
+      const logPath = turnsPath(ts);
 
       try {
         const sandbox = await getSandbox(
@@ -82,81 +40,105 @@ export const bash = ({
           context,
           files?.length ? { files, messageTs: context.event.ts } : undefined
         );
+
         await sandbox.runCommand({
           cmd: 'mkdir',
-          args: ['-p', outputDirPath, turnsDirPath],
+          args: ['-p', outputDir(ts), sandboxPath('agent/turns')],
         });
-        if (status) {
-          await setStatus(context, { status, loading: true });
-        } else {
-          await setStatus(context, {
-            status: 'is running commands in the sandbox',
-            loading: true,
-          });
-        }
 
-        logger.debug(
-          {
-            ctxId,
-            command,
-            workdir: effectiveWorkdir,
-            status,
-          },
-          'Sandbox command start'
-        );
+        await setStatus(context, {
+          status: status ?? 'is running commands in the sandbox',
+          loading: true,
+        });
 
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
-          cwd: effectiveWorkdir,
+          cwd,
         });
 
         const stdout = await result.stdout();
         const stderr = await result.stderr();
         const exitCode = result.exitCode;
 
-        logger.debug(
-          {
-            ctxId,
-            exitCode,
-            ok: exitCode === 0,
-          },
-          'Sandbox command result'
-        );
+        if (exitCode !== 0) {
+          logger.debug(
+            { command, exitCode, stderr: stderr.slice(0, 500) },
+            `[${ctxId}] Command failed with exit code ${exitCode}`
+          );
+        }
 
-        await addHistory(sandbox, turnPath, {
+        await addHistory(sandbox, logPath, {
           command,
-          workdir: effectiveWorkdir,
+          workdir: cwd,
           status,
           stdout,
           stderr,
           exitCode,
         });
 
-        const stdoutResult = truncateOutput(stdout || '(no output)', turnPath);
-        const stderrResult = truncateOutput(stderr, turnPath);
+        const out = truncate(stdout || '(no output)', logPath);
+        const err = truncate(stderr, logPath);
 
         return {
-          stdout: stdoutResult.content,
-          stderr: stderrResult.content,
+          output: out.text,
+          error: err.text,
           exitCode,
-          ...(stdoutResult.truncated || stderrResult.truncated
-            ? { fullOutput: turnPath }
-            : {}),
+          ...(out.truncated || err.truncated ? { fullOutput: logPath } : {}),
         };
       } catch (error) {
-        logger.error({ error, ctxId, command }, 'Sandbox operation failed');
+        logger.error(
+          { error, command },
+          `[${ctxId}] Sandbox crashed mid-command`
+        );
         await redis.del(redisKeys.sandbox(ctxId));
 
         return {
-          stdout: '',
-          stderr: error instanceof Error ? error.message : String(error),
+          output: '',
+          error: error instanceof Error ? error.message : String(error),
           exitCode: 1,
         };
       }
     },
   });
 
-function getMessageTs(context: SlackMessageContext): string {
-  return (context.event as { ts?: string }).ts ?? 'unknown';
+function truncate(
+  raw: string,
+  logPath: string
+): { text: string; truncated: boolean } {
+  const lines = raw.split('\n');
+  const totalBytes = Buffer.byteLength(raw, 'utf-8');
+
+  if (
+    lines.length <= tools.bash.maxOutputLines &&
+    totalBytes <= tools.bash.maxOutputBytes
+  ) {
+    return { text: raw, truncated: false };
+  }
+
+  const kept: string[] = [];
+  let bytes = 0;
+  let hitBytes = false;
+
+  for (let i = 0; i < lines.length && i < tools.bash.maxOutputLines; i++) {
+    const line = lines[i] ?? '';
+    const size = Buffer.byteLength(line, 'utf-8') + (i > 0 ? 1 : 0);
+    if (bytes + size > tools.bash.maxOutputBytes) {
+      hitBytes = true;
+      break;
+    }
+    kept.push(line);
+    bytes += size;
+  }
+
+  const removed = hitBytes ? totalBytes - bytes : lines.length - kept.length;
+  const unit = hitBytes ? 'bytes' : 'lines';
+  const hint =
+    `Output truncated. Full content saved to: ${logPath}\n` +
+    'Use Read on that file with offset/limit, or Grep to search it.';
+
+  return {
+    text: `${kept.join('\n')}\n\n...${removed} ${unit} truncated...\n\n${hint}`,
+    truncated: true,
+  };
 }

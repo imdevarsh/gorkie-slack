@@ -3,9 +3,7 @@ import { getConversationMessages } from '~/slack/conversations';
 import type { SandboxRequestHints, SlackMessageContext } from '~/types';
 import { resolveChannelName, resolveServerName } from '~/utils/slack';
 import { getTime } from '~/utils/time';
-import { reconnectSandbox } from './connect';
-
-const FRACTIONAL_SECONDS = /\.\d+$/;
+import { reconnectSandbox } from './lifecycle';
 
 export async function peekFilesystem(ctxId: string): Promise<string | null> {
   const live = await reconnectSandbox(ctxId);
@@ -15,16 +13,10 @@ export async function peekFilesystem(ctxId: string): Promise<string | null> {
 
   const result = await live
     .runCommand({
-      cmd: 'find',
+      cmd: 'sh',
       args: [
-        'attachments',
-        'output',
-        '-maxdepth',
-        '3',
-        '-type',
-        'f',
-        '-printf',
-        '%T@ %T+ %p\\n',
+        '-c',
+        "fd --type f . attachments output --max-depth 3 -X stat -c '%Y\\t%T+ %n' 2>/dev/null | sort -t$'\\t' -k1 -rn | cut -f2-",
       ],
     })
     .catch(() => null);
@@ -38,26 +30,7 @@ export async function peekFilesystem(ctxId: string): Promise<string | null> {
     return null;
   }
 
-  return stdout
-    .trim()
-    .split('\n')
-    .map((line) => {
-      const first = line.indexOf(' ');
-      const second = line.indexOf(' ', first + 1);
-      if (first < 0 || second < 0) {
-        return { epoch: 0, display: line };
-      }
-      const epoch = Number(line.slice(0, first));
-      const date = line
-        .slice(first + 1, second)
-        .replace('+', ' ')
-        .replace(FRACTIONAL_SECONDS, '');
-      const filePath = line.slice(second + 1);
-      return { epoch, display: `${date}  ${filePath}` };
-    })
-    .sort((a, b) => b.epoch - a.epoch)
-    .map((entry) => entry.display)
-    .join('\n');
+  return stdout.trim();
 }
 
 export interface SandboxContext {

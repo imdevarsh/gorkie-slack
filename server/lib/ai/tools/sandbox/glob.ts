@@ -6,13 +6,6 @@ import { getSandbox } from '~/lib/sandbox';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
-const outputSchema = z.object({
-  path: z.string(),
-  count: z.number(),
-  truncated: z.boolean(),
-  output: z.string(),
-});
-
 export const glob = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Find files by glob pattern in the sandbox.',
@@ -44,10 +37,13 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getSandbox(ctxId, context);
-        const payload = Buffer.from(
-          JSON.stringify({ pattern, path, limit })
-        ).toString('base64');
-        const command = `PARAMS='${payload}' python3 agent/bin/glob.py`;
+
+        const command = [
+          `fd --type f --glob '${escapeShell(pattern)}' '${escapeShell(path)}'`,
+          `-X stat -c '%Y\\t%n' 2>/dev/null`,
+          `| sort -t$'\\t' -k1 -rn`,
+          `| head -n ${limit}`,
+        ].join(' ');
 
         const result = await sandbox.runCommand({
           cmd: 'sh',
@@ -57,37 +53,41 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
         const stdout = await result.stdout();
         const stderr = await result.stderr();
 
-        if (result.exitCode !== 0) {
+        if (result.exitCode !== 0 && !stdout.trim()) {
           return {
             success: false,
             error: stderr || `Failed to match pattern: ${pattern}`,
           };
         }
 
-        const data = outputSchema.parse(JSON.parse(stdout || '{}'));
+        const paths = stdout
+          .trim()
+          .split('\n')
+          .filter(Boolean)
+          .map((line) => {
+            const tab = line.indexOf('\t');
+            return tab >= 0 ? line.slice(tab + 1) : line;
+          });
+
+        const truncated = paths.length >= limit;
+        const output = paths.length > 0 ? paths.join('\n') : 'No files found';
 
         logger.debug(
-          {
-            ctxId,
-            pattern,
-            path,
-            count: data.count,
-            truncated: data.truncated,
-          },
-          'Sandbox glob complete'
+          { pattern, path, count: paths.length },
+          `[${ctxId}] Found ${paths.length} files matching ${pattern}`
         );
 
         return {
           success: true,
-          path: data.path,
-          count: data.count,
-          truncated: data.truncated,
-          output: data.output,
+          path,
+          count: paths.length,
+          truncated,
+          output,
         };
       } catch (error) {
         logger.error(
-          { error, pattern, path, ctxId },
-          'Failed to glob in sandbox'
+          { error, pattern, path },
+          `[${ctxId}] Glob failed for pattern ${pattern}`
         );
         return {
           success: false,
@@ -96,3 +96,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       }
     },
   });
+
+function escapeShell(value: string): string {
+  return value.replace(/'/g, "'\\''");
+}

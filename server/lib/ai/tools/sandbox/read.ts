@@ -60,30 +60,21 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
 
         const content = numbered.join('\n');
 
-        const response = {
+        const linesReturned = Math.max(0, end - start);
+        logger.debug(
+          { path, totalLines, linesReturned },
+          `[${ctxId}] Read ${linesReturned} lines from ${path}`
+        );
+
+        return {
           success: true,
           content,
           totalLines,
           offset: start,
-          linesReturned: Math.max(0, end - start),
+          linesReturned,
         };
-
-        logger.debug(
-          {
-            ctxId,
-            path,
-            totalLines: response.totalLines,
-            linesReturned: response.linesReturned,
-          },
-          'Read complete'
-        );
-
-        return response;
       } catch (error) {
-        logger.error(
-          { error, path, ctxId },
-          'Failed to read file from sandbox'
-        );
+        logger.error({ error, path }, `[${ctxId}] Failed to read ${path}`);
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

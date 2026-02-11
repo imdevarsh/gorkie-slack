@@ -52,27 +52,22 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
         }
 
         const updated = replaceAll
-          ? data.split(oldString).join(newString)
+          ? data.replaceAll(oldString, newString)
           : data.replace(oldString, newString);
 
         await sandbox.writeFiles([
           { path, content: Buffer.from(updated, 'utf-8') },
         ]);
 
-        const response = {
-          success: true,
-          path,
-          replaced: replaceAll ? count : 1,
-        };
-
+        const replaced = replaceAll ? count : 1;
         logger.debug(
-          { ctxId, path, replaced: response.replaced },
-          'Sandbox edit complete'
+          { path, replaced },
+          `[${ctxId}] Replaced ${replaced} occurrence${replaced > 1 ? 's' : ''} in ${path}`
         );
 
-        return response;
+        return { success: true, path, replaced };
       } catch (error) {
-        logger.error({ error, path, ctxId }, 'Failed to edit file in sandbox');
+        logger.error({ error, path }, `[${ctxId}] Failed to edit ${path}`);
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

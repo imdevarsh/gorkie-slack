@@ -30,20 +30,11 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
           { path, content: Buffer.from(content, 'utf-8') },
         ]);
 
-        const response = {
-          success: true,
-          path,
-          output: 'ok',
-        };
+        logger.debug({ path }, `[${ctxId}] Wrote ${path}`);
 
-        logger.debug(
-          { ctxId, path, output: response.output },
-          'Write complete'
-        );
-
-        return response;
+        return { success: true, path };
       } catch (error) {
-        logger.error({ error, path, ctxId }, 'Failed to write file in sandbox');
+        logger.error({ error, path }, `[${ctxId}] Failed to write ${path}`);
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

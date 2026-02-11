@@ -2,17 +2,6 @@ import { Snapshot } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
-import { snapshotRecordSchema } from '~/lib/validators/sandbox/snapshot';
-
-export function parseSnapshotRecord(
-  raw: string
-): { snapshotId: string; createdAt: number } | null {
-  try {
-    return snapshotRecordSchema.parse(JSON.parse(raw) as unknown);
-  } catch {
-    return null;
-  }
-}
 
 export async function deleteSnapshot(
   snapshotId: string,
@@ -21,9 +10,9 @@ export async function deleteSnapshot(
   try {
     const snapshot = await Snapshot.get({ snapshotId });
     await snapshot.delete();
-    logger.info({ snapshotId, ctxId }, 'Deleted snapshot');
+    logger.info({ snapshotId }, `[${ctxId}] Deleted snapshot`);
   } catch (error) {
-    logger.warn({ snapshotId, error, ctxId }, 'Failed to delete snapshot');
+    logger.warn({ snapshotId, error }, `[${ctxId}] Failed to delete snapshot`);
   }
 }
 

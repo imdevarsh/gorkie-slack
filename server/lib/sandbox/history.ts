@@ -4,6 +4,7 @@ import {
   type HistoryEntry,
   historySchema,
 } from '~/lib/validators/sandbox/history';
+import { safeParseJson } from '~/utils/parse-json';
 
 export async function addHistory(
   sandbox: Sandbox,
@@ -11,13 +12,8 @@ export async function addHistory(
   entry: HistoryEntry
 ): Promise<void> {
   const previous = await sandbox.readFileToBuffer({ path }).catch(() => null);
-  const raw = previous?.toString() ?? '[]';
-  let history: HistoryEntry[] = [];
-  try {
-    history = historySchema.parse(JSON.parse(raw) as unknown);
-  } catch {
-    history = [];
-  }
+  const history =
+    safeParseJson(previous?.toString() ?? '[]', historySchema) ?? [];
   history.push(entry);
   await sandbox
     .writeFiles([

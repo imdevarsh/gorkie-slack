@@ -1,3 +1,4 @@
+import nodePath from 'node:path';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
@@ -50,7 +51,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
           return { success: false, error: `File not found: ${resolvedPath}` };
         }
 
-        const uploadFilename = filename ?? path.split('/').pop() ?? 'file';
+        const uploadFilename = filename ?? (nodePath.basename(path) || 'file');
 
         await context.client.files.uploadV2({
           channel_id: channelId,
@@ -62,7 +63,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
 
         logger.info(
           { channel: channelId, path: resolvedPath, size: fileBuffer.length },
-          'Uploaded sandbox file to Slack'
+          `Uploaded ${uploadFilename} (${fileBuffer.length} bytes) to Slack`
         );
 
         return {
@@ -71,8 +72,8 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { error, channel: channelId, path, ctxId },
-          'Failed to upload sandbox file'
+          { error, channel: channelId, path },
+          `[${ctxId}] Failed to upload ${path} to Slack`
         );
         return {
           success: false,
