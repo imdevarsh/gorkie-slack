@@ -95,7 +95,10 @@ async function provision(context: SlackMessageContext): Promise<Sandbox> {
   await makeFolders(instance);
   await installTools(instance);
 
-  logger.info({ ctxId, sandboxId: instance.sandboxId }, '[sandbox] Created new sandbox');
+  logger.info(
+    { ctxId, sandboxId: instance.sandboxId },
+    '[sandbox] Created new sandbox'
+  );
   return instance;
 }
 
@@ -124,7 +127,10 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
     source: { type: 'snapshot', snapshotId },
     timeout: config.timeoutMs,
   }).catch((error: unknown) => {
-    logger.warn({ snapshotId, error, ctxId }, '[sandbox] Failed to restore sandbox from snapshot');
+    logger.warn(
+      { snapshotId, error, ctxId },
+      '[sandbox] Failed to restore sandbox from snapshot'
+    );
     return null;
   });
 

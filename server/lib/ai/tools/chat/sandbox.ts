@@ -47,7 +47,7 @@ export const sandbox = ({
 
         logger.info(
           { steps: result.steps.length, ctxId },
-          '[subagent] [sandbox] completed'
+          '[subagent] Sandbox run completed'
         );
 
         return {
@@ -56,7 +56,7 @@ export const sandbox = ({
           steps: result.steps.length,
         };
       } catch (error) {
-        logger.error({ error, ctxId }, '[subagent] [sandbox] failed');
+        logger.error({ error, ctxId }, '[subagent] Sandbox run failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

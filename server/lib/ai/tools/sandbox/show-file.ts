@@ -75,10 +75,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
           message: `Uploaded ${uploadFilename} (${fileBuffer.length} bytes) to Slack`,
         };
       } catch (error) {
-        logger.error(
-          { error, path, ctxId },
-          '[sandbox] File upload failed'
-        );
+        logger.error({ error, path, ctxId }, '[sandbox] File upload failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

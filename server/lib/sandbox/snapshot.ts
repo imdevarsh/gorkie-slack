@@ -10,9 +10,12 @@ export async function deleteSnapshot(
   try {
     const snapshot = await Snapshot.get({ snapshotId });
     await snapshot.delete();
-    logger.info({ snapshotId, ctxId }, '[sandbox] [snapshot] delete_ok');
+    logger.info({ snapshotId, ctxId }, '[sandbox] Deleted snapshot');
   } catch (error) {
-    logger.warn({ snapshotId, error, ctxId }, '[sandbox] [snapshot] delete_fail');
+    logger.warn(
+      { snapshotId, error, ctxId },
+      '[sandbox] Failed to delete snapshot'
+    );
   }
 }
 

@@ -60,10 +60,7 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
         ]);
 
         const replaced = replaceAll ? count : 1;
-        logger.debug(
-          { path, replaced, ctxId },
-          '[sandbox] Edit completed'
-        );
+        logger.debug({ path, replaced, ctxId }, '[sandbox] Edit completed');
 
         return { success: true, path, replaced };
       } catch (error) {
