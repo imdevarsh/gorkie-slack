@@ -82,14 +82,7 @@ async function provision(
   ctxId: string,
   context?: SlackMessageContext
 ): Promise<Sandbox> {
-  if (context) {
-    await setStatus(context, {
-      status: 'is restoring the sandbox',
-      loading: true,
-    });
-  }
-
-  const restored = await restore(ctxId);
+  const restored = await restore(ctxId, context);
   if (restored) {
     await installTools(restored);
     return restored;
@@ -114,7 +107,10 @@ async function provision(
   return instance;
 }
 
-async function restore(ctxId: string): Promise<Sandbox | null> {
+async function restore(
+  ctxId: string,
+  context?: SlackMessageContext
+): Promise<Sandbox | null> {
   const snapshotRaw = await redis.get(redisKeys.snapshot(ctxId));
   const snapshot = safeParseJson(snapshotRaw, snapshotRecordSchema);
   if (!snapshot) {
@@ -127,6 +123,13 @@ async function restore(ctxId: string): Promise<Sandbox | null> {
     await deleteSnapshot(snapshotId, ctxId);
     await redis.del(redisKeys.snapshot(ctxId));
     return null;
+  }
+
+  if (context) {
+    await setStatus(context, {
+      status: 'is restoring the sandbox',
+      loading: true,
+    });
   }
 
   const instance = await Sandbox.create({
