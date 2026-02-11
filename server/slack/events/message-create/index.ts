@@ -29,7 +29,7 @@ async function canReply(ctxId: string): Promise<boolean> {
 }
 
 async function onSuccess(_context: SlackMessageContext) {
-  // await saveChatMemory(context, 5);
+  // todo: add operations here
 }
 
 function isProcessableMessage(
@@ -37,7 +37,6 @@ function isProcessableMessage(
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
 
-  // has to be done again for type things
   if (
     event.subtype &&
     event.subtype !== 'thread_broadcast' &&
