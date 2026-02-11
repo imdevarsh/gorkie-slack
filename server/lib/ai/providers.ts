@@ -1,4 +1,3 @@
-import { openai } from '@ai-sdk/openai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { customProvider, wrapLanguageModel } from 'ai';
 import { createRetryable } from 'ai-retry';
@@ -35,7 +34,7 @@ const onModelError = (context: {
 };
 
 const chatModel = createRetryable({
-  model: openai('gpt-5-mini'),
+  model: hackclub('google/gemini-3-flash-preview'),
   retries: [
     hackclub('google/gemini-2.5-flash'),
     hackclub('openai/gpt-5-mini'),
@@ -47,9 +46,8 @@ const chatModel = createRetryable({
 });
 
 const summariserModel = createRetryable({
-  model: openai('gpt-5-nano'),
+  model: hackclub('google/gemini-3-flash-preview'),
   retries: [
-    hackclub('google/gemini-3-flash-preview'),
     hackclub('google/gemini-2.5-flash'),
     hackclub('openai/gpt-5-mini'),
     openrouter('google/gemini-2.5-flash-lite-preview-09-2025'),
@@ -59,8 +57,12 @@ const summariserModel = createRetryable({
 });
 
 const agentModel = createRetryable({
-  model: openai('gpt-5.2'),
-  retries: [hackclub('openai/gpt-5.2'), openrouter('openai/gpt-5.2')],
+  model: hackclub('openai/gpt-5.2'),
+  retries: [
+    hackclub('google/gemini-3-pro-preview'),
+    openrouter('openai/gpt-5.2'),
+    openrouter('google/gemini-3-pro-preview'),
+  ],
   onError: onModelError,
 });
 
