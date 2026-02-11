@@ -70,7 +70,10 @@ function isProcessableMessage(
   } satisfies SlackMessageContext;
 }
 
-async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
+async function getAuthorName(
+  ctx: SlackMessageContext,
+  ctxId: string
+): Promise<string> {
   const userId = (ctx.event as { user?: string }).user;
   if (!userId) {
     return 'unknown';
@@ -84,7 +87,10 @@ async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
       userId
     );
   } catch (error) {
-    logger.warn({ error, userId }, 'Failed to fetch user info for logging');
+    logger.warn(
+      { error, userId, ctxId },
+      'Failed to fetch user info for logging'
+    );
     return userId;
   }
 }
@@ -110,7 +116,7 @@ async function handleMessage(args: MessageEventArgs) {
   const ctxId = getContextId(messageContext);
   const trigger = await getTrigger(messageContext, messageContext.botUserId);
 
-  const authorName = await getAuthorName(messageContext);
+  const authorName = await getAuthorName(messageContext, ctxId);
   const content = (messageContext.event as { text?: string }).text ?? '';
 
   const { messages, requestHints } = await buildChatContext(messageContext);

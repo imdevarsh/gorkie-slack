@@ -39,7 +39,12 @@ if (!isProd) {
       colorize: true,
       translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
       ignore: 'pid,hostname,ctxId',
-      messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
+      messageFormat: '{msg}',
+      customPrettifiers: {
+        time: (value: string, _key: string, log: { ctxId?: string | null }) => {
+          return log.ctxId ? `${value} ${log.ctxId}` : value;
+        },
+      },
     },
     level: logLevel,
   });

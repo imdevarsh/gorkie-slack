@@ -31,8 +31,9 @@ export const sandbox = ({
         loading: true,
       });
 
+      const ctxId = getContextId(context);
+
       try {
-        const ctxId = getContextId(context);
         const { messages, requestHints } = await buildSandboxContext({
           ctxId,
           context,
@@ -43,7 +44,10 @@ export const sandbox = ({
           messages: [...messages, { role: 'user', content: task }],
         });
 
-        logger.info({ steps: result.steps.length }, 'Sandbox agent completed');
+        logger.info(
+          { steps: result.steps.length, ctxId },
+          'Sandbox agent completed'
+        );
 
         return {
           success: true,
@@ -51,7 +55,7 @@ export const sandbox = ({
           steps: result.steps.length,
         };
       } catch (error) {
-        logger.error({ error }, 'Sandbox agent failed');
+        logger.error({ error, ctxId }, 'Sandbox agent failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),
