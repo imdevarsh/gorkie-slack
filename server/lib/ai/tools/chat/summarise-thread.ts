@@ -62,7 +62,7 @@ export const summariseThread = ({
         const { text } = await generateText({
           model: provider.languageModel('summariser-model'),
           messages,
-          system: summariseThreadPrompt(instructions)
+          system: summariseThreadPrompt(instructions),
         });
 
         logger.debug(

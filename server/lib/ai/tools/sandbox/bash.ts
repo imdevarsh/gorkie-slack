@@ -73,6 +73,7 @@ export const bash = ({
       const messageTs = getMessageTs(context);
       const outputDirPath = outputDir(messageTs);
       const turnPath = turnsPath(messageTs);
+      const turnsDirPath = sandboxPath('agent/turns');
       const effectiveWorkdir = sandboxPath(workdir ?? '.');
 
       try {
@@ -83,7 +84,7 @@ export const bash = ({
         );
         await sandbox.runCommand({
           cmd: 'mkdir',
-          args: ['-p', outputDirPath, '/home/vercel-sandbox/agent/turns'],
+          args: ['-p', outputDirPath, turnsDirPath],
         });
         if (status) {
           await setStatus(context, { status, loading: true });

@@ -6,9 +6,9 @@
 - Check With User DMs
 - Fix ratelimiting
 - fix lint
-- it shows restoring snadbox even when its not for a split sec
+- it shows restoring sandbox even when it's not for a split second
 - enforce gorkie to SEND THE ENTIRE PROMPT to the sandbox agent not split it into smaller bits
-- add is thinking tool on prepareStep / tool finish lol bcs when tis writing hug files its stuck at the previous tool
+- add is thinking tool on prepareStep / tool finish lol because when it's writing huge files its stuck at the previous tool
 > 
     status: "is retrying paste.rs"
 [ERROR]  bolt-app 42 | exports.UnknownError = UnknownError;
@@ -45,4 +45,4 @@ TimeoutError: Task timed out after 300000ms (queue has 1 running, 0 waiting)
 
 [ERROR]   An unhandled error occurred while Bolt processed (type: event_callback, error: Error: Task timed out after 300000ms (queue has 1 running, 0 waiting))
 [2026-02-10 17:27:14.440 +0000] DEBUG: Sandbox command result
-- the ai still doesnt know how to use glob tool / and or messesup thining file is 404
+- the ai still doesn't know how to use glob tool / and or messes up thinking file is 404

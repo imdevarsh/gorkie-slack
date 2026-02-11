@@ -1,5 +1,6 @@
 import { Sandbox } from '@vercel/sandbox';
 import type { SlackMessageContext } from '~/types';
+import logger from '~/lib/logger';
 import { syncAttachments } from './attachments';
 import { reconnectSandbox } from './connect';
 import { provisionSandbox } from './provision';
@@ -57,7 +58,9 @@ export async function stopSandbox(ctxId: string): Promise<void> {
     return;
   }
 
-  await cleanupSnapshots();
+  void cleanupSnapshots().catch((error) => {
+    logger.warn({ error, ctxId }, 'Failed to cleanup snapshots');
+  });
   const snap = await instance.snapshot().catch(() => null);
   if (!snap) {
     await forceStop(sandboxId);

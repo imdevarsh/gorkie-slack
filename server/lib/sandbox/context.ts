@@ -1,6 +1,7 @@
 import type { ModelMessage } from 'ai';
 import { getConversationMessages } from '~/slack/conversations';
 import type { SandboxRequestHints, SlackMessageContext } from '~/types';
+import { resolveChannelName, resolveServerName } from '~/utils/slack';
 import { getTime } from '~/utils/time';
 import { reconnectSandbox } from './connect';
 
@@ -57,41 +58,6 @@ export async function peekFilesystem(ctxId: string): Promise<string | null> {
     .sort((a, b) => b.epoch - a.epoch)
     .map((entry) => entry.display)
     .join('\n');
-}
-
-async function resolveChannelName(
-  context: SlackMessageContext
-): Promise<string> {
-  const channelId = (context.event as { channel?: string }).channel;
-  if (!channelId) {
-    return 'unknown';
-  }
-  try {
-    const info = await context.client.conversations.info({
-      channel: channelId,
-    });
-    const ch = info.channel;
-    if (!ch) {
-      return channelId;
-    }
-    if (ch.is_im) {
-      return 'Direct Message';
-    }
-    return ch.name_normalized ?? ch.name ?? channelId;
-  } catch {
-    return channelId;
-  }
-}
-
-async function resolveServerName(
-  context: SlackMessageContext
-): Promise<string> {
-  try {
-    const info = await context.client.team.info();
-    return info.team?.name ?? 'Slack Workspace';
-  } catch {
-    return 'Slack Workspace';
-  }
 }
 
 export interface SandboxContext {
