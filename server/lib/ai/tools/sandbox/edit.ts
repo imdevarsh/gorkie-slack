@@ -62,12 +62,12 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
         const replaced = replaceAll ? count : 1;
         logger.debug(
           { path, replaced, ctxId },
-          '[sandbox] [edit] ok'
+          '[sandbox] Edit completed'
         );
 
         return { success: true, path, replaced };
       } catch (error) {
-        logger.error({ error, path, ctxId }, '[sandbox] [edit] fail');
+        logger.error({ error, path, ctxId }, '[sandbox] Edit failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

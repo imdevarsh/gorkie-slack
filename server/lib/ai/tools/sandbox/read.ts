@@ -63,7 +63,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         const linesReturned = Math.max(0, end - start);
         logger.debug(
           { path, totalLines, linesReturned, ctxId },
-          '[sandbox] [read] ok'
+          '[sandbox] Read completed'
         );
 
         return {
@@ -74,7 +74,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
           linesReturned,
         };
       } catch (error) {
-        logger.error({ error, path, ctxId }, '[sandbox] [read] fail');
+        logger.error({ error, path, ctxId }, '[sandbox] Read failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

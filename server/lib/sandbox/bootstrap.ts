@@ -10,7 +10,7 @@ export async function makeFolders(instance: Sandbox): Promise<void> {
       args: ['-p', 'agent/turns', 'agent/bin', 'output'],
     })
     .catch((error: unknown) => {
-      logger.warn({ error }, '[sandbox] [bootstrap] mkdir_fail');
+      logger.warn({ error }, '[sandbox] Failed to create directories');
     });
 }
 
@@ -25,7 +25,7 @@ export async function installTools(instance: Sandbox): Promise<void> {
 
     await instance.writeFiles(files);
   } catch (error) {
-    logger.warn({ error }, '[sandbox] [bootstrap] install_fail');
+    logger.warn({ error }, '[sandbox] Failed to install sandbox tools');
   }
 }
 

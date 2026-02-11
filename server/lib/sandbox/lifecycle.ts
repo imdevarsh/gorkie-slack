@@ -43,7 +43,7 @@ export async function stopSandbox(ctxId: string): Promise<void> {
   }
 
   cleanupSnapshots().catch((error) => {
-    logger.warn({ error, ctxId }, '[sandbox] [snapshot] cleanup_fail');
+    logger.warn({ error, ctxId }, '[sandbox] Snapshot cleanup failed');
   });
 
   const snap = await instance.snapshot().catch(() => null);
@@ -95,7 +95,7 @@ async function provision(context: SlackMessageContext): Promise<Sandbox> {
   await makeFolders(instance);
   await installTools(instance);
 
-  logger.info({ ctxId, sandboxId: instance.sandboxId }, '[sandbox] [lifecycle] created');
+  logger.info({ ctxId, sandboxId: instance.sandboxId }, '[sandbox] Created new sandbox');
   return instance;
 }
 
@@ -124,7 +124,7 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
     source: { type: 'snapshot', snapshotId },
     timeout: config.timeoutMs,
   }).catch((error: unknown) => {
-    logger.warn({ snapshotId, error, ctxId }, '[sandbox] [lifecycle] restore_fail');
+    logger.warn({ snapshotId, error, ctxId }, '[sandbox] Failed to restore sandbox from snapshot');
     return null;
   });
 
@@ -135,7 +135,7 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
 
   logger.info(
     { snapshotId, sandboxId: instance.sandboxId, ctxId },
-    '[sandbox] [lifecycle] restored'
+    '[sandbox] Restored sandbox from snapshot'
   );
   return instance;
 }
