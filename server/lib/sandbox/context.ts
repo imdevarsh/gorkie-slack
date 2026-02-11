@@ -16,7 +16,7 @@ export async function peekFilesystem(ctxId: string): Promise<string | null> {
       cmd: 'sh',
       args: [
         '-c',
-        "fd --type f . attachments output --max-depth 3 -X stat -c '%Y\\t%T+ %n' 2>/dev/null | sort -t$'\\t' -k1 -rn | cut -f2-",
+        "find attachments output -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -t$'\\t' -k1 -rn | cut -f2-",
       ],
     })
     .catch(() => null);
