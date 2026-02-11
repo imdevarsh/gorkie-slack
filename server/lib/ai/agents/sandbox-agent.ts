@@ -10,20 +10,14 @@ import { showFile } from '~/lib/ai/tools/sandbox/show-file';
 import { write } from '~/lib/ai/tools/sandbox/write';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
 import type { SandboxRequestHints, SlackMessageContext } from '~/types';
-import type { SlackFile } from '~/utils/images';
 import { getUserInfo } from '../tools/shared/get-user-info';
 
 interface SandboxAgentOptions {
   context: SlackMessageContext;
-  files?: SlackFile[];
   requestHints?: SandboxRequestHints;
 }
 
-export function sandboxAgent({
-  context,
-  files,
-  requestHints,
-}: SandboxAgentOptions) {
+export function sandboxAgent({ context, requestHints }: SandboxAgentOptions) {
   return new ToolLoopAgent({
     model: provider.languageModel('agent-model'),
     instructions: systemPrompt({
@@ -32,7 +26,7 @@ export function sandboxAgent({
       requestHints,
     }),
     tools: {
-      bash: bash({ context, files }),
+      bash: bash({ context }),
       glob: glob({ context }),
       grep: grep({ context }),
       showFile: showFile({ context }),

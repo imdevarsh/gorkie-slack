@@ -37,7 +37,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
       }
 
       try {
-        const sandbox = await getSandbox(ctxId, context);
+        const sandbox = await getSandbox(context);
         await setStatus(context, {
           status: 'is uploading a file',
           loading: true,

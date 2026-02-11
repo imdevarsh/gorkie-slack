@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { sandboxAgent } from '~/lib/ai/agents';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
-import { buildSandboxContext } from '~/lib/sandbox';
+import { buildSandboxContext, getSandbox } from '~/lib/sandbox';
+import { syncAttachments } from '~/lib/sandbox/attachments';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
@@ -34,12 +35,12 @@ export const sandbox = ({
       const ctxId = getContextId(context);
 
       try {
-        const { messages, requestHints } = await buildSandboxContext({
-          ctxId,
-          context,
-        });
+        const sandbox = await getSandbox(context);
+        await syncAttachments(sandbox, context, files);
 
-        const agent = sandboxAgent({ context, files, requestHints });
+        const { messages, requestHints } = await buildSandboxContext(context);
+
+        const agent = sandboxAgent({ context, requestHints });
         const result = await agent.generate({
           messages: [...messages, { role: 'user', content: task }],
         });

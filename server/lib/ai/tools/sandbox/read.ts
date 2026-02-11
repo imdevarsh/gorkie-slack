@@ -37,7 +37,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(ctxId, context);
+        const sandbox = await getSandbox(context);
         const fileBuffer = await sandbox.readFileToBuffer({ path });
 
         if (!fileBuffer) {

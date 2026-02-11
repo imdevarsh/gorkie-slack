@@ -1,11 +1,15 @@
 import type { ModelMessage } from 'ai';
 import { getConversationMessages } from '~/slack/conversations';
 import type { SandboxRequestHints, SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { resolveChannelName, resolveServerName } from '~/utils/slack';
 import { getTime } from '~/utils/time';
 import { reconnectSandbox } from './lifecycle';
 
-export async function peekFilesystem(ctxId: string): Promise<string | null> {
+export async function peekFilesystem(
+  context: SlackMessageContext
+): Promise<string | null> {
+  const ctxId = getContextId(context);
   const live = await reconnectSandbox(ctxId);
   if (!live) {
     return null;
@@ -38,13 +42,9 @@ export interface SandboxContext {
   requestHints: SandboxRequestHints;
 }
 
-export async function buildSandboxContext({
-  ctxId,
-  context,
-}: {
-  ctxId: string;
-  context: SlackMessageContext;
-}): Promise<SandboxContext> {
+export async function buildSandboxContext(
+  context: SlackMessageContext
+): Promise<SandboxContext> {
   const channel = (context.event as { channel?: string }).channel;
   const threadTs = (context.event as { thread_ts?: string }).thread_ts;
 
@@ -58,7 +58,7 @@ export async function buildSandboxContext({
           limit: 5,
         })
       : [],
-    peekFilesystem(ctxId),
+    peekFilesystem(context),
     resolveChannelName(context),
     resolveServerName(context),
   ]);

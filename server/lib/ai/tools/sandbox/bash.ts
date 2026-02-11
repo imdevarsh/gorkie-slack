@@ -9,15 +9,8 @@ import { addHistory } from '~/lib/sandbox/history';
 import { outputDir, sandboxPath, turnsPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import type { SlackFile } from '~/utils/images';
 
-export const bash = ({
-  context,
-  files,
-}: {
-  context: SlackMessageContext;
-  files?: SlackFile[];
-}) =>
+export const bash = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Run a shell command.',
     inputSchema: z.object({
@@ -35,11 +28,7 @@ export const bash = ({
       const logPath = turnsPath(ts);
 
       try {
-        const sandbox = await getSandbox(
-          ctxId,
-          context,
-          files?.length ? { files, messageTs: context.event.ts } : undefined
-        );
+        const sandbox = await getSandbox(context);
 
         await sandbox.runCommand({
           cmd: 'mkdir',

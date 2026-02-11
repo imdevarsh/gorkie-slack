@@ -47,7 +47,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(ctxId, context);
+        const sandbox = await getSandbox(context);
         const payload = Buffer.from(
           JSON.stringify({ pattern, path, include, limit })
         ).toString('base64');

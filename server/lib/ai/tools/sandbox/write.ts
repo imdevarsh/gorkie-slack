@@ -25,7 +25,7 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(ctxId);
+        const sandbox = await getSandbox(context);
         await sandbox.writeFiles([
           { path, content: Buffer.from(content, 'utf-8') },
         ]);

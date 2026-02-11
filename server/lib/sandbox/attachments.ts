@@ -2,39 +2,48 @@ import type { Sandbox } from '@vercel/sandbox';
 import sanitizeFilename from 'sanitize-filename';
 import { env } from '~/env';
 import logger from '~/lib/logger';
+import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 import { attachmentsDir } from './paths';
-import type { SandboxAttachments } from './types';
 
 export const ATTACHMENTS_DIR = 'attachments';
 
-const syncedAttachments = new Set<string>();
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
 export async function syncAttachments(
   sandbox: Sandbox,
-  ctxId: string,
-  attachments?: SandboxAttachments
+  context: SlackMessageContext,
+  files?: SlackFile[]
 ): Promise<void> {
-  if (!attachments?.files.length) {
+  if (!files?.length) {
     return;
   }
 
-  const key = `${ctxId}:${attachments.messageTs}`;
-  if (syncedAttachments.has(key)) {
+  const messageTs = context.event.ts;
+  if (!messageTs) {
     return;
   }
 
-  const dir = attachmentsDir(attachments.messageTs);
+  const ctxId = getContextId(context);
+  const dir = attachmentsDir(messageTs);
+  const existing = await sandbox
+    .runCommand({ cmd: 'sh', args: ['-c', `ls -A '${dir}' >/dev/null 2>&1`] })
+    .catch(() => null);
+
+  if (existing?.exitCode === 0) {
+    return;
+  }
+
   await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
 
   const results = await Promise.all(
-    attachments.files.map((file) => syncFile(sandbox, dir, file, ctxId))
+    files.map((file) => syncFile(sandbox, dir, file, ctxId))
   );
 
   if (results.some((ok) => !ok)) {
     logger.warn(
-      { messageTs: attachments.messageTs, ctxId },
+      { messageTs, ctxId },
       'Attachment sync incomplete; will retry on next request'
     );
     return;
@@ -42,13 +51,12 @@ export async function syncAttachments(
 
   logger.info(
     {
-      count: attachments.files.length,
-      messageTs: attachments.messageTs,
+      count: files.length,
+      messageTs,
       ctxId,
     },
     'Transported attachments to sandbox'
   );
-  syncedAttachments.add(key);
 }
 
 async function syncFile(

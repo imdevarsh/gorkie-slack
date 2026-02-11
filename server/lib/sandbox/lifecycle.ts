@@ -5,25 +5,21 @@ import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { snapshotRecordSchema } from '~/lib/validators/sandbox/snapshot';
 import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { safeParseJson } from '~/utils/parse-json';
-import { syncAttachments } from './attachments';
 import { installTools, makeFolders } from './bootstrap';
 import { cleanupSnapshots, deleteSnapshot, registerSnapshot } from './snapshot';
-import type { SandboxAttachments } from './types';
 
 export async function getSandbox(
-  ctxId: string,
-  context?: SlackMessageContext,
-  attachments?: SandboxAttachments
+  context: SlackMessageContext
 ): Promise<Sandbox> {
+  const ctxId = getContextId(context);
   const live = await reconnectSandbox(ctxId);
   if (live) {
-    await syncAttachments(live, ctxId, attachments);
     return live;
   }
 
-  const instance = await provision(ctxId, context);
-  await syncAttachments(instance, ctxId, attachments);
+  const instance = await provision(context);
   await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
   await redis.expire(redisKeys.sandbox(ctxId), config.ttl);
   return instance;
@@ -78,22 +74,18 @@ export async function reconnectSandbox(ctxId: string): Promise<Sandbox | null> {
   return null;
 }
 
-async function provision(
-  ctxId: string,
-  context?: SlackMessageContext
-): Promise<Sandbox> {
-  const restored = await restore(ctxId, context);
+async function provision(context: SlackMessageContext): Promise<Sandbox> {
+  const ctxId = getContextId(context);
+  const restored = await restore(context);
   if (restored) {
     await installTools(restored);
     return restored;
   }
 
-  if (context) {
-    await setStatus(context, {
-      status: 'is setting up the sandbox',
-      loading: true,
-    });
-  }
+  await setStatus(context, {
+    status: 'is setting up the sandbox',
+    loading: true,
+  });
 
   const instance = await Sandbox.create({
     runtime: config.runtime,
@@ -107,10 +99,8 @@ async function provision(
   return instance;
 }
 
-async function restore(
-  ctxId: string,
-  context?: SlackMessageContext
-): Promise<Sandbox | null> {
+async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
+  const ctxId = getContextId(context);
   const snapshotRaw = await redis.get(redisKeys.snapshot(ctxId));
   const snapshot = safeParseJson(snapshotRaw, snapshotRecordSchema);
   if (!snapshot) {
@@ -125,12 +115,10 @@ async function restore(
     return null;
   }
 
-  if (context) {
-    await setStatus(context, {
-      status: 'is restoring the sandbox',
-      loading: true,
-    });
-  }
+  await setStatus(context, {
+    status: 'is restoring the sandbox',
+    loading: true,
+  });
 
   const instance = await Sandbox.create({
     source: { type: 'snapshot', snapshotId },
