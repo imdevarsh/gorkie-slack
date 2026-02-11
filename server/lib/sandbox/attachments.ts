@@ -9,7 +9,7 @@ import { attachmentsDir } from './paths';
 
 export const ATTACHMENTS_DIR = 'attachments';
 
-const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+const MAX_ATTACHMENT_BYTES = 1_000_000_000;
 
 export async function syncAttachments(
   sandbox: Sandbox,

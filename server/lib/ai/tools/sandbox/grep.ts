@@ -82,10 +82,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
           output: data.output,
         };
       } catch (error) {
-        logger.error(
-          { ctxId, error, pattern, path },
-          '[sandbox] [grep] fail'
-        );
+        logger.error({ ctxId, error, pattern, path }, '[sandbox] [grep] fail');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),
