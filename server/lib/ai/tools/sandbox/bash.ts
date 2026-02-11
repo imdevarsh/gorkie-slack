@@ -69,6 +69,17 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         const out = truncate(stdout || '(no output)', logPath);
         const err = truncate(stderr, logPath);
 
+        logger.debug(
+          {
+            ctxId,
+            exitCode,
+            command,
+            out,
+            err,
+          },
+          '[sandbox] Command execution completed'
+        );
+
         return {
           output: out.text,
           error: err.text,
