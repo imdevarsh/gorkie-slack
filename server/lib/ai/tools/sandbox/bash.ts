@@ -63,8 +63,8 @@ export const bash = ({
 
         if (exitCode !== 0) {
           logger.debug(
-            { command, exitCode, stderr: stderr.slice(0, 500) },
-            `[${ctxId}] Command failed with exit code ${exitCode}`
+            { ctxId, command, exitCode, stderr: stderr.slice(0, 500) },
+            `Command failed with exit code ${exitCode}`
           );
         }
 
@@ -87,10 +87,7 @@ export const bash = ({
           ...(out.truncated || err.truncated ? { fullOutput: logPath } : {}),
         };
       } catch (error) {
-        logger.error(
-          { error, command },
-          `[${ctxId}] Sandbox crashed mid-command`
-        );
+        logger.error({ error, command, ctxId }, 'Sandbox crashed mid-command');
         await redis.del(redisKeys.sandbox(ctxId));
 
         return {

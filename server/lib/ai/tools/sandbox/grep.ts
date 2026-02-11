@@ -89,8 +89,8 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
         const output = formatMatches(matches.entries);
 
         logger.debug(
-          { pattern, path, include, count: matches.entries.length },
-          `[${ctxId}] Found ${matches.entries.length} matches for ${pattern}`
+          { ctxId, pattern, path, include, count: matches.entries.length },
+          `Found ${matches.entries.length} matches for ${pattern}`
         );
 
         return {
@@ -102,8 +102,8 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { error, pattern, path },
-          `[${ctxId}] Grep failed for pattern ${pattern}`
+          { ctxId, error, pattern, path },
+          `Grep failed for pattern ${pattern}`
         );
         return {
           success: false,

@@ -20,12 +20,13 @@ export function logReply(
       : 'Completed tool execution';
 
     logger.info(
-      `[${ctxId}] -> ${author}${reason ? ` (${reason})` : ''}: ${summary}`
+      { ctxId },
+      `-> ${author}${reason ? ` (${reason})` : ''}: ${summary}`
     );
   } else if (result.error) {
     logger.error(
-      { error: result.error },
-      `[${ctxId}] Failed to reply to ${author}`
+      { error: result.error, ctxId },
+      `Failed to reply to ${author}`
     );
   }
 }

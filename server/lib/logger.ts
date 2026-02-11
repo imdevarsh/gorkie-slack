@@ -38,7 +38,8 @@ if (!isProd) {
     options: {
       colorize: true,
       translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
-      ignore: 'pid,hostname',
+      ignore: 'pid,hostname,ctxId',
+      messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
     },
     level: logLevel,
   });

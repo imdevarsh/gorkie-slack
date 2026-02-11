@@ -62,7 +62,12 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         });
 
         logger.info(
-          { channel: channelId, path: resolvedPath, size: fileBuffer.length },
+          {
+            channel: channelId,
+            path: resolvedPath,
+            size: fileBuffer.length,
+            ctxId,
+          },
           `Uploaded ${uploadFilename} (${fileBuffer.length} bytes) to Slack`
         );
 
@@ -72,8 +77,8 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { error, channel: channelId, path },
-          `[${ctxId}] Failed to upload ${path} to Slack`
+          { error, channel: channelId, path, ctxId },
+          `Failed to upload ${path} to Slack`
         );
         return {
           success: false,

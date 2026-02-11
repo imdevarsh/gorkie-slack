@@ -23,7 +23,7 @@ type MessageEventArgs = SlackEventMiddlewareArgs<'message'> & AllMiddlewareArgs;
 async function canReply(ctxId: string): Promise<boolean> {
   const { success } = await ratelimit(redisKeys.channelCount(ctxId));
   if (!success) {
-    logger.info(`[${ctxId}] Rate limit hit. Skipping reply.`);
+    logger.info({ ctxId }, 'Rate limit hit. Skipping reply.');
   }
   return success;
 }
@@ -129,9 +129,10 @@ async function handleMessage(args: MessageEventArgs) {
 
     logger.info(
       {
+        ctxId,
         message: `${authorName}: ${content}`,
       },
-      `[${ctxId}] Triggered by ${trigger.type}`
+      `Triggered by ${trigger.type}`
     );
 
     const result = await generateResponse(
@@ -156,7 +157,8 @@ async function handleMessage(args: MessageEventArgs) {
 
   if (!hasQuota) {
     logger.debug(
-      `[${ctxId}] Quota exhausted (${idleCount}/${messageThreshold})`
+      { ctxId },
+      `Quota exhausted (${idleCount}/${messageThreshold})`
     );
     return;
   }

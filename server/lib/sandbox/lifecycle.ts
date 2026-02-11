@@ -47,7 +47,7 @@ export async function stopSandbox(ctxId: string): Promise<void> {
   }
 
   cleanupSnapshots().catch((error) => {
-    logger.warn({ error }, `[${ctxId}] Failed to cleanup snapshots`);
+    logger.warn({ error, ctxId }, 'Failed to cleanup snapshots');
   });
 
   const snap = await instance.snapshot().catch(() => null);
@@ -110,10 +110,7 @@ async function provision(
   await makeFolders(instance);
   await installTools(instance);
 
-  logger.info(
-    { sandboxId: instance.sandboxId },
-    `[${ctxId}] Created new sandbox`
-  );
+  logger.info({ ctxId, sandboxId: instance.sandboxId }, 'Created new sandbox');
   return instance;
 }
 
@@ -136,7 +133,7 @@ async function restore(ctxId: string): Promise<Sandbox | null> {
     source: { type: 'snapshot', snapshotId },
     timeout: config.timeoutMs,
   }).catch((error: unknown) => {
-    logger.warn({ snapshotId, error }, `[${ctxId}] Snapshot restore failed`);
+    logger.warn({ snapshotId, error, ctxId }, 'Snapshot restore failed');
     return null;
   });
 
@@ -146,8 +143,8 @@ async function restore(ctxId: string): Promise<Sandbox | null> {
   }
 
   logger.info(
-    { snapshotId, sandboxId: instance.sandboxId },
-    `[${ctxId}] Restored sandbox from snapshot`
+    { snapshotId, sandboxId: instance.sandboxId, ctxId },
+    'Restored sandbox from snapshot'
   );
   return instance;
 }

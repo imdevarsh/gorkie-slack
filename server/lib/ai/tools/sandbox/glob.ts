@@ -73,8 +73,8 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
         const output = paths.length > 0 ? paths.join('\n') : 'No files found';
 
         logger.debug(
-          { pattern, path, count: paths.length },
-          `[${ctxId}] Found ${paths.length} files matching ${pattern}`
+          { ctxId, pattern, path, count: paths.length },
+          `Found ${paths.length} files matching ${pattern}`
         );
 
         return {
@@ -86,8 +86,8 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { error, pattern, path },
-          `[${ctxId}] Glob failed for pattern ${pattern}`
+          { ctxId, error, pattern, path },
+          `Glob failed for pattern ${pattern}`
         );
         return {
           success: false,
