@@ -20,6 +20,10 @@ export function attachmentsDir(messageTs: string): string {
   return sandboxPath(path.join('attachments', messageTs));
 }
 
+export function turnsDir(): string {
+  return sandboxPath(path.join('agent', 'turns'));
+}
+
 export function turnsPath(messageTs: string): string {
   return sandboxPath(path.join('agent', 'turns', `${messageTs}.json`));
 }
