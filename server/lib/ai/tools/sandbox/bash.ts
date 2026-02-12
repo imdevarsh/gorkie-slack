@@ -40,6 +40,11 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
           loading: true,
         });
 
+        logger.debug(
+          { ctxId, command, cwd },
+          '[sandbox] Command execution started'
+        );
+
         const result = await sandbox.runCommand({
           cmd: 'sh',
           args: ['-c', command],
@@ -73,7 +78,6 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
           {
             ctxId,
             exitCode,
-            command,
             out,
             err,
           },

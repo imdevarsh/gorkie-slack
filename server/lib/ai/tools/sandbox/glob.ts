@@ -57,6 +57,18 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
         const stderr = await result.stderr();
 
         if (result.exitCode !== 0) {
+          logger.warn(
+            {
+              ctxId,
+              pattern,
+              path: resolvedPath,
+              limit,
+              exitCode: result.exitCode,
+              stderr: stderr.slice(0, 1000),
+              stdout: stdout.slice(0, 1000),
+            },
+            '[sandbox] Glob command failed'
+          );
           return {
             success: false,
             error: stderr || `Failed to match pattern: ${pattern}`,
@@ -79,7 +91,10 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
           matches: data.matches,
         };
       } catch (error) {
-        logger.error({ ctxId, error, pattern, path }, '[sandbox] Glob failed');
+        logger.error(
+          { ctxId, error, pattern, path: resolvedPath, limit },
+          '[sandbox] Glob failed'
+        );
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

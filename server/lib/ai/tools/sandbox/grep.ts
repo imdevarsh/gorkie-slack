@@ -60,12 +60,24 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
         const stderr = await result.stderr();
 
         if (result.exitCode !== 0) {
+          logger.warn(
+            {
+              ctxId,
+              pattern,
+              include,
+              path: resolvedPath,
+              limit,
+              exitCode: result.exitCode,
+              stderr: stderr.slice(0, 1000),
+              stdout: stdout.slice(0, 1000),
+            },
+            '[sandbox] Grep command failed'
+          );
           return {
             success: false,
             error: stderr || `Failed to search: ${pattern}`,
           };
         }
-
         const data = outputSchema.parse(JSON.parse(stdout || '{}'));
 
         logger.debug(
@@ -81,7 +93,10 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
           output: data.output,
         };
       } catch (error) {
-        logger.error({ ctxId, error, pattern, path }, '[sandbox] Grep failed');
+        logger.error(
+          { ctxId, error, pattern, include, path, limit },
+          '[sandbox] Grep failed'
+        );
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),
