@@ -84,6 +84,15 @@ export const examplesPrompt = `\
 </example>
 
 <example>
+<title>Public URL video download</title>
+<user>download this video https://www.youtube.com/watch?v=dQw4w9WgXcQ</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Download the video from https://www.youtube.com/watch?v=dQw4w9WgXcQ into output/<message_ts>/ as MP4, then upload it with showFile. If needed, install yt-dlp and ffmpeg. If download requires auth or fails, include the exact error in the summary." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done. I downloaded the video and uploaded the MP4 file in this thread."] }</input></tool>
+</workflow>
+</example>
+
+<example>
 <title>Spam or low-value message</title>
 <user>gm</user>
 <workflow>

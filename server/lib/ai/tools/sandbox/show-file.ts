@@ -13,9 +13,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
     description:
       'Upload a file from the sandbox to Slack so the user can see or download it.',
     inputSchema: z.object({
-      path: z
-        .string()
-        .describe('File path in sandbox'),
+      path: z.string().describe('File path in sandbox'),
       filename: z
         .string()
         .optional()

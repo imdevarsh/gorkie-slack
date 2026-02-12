@@ -20,6 +20,9 @@ Search queries work best when specific. Use keywords, user names, channel names,
 <tool>
 <name>searchWeb</name>
 <description>Search the internet for current information, documentation, or answers.</description>
+<rules>
+- Do NOT use this tool for file/video downloads/operations. Use sandbox for download/processing tasks.
+</rules>
 </tool>
 
 <tool>
@@ -61,6 +64,7 @@ Use when:
 - User uploads files that need processing (images, CSVs, PDFs, etc.)
 - Any task that requires a shell environment
 - Quick calculations or data transformations
+- User gives a direct URL and asks to download, convert, transcode, extract, or reformat content
 
 The sandbox agent handles all the details (finding files, running commands, uploading results) and returns a summary of what it did.
 </description>
@@ -69,6 +73,7 @@ The sandbox agent handles all the details (finding files, running commands, uplo
 - Provide a clear, specific task description with the complete user intent in one prompt.
 - Mention any relevant file names or paths from attachments
 - The sandbox agent will use showFile to upload results before returning
+- If the user asks to peforfm operations on a file, call sandbox first instead of replying with instructions.
 </rules>
 </tool>
 

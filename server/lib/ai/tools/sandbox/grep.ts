@@ -19,10 +19,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
     description: 'Search file contents in the sandbox using a regex pattern.',
     inputSchema: z.object({
       pattern: z.string().describe('Regex pattern to search for'),
-      path: z
-        .string()
-        .default('.')
-        .describe('Directory path in sandbox'),
+      path: z.string().default('.').describe('Directory path in sandbox'),
       include: z
         .string()
         .optional()

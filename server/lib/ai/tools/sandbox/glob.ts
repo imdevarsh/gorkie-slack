@@ -20,10 +20,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
     description: 'Find files by glob pattern in the sandbox.',
     inputSchema: z.object({
       pattern: z.string().describe('Glob pattern to match (e.g. "**/*.ts")'),
-      path: z
-        .string()
-        .default('.')
-        .describe('Directory path in sandbox'),
+      path: z.string().default('.').describe('Directory path in sandbox'),
       limit: z
         .number()
         .int()
