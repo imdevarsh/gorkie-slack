@@ -14,6 +14,7 @@ import { getUserInfo } from '~/lib/ai/tools/shared/get-user-info';
 import { getWeather } from '~/lib/ai/tools/shared/get-weather';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
 import { successToolCall } from '~/lib/ai/utils';
+import { setStatus } from '~/lib/ai/utils/status';
 import type { ChatRequestHints, SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 
@@ -52,6 +53,10 @@ export const orchestratorAgent = ({
       react: react({ context }),
       reply: reply({ context }),
       skip: skip({ context }),
+    },
+    prepareStep: async () => {
+      await setStatus(context, { status: 'is thinking', loading: true });
+      return {};
     },
     stopWhen: [
       stepCountIs(25),

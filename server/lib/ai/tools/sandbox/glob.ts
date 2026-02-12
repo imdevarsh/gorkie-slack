@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
@@ -11,6 +12,7 @@ const outputSchema = z.object({
   count: z.number(),
   truncated: z.boolean(),
   output: z.string(),
+  matches: z.array(z.string()),
 });
 
 export const glob = ({ context }: { context: SlackMessageContext }) =>
@@ -21,7 +23,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       path: z
         .string()
         .default('.')
-        .describe('Directory path in sandbox (relative, default: .)'),
+        .describe('Directory path in sandbox'),
       limit: z
         .number()
         .int()
@@ -43,9 +45,10 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
+        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
         const payload = Buffer.from(
-          JSON.stringify({ pattern, path, limit })
+          JSON.stringify({ pattern, path: resolvedPath, limit })
         ).toString('base64');
 
         const result = await sandbox.runCommand({
@@ -66,7 +69,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
         const data = outputSchema.parse(JSON.parse(stdout || '{}'));
 
         logger.debug(
-          { ctxId, pattern, path, count: data.count },
+          { ctxId, pattern, path: resolvedPath, count: data.count },
           '[sandbox] Glob completed'
         );
 
@@ -76,6 +79,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
           count: data.count,
           truncated: data.truncated,
           output: data.output,
+          matches: data.matches,
         };
       } catch (error) {
         logger.error({ ctxId, error, pattern, path }, '[sandbox] Glob failed');

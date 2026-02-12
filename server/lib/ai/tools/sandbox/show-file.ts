@@ -15,7 +15,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
     inputSchema: z.object({
       path: z
         .string()
-        .describe('File path in sandbox (e.g. output.png, report.csv)'),
+        .describe('File path in sandbox'),
       filename: z
         .string()
         .optional()
@@ -30,13 +30,13 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;
       const ctxId = getContextId(context);
-      const resolvedPath = sandboxPath(path);
 
       if (!channelId) {
         return { success: false, error: 'Missing Slack channel' };
       }
 
       try {
+        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
         await setStatus(context, {
           status: 'is uploading a file',

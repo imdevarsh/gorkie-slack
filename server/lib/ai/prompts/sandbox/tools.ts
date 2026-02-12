@@ -16,9 +16,10 @@ Run shell commands in the sandbox. Commands execute via sh -c in the working dir
 Find files by glob pattern. Returns paths sorted by modification time (newest first).
 Always use this before operating on files, never assume a file exists or guess its path.
 - pattern: glob pattern like "**/*.png", "*.csv", "src/**/*.ts"
-- path: directory to search in (default: current directory). Use "attachments" to find uploads.
+- path: directory to search in (default: current directory). Use "/home/vercel-sandbox/attachments" to find uploads.
 - limit: max results (default 100, max 500). Use a more specific pattern if you hit the limit.
-Example: glob({ "pattern": "**/*.png", "path": "attachments" })
+The tool returns both newline output and a structured matches array.
+Example: glob({ "pattern": "**/*.png", "path": "/home/vercel-sandbox/attachments" })
 </tool>
 
 <tool>

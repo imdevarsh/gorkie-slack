@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
@@ -10,7 +11,7 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Edit a file by exact string replacement.',
     inputSchema: z.object({
-      path: z.string().describe('File path in sandbox (relative)'),
+      path: z.string().describe('File path in sandbox'),
       oldString: z.string().describe('Exact string to replace'),
       newString: z.string().describe('Replacement string'),
       replaceAll: z
@@ -30,11 +31,14 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
+        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
-        const fileBuffer = await sandbox.readFileToBuffer({ path });
+        const fileBuffer = await sandbox.readFileToBuffer({
+          path: resolvedPath,
+        });
 
         if (!fileBuffer) {
-          return { success: false, error: `File not found: ${path}` };
+          return { success: false, error: `File not found: ${resolvedPath}` };
         }
 
         const data = fileBuffer.toString('utf-8');
@@ -56,13 +60,16 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
           : data.replace(oldString, newString);
 
         await sandbox.writeFiles([
-          { path, content: Buffer.from(updated, 'utf-8') },
+          { path: resolvedPath, content: Buffer.from(updated, 'utf-8') },
         ]);
 
         const replaced = replaceAll ? count : 1;
-        logger.debug({ path, replaced, ctxId }, '[sandbox] Edit completed');
+        logger.debug(
+          { path: resolvedPath, replaced, ctxId },
+          '[sandbox] Edit completed'
+        );
 
-        return { success: true, path, replaced };
+        return { success: true, path: resolvedPath, replaced };
       } catch (error) {
         logger.error({ error, path, ctxId }, '[sandbox] Edit failed');
         return {

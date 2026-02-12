@@ -9,6 +9,7 @@ import { read } from '~/lib/ai/tools/sandbox/read';
 import { showFile } from '~/lib/ai/tools/sandbox/show-file';
 import { write } from '~/lib/ai/tools/sandbox/write';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
+import { setStatus } from '~/lib/ai/utils/status';
 import type { SandboxRequestHints, SlackMessageContext } from '~/types';
 import { getUserInfo } from '../tools/shared/get-user-info';
 
@@ -35,6 +36,10 @@ export function sandboxAgent({ context, requestHints }: SandboxAgentOptions) {
       edit: edit({ context }),
       searchWeb,
       getUserInfo: getUserInfo({ context }),
+    },
+    prepareStep: async () => {
+      await setStatus(context, { status: 'is thinking', loading: true });
+      return {};
     },
     stopWhen: stepCountIs(30),
     experimental_telemetry: {

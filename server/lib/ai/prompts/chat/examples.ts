@@ -42,7 +42,7 @@ export const examplesPrompt = `\
 <title>Image processing with attachment</title>
 <user>[uploads photo.png] Invert this to black and white</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Find the uploaded "photo.png" in attachments/ and invert it to black and white using ImageMagick. Save result and upload to Slack with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Find the uploaded 'photo.png' in attachments/ and invert it to black and white using ImageMagick. Save result and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done! I inverted your image to black and white."] }</input></tool>
 </workflow>
 </example>
@@ -51,7 +51,7 @@ export const examplesPrompt = `\
 <title>Python data analysis</title>
 <user>[uploads data.csv] Analyze this CSV for me</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Find the uploaded "data.csv" in attachments/ and analyze it with pandas. Install python3 and pandas if needed. Print summary statistics." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Find the uploaded 'data.csv' in attachments/ and analyze it with pandas. Install python3 and pandas if needed. Print summary statistics." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the analysis of your CSV: ..."] }</input></tool>
 </workflow>
 </example>

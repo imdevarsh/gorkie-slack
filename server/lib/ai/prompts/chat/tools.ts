@@ -65,7 +65,8 @@ Use when:
 The sandbox agent handles all the details (finding files, running commands, uploading results) and returns a summary of what it did.
 </description>
 <rules>
-- Provide a clear, specific task description
+- Call sandbox ONCE per user request unless the user explicitly asks for separate phases.
+- Provide a clear, specific task description with the complete user intent in one prompt.
 - Mention any relevant file names or paths from attachments
 - The sandbox agent will use showFile to upload results before returning
 </rules>

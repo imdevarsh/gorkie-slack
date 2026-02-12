@@ -24,10 +24,10 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
     execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
       const ts = (context.event as { ts?: string }).ts ?? 'unknown';
-      const cwd = sandboxPath(workdir ?? '.');
       const logPath = turnsPath(ts);
 
       try {
+        const cwd = sandboxPath(workdir ?? '.');
         const sandbox = await getSandbox(context);
 
         await sandbox.runCommand({

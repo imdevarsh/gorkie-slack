@@ -76,7 +76,7 @@ def main():
   matches.sort(key=lambda x: x[1], reverse=True)
 
   if not matches:
-    output = "No files found"
+    output = ""
   else:
     output_lines = [f"Found {len(matches)} matches"]
     current = ""

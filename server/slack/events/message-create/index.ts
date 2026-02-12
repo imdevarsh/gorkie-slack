@@ -20,6 +20,11 @@ export const name = 'message';
 
 type MessageEventArgs = SlackEventMiddlewareArgs<'message'> & AllMiddlewareArgs;
 
+function hasSupportedSubtype(args: MessageEventArgs): boolean {
+  const subtype = args.event.subtype;
+  return !subtype || subtype === 'thread_broadcast' || subtype === 'file_share';
+}
+
 async function canReply(ctxId: string): Promise<boolean> {
   const { success } = await ratelimit(redisKeys.channelCount(ctxId));
   if (!success) {
@@ -37,11 +42,7 @@ function isProcessableMessage(
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
 
-  if (
-    event.subtype &&
-    event.subtype !== 'thread_broadcast' &&
-    event.subtype !== 'file_share'
-  ) {
+  if (!hasSupportedSubtype(args)) {
     return null;
   }
 
@@ -95,11 +96,7 @@ async function getAuthorName(
 }
 
 async function handleMessage(args: MessageEventArgs) {
-  if (
-    args.event.subtype &&
-    args.event.subtype !== 'thread_broadcast' &&
-    args.event.subtype !== 'file_share'
-  ) {
+  if (!hasSupportedSubtype(args)) {
     return;
   }
 
@@ -124,7 +121,7 @@ async function handleMessage(args: MessageEventArgs) {
     if (!isUserAllowed(args.event.user)) {
       await args.client.chat.postMessage({
         channel: args.event.channel,
-        thread_ts: args.event.thread_ts || args.event.ts,
+        thread_ts: args.event.thread_ts ?? args.event.ts,
         markdown_text: `Hey there <@${args.event.user}>! For security and privacy reasons, you must be in <#${env.OPT_IN_CHANNEL}> to talk to me. When you're ready, ping me again and we can talk!`,
       });
       return;
@@ -170,11 +167,7 @@ async function handleMessage(args: MessageEventArgs) {
 }
 
 export async function execute(args: MessageEventArgs) {
-  if (
-    args.event.subtype &&
-    args.event.subtype !== 'thread_broadcast' &&
-    args.event.subtype !== 'file_share'
-  ) {
+  if (!hasSupportedSubtype(args)) {
     return;
   }
 
@@ -188,5 +181,5 @@ export async function execute(args: MessageEventArgs) {
     return;
   }
 
-  return await getQueue(ctxId).add(async () => handleMessage(args));
+  return getQueue(ctxId).add(async () => handleMessage(args));
 }

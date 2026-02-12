@@ -52,13 +52,14 @@ def main():
     truncated = True
 
   paths = [os.path.normpath(p) for p, _ in matches]
-  output = "\n".join(paths) if paths else "No files found"
+  output = "\n".join(paths)
 
   print(json.dumps({
     "path": path,
     "count": len(paths),
     "truncated": truncated,
-    "output": output
+    "output": output,
+    "matches": paths
   }))
 
 if __name__ == "__main__":

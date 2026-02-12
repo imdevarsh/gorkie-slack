@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 export const read = ({ context }: { context: SlackMessageContext }) =>
@@ -10,7 +11,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
     description:
       'Reads a file from the sandbox filesystem. You can access any file directly by using this tool.',
     inputSchema: z.object({
-      path: z.string().describe('File path in sandbox (relative)'),
+      path: z.string().describe('File path in sandbox'),
       offset: z
         .number()
         .int()
@@ -37,11 +38,14 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
+        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
-        const fileBuffer = await sandbox.readFileToBuffer({ path });
+        const fileBuffer = await sandbox.readFileToBuffer({
+          path: resolvedPath,
+        });
 
         if (!fileBuffer) {
-          return { success: false, error: `File not found: ${path}` };
+          return { success: false, error: `File not found: ${resolvedPath}` };
         }
 
         const lines = fileBuffer.toString('utf-8').split('\n');
@@ -62,13 +66,14 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
 
         const linesReturned = Math.max(0, end - start);
         logger.debug(
-          { path, totalLines, linesReturned, ctxId },
+          { path: resolvedPath, totalLines, linesReturned, ctxId },
           '[sandbox] Read completed'
         );
 
         return {
           success: true,
           content,
+          path: resolvedPath,
           totalLines,
           offset: start,
           linesReturned,
@@ -77,6 +82,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         logger.error({ error, path, ctxId }, '[sandbox] Read failed');
         return {
           success: false,
+          path,
           error: error instanceof Error ? error.message : String(error),
         };
       }

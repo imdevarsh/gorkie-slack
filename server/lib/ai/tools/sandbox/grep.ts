@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
@@ -21,7 +22,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       path: z
         .string()
         .default('.')
-        .describe('Directory path in sandbox (relative, default: .)'),
+        .describe('Directory path in sandbox'),
       include: z
         .string()
         .optional()
@@ -47,9 +48,10 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
+        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
         const payload = Buffer.from(
-          JSON.stringify({ pattern, path, include, limit })
+          JSON.stringify({ pattern, path: resolvedPath, include, limit })
         ).toString('base64');
 
         const result = await sandbox.runCommand({
@@ -70,7 +72,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
         const data = outputSchema.parse(JSON.parse(stdout || '{}'));
 
         logger.debug(
-          { ctxId, pattern, path, include, count: data.count },
+          { ctxId, pattern, path: resolvedPath, include, count: data.count },
           '[sandbox] Grep completed'
         );
 
