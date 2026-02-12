@@ -2,9 +2,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
+import { getSandbox } from '~/lib/sandbox';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getSandbox } from './bash/sandbox';
 
 export const write = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -25,25 +25,16 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(ctxId);
+        const sandbox = await getSandbox(context);
         await sandbox.writeFiles([
           { path, content: Buffer.from(content, 'utf-8') },
         ]);
 
-        const response = {
-          success: true,
-          path,
-          output: 'ok',
-        };
+        logger.debug({ path, ctxId }, '[sandbox] Write completed');
 
-        logger.debug(
-          { ctxId, path, output: response.output },
-          'Write complete'
-        );
-
-        return response;
+        return { success: true, path };
       } catch (error) {
-        logger.error({ error, path, ctxId }, 'Failed to write file in sandbox');
+        logger.error({ error, path, ctxId }, '[sandbox] Write failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

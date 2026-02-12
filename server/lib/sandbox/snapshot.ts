@@ -10,9 +10,12 @@ export async function deleteSnapshot(
   try {
     const snapshot = await Snapshot.get({ snapshotId });
     await snapshot.delete();
-    logger.info({ snapshotId, ctxId }, 'Deleted snapshot');
+    logger.info({ snapshotId, ctxId }, '[sandbox] Deleted snapshot');
   } catch (error) {
-    logger.warn({ snapshotId, error, ctxId }, 'Failed to delete snapshot');
+    logger.warn(
+      { snapshotId, error, ctxId },
+      '[sandbox] Failed to delete snapshot'
+    );
   }
 }
 
@@ -51,8 +54,6 @@ export async function registerSnapshot(
     redisKeys.snapshot(ctxId),
     JSON.stringify({ snapshotId, createdAt: now })
   );
-  await Promise.all([
-    redis.expire(redisKeys.snapshot(ctxId), config.snapshot.ttl),
-  ]);
+  await redis.expire(redisKeys.snapshot(ctxId), config.snapshot.ttl);
   await redis.zadd(redisKeys.snapshotIndex(), now, `${snapshotId}:${ctxId}`);
 }

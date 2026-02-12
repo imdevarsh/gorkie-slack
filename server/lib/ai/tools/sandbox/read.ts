@@ -2,9 +2,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
+import { getSandbox } from '~/lib/sandbox';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getSandbox } from './bash/sandbox';
 export const read = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description:
@@ -37,7 +37,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(ctxId);
+        const sandbox = await getSandbox(context);
         const fileBuffer = await sandbox.readFileToBuffer({ path });
 
         if (!fileBuffer) {
@@ -60,30 +60,21 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
 
         const content = numbered.join('\n');
 
-        const response = {
+        const linesReturned = Math.max(0, end - start);
+        logger.debug(
+          { path, totalLines, linesReturned, ctxId },
+          '[sandbox] Read completed'
+        );
+
+        return {
           success: true,
           content,
           totalLines,
           offset: start,
-          linesReturned: Math.max(0, end - start),
+          linesReturned,
         };
-
-        logger.debug(
-          {
-            ctxId,
-            path,
-            totalLines: response.totalLines,
-            linesReturned: response.linesReturned,
-          },
-          'Read complete'
-        );
-
-        return response;
       } catch (error) {
-        logger.error(
-          { error, path, ctxId },
-          'Failed to read file from sandbox'
-        );
+        logger.error({ error, path, ctxId }, '[sandbox] Read failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

@@ -10,22 +10,22 @@ export async function makeFolders(instance: Sandbox): Promise<void> {
       args: ['-p', 'agent/turns', 'agent/bin', 'output'],
     })
     .catch((error: unknown) => {
-      logger.warn({ error }, 'Sandbox dir setup failed');
+      logger.warn({ error }, '[sandbox] Failed to create directories');
     });
 }
 
-export async function installUtils(instance: Sandbox): Promise<void> {
+export async function installTools(instance: Sandbox): Promise<void> {
   try {
-    const repoDir = path.join(process.cwd(), 'sandbox');
+    const repoDir = path.join(process.cwd(), 'sandbox/agent/bin');
     const files = await readAllFiles(repoDir);
 
     if (files.length === 0) {
-      throw new Error('No sandbox files found in sandbox/');
+      throw new Error('No sandbox bin files found in sandbox/agent/bin');
     }
 
     await instance.writeFiles(files);
   } catch (error) {
-    logger.warn({ error }, 'Sandbox bin install failed');
+    logger.warn({ error }, '[sandbox] Failed to install sandbox tools');
   }
 }
 

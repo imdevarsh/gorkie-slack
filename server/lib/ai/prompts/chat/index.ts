@@ -1,12 +1,12 @@
-import type { RequestHints, SlackMessageContext } from '~/types';
-import { corePrompt } from '../shared/core';
-import { personalityPrompt } from '../shared/personality';
+import type { ChatRequestHints, SlackMessageContext } from '~/types';
 import { attachmentsPrompt } from './attachments';
+import { corePrompt } from './core';
 import { examplesPrompt } from './examples';
+import { personalityPrompt } from './personality';
 import { replyPrompt } from './tasks';
 import { toolsPrompt } from './tools';
 
-const getRequestPrompt = (hints: RequestHints) => `\
+const getRequestPrompt = (hints: ChatRequestHints) => `\
 <context>
 The current date and time is ${hints.time}.
 You're in the ${hints.server} Slack workspace, inside the ${hints.channel} channel.
@@ -18,7 +18,7 @@ export function chatPrompt({
   requestHints,
   context,
 }: {
-  requestHints: RequestHints;
+  requestHints: ChatRequestHints;
   context: SlackMessageContext;
 }): string {
   return [

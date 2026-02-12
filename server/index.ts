@@ -1,8 +1,8 @@
 import { LangfuseSpanProcessor } from '@langfuse/otel';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { env } from '~/env';
-import { cleanupSnapshots } from '~/lib/ai/tools/sandbox/bash/utils/snapshot';
 import logger from '~/lib/logger';
+import { cleanupSnapshots } from '~/lib/sandbox/snapshot';
 import { createSlackApp } from '~/slack/app';
 
 const sdk = new NodeSDK({

@@ -1,9 +1,9 @@
 import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
-import { stopSandbox } from '~/lib/ai/tools/sandbox/bash/sandbox';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
-import type { RequestHints, SlackMessageContext } from '~/types';
+import { stopSandbox } from '~/lib/sandbox';
+import type { ChatRequestHints, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
@@ -11,7 +11,7 @@ import { getSlackUserName } from '~/utils/users';
 export async function generateResponse(
   context: SlackMessageContext,
   messages: ModelMessage[],
-  hints: RequestHints
+  requestHints: ChatRequestHints
 ) {
   const ctxId = getContextId(context);
 
@@ -53,7 +53,7 @@ export async function generateResponse(
       currentMessageContent = replyPrompt;
     }
 
-    const agent = orchestratorAgent({ context, hints, files });
+    const agent = orchestratorAgent({ context, requestHints, files });
 
     const { toolCalls } = await agent.generate({
       messages: [

@@ -14,23 +14,23 @@ import { getUserInfo } from '~/lib/ai/tools/shared/get-user-info';
 import { getWeather } from '~/lib/ai/tools/shared/get-weather';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
 import { successToolCall } from '~/lib/ai/utils';
-import type { RequestHints, SlackMessageContext } from '~/types';
+import type { ChatRequestHints, SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 
 export const orchestratorAgent = ({
   context,
-  hints,
+  requestHints,
   files,
 }: {
   context: SlackMessageContext;
-  hints: RequestHints;
+  requestHints: ChatRequestHints;
   files?: SlackFile[];
 }) =>
   new ToolLoopAgent({
     model: provider.languageModel('chat-model'),
     instructions: systemPrompt({
       agent: 'chat',
-      requestHints: hints,
+      requestHints,
       context,
     }),
     providerOptions: {
@@ -38,7 +38,6 @@ export const orchestratorAgent = ({
         reasoning: { enabled: true, exclude: false, effort: 'medium' },
       },
     },
-    temperature: 1,
     toolChoice: 'required',
     tools: {
       getWeather,

@@ -9,22 +9,24 @@ import { read } from '~/lib/ai/tools/sandbox/read';
 import { showFile } from '~/lib/ai/tools/sandbox/show-file';
 import { write } from '~/lib/ai/tools/sandbox/write';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
-import type { SlackMessageContext } from '~/types';
-import type { SlackFile } from '~/utils/images';
+import type { SandboxRequestHints, SlackMessageContext } from '~/types';
 import { getUserInfo } from '../tools/shared/get-user-info';
 
-export const sandboxAgent = ({
-  context,
-  files,
-}: {
+interface SandboxAgentOptions {
   context: SlackMessageContext;
-  files?: SlackFile[];
-}) =>
-  new ToolLoopAgent({
+  requestHints?: SandboxRequestHints;
+}
+
+export function sandboxAgent({ context, requestHints }: SandboxAgentOptions) {
+  return new ToolLoopAgent({
     model: provider.languageModel('agent-model'),
-    instructions: systemPrompt({ agent: 'sandbox' }),
+    instructions: systemPrompt({
+      agent: 'sandbox',
+      context,
+      requestHints,
+    }),
     tools: {
-      bash: bash({ context, files }),
+      bash: bash({ context }),
       glob: glob({ context }),
       grep: grep({ context }),
       showFile: showFile({ context }),
@@ -35,9 +37,9 @@ export const sandboxAgent = ({
       getUserInfo: getUserInfo({ context }),
     },
     stopWhen: stepCountIs(30),
-    temperature: 0.7,
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'sandbox',
     },
   });
+}

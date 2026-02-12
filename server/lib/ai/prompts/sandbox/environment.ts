@@ -1,39 +1,35 @@
 export const environmentPrompt = `\
 <environment>
-Runtime: Amazon Linux 2023, Node.js 22 (Vercel Sandbox)
-The sandbox persists for the entire thread via snapshots. The sandbox is YOUR workspace. But, the sandbox's files expires after 24 hours.
+<filesystem>
+Use absolute paths (starting with /home/vercel-sandbox) in bash commands and showFile inputs to avoid workdir-related mistakes.
+Relative paths are allowed, but absolute paths are preferred for reliability.
 
-Filesystem layout:
-\`\`\`
-attachments/             # User uploads (auto-managed, read-only)
-  <message_ts>/          # Grouped by message timestamp
-    photo.png
-    data.csv
-output/                  # Generated files go here
-  <message_ts>/          # Create a subfolder per message
-    result.png
-    report.csv
-agent/                   # Execution metadata (auto-managed)
-  turns/
-    <message_ts>.json    # [{ command, stdout, stderr, exitCode }, ...]
-\`\`\`
+attachments/<message_ts>/
+  User-uploaded files from Slack. Read-only, NEVER ever write here.
+  Files from earlier messages in the thread also live here under their respective message_ts.
+  Example: attachments/1770648887.532179/photo.png
 
-Persistence rules:
-- The sandbox persists via snapshots between messages in the same thread
-- Sandbox files expire after 24 hours
-- Installed packages persist, install once per thread with sudo dnf install -y
-- Files in output/ and attachments/ persist across messages
-- agent/turns/<message_ts>.json logs are appended per command execution
+output/<message_ts>/
+  Your output directory. Always write ALL generated files here.
+  If you DO NOT write your files here, on follow up messages you won't be able to find them, so this is VERY IMPORTANT.
+  This is where showFile looks for files to upload.
+  Example: output/1770648887.532179/result.png
 
-Output directory:
-- ALWAYS create output/<message_ts>/ and run work there
-- Save generated files inside output/<message_ts>/ (never the working directory root)
-- Use showFile with output/<message_ts>/ paths to share results with the user
-- Example: save chart to output/<message_ts>/chart.png, then showFile({ path: "output/<message_ts>/chart.png" })
+agent/turns/<message_ts>.json
+  Automatic log of each bash command's stdout, stderr, and exit code.
+  If bash output was truncated, read this file for the full content.
+</filesystem>
 
-Execution logs:
-- Every command is logged to agent/turns/<message_ts>.json with full stdout/stderr
-- Entries are appended in order of execution
-- If output was truncated, the fullOutput field in the result has the log path
-- To recover truncated output: read agent/turns/<message_ts>.json
+<packages>
+Do not assume any tool is pre-installed beyond the base OS, Node.js, and Python 3.
+Always install before first use:
+
+  System packages: sudo dnf install -y <package>
+  Python packages: pip3 install <package>
+  Node packages:   npm install -g <package>
+
+Common installs:
+  sudo dnf install -y ImageMagick poppler-utils tesseract ffmpeg
+  pip3 install pandas matplotlib pillow requests
+</packages>
 </environment>`;

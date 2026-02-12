@@ -1,0 +1,74 @@
+import type { ModelMessage } from 'ai';
+import { getConversationMessages } from '~/slack/conversations';
+import type { SandboxRequestHints, SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
+import { resolveChannelName, resolveServerName } from '~/utils/slack';
+import { getTime } from '~/utils/time';
+import { reconnectSandbox } from './lifecycle';
+
+export async function peekFilesystem(
+  context: SlackMessageContext
+): Promise<string | null> {
+  const ctxId = getContextId(context);
+  const live = await reconnectSandbox(ctxId);
+  if (!live) {
+    return null;
+  }
+
+  const result = await live
+    .runCommand({
+      cmd: 'sh',
+      args: [
+        '-c',
+        "find attachments output -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -t$'\\t' -k1 -rn | cut -f2-",
+      ],
+    })
+    .catch(() => null);
+
+  if (!result) {
+    return null;
+  }
+
+  const stdout = await result.stdout();
+  if (!stdout.trim()) {
+    return null;
+  }
+
+  return stdout.trim();
+}
+
+export interface SandboxContext {
+  messages: ModelMessage[];
+  requestHints: SandboxRequestHints;
+}
+
+export async function buildSandboxContext(
+  context: SlackMessageContext
+): Promise<SandboxContext> {
+  const channel = (context.event as { channel?: string }).channel;
+  const threadTs = (context.event as { thread_ts?: string }).thread_ts;
+
+  const [messages, existingFiles, channelName, serverName] = await Promise.all([
+    channel
+      ? getConversationMessages({
+          client: context.client,
+          channel,
+          threadTs,
+          botUserId: context.botUserId,
+          limit: 5,
+        })
+      : [],
+    peekFilesystem(context),
+    resolveChannelName(context),
+    resolveServerName(context),
+  ]);
+
+  const requestHints: SandboxRequestHints = {
+    time: getTime(),
+    channel: channelName,
+    server: serverName,
+    existingFiles,
+  };
+
+  return { messages, requestHints };
+}

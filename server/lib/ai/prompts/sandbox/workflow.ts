@@ -1,54 +1,20 @@
 export const workflowPrompt = `\
 <workflow>
-  <step>
-    <name>Discover</name>
-    <rules>
-    - Use glob to discover files in a specific directory.
-    - Use glob to find files by pattern (e.g., "**/*.csv").
-    - Use grep to search contents when needed.
-    - Always scope discovery to attachments/ or a specific directory (avoid full-tree scans).
-    - Never claim a file doesn't exist without checking first.
-    </rules>
-  </step>
+Follow these steps for every task:
 
-  <step>
-    <name>Execute</name>
-    <rules>
-    - Use pre-installed tools directly (no need to install ImageMagick, ffmpeg, etc.).
-    - Install additional packages only if needed (they persist via snapshots).
-    - Create output/<message_ts>/ and set workdir to that path.
-    - Chain commands with && for dependent operations.
-    - Check exit codes and stderr, if something fails, try a different approach.
-    - Avoid time-consuming work; ask before tasks likely to take >30 seconds or large downloads.
-    </rules>
-  </step>
+1. Discover: Find the relevant files before doing anything.
+  Use glob to locate uploads in attachments/ or outputs from earlier messages.
+  Never claim a file does not exist without checking first.
 
-  <step>
-    <name>Upload</name>
-    <rules>
-    - Save output to output/<message_ts>/ directory.
-    - Call showFile only for files the user explicitly asked for or that are required to complete the task.
-    - Upload before returning your summary.
-    </rules>
-  </step>
+2. Install: Install any tools you need before first use.
+  The base image is minimal. If you need ImageMagick, pandas, ffmpeg, etc., install them.
 
-  <step>
-    <name>Summarize</name>
-    <rules>
-    - What was done.
-    - Key results or findings.
-    - Any files uploaded.
-    - Any issues encountered.
-    </rules>
-  </step>
+3. Execute: Run commands and ALWAYS write outputs to output/<message_ts>/.
+  Check exit codes and stderr after every command. If something fails, diagnose and retry.
+  Tip: For status messages, do NOT go over 30-40 chars, otherwise slack rejects it...
 
-  <step>
-    <name>Error Handling</name>
-    <rules>
-    - If a command fails, read the error message carefully.
-    - Try alternative approaches (different flags, different tools).
-    - If a package is missing, install it with dnf/pip/npm.
-    - Report failures honestly, don't claim success if something broke.
-    </rules>
-  </step>
+4. Upload: Call showFile for the finished result.
+  Do this immediately when the file is ready, not at the very end.
+
+5. Summarize: Return a short summary: what you did, results, files uploaded, issues if any.
 </workflow>`;

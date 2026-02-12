@@ -2,9 +2,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
+import { getSandbox } from '~/lib/sandbox';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getSandbox } from './bash/sandbox';
 
 const outputSchema = z.object({
   path: z.string(),
@@ -47,15 +47,14 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(ctxId);
+        const sandbox = await getSandbox(context);
         const payload = Buffer.from(
           JSON.stringify({ pattern, path, include, limit })
         ).toString('base64');
-        const command = `PARAMS='${payload}' python3 agent/bin/grep.py`;
 
         const result = await sandbox.runCommand({
           cmd: 'sh',
-          args: ['-c', command],
+          args: ['-c', 'PARAMS="$1" python3 agent/bin/grep.py', '--', payload],
         });
 
         const stdout = await result.stdout();
@@ -71,15 +70,8 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
         const data = outputSchema.parse(JSON.parse(stdout || '{}'));
 
         logger.debug(
-          {
-            ctxId,
-            pattern,
-            path,
-            include,
-            count: data.count,
-            truncated: data.truncated,
-          },
-          'Grep complete'
+          { ctxId, pattern, path, include, count: data.count },
+          '[sandbox] Grep completed'
         );
 
         return {
@@ -90,10 +82,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
           output: data.output,
         };
       } catch (error) {
-        logger.error(
-          { error, pattern, path, ctxId },
-          'Failed to grep in sandbox'
-        );
+        logger.error({ ctxId, error, pattern, path }, '[sandbox] Grep failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

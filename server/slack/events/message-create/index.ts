@@ -23,13 +23,13 @@ type MessageEventArgs = SlackEventMiddlewareArgs<'message'> & AllMiddlewareArgs;
 async function canReply(ctxId: string): Promise<boolean> {
   const { success } = await ratelimit(redisKeys.channelCount(ctxId));
   if (!success) {
-    logger.info(`[${ctxId}] Rate limit hit. Skipping reply.`);
+    logger.info({ ctxId }, 'Rate limit hit. Skipping reply.');
   }
   return success;
 }
 
 async function onSuccess(_context: SlackMessageContext) {
-  // await saveChatMemory(context, 5);
+  // todo: add operations here
 }
 
 function isProcessableMessage(
@@ -37,7 +37,6 @@ function isProcessableMessage(
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
 
-  // has to be done again for type things
   if (
     event.subtype &&
     event.subtype !== 'thread_broadcast' &&
@@ -70,7 +69,10 @@ function isProcessableMessage(
   } satisfies SlackMessageContext;
 }
 
-async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
+async function getAuthorName(
+  ctx: SlackMessageContext,
+  ctxId: string
+): Promise<string> {
   const userId = (ctx.event as { user?: string }).user;
   if (!userId) {
     return 'unknown';
@@ -84,7 +86,10 @@ async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
       userId
     );
   } catch (error) {
-    logger.warn({ error, userId }, 'Failed to fetch user info for logging');
+    logger.warn(
+      { error, userId, ctxId },
+      'Failed to fetch user info for logging'
+    );
     return userId;
   }
 }
@@ -110,10 +115,10 @@ async function handleMessage(args: MessageEventArgs) {
   const ctxId = getContextId(messageContext);
   const trigger = await getTrigger(messageContext, messageContext.botUserId);
 
-  const authorName = await getAuthorName(messageContext);
+  const authorName = await getAuthorName(messageContext, ctxId);
   const content = (messageContext.event as { text?: string }).text ?? '';
 
-  const { messages, hints } = await buildChatContext(messageContext);
+  const { messages, requestHints } = await buildChatContext(messageContext);
 
   if (trigger.type) {
     if (!isUserAllowed(args.event.user)) {
@@ -129,12 +134,17 @@ async function handleMessage(args: MessageEventArgs) {
 
     logger.info(
       {
+        ctxId,
         message: `${authorName}: ${content}`,
       },
-      `[${ctxId}] Triggered by ${trigger.type}`
+      `Triggered by ${trigger.type}`
     );
 
-    const result = await generateResponse(messageContext, messages, hints);
+    const result = await generateResponse(
+      messageContext,
+      messages,
+      requestHints
+    );
 
     logReply(ctxId, authorName, result, 'trigger');
 
@@ -152,7 +162,8 @@ async function handleMessage(args: MessageEventArgs) {
 
   if (!hasQuota) {
     logger.debug(
-      `[${ctxId}] Quota exhausted (${idleCount}/${messageThreshold})`
+      { ctxId },
+      `Quota exhausted (${idleCount}/${messageThreshold})`
     );
     return;
   }

@@ -2,9 +2,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
+import { getSandbox } from '~/lib/sandbox';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { getSandbox } from './bash/sandbox';
 
 export const edit = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -30,7 +30,7 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
       const ctxId = getContextId(context);
 
       try {
-        const sandbox = await getSandbox(ctxId);
+        const sandbox = await getSandbox(context);
         const fileBuffer = await sandbox.readFileToBuffer({ path });
 
         if (!fileBuffer) {
@@ -52,27 +52,19 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
         }
 
         const updated = replaceAll
-          ? data.split(oldString).join(newString)
+          ? data.replaceAll(oldString, newString)
           : data.replace(oldString, newString);
 
         await sandbox.writeFiles([
           { path, content: Buffer.from(updated, 'utf-8') },
         ]);
 
-        const response = {
-          success: true,
-          path,
-          replaced: replaceAll ? count : 1,
-        };
+        const replaced = replaceAll ? count : 1;
+        logger.debug({ path, replaced, ctxId }, '[sandbox] Edit completed');
 
-        logger.debug(
-          { ctxId, path, replaced: response.replaced },
-          'Sandbox edit complete'
-        );
-
-        return response;
+        return { success: true, path, replaced };
       } catch (error) {
-        logger.error({ error, path, ctxId }, 'Failed to edit file in sandbox');
+        logger.error({ error, path, ctxId }, '[sandbox] Edit failed');
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

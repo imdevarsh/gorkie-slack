@@ -1,18 +1,25 @@
-import { corePrompt } from '../shared/core';
+import type { SandboxRequestHints, SlackMessageContext } from '~/types';
+import { contextPrompt } from './context';
+import { corePrompt } from './core';
 import { environmentPrompt } from './environment';
 import { examplesPrompt } from './examples';
-import { packagesPrompt } from './packages';
-import { rolePrompt } from './role';
 import { toolsPrompt } from './tools';
 import { workflowPrompt } from './workflow';
 
-export function sandboxPrompt(): string {
+interface SandboxPromptOptions {
+  context?: SlackMessageContext;
+  requestHints?: SandboxRequestHints;
+}
+
+export function sandboxPrompt({
+  context,
+  requestHints,
+}: SandboxPromptOptions = {}): string {
   return [
     corePrompt,
-    rolePrompt,
     environmentPrompt,
+    contextPrompt({ context, requestHints }),
     toolsPrompt,
-    packagesPrompt,
     workflowPrompt,
     examplesPrompt,
   ]
