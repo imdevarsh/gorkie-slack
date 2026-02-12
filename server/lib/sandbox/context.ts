@@ -48,7 +48,7 @@ export async function buildSandboxContext(
   const channel = (context.event as { channel?: string }).channel;
   const threadTs = (context.event as { thread_ts?: string }).thread_ts;
 
-  const [messages, existingFiles, channelName, serverName] = await Promise.all([
+  const [messages, existingFiles, metadata] = await Promise.all([
     channel
       ? getConversationMessages({
           client: context.client,
@@ -59,16 +59,26 @@ export async function buildSandboxContext(
         })
       : [],
     peekFilesystem(context),
+    buildMetadata(context),
+  ]);
+
+  return {
+    messages,
+    requestHints: {
+      time: getTime(),
+      channel: metadata.channel,
+      server: metadata.server,
+      existingFiles,
+    },
+  };
+}
+
+async function buildMetadata(
+  context: SlackMessageContext
+): Promise<{ channel: string; server: string }> {
+  const [channel, server] = await Promise.all([
     resolveChannelName(context),
     resolveServerName(context),
   ]);
-
-  const requestHints: SandboxRequestHints = {
-    time: getTime(),
-    channel: channelName,
-    server: serverName,
-    existingFiles,
-  };
-
-  return { messages, requestHints };
+  return { channel, server };
 }

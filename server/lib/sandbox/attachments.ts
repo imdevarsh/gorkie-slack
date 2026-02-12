@@ -1,5 +1,6 @@
 import type { Sandbox } from '@vercel/sandbox';
 import sanitizeFilename from 'sanitize-filename';
+import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
@@ -8,8 +9,7 @@ import type { SlackFile } from '~/utils/images';
 import { attachmentsDir } from './paths';
 
 export const ATTACHMENTS_DIR = 'attachments';
-
-const MAX_ATTACHMENT_BYTES = 1_000_000_000;
+const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 
 export async function syncAttachments(
   sandbox: Sandbox,
