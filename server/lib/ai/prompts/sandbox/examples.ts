@@ -2,7 +2,7 @@ export const examplesPrompt = `\
 <examples>
 
 <example>
-<description>Fresh task with a new upload — no prior sandbox state.</description>
+<description>Fresh task with a new upload, no prior sandbox state.</description>
 <task>Convert the uploaded image to black and white</task>
 <steps>
 1. glob({ "pattern": "**/*.png", "path": "/home/vercel-sandbox/attachments" })
@@ -56,7 +56,7 @@ Summary: "Found your diagram from an earlier message, inverted the colors, and u
 </example>
 
 <example>
-<description>Simple computation — no files involved.</description>
+<description>Quick calculation</description>
 <task>Calculate 44 * 44</task>
 <steps>
 1. bash({ "command": "echo $((44 * 44))" })
