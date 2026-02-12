@@ -41,6 +41,7 @@ function isProcessableMessage(
   args: MessageEventArgs
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
+  const userId = (event as { user?: string }).user;
 
   if (!hasSupportedSubtype(args)) {
     return null;
@@ -50,7 +51,7 @@ function isProcessableMessage(
     return null;
   }
 
-  if (context.botUserId && event.user === context.botUserId) {
+  if (context.botUserId && userId === context.botUserId) {
     return null;
   }
 
@@ -100,12 +101,25 @@ async function handleMessage(args: MessageEventArgs) {
     return;
   }
 
-  if (!shouldUse(args.event.text || '')) {
+  const messageContext = isProcessableMessage(args);
+  if (!messageContext) {
     return;
   }
 
-  const messageContext = isProcessableMessage(args);
-  if (!messageContext) {
+  const event = messageContext.event as {
+    channel?: string;
+    text?: string;
+    thread_ts?: string;
+    ts: string;
+    user?: string;
+  };
+  const userId = event.user;
+  const messageText = event.text ?? '';
+  if (!userId) {
+    return;
+  }
+
+  if (!shouldUse(messageText)) {
     return;
   }
 
@@ -113,16 +127,20 @@ async function handleMessage(args: MessageEventArgs) {
   const trigger = await getTrigger(messageContext, messageContext.botUserId);
 
   const authorName = await getAuthorName(messageContext, ctxId);
-  const content = (messageContext.event as { text?: string }).text ?? '';
+  const content = messageText;
 
   const { messages, requestHints } = await buildChatContext(messageContext);
 
   if (trigger.type) {
-    if (!isUserAllowed(args.event.user)) {
+    if (!isUserAllowed(userId)) {
+      if (!event.channel) {
+        return;
+      }
+
       await args.client.chat.postMessage({
-        channel: args.event.channel,
-        thread_ts: args.event.thread_ts ?? args.event.ts,
-        markdown_text: `Hey there <@${args.event.user}>! For security and privacy reasons, you must be in <#${env.OPT_IN_CHANNEL}> to talk to me. When you're ready, ping me again and we can talk!`,
+        channel: event.channel,
+        thread_ts: event.thread_ts ?? event.ts,
+        markdown_text: `Hey there <@${userId}>! For security and privacy reasons, you must be in <#${env.OPT_IN_CHANNEL}> to talk to me. When you're ready, ping me again and we can talk!`,
       });
       return;
     }
@@ -151,7 +169,7 @@ async function handleMessage(args: MessageEventArgs) {
     return;
   }
 
-  if (!isUserAllowed(args.event.user)) {
+  if (!isUserAllowed(userId)) {
     return;
   }
 
@@ -181,5 +199,9 @@ export async function execute(args: MessageEventArgs) {
     return;
   }
 
-  return getQueue(ctxId).add(async () => handleMessage(args));
+  return getQueue(ctxId)
+    .add(async () => handleMessage(args))
+    .catch((error: unknown) => {
+      logger.error({ error, ctxId }, 'Failed to process queued message');
+    });
 }
