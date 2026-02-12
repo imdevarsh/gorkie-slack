@@ -29,15 +29,19 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
         loading: true,
       });
       const ctxId = getContextId(context);
+      const resolvedPath = sandboxPath(path);
 
       try {
-        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
         const fileBuffer = await sandbox.readFileToBuffer({
           path: resolvedPath,
         });
 
         if (!fileBuffer) {
+          logger.warn(
+            { path: resolvedPath, ctxId },
+            '[sandbox] Edit missing file'
+          );
           return { success: false, error: `File not found: ${resolvedPath}` };
         }
 
@@ -45,10 +49,18 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
         const count = data.split(oldString).length - 1;
 
         if (count === 0) {
+          logger.warn(
+            { path: resolvedPath, ctxId },
+            '[sandbox] Edit oldString not found'
+          );
           return { success: false, error: 'oldString not found' };
         }
 
         if (count > 1 && !replaceAll) {
+          logger.warn(
+            { path: resolvedPath, count, ctxId },
+            '[sandbox] Edit requires replaceAll'
+          );
           return {
             success: false,
             error: 'oldString found multiple times and replaceAll is false',
@@ -71,7 +83,10 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
 
         return { success: true, path: resolvedPath, replaced };
       } catch (error) {
-        logger.error({ error, path, ctxId }, '[sandbox] Edit failed');
+        logger.error(
+          { error, path: resolvedPath, ctxId },
+          '[sandbox] Edit failed'
+        );
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

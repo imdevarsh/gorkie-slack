@@ -92,6 +92,10 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
       const userId = (context.event as { user?: string }).user;
 
       if (!(channelId && messageTs)) {
+        logger.warn(
+          { channel: channelId, messageTs, type, offset },
+          'Failed to send Slack reply: missing channel or timestamp'
+        );
         return { success: false, error: 'Missing Slack channel or timestamp' };
       }
 

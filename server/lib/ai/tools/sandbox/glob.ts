@@ -40,9 +40,9 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       });
 
       const ctxId = getContextId(context);
+      const resolvedPath = sandboxPath(path);
 
       try {
-        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
         const payload = Buffer.from(
           JSON.stringify({ pattern, path: resolvedPath, limit })

@@ -28,13 +28,17 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;
       const ctxId = getContextId(context);
+      const resolvedPath = sandboxPath(path);
 
       if (!channelId) {
+        logger.warn(
+          { path: resolvedPath, ctxId },
+          '[sandbox] File upload missing channel'
+        );
         return { success: false, error: 'Missing Slack channel' };
       }
 
       try {
-        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
         await setStatus(context, {
           status: 'is uploading a file',
@@ -46,6 +50,10 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
         });
 
         if (!fileBuffer) {
+          logger.warn(
+            { path: resolvedPath, ctxId },
+            '[sandbox] File upload missing file'
+          );
           return { success: false, error: `File not found: ${resolvedPath}` };
         }
 
@@ -73,7 +81,10 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
           message: `Uploaded ${uploadFilename} (${fileBuffer.length} bytes) to Slack`,
         };
       } catch (error) {
-        logger.error({ error, path, ctxId }, '[sandbox] File upload failed');
+        logger.error(
+          { error, path: resolvedPath, ctxId },
+          '[sandbox] File upload failed'
+        );
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

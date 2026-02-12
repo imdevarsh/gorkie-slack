@@ -19,6 +19,10 @@ export const react = ({ context }: { context: SlackMessageContext }) =>
       const messageTs = context.event.ts;
 
       if (!(channelId && messageTs)) {
+        logger.warn(
+          { channel: channelId, messageTs, emojis },
+          'Failed to add Slack reactions: missing channel or message id'
+        );
         return { success: false, error: 'Missing Slack channel or message id' };
       }
 

@@ -56,8 +56,15 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         const exitCode = result.exitCode;
 
         if (exitCode !== 0) {
-          logger.debug(
-            { ctxId, command, exitCode, stderr: stderr.slice(0, 500) },
+          logger.warn(
+            {
+              ctxId,
+              command,
+              cwd,
+              exitCode,
+              stderr: stderr.slice(0, 1000),
+              stdout: stdout.slice(0, 1000),
+            },
             '[sandbox] Command exited with non-zero status'
           );
         }

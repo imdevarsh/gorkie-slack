@@ -36,15 +36,19 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         loading: true,
       });
       const ctxId = getContextId(context);
+      const resolvedPath = sandboxPath(path);
 
       try {
-        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
         const fileBuffer = await sandbox.readFileToBuffer({
           path: resolvedPath,
         });
 
         if (!fileBuffer) {
+          logger.warn(
+            { path: resolvedPath, ctxId },
+            '[sandbox] Read missing file'
+          );
           return { success: false, error: `File not found: ${resolvedPath}` };
         }
 
@@ -79,7 +83,10 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
           linesReturned,
         };
       } catch (error) {
-        logger.error({ error, path, ctxId }, '[sandbox] Read failed');
+        logger.error(
+          { error, path: resolvedPath, ctxId },
+          '[sandbox] Read failed'
+        );
         return {
           success: false,
           path,

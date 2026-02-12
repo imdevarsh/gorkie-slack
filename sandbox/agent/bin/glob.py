@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import base64
-import glob
 import json
 import os
 import sys
+from pathlib import Path
 
 def expand_braces(value):
   if "{" not in value:
@@ -29,18 +29,19 @@ def main():
     raise ValueError(f"Not a directory: {path}")
 
   patterns = expand_braces(pattern)
+  root = Path(path)
   matches = []
   seen = set()
   for pat in patterns:
-    for item in glob.glob(os.path.join(path, pat), recursive=True):
-      if not os.path.isfile(item):
+    for item in root.glob(pat):
+      if not item.is_file():
         continue
-      full = os.path.normpath(item)
+      full = os.path.normpath(str(item))
       if full in seen:
         continue
       seen.add(full)
       try:
-        mtime = os.path.getmtime(full)
+        mtime = item.stat().st_mtime
       except OSError:
         mtime = 0
       matches.append((full, mtime))

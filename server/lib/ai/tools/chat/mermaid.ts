@@ -60,6 +60,10 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
       const messageTs = context.event.ts;
 
       if (!channelId) {
+        logger.warn(
+          { title },
+          'Failed to create Mermaid diagram: missing channel'
+        );
         return { success: false, error: 'Missing Slack channel' };
       }
 
