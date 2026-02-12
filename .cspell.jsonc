@@ -46,6 +46,8 @@
     "xoxb",
     "zadd",
     "zcard",
-    "zremrangebyscore"
+    "zremrangebyscore",
+    "zrangebyscore",
+    "zrem"
   ]
 }
