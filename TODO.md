@@ -46,3 +46,5 @@ TimeoutError: Task timed out after 300000ms (queue has 1 running, 0 waiting)
 [ERROR]   An unhandled error occurred while Bolt processed (type: event_callback, error: Error: Task timed out after 300000ms (queue has 1 running, 0 waiting))
 [2026-02-10 17:27:14.440 +0000] DEBUG: Sandbox command result
 - the ai still doesn't know how to use glob tool / and or messes up thinking file is 404
+- todo: the sandbox sometimes might timeout and the snapshot might not be saved
+- todo: the snapshot fails to delete sometimes?
