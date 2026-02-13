@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { writeSandboxFiles } from '~/lib/sandbox/modal';
 import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -28,7 +29,7 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
       try {
         const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
-        await sandbox.writeFiles([
+        await writeSandboxFiles(sandbox, [
           { path: resolvedPath, content: Buffer.from(content, 'utf-8') },
         ]);
 

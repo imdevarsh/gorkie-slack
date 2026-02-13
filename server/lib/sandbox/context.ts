@@ -19,16 +19,12 @@ export async function peekFilesystem(
   const result = await runSandboxCommand(live, {
     cmd: 'sh',
     args: [
-      '-c',
+      '-lc',
       "find attachments output -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -t$'\\t' -k1 -rn | cut -f2-",
     ],
   }).catch(() => null);
 
-  if (!result) {
-    return null;
-  }
-
-  if (!result.stdout.trim()) {
+  if (!result || result.exitCode !== 0 || !result.stdout.trim()) {
     return null;
   }
 

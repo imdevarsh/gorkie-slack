@@ -7,6 +7,7 @@ import { readSandboxFile } from '~/lib/sandbox/modal';
 import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+
 export const read = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description:
@@ -36,20 +37,13 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         status: status ?? 'is reading file',
         loading: true,
       });
+
       const ctxId = getContextId(context);
       const resolvedPath = sandboxPath(path);
 
       try {
         const sandbox = await getSandbox(context);
         const fileBuffer = await readSandboxFile(sandbox, resolvedPath);
-
-        if (!fileBuffer) {
-          logger.warn(
-            { path: resolvedPath, ctxId },
-            '[sandbox] Read missing file'
-          );
-          return { success: false, error: `File not found: ${resolvedPath}` };
-        }
 
         const lines = fileBuffer.toString('utf-8').split('\n');
         const totalLines = lines.length;
@@ -66,8 +60,8 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
         }
 
         const content = numbered.join('\n');
-
         const linesReturned = Math.max(0, end - start);
+
         logger.debug(
           { path: resolvedPath, totalLines, linesReturned, ctxId },
           '[sandbox] Read completed'

@@ -8,14 +8,6 @@ import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
-const outputSchema = z.object({
-  path: z.string(),
-  count: z.number(),
-  truncated: z.boolean(),
-  output: z.string(),
-  matches: z.array(z.string()),
-});
-
 export const glob = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Find files by glob pattern in the sandbox.',
@@ -45,15 +37,23 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getSandbox(context);
-        const payload = Buffer.from(
-          JSON.stringify({ pattern, path: resolvedPath, limit })
-        ).toString('base64');
-
+        const effectiveLimit = limit + 1;
         const result = await runSandboxCommand(sandbox, {
           cmd: 'sh',
-          args: ['-c', 'PARAMS="$1" python3 agent/bin/glob.py', '--', payload],
+          args: [
+            '-lc',
+            [
+              'cd "$1" || exit 2',
+              'PATTERN="$2"',
+              'LIMIT="$3"',
+              'fd --type f --hidden --follow --exclude .git --exclude node_modules --glob "$PATTERN" . | sort | head -n "$LIMIT"',
+            ].join('\n'),
+            '--',
+            resolvedPath,
+            pattern,
+            String(effectiveLimit),
+          ],
         });
-        const { stdout, stderr } = result;
 
         if (result.exitCode !== 0) {
           logger.warn(
@@ -63,31 +63,36 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
               path: resolvedPath,
               limit,
               exitCode: result.exitCode,
-              stderr: stderr.slice(0, 1000),
-              stdout: stdout.slice(0, 1000),
+              stderr: result.stderr.slice(0, 1000),
+              stdout: result.stdout.slice(0, 1000),
             },
             '[sandbox] Glob command failed'
           );
           return {
             success: false,
-            error: stderr || `Failed to match pattern: ${pattern}`,
+            error: result.stderr || `Failed to match pattern: ${pattern}`,
           };
         }
 
-        const data = outputSchema.parse(JSON.parse(stdout || '{}'));
+        const lines = result.stdout
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean);
+        const truncated = lines.length > limit;
+        const matches = truncated ? lines.slice(0, limit) : lines;
 
         logger.debug(
-          { ctxId, pattern, path: resolvedPath, count: data.count },
+          { ctxId, pattern, path: resolvedPath, count: matches.length },
           '[sandbox] Glob completed'
         );
 
         return {
           success: true,
-          path: data.path,
-          count: data.count,
-          truncated: data.truncated,
-          output: data.output,
-          matches: data.matches,
+          path: resolvedPath,
+          count: matches.length,
+          truncated,
+          output: matches.join('\n'),
+          matches,
         };
       } catch (error) {
         logger.error(

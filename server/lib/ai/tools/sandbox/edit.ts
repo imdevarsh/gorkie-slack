@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { readSandboxFile, writeSandboxFiles } from '~/lib/sandbox/modal';
 import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -33,18 +34,7 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getSandbox(context);
-        const fileBuffer = await sandbox.readFileToBuffer({
-          path: resolvedPath,
-        });
-
-        if (!fileBuffer) {
-          logger.warn(
-            { path: resolvedPath, ctxId },
-            '[sandbox] Edit missing file'
-          );
-          return { success: false, error: `File not found: ${resolvedPath}` };
-        }
-
+        const fileBuffer = await readSandboxFile(sandbox, resolvedPath);
         const data = fileBuffer.toString('utf-8');
         const count = data.split(oldString).length - 1;
 
@@ -71,7 +61,7 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
           ? data.replaceAll(oldString, newString)
           : data.replace(oldString, newString);
 
-        await sandbox.writeFiles([
+        await writeSandboxFiles(sandbox, [
           { path: resolvedPath, content: Buffer.from(updated, 'utf-8') },
         ]);
 

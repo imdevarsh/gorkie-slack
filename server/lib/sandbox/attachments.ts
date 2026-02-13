@@ -1,3 +1,4 @@
+import type { Sandbox } from 'modal';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
@@ -5,9 +6,8 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
+import { writeSandboxFiles } from './modal';
 import { attachmentsDir } from './paths';
-import { runSandboxCommand, writeSandboxFiles } from './modal';
-import type { Sandbox } from 'modal';
 
 export const ATTACHMENTS_DIR = 'attachments';
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
@@ -29,53 +29,45 @@ export async function syncAttachments(
   const ctxId = getContextId(context);
   const dir = attachmentsDir(messageTs);
 
-  await runSandboxCommand(sandbox, { cmd: 'mkdir', args: ['-p', dir] });
+  const uploads = await Promise.all(
+    files.map(
+      async (file): Promise<{ path: string; content: Buffer } | null> => {
+        const content = await downloadAttachment(file, ctxId);
+        if (!content) {
+          return null;
+        }
 
-  const results = await Promise.all(
-    files.map((file) => syncFile(sandbox, dir, file, ctxId))
+        const name = sanitizeFilename(file.name ?? 'attachment', {
+          replacement: '_',
+        });
+        const safeName = name || `file-${file.id ?? 'unknown'}`;
+        return { path: `${dir}/${safeName}`, content };
+      }
+    )
   );
 
-  if (results.some((ok) => !ok)) {
-    logger.warn({ messageTs, ctxId }, '[sandbox] Attachment sync incomplete');
+  const writeable = uploads.filter(
+    (item): item is { path: string; content: Buffer } => item !== null
+  );
+  if (writeable.length === 0) {
     return;
   }
 
+  await writeSandboxFiles(sandbox, writeable).catch((error: unknown) => {
+    logger.warn(
+      { error, ctxId, messageTs },
+      '[sandbox] Failed to sync attachments'
+    );
+  });
+
   logger.info(
     {
-      count: files.length,
+      count: writeable.length,
       messageTs,
       ctxId,
     },
     '[sandbox] Attachments synced'
   );
-}
-
-async function syncFile(
-  sandbox: Sandbox,
-  dir: string,
-  file: SlackFile,
-  ctxId: string
-): Promise<boolean> {
-  const content = await downloadAttachment(file, ctxId);
-  if (!content) {
-    return false;
-  }
-
-  const name = sanitizeFilename(file.name ?? 'attachment', {
-    replacement: '_',
-  });
-  const safeName = name || `file-${file.id ?? 'unknown'}`;
-
-  try {
-    await writeSandboxFiles(sandbox, [{ path: `${dir}/${safeName}`, content }]);
-    return true;
-  } catch (error) {
-    logger.warn(
-      { error, fileId: file.id, name: file.name, ctxId },
-      '[sandbox] Failed to write attachment'
-    );
-    return false;
-  }
 }
 
 async function downloadAttachment(

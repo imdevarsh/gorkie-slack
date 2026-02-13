@@ -1,7 +1,7 @@
 export const environmentPrompt = `\
 <environment>
 <filesystem>
-Use absolute paths (starting with /home/vercel-sandbox) in bash commands and showFile inputs to avoid workdir-related mistakes.
+Use absolute paths (starting with /workspace) in bash commands and showFile inputs to avoid workdir-related mistakes.
 Relative paths are allowed, but absolute paths are preferred for reliability.
 
 attachments/<message_ts>/

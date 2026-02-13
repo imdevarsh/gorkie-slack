@@ -15,13 +15,15 @@ export async function addHistory(
   const previous = await readSandboxFile(sandbox, path).catch(() => null);
   const history =
     safeParseJson(previous?.toString() ?? '[]', historySchema) ?? [];
+
   history.push(entry);
+
   await writeSandboxFiles(sandbox, [
-      {
-        path,
-        content: Buffer.from(JSON.stringify(history, null, 2)),
-      },
-    ]).catch((error: unknown) => {
+    {
+      path,
+      content: Buffer.from(JSON.stringify(history, null, 2), 'utf-8'),
+    },
+  ]).catch((error: unknown) => {
     logger.warn({ error, path }, '[sandbox] Failed to write turn log');
   });
 }

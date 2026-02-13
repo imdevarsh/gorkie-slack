@@ -5,8 +5,8 @@ import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
-import { runSandboxCommand } from '~/lib/sandbox/modal';
 import { addHistory } from '~/lib/sandbox/history';
+import { runSandboxCommand } from '~/lib/sandbox/modal';
 import { outputDir, sandboxPath, turnsPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -15,7 +15,7 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Run a shell command.',
     inputSchema: z.object({
-      command: z.string().describe('Shell command (runs via sh -c)'),
+      command: z.string().describe('Shell command (runs via sh -lc)'),
       workdir: z.string().optional().describe('Working directory (relative)'),
       status: z
         .string()
@@ -48,27 +48,26 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
 
         const result = await runSandboxCommand(sandbox, {
           cmd: 'sh',
-          args: ['-c', command],
+          args: ['-lc', command],
           cwd,
         });
-        const { stdout, stderr, exitCode } = result;
 
         await addHistory(sandbox, logPath, {
           command,
           workdir: cwd,
           status,
-          stdout,
-          stderr,
-          exitCode,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          exitCode: result.exitCode,
         });
 
-        const out = truncate(stdout || '(no output)', logPath);
-        const err = truncate(stderr, logPath);
+        const out = truncate(result.stdout || '(no output)', logPath);
+        const err = truncate(result.stderr, logPath);
 
         logger.debug(
           {
             ctxId,
-            exitCode,
+            exitCode: result.exitCode,
             out,
             err,
           },
@@ -78,7 +77,7 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         return {
           output: out.text,
           error: err.text,
-          exitCode,
+          exitCode: result.exitCode,
           ...(out.truncated || err.truncated ? { fullOutput: logPath } : {}),
         };
       } catch (error) {

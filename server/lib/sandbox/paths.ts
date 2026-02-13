@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-const SANDBOX_HOME = '/root';
+const SANDBOX_HOME = '/workspace';
 
 export function sandboxPath(relativePath: string): string {
   if (relativePath === '.' || relativePath === './') {
@@ -9,21 +9,21 @@ export function sandboxPath(relativePath: string): string {
   if (relativePath.startsWith('/')) {
     return relativePath;
   }
-  return path.join(SANDBOX_HOME, relativePath);
+  return path.posix.join(SANDBOX_HOME, relativePath);
 }
 
 export function outputDir(messageTs: string): string {
-  return sandboxPath(path.join('output', messageTs));
+  return sandboxPath(path.posix.join('output', messageTs));
 }
 
 export function attachmentsDir(messageTs: string): string {
-  return sandboxPath(path.join('attachments', messageTs));
+  return sandboxPath(path.posix.join('attachments', messageTs));
 }
 
 export function turnsDir(): string {
-  return sandboxPath(path.join('agent', 'turns'));
+  return sandboxPath(path.posix.join('agent', 'turns'));
 }
 
 export function turnsPath(messageTs: string): string {
-  return sandboxPath(path.join('agent', 'turns', `${messageTs}.json`));
+  return sandboxPath(path.posix.join('agent', 'turns', `${messageTs}.json`));
 }

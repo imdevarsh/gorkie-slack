@@ -20,15 +20,15 @@ export async function getSandbox(
   context: SlackMessageContext
 ): Promise<Sandbox> {
   const ctxId = getContextId(context);
-  const live = await reconnectSandbox(ctxId);
-  if (live) {
-    return live;
+  const existing = await reconnectSandbox(ctxId);
+  if (existing) {
+    return existing;
   }
 
-  const instance = await provision(context);
-  await redis.set(redisKeys.sandbox(ctxId), instance.sandboxId);
+  const sandbox = await provisionSandbox(context);
+  await redis.set(redisKeys.sandbox(ctxId), sandbox.sandboxId);
   await redis.expire(redisKeys.sandbox(ctxId), config.ttl);
-  return instance;
+  return sandbox;
 }
 
 export async function stopSandbox(ctxId: string): Promise<void> {
@@ -40,54 +40,63 @@ export async function stopSandbox(ctxId: string): Promise<void> {
   await redis.del(redisKeys.sandbox(ctxId));
 
   const snapshotRaw = await redis.get(redisKeys.snapshot(ctxId));
-  const previousSnapshotId =
-    safeParseJson(snapshotRaw, snapshotRecordSchema)?.snapshotId ?? null;
+  const previousImageId =
+    safeParseJson(snapshotRaw, snapshotRecordSchema)?.imageId ?? null;
 
-  const instance = await getModalSandboxById(sandboxId);
-  if (!instance) {
+  const sandbox = await getModalSandboxById(sandboxId);
+  if (!sandbox) {
     return;
   }
 
-  cleanupSnapshots().catch((error) => {
+  cleanupSnapshots().catch((error: unknown) => {
     logger.warn({ error, ctxId }, '[sandbox] Snapshot cleanup failed');
   });
 
-  const snapshotId = await snapshotSandboxFilesystem(instance).catch(() => null);
-  if (!snapshotId) {
-    await forceStop(sandboxId);
+  const imageId = await snapshotSandboxFilesystem(sandbox).catch(
+    (error: unknown) => {
+      logger.warn({ error, ctxId, sandboxId }, '[sandbox] Snapshot failed');
+      return null;
+    }
+  );
+
+  await terminateModalSandbox(sandbox).catch((error: unknown) => {
+    logger.warn({ error, ctxId, sandboxId }, '[sandbox] Terminate failed');
+  });
+
+  if (!imageId) {
     return;
   }
 
-  if (previousSnapshotId && previousSnapshotId !== snapshotId) {
-    await deleteSnapshot(previousSnapshotId, ctxId);
+  if (previousImageId && previousImageId !== imageId) {
+    await deleteSnapshot(previousImageId, ctxId);
   }
 
-  await registerSnapshot(ctxId, snapshotId);
+  await registerSnapshot(ctxId, imageId);
 }
 
-export async function reconnectSandbox(
-  ctxId: string
-): Promise<Sandbox | null> {
+export async function reconnectSandbox(ctxId: string): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
   if (!sandboxId) {
     return null;
   }
 
-  const existing = await getModalSandboxById(sandboxId);
-  if (existing) {
-    return existing;
+  const sandbox = await getModalSandboxById(sandboxId);
+  if (sandbox) {
+    return sandbox;
   }
 
   await redis.del(redisKeys.sandbox(ctxId));
   return null;
 }
 
-async function provision(
+async function provisionSandbox(
   context: SlackMessageContext
 ): Promise<Sandbox> {
   const ctxId = getContextId(context);
-  const restored = await restore(context);
+
+  const restored = await restoreFromSnapshot(context);
   if (restored) {
+    await makeFolders(restored);
     await installTools(restored);
     return restored;
   }
@@ -97,19 +106,21 @@ async function provision(
     loading: true,
   });
 
-  const instance = await createModalSandbox();
-
-  await makeFolders(instance);
-  await installTools(instance);
+  const sandbox = await createModalSandbox();
+  await makeFolders(sandbox);
+  await installTools(sandbox);
 
   logger.info(
-    { ctxId, sandboxId: instance.sandboxId },
-    '[sandbox] Created new sandbox'
+    { ctxId, sandboxId: sandbox.sandboxId },
+    '[sandbox] Created new Modal sandbox'
   );
-  return instance;
+
+  return sandbox;
 }
 
-async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
+async function restoreFromSnapshot(
+  context: SlackMessageContext
+): Promise<Sandbox | null> {
   const ctxId = getContextId(context);
   const snapshotRaw = await redis.get(redisKeys.snapshot(ctxId));
   const snapshot = safeParseJson(snapshotRaw, snapshotRecordSchema);
@@ -117,10 +128,10 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
     return null;
   }
 
-  const { snapshotId, createdAt } = snapshot;
-
-  if (Date.now() - createdAt > config.snapshot.ttl * 1000) {
-    await deleteSnapshot(snapshotId, ctxId);
+  const { imageId, createdAt } = snapshot;
+  const ageMs = Date.now() - createdAt;
+  if (ageMs > config.snapshot.ttl * 1000) {
+    await deleteSnapshot(imageId, ctxId);
     await redis.del(redisKeys.snapshot(ctxId));
     return null;
   }
@@ -130,29 +141,23 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
     loading: true,
   });
 
-  const instance = await createModalSandbox(snapshotId).catch((error: unknown) => {
+  const sandbox = await createModalSandbox(imageId).catch((error: unknown) => {
     logger.warn(
-      { snapshotId, error, ctxId },
-      '[sandbox] Failed to restore sandbox from snapshot'
+      { imageId, error, ctxId },
+      '[sandbox] Failed to restore Modal sandbox from image'
     );
     return null;
   });
 
-  if (!instance) {
+  if (!sandbox) {
     await redis.del(redisKeys.snapshot(ctxId));
     return null;
   }
 
   logger.info(
-    { snapshotId, sandboxId: instance.sandboxId, ctxId },
-    '[sandbox] Restored sandbox from snapshot'
+    { imageId, sandboxId: sandbox.sandboxId, ctxId },
+    '[sandbox] Restored Modal sandbox from image'
   );
-  return instance;
-}
 
-async function forceStop(sandboxId: string): Promise<void> {
-  const instance = await getModalSandboxById(sandboxId);
-  if (instance) {
-    await terminateModalSandbox(instance).catch(() => null);
-  }
+  return sandbox;
 }

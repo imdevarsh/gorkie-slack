@@ -1,19 +1,19 @@
 import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
-import { deleteSnapshotImage } from './runtime';
+import { deleteSnapshotImage } from './modal';
 
 export async function deleteSnapshot(
-  snapshotId: string,
+  imageId: string,
   ctxId: string
 ): Promise<void> {
   try {
-    await deleteSnapshotImage(snapshotId);
-    logger.info({ snapshotId, ctxId }, '[sandbox] Deleted snapshot');
+    await deleteSnapshotImage(imageId);
+    logger.info({ imageId, ctxId }, '[sandbox] Deleted snapshot image');
   } catch (error) {
     logger.warn(
-      { snapshotId, error, ctxId },
-      '[sandbox] Failed to delete snapshot'
+      { imageId, error, ctxId },
+      '[sandbox] Failed to delete snapshot image'
     );
   }
 }
@@ -32,13 +32,13 @@ export async function cleanupSnapshots(): Promise<void> {
 
   await Promise.all(
     expired.map(async (entry) => {
-      const [snapshotId, ctxId] = entry.split(':');
-      if (!(snapshotId && ctxId)) {
+      const [imageId, ctxId] = entry.split(':');
+      if (!(imageId && ctxId)) {
         await redis.zrem(redisKeys.snapshotIndex(), entry);
         return;
       }
 
-      await deleteSnapshot(snapshotId, ctxId);
+      await deleteSnapshot(imageId, ctxId);
       await redis.zrem(redisKeys.snapshotIndex(), entry);
     })
   );
@@ -46,13 +46,13 @@ export async function cleanupSnapshots(): Promise<void> {
 
 export async function registerSnapshot(
   ctxId: string,
-  snapshotId: string
+  imageId: string
 ): Promise<void> {
   const now = Date.now();
   await redis.set(
     redisKeys.snapshot(ctxId),
-    JSON.stringify({ snapshotId, createdAt: now })
+    JSON.stringify({ imageId, createdAt: now })
   );
   await redis.expire(redisKeys.snapshot(ctxId), config.snapshot.ttl);
-  await redis.zadd(redisKeys.snapshotIndex(), now, `${snapshotId}:${ctxId}`);
+  await redis.zadd(redisKeys.snapshotIndex(), now, `${imageId}:${ctxId}`);
 }

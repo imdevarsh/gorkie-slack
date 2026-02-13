@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { readSandboxFile } from '~/lib/sandbox/modal';
 import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -45,18 +46,7 @@ export const showFile = ({ context }: { context: SlackMessageContext }) =>
           loading: true,
         });
 
-        const fileBuffer = await sandbox.readFileToBuffer({
-          path: resolvedPath,
-        });
-
-        if (!fileBuffer) {
-          logger.warn(
-            { path: resolvedPath, ctxId },
-            '[sandbox] File upload missing file'
-          );
-          return { success: false, error: `File not found: ${resolvedPath}` };
-        }
-
+        const fileBuffer = await readSandboxFile(sandbox, resolvedPath);
         const uploadFilename = filename ?? (nodePath.basename(path) || 'file');
 
         await context.client.files.uploadV2({

@@ -8,13 +8,6 @@ import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
-const outputSchema = z.object({
-  path: z.string(),
-  count: z.number(),
-  truncated: z.boolean(),
-  output: z.string(),
-});
-
 export const grep = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Search file contents in the sandbox using a regex pattern.',
@@ -24,7 +17,7 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       include: z
         .string()
         .optional()
-        .describe('Glob pattern to filter files (e.g. "*.ts", "*.{ts,tsx}")'),
+        .describe('Glob pattern to filter files (e.g. "*.ts", "*.tsx")'),
       limit: z
         .number()
         .int()
@@ -44,21 +37,35 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       });
 
       const ctxId = getContextId(context);
+      const resolvedPath = sandboxPath(path);
 
       try {
-        const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
-        const payload = Buffer.from(
-          JSON.stringify({ pattern, path: resolvedPath, include, limit })
-        ).toString('base64');
-
+        const effectiveLimit = limit + 1;
         const result = await runSandboxCommand(sandbox, {
-          cmd: 'sh',
-          args: ['-c', 'PARAMS="$1" python3 agent/bin/grep.py', '--', payload],
+          cmd: 'bash',
+          args: [
+            '-lc',
+            [
+              'set -o pipefail',
+              'cd "$1" || exit 2',
+              'PATTERN="$2"',
+              'INCLUDE="$3"',
+              'LIMIT="$4"',
+              'if [ -n "$INCLUDE" ]; then',
+              '  rg --line-number --no-heading --color never --hidden --follow --glob "$INCLUDE" --glob "!node_modules/**" --glob "!.git/**" -e "$PATTERN" . | head -n "$LIMIT"',
+              'fi',
+              'rg --line-number --no-heading --color never --hidden --follow --glob "!node_modules/**" --glob "!.git/**" -e "$PATTERN" . | head -n "$LIMIT"',
+            ].join('\n'),
+            '--',
+            resolvedPath,
+            pattern,
+            include ?? '',
+            String(effectiveLimit),
+          ],
         });
-        const { stdout, stderr } = result;
 
-        if (result.exitCode !== 0) {
+        if (!(result.exitCode === 0 || result.exitCode === 1)) {
           logger.warn(
             {
               ctxId,
@@ -67,29 +74,53 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
               path: resolvedPath,
               limit,
               exitCode: result.exitCode,
-              stderr: stderr.slice(0, 1000),
-              stdout: stdout.slice(0, 1000),
+              stderr: result.stderr.slice(0, 1000),
+              stdout: result.stdout.slice(0, 1000),
             },
             '[sandbox] Grep command failed'
           );
           return {
             success: false,
-            error: stderr || `Failed to search: ${pattern}`,
+            error: result.stderr || `Failed to search: ${pattern}`,
           };
         }
-        const data = outputSchema.parse(JSON.parse(stdout || '{}'));
+
+        const lines = result.stdout
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean);
+        const truncated = lines.length > limit;
+        const matches = truncated ? lines.slice(0, limit) : lines;
+
+        const output = matches
+          .map((line) => {
+            const idx = line.indexOf(':');
+            if (idx === -1) {
+              return line;
+            }
+            const file = line.slice(0, idx);
+            const rest = line.slice(idx + 1);
+            return `${file}\n  ${rest}`;
+          })
+          .join('\n');
 
         logger.debug(
-          { ctxId, pattern, path: resolvedPath, include, count: data.count },
+          {
+            ctxId,
+            pattern,
+            path: resolvedPath,
+            include,
+            count: matches.length,
+          },
           '[sandbox] Grep completed'
         );
 
         return {
           success: true,
-          path: data.path,
-          count: data.count,
-          truncated: data.truncated,
-          output: data.output,
+          path: resolvedPath,
+          count: matches.length,
+          truncated,
+          output,
         };
       } catch (error) {
         logger.error(

@@ -1,54 +1,53 @@
-import { readdir, readFile } from 'node:fs/promises';
-import path from 'node:path';
 import type { Sandbox } from 'modal';
 import logger from '~/lib/logger';
-import { runSandboxCommand, writeSandboxFiles } from './modal';
+import { runSandboxCommand } from './modal';
+import { sandboxPath } from './paths';
 
 export async function makeFolders(instance: Sandbox): Promise<void> {
-  await runSandboxCommand(instance, {
-      cmd: 'mkdir',
-      args: ['-p', 'agent/turns', 'agent/bin', 'output'],
-    })
-    .catch((error: unknown) => {
-      logger.warn({ error }, '[sandbox] Failed to create directories');
-    });
-}
+  const result = await runSandboxCommand(instance, {
+    cmd: 'mkdir',
+    args: [
+      '-p',
+      sandboxPath('agent/turns'),
+      sandboxPath('attachments'),
+      sandboxPath('output'),
+    ],
+  }).catch((error: unknown) => {
+    logger.warn({ error }, '[sandbox] Failed to create directories');
+    return null;
+  });
 
-export async function installTools(instance: Sandbox): Promise<void> {
-  try {
-    const repoDir = path.join(process.cwd(), 'sandbox/agent/bin');
-    const files = await readAllFiles(repoDir);
-
-    if (files.length === 0) {
-      throw new Error('No sandbox bin files found in sandbox/agent/bin');
-    }
-
-    await writeSandboxFiles(instance, files);
-  } catch (error) {
-    logger.warn({ error }, '[sandbox] Failed to install sandbox tools');
+  if (result && result.exitCode !== 0) {
+    logger.warn({ stderr: result.stderr }, '[sandbox] mkdir returned non-zero');
   }
 }
 
-async function readAllFiles(
-  rootDir: string
-): Promise<Array<{ path: string; content: Buffer }>> {
-  const entries = await readdir(rootDir, { withFileTypes: true });
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const fullPath = path.join(rootDir, entry.name);
-      if (entry.isDirectory()) {
-        return readAllFiles(fullPath);
-      }
-      if (!entry.isFile()) {
-        return [];
-      }
-      const content = await readFile(fullPath);
-      const relative = path.relative(
-        path.join(process.cwd(), 'sandbox'),
-        fullPath
-      );
-      return [{ path: relative, content }];
-    })
-  );
-  return files.flat();
+export async function installTools(instance: Sandbox): Promise<void> {
+  const install = await runSandboxCommand(instance, {
+    cmd: 'sh',
+    args: [
+      '-lc',
+      [
+        'set -e',
+        'if ! command -v rg >/dev/null 2>&1 || ! command -v fd >/dev/null 2>&1; then',
+        '  apt-get update',
+        '  apt-get install -y --no-install-recommends ripgrep fd-find',
+        '  ln -sf /usr/bin/fdfind /usr/local/bin/fd || true',
+        'fi',
+      ].join('\n'),
+    ],
+  }).catch((error: unknown) => {
+    logger.warn({ error }, '[sandbox] Failed to install fd/rg');
+    return null;
+  });
+
+  if (install && install.exitCode !== 0) {
+    logger.warn(
+      {
+        stderr: install.stderr.slice(0, 2000),
+        stdout: install.stdout.slice(0, 2000),
+      },
+      '[sandbox] fd/rg installation returned non-zero'
+    );
+  }
 }
