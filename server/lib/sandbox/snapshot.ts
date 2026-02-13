@@ -7,15 +7,8 @@ export async function deleteSnapshot(
   imageId: string,
   ctxId: string
 ): Promise<void> {
-  try {
-    await deleteSnapshotImage(imageId);
-    logger.info({ imageId, ctxId }, '[sandbox] Deleted snapshot image');
-  } catch (error) {
-    logger.warn(
-      { imageId, error, ctxId },
-      '[sandbox] Failed to delete snapshot image'
-    );
-  }
+  await deleteSnapshotImage(imageId);
+  logger.info({ imageId, ctxId }, '[sandbox] Deleted snapshot image');
 }
 
 export async function cleanupSnapshots(): Promise<void> {
