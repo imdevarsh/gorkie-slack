@@ -56,22 +56,10 @@ const summariserModel = createRetryable({
   onError: onModelError,
 });
 
-const agentModel = createRetryable({
-  model: hackclub('z-ai/glm-5'),
-  retries: [
-    hackclub('moonshotai/kimi-k2-thinking'), 
-    hackclub('z-ai/glm-4.7'),
-    openrouter('z-ai/glm-5'),
-    openrouter('moonshotai/kimi-k2-thinking'),
-    openrouter('google/gemini-3-flash-preview'),
-  ],
-  onError: onModelError,
-});
-
 export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
     'summariser-model': summariserModel,
-    'agent-model': agentModel,
+    'agent-model': chatModel,
   },
 });
