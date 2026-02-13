@@ -33,6 +33,7 @@ Always install before first use:
 On Amazon Linux 2023, many packages are not available in default repos.
 Use this install pattern for system tools:
   - Try one package-manager install attempt.
+  - Do NOT install curl/wget/file unless absolutely required; curl-minimal is already present in most environments.
   - If dnf returns "No match" / "Unable to find a match", stop retrying dnf for that tool.
   - Fall back to a pinned standalone binary/archive in output/<tool>/ and run it via absolute path.
   - If extracting .tar.xz archives, ensure xz is installed first: sudo dnf install -y xz

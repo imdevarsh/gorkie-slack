@@ -9,6 +9,7 @@ Run shell commands in the sandbox. Commands execute via sh -c in the working dir
 - For file operations (reading, writing, searching), prefer the dedicated tools below, they are faster and return structured output.
 - If output is truncated, the full stdout/stderr is saved to agent/turns/<message_ts>.json, use read to view it.
 - Pass a status parameter (e.g. "is installing dependencies") to show progress in Slack.
+- Treat meaningful stderr warnings from transformation tools (e.g. ImageMagick font fallback warnings) as a failure to fix before uploading.
 </tool>
 
 <tool>
