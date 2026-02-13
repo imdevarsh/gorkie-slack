@@ -2,12 +2,13 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Sandbox } from '@vercel/sandbox';
 import logger from '~/lib/logger';
+import { sandboxPath } from './utils';
 
 export async function makeFolders(instance: Sandbox): Promise<void> {
   await instance
     .runCommand({
       cmd: 'mkdir',
-      args: ['-p', 'agent/turns', 'agent/bin', 'output'],
+      args: ['-p', sandboxPath('attachments'), sandboxPath('agent/turns'), sandboxPath('agent/bin'), sandboxPath('output')],
     })
     .catch((error: unknown) => {
       logger.warn({ error }, '[sandbox] Failed to create directories');
