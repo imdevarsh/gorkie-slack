@@ -11,7 +11,7 @@ import { searchSlack } from '~/lib/ai/tools/chat/search-slack';
 import { skip } from '~/lib/ai/tools/chat/skip';
 import { summariseThread } from '~/lib/ai/tools/chat/summarise-thread';
 import { getUserInfo } from '~/lib/ai/tools/shared/get-user-info';
-import { getWeather } from '~/lib/ai/tools/shared/get-weather';
+import { getWeather } from '~/lib/ai/tools/chat/get-weather';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
 import { successToolCall } from '~/lib/ai/utils';
 import { setStatus } from '~/lib/ai/utils/status';
