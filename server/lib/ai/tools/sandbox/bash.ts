@@ -5,6 +5,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { runSandboxCommand } from '~/lib/sandbox/modal';
 import { addHistory } from '~/lib/sandbox/history';
 import { outputDir, sandboxPath, turnsPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
@@ -30,7 +31,7 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         const cwd = sandboxPath(workdir ?? '.');
         const sandbox = await getSandbox(context);
 
-        await sandbox.runCommand({
+        await runSandboxCommand(sandbox, {
           cmd: 'mkdir',
           args: ['-p', outputDir(ts), sandboxPath('agent/turns')],
         });
@@ -45,15 +46,12 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
           '[sandbox] Command execution started'
         );
 
-        const result = await sandbox.runCommand({
+        const result = await runSandboxCommand(sandbox, {
           cmd: 'sh',
           args: ['-c', command],
           cwd,
         });
-
-        const stdout = await result.stdout();
-        const stderr = await result.stderr();
-        const exitCode = result.exitCode;
+        const { stdout, stderr, exitCode } = result;
 
         await addHistory(sandbox, logPath, {
           command,

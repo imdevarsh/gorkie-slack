@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-const SANDBOX_HOME = '/home/vercel-sandbox';
+const SANDBOX_HOME = '/root';
 
 export function sandboxPath(relativePath: string): string {
   if (relativePath === '.' || relativePath === './') {

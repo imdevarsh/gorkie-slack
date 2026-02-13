@@ -1,15 +1,14 @@
-import { Snapshot } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
 import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
+import { deleteSnapshotImage } from './runtime';
 
 export async function deleteSnapshot(
   snapshotId: string,
   ctxId: string
 ): Promise<void> {
   try {
-    const snapshot = await Snapshot.get({ snapshotId, ...config.auth });
-    await snapshot.delete();
+    await deleteSnapshotImage(snapshotId);
     logger.info({ snapshotId, ctxId }, '[sandbox] Deleted snapshot');
   } catch (error) {
     logger.warn(

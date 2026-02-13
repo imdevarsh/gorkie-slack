@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { runSandboxCommand } from '~/lib/sandbox/modal';
 import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -48,13 +49,11 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
           JSON.stringify({ pattern, path: resolvedPath, limit })
         ).toString('base64');
 
-        const result = await sandbox.runCommand({
+        const result = await runSandboxCommand(sandbox, {
           cmd: 'sh',
           args: ['-c', 'PARAMS="$1" python3 agent/bin/glob.py', '--', payload],
         });
-
-        const stdout = await result.stdout();
-        const stderr = await result.stderr();
+        const { stdout, stderr } = result;
 
         if (result.exitCode !== 0) {
           logger.warn(

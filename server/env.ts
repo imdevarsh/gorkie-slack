@@ -27,10 +27,12 @@ export const env = createEnv({
       .default('info'),
     // Exa
     EXA_API_KEY: z.string().min(1),
-    // Vercel Sandbox (https://docs.vercel.com/docs/rest-api/reference/welcome#creating-an-access-token)
-    VERCEL_TEAM_ID: z.string().min(1).startsWith('team_'),
-    VERCEL_PROJECT_ID: z.string().min(1).startsWith('prj_'),
-    VERCEL_TOKEN: z.string().min(1),
+    // Modal Sandbox
+    MODAL_TOKEN_ID: z.string().optional(),
+    MODAL_TOKEN_SECRET: z.string().optional(),
+    MODAL_ENVIRONMENT: z.string().optional(),
+    MODAL_APP_NAME: z.string().optional().default('gorkie-slack-sandbox'),
+    MODAL_BASE_IMAGE: z.string().optional().default('ubuntu:22.04'),
   },
 
   /**

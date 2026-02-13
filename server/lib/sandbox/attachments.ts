@@ -1,4 +1,3 @@
-import type { Sandbox } from '@vercel/sandbox';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
@@ -7,6 +6,8 @@ import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 import { attachmentsDir } from './paths';
+import { runSandboxCommand, writeSandboxFiles } from './modal';
+import type { Sandbox } from 'modal';
 
 export const ATTACHMENTS_DIR = 'attachments';
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
@@ -28,7 +29,7 @@ export async function syncAttachments(
   const ctxId = getContextId(context);
   const dir = attachmentsDir(messageTs);
 
-  await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
+  await runSandboxCommand(sandbox, { cmd: 'mkdir', args: ['-p', dir] });
 
   const results = await Promise.all(
     files.map((file) => syncFile(sandbox, dir, file, ctxId))
@@ -66,7 +67,7 @@ async function syncFile(
   const safeName = name || `file-${file.id ?? 'unknown'}`;
 
   try {
-    await sandbox.writeFiles([{ path: `${dir}/${safeName}`, content }]);
+    await writeSandboxFiles(sandbox, [{ path: `${dir}/${safeName}`, content }]);
     return true;
   } catch (error) {
     logger.warn(

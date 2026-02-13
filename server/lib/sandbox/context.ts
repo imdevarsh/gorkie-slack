@@ -5,6 +5,7 @@ import { getContextId } from '~/utils/context';
 import { resolveChannelName, resolveServerName } from '~/utils/slack';
 import { getTime } from '~/utils/time';
 import { reconnectSandbox } from './lifecycle';
+import { runSandboxCommand } from './modal';
 
 export async function peekFilesystem(
   context: SlackMessageContext
@@ -15,26 +16,23 @@ export async function peekFilesystem(
     return null;
   }
 
-  const result = await live
-    .runCommand({
-      cmd: 'sh',
-      args: [
-        '-c',
-        "find attachments output -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -t$'\\t' -k1 -rn | cut -f2-",
-      ],
-    })
-    .catch(() => null);
+  const result = await runSandboxCommand(live, {
+    cmd: 'sh',
+    args: [
+      '-c',
+      "find attachments output -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -t$'\\t' -k1 -rn | cut -f2-",
+    ],
+  }).catch(() => null);
 
   if (!result) {
     return null;
   }
 
-  const stdout = await result.stdout();
-  if (!stdout.trim()) {
+  if (!result.stdout.trim()) {
     return null;
   }
 
-  return stdout.trim();
+  return result.stdout.trim();
 }
 
 export interface SandboxContext {

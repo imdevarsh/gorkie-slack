@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
+import { readSandboxFile } from '~/lib/sandbox/modal';
 import { sandboxPath } from '~/lib/sandbox/paths';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -40,9 +41,7 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getSandbox(context);
-        const fileBuffer = await sandbox.readFileToBuffer({
-          path: resolvedPath,
-        });
+        const fileBuffer = await readSandboxFile(sandbox, resolvedPath);
 
         if (!fileBuffer) {
           logger.warn(

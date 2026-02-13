@@ -1,4 +1,4 @@
-import { Sandbox } from '@vercel/sandbox';
+import type { Sandbox } from 'modal';
 import { sandbox as config } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
 import { redis, redisKeys } from '~/lib/kv';
@@ -8,6 +8,12 @@ import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { safeParseJson } from '~/utils/parse-json';
 import { installTools, makeFolders } from './bootstrap';
+import {
+  createModalSandbox,
+  getModalSandboxById,
+  snapshotSandboxFilesystem,
+  terminateModalSandbox,
+} from './modal';
 import { cleanupSnapshots, deleteSnapshot, registerSnapshot } from './snapshot';
 
 export async function getSandbox(
@@ -37,10 +43,8 @@ export async function stopSandbox(ctxId: string): Promise<void> {
   const previousSnapshotId =
     safeParseJson(snapshotRaw, snapshotRecordSchema)?.snapshotId ?? null;
 
-  const instance = await Sandbox.get({ sandboxId, ...config.auth }).catch(
-    () => null
-  );
-  if (!instance || instance.status !== 'running') {
+  const instance = await getModalSandboxById(sandboxId);
+  if (!instance) {
     return;
   }
 
@@ -48,29 +52,29 @@ export async function stopSandbox(ctxId: string): Promise<void> {
     logger.warn({ error, ctxId }, '[sandbox] Snapshot cleanup failed');
   });
 
-  const snap = await instance.snapshot().catch(() => null);
-  if (!snap) {
+  const snapshotId = await snapshotSandboxFilesystem(instance).catch(() => null);
+  if (!snapshotId) {
     await forceStop(sandboxId);
     return;
   }
 
-  if (previousSnapshotId && previousSnapshotId !== snap.snapshotId) {
+  if (previousSnapshotId && previousSnapshotId !== snapshotId) {
     await deleteSnapshot(previousSnapshotId, ctxId);
   }
 
-  await registerSnapshot(ctxId, snap.snapshotId);
+  await registerSnapshot(ctxId, snapshotId);
 }
 
-export async function reconnectSandbox(ctxId: string): Promise<Sandbox | null> {
+export async function reconnectSandbox(
+  ctxId: string
+): Promise<Sandbox | null> {
   const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
   if (!sandboxId) {
     return null;
   }
 
-  const existing = await Sandbox.get({ sandboxId, ...config.auth }).catch(
-    () => null
-  );
-  if (existing?.status === 'running') {
+  const existing = await getModalSandboxById(sandboxId);
+  if (existing) {
     return existing;
   }
 
@@ -78,7 +82,9 @@ export async function reconnectSandbox(ctxId: string): Promise<Sandbox | null> {
   return null;
 }
 
-async function provision(context: SlackMessageContext): Promise<Sandbox> {
+async function provision(
+  context: SlackMessageContext
+): Promise<Sandbox> {
   const ctxId = getContextId(context);
   const restored = await restore(context);
   if (restored) {
@@ -91,11 +97,7 @@ async function provision(context: SlackMessageContext): Promise<Sandbox> {
     loading: true,
   });
 
-  const instance = await Sandbox.create({
-    runtime: config.runtime,
-    timeout: config.timeoutMs,
-    ...config.auth,
-  });
+  const instance = await createModalSandbox();
 
   await makeFolders(instance);
   await installTools(instance);
@@ -128,11 +130,7 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
     loading: true,
   });
 
-  const instance = await Sandbox.create({
-    source: { type: 'snapshot', snapshotId },
-    timeout: config.timeoutMs,
-    ...config.auth,
-  }).catch((error: unknown) => {
+  const instance = await createModalSandbox(snapshotId).catch((error: unknown) => {
     logger.warn(
       { snapshotId, error, ctxId },
       '[sandbox] Failed to restore sandbox from snapshot'
@@ -153,10 +151,8 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
 }
 
 async function forceStop(sandboxId: string): Promise<void> {
-  const instance = await Sandbox.get({ sandboxId, ...config.auth }).catch(
-    () => null
-  );
-  if (instance?.status === 'running') {
-    await instance.stop().catch(() => null);
+  const instance = await getModalSandboxById(sandboxId);
+  if (instance) {
+    await terminateModalSandbox(instance).catch(() => null);
   }
 }

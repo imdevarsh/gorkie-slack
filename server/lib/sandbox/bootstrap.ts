@@ -1,11 +1,11 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Sandbox } from '@vercel/sandbox';
+import type { Sandbox } from 'modal';
 import logger from '~/lib/logger';
+import { runSandboxCommand, writeSandboxFiles } from './modal';
 
 export async function makeFolders(instance: Sandbox): Promise<void> {
-  await instance
-    .runCommand({
+  await runSandboxCommand(instance, {
       cmd: 'mkdir',
       args: ['-p', 'agent/turns', 'agent/bin', 'output'],
     })
@@ -23,7 +23,7 @@ export async function installTools(instance: Sandbox): Promise<void> {
       throw new Error('No sandbox bin files found in sandbox/agent/bin');
     }
 
-    await instance.writeFiles(files);
+    await writeSandboxFiles(instance, files);
   } catch (error) {
     logger.warn({ error }, '[sandbox] Failed to install sandbox tools');
   }
