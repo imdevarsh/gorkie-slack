@@ -39,6 +39,7 @@ Read a file and return its contents with line numbers (cat -n format).
 - Returns up to 2000 lines by default. Lines over 2000 characters are truncated.
 - Use offset and limit for large files: offset is 0-based line number, limit is max lines to return.
 - Use this to inspect file contents before editing, or to view truncated bash output from agent/turns/.
+- For follow-up tasks, read recent agent/turns/*.json files to recover previous parameters and summary fields (method/worked/failed/learnings).
 Example: read({ "path": "output/result.json" })
 Example: read({ "path": "agent/turns/1770648887.532179.json", "offset": 0, "limit": 50 })
 </tool>

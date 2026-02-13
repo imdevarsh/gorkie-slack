@@ -2,6 +2,11 @@ export const workflowPrompt = `\
 <workflow>
 Follow these steps for every task:
 
+0. Recall: For follow-up requests, recover recent execution context before acting.
+  Read recent agent/turns/<message_ts>.json logs (latest 3-5) and extract:
+  method used, what worked, what failed, learnings, key parameters, and last successful output path.
+  Reuse proven settings from the latest successful turn unless the user explicitly asks to change them.
+
 1. Discover: Find the relevant files before doing anything.
   Use glob to locate uploads in attachments/ or outputs from earlier messages.
   Never claim a file does not exist without checking first.
@@ -26,5 +31,10 @@ Follow these steps for every task:
 4. Upload: Call showFile for the finished result.
   Do this immediately when the file is ready, not at the very end.
 
-5. Summarize: Return a short summary: what you did, results, files uploaded, issues if any.
+5. Summarize: Return a compact structured summary with these exact sections:
+  Method:
+  Worked:
+  Failed:
+  Learnings for next iteration:
+  Files uploaded:
 </workflow>`;
