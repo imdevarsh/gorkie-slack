@@ -55,20 +55,6 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         const stderr = await result.stderr();
         const exitCode = result.exitCode;
 
-        if (exitCode !== 0) {
-          logger.warn(
-            {
-              ctxId,
-              command,
-              cwd,
-              exitCode,
-              stderr: stderr.slice(0, 1000),
-              stdout: stdout.slice(0, 1000),
-            },
-            '[sandbox] Command exited with non-zero status'
-          );
-        }
-
         await addHistory(sandbox, logPath, {
           command,
           workdir: cwd,
