@@ -38,7 +38,21 @@ export function sandboxAgent({ context, requestHints }: SandboxAgentOptions) {
       getUserInfo: getUserInfo({ context }),
     },
     prepareStep: async () => {
-      await setStatus(context, { status: 'is thinking', loading: true });
+      await setStatus(context, {
+        status: 'is thinking',
+        loading: [
+          'is pondering your question',
+          'is working on it',
+          'is putting thoughts together',
+          'is mulling this over',
+          'is figuring this out',
+          'is cooking up a response',
+          'is connecting the dots',
+          'is working through this',
+          'is piecing things together',
+          'is giving it a good think',
+        ],
+      });
       return {};
     },
     stopWhen: stepCountIs(30),
