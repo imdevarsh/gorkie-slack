@@ -28,8 +28,16 @@ Always install before first use:
   Python packages: pip3 install <package>
   Node packages:   npm install -g <package>
 
+On Amazon Linux 2023, many packages are not available in default repos.
+Use this install pattern for system tools:
+  - Try one package-manager install attempt.
+  - If dnf returns "No match" / "Unable to find a match", stop retrying dnf for that tool.
+  - Fall back to a pinned standalone binary/archive in output/<message_ts>/<tool>/ and run it via absolute path.
+  - If extracting .tar.xz archives, ensure xz is installed first: sudo dnf install -y xz
+  - After installing ALWAYS delete the archive, and other folders with artifacts to save storage...
+
 Common installs:
-  sudo dnf install -y ImageMagick poppler-utils tesseract ffmpeg
+  sudo dnf install -y ImageMagick poppler-utils tesseract
   pip3 install pandas matplotlib pillow requests
 </packages>
 </environment>`;

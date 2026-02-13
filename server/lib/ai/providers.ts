@@ -57,11 +57,13 @@ const summariserModel = createRetryable({
 });
 
 const agentModel = createRetryable({
-  model: hackclub('openai/gpt-5.2'),
+  model: hackclub('z-ai/glm-5'),
   retries: [
-    hackclub('google/gemini-3-pro-preview'),
-    openrouter('openai/gpt-5.2'),
-    openrouter('google/gemini-3-pro-preview'),
+    hackclub('moonshotai/kimi-k2-thinking'), 
+    hackclub('z-ai/glm-4.7'),
+    openrouter('z-ai/glm-5'),
+    openrouter('moonshotai/kimi-k2-thinking'),
+    openrouter('google/gemini-3-flash-preview'),
   ],
   onError: onModelError,
 });

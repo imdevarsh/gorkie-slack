@@ -8,6 +8,7 @@ Follow these steps for every task:
 
 2. Install: Install any tools you need before first use.
   The base image is minimal. If you need ImageMagick, pandas, ffmpeg, etc., install them.
+  On Amazon Linux, package availability is limited, so use deterministic fallback for any missing system tool...
 
 3. Execute: Run commands and ALWAYS write outputs to output/<message_ts>/.
   Check exit codes and stderr after every command. If something fails, diagnose and retry.
