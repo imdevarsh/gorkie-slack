@@ -6,13 +6,13 @@ export const examplesPrompt = `\
 <task>Convert the uploaded image to black and white</task>
 <steps>
 1. glob({ "pattern": "**/*.png", "path": "/home/vercel-sandbox/attachments" })
-   → /home/vercel-sandbox/attachments/1770648887.532179/photo.png
+   → /home/vercel-sandbox/attachments/photo.png
 2. bash({ "command": "sudo dnf install -y ImageMagick" })
-3. bash({ "command": "convert /home/vercel-sandbox/attachments/1770648887.532179/photo.png -colorspace Gray /home/vercel-sandbox/output/1770648887.532179/bw.png" })
-4. showFile({ "path": "/home/vercel-sandbox/output/1770648887.532179/bw.png", "title": "Black and white" })
-Summary: "Converted photo.png to grayscale and uploaded the result."
+3. bash({ "command": "mv /home/vercel-sandbox/attachments/photo.png /home/vercel-sandbox/attachments/cat-original.png && convert /home/vercel-sandbox/attachments/cat-original.png -colorspace Gray /home/vercel-sandbox/output/cat.png" })
+4. showFile({ "path": "/home/vercel-sandbox/output/cat.png", "title": "Black and white" })
+Summary: "Renamed the source as cat-original.png, generated cat.png, and uploaded the result."
 </steps>
-<note>ALWAYS write the output to output/<message_ts>/, never modify files in attachments/.</note>
+<note>ALWAYS write output to output/. Rename files immediately to semantic names (cat, cat-original style).</note>
 </example>
 
 <example>
@@ -20,8 +20,8 @@ Summary: "Converted photo.png to grayscale and uploaded the result."
 <context>
 <sandbox_files>
 Files already in the sandbox (newest first):
-2026-02-10 14:32:05  output/1770648887.532179/bw.png
-2026-02-10 14:31:58  attachments/1770648887.532179/photo.png
+2026-02-10 14:32:05  output/cat.png
+2026-02-10 14:31:58  output/cat-original.png
 </sandbox_files>
 <recent_messages>
 User: convert my image to black and white
@@ -30,11 +30,11 @@ Assistant: Done! Converted photo.png to grayscale.
 </context>
 <task>Now invert it</task>
 <steps>
-1. bash({ "command": "convert /home/vercel-sandbox/output/1770648887.532179/bw.png -negate /home/vercel-sandbox/output/1770650000.000000/inverted.png" })
-2. showFile({ "path": "/home/vercel-sandbox/output/1770650000.000000/inverted.png", "title": "Inverted" })
+1. bash({ "command": "convert /home/vercel-sandbox/output/cat.png -negate /home/vercel-sandbox/output/cat-inverted.png" })
+2. showFile({ "path": "/home/vercel-sandbox/output/cat-inverted.png", "title": "Inverted" })
 Summary: "Inverted the black and white image and uploaded."
 </steps>
-<note>The agent used the file listing to find the previous output directly, no glob needed. Output goes to the current message_ts directory.</note>
+<note>The agent used the file listing to find the previous output directly, no glob needed. Keep semantic names in output/.</note>
 </example>
 
 <example>
@@ -42,17 +42,17 @@ Summary: "Inverted the black and white image and uploaded."
 <context>
 <sandbox_files>
 Files already in the sandbox (newest first):
-2026-02-10 13:00:12  attachments/1770640000.000000/diagram.png
+2026-02-10 13:00:12  attachments/diagram.png
 </sandbox_files>
 </context>
 <task>Process that image I uploaded earlier</task>
 <steps>
 1. bash({ "command": "sudo dnf install -y ImageMagick" })
-2. bash({ "command": "convert /home/vercel-sandbox/attachments/1770640000.000000/diagram.png -negate /home/vercel-sandbox/output/1770648887.532179/inverted.png" })
-3. showFile({ "path": "/home/vercel-sandbox/output/1770648887.532179/inverted.png", "title": "Inverted diagram" })
+2. bash({ "command": "mv /home/vercel-sandbox/attachments/diagram.png /home/vercel-sandbox/attachments/diagram-original.png && convert /home/vercel-sandbox/attachments/diagram-original.png -negate /home/vercel-sandbox/output/diagram.png" })
+3. showFile({ "path": "/home/vercel-sandbox/output/diagram.png", "title": "Inverted diagram" })
 Summary: "Found your diagram from an earlier message, inverted the colors, and uploaded."
 </steps>
-<note>Read the file path from sandbox_files instead of globbing. Always write output to the current message_ts directory.</note>
+<note>Read the file path from sandbox_files instead of globbing. Write outputs to output/ and rename to semantic names.</note>
 </example>
 
 <example>

@@ -8,7 +8,7 @@ export function attachmentsPrompt(context: SlackMessageContext): string {
     return '';
   }
 
-  const dir = `${ATTACHMENTS_DIR}/${context.event.ts}`;
+  const dir = ATTACHMENTS_DIR;
   const listing = files
     .map(
       (f) =>

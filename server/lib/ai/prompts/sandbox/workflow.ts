@@ -10,8 +10,12 @@ Follow these steps for every task:
   The base image is minimal. If you need ImageMagick, pandas, ffmpeg, etc., install them.
   On Amazon Linux, package availability is limited, so use deterministic fallback for any missing system tool...
 
-3. Execute: Run commands and ALWAYS write outputs to output/<message_ts>/.
+3. Execute: Run commands and ALWAYS write outputs to output/.
   Check exit codes and stderr after every command. If something fails, diagnose and retry.
+  Prefer renaming input once in attachments/<name>-original.<ext> before processing.
+  Immediately rename generic filenames to semantic names aligned with user intent.
+  For single-file transforms, preserve source as "<name>-original.<ext>" and publish "<name>.<ext>".
+  This naming convention helps future tasks locate and reuse files without ambiguity.
   Tip: For status messages, do NOT go over 30-40 chars, otherwise slack rejects it...
 
 4. Upload: Call showFile for the finished result.

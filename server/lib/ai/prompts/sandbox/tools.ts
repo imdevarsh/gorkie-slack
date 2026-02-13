@@ -5,7 +5,7 @@ export const toolsPrompt = `\
 <name>bash</name>
 Run shell commands in the sandbox. Commands execute via sh -c in the working directory.
 - Use the workdir parameter to run in a specific directory instead of "cd && ..." chains.
-- The default workdir is output/<message_ts>/, so generated files land there automatically.
+- The default workdir is /home/vercel-sandbox (.).
 - For file operations (reading, writing, searching), prefer the dedicated tools below, they are faster and return structured output.
 - If output is truncated, the full stdout/stderr is saved to agent/turns/<message_ts>.json, use read to view it.
 - Pass a status parameter (e.g. "is installing dependencies") to show progress in Slack.
@@ -38,17 +38,19 @@ Read a file and return its contents with line numbers (cat -n format).
 - Returns up to 2000 lines by default. Lines over 2000 characters are truncated.
 - Use offset and limit for large files: offset is 0-based line number, limit is max lines to return.
 - Use this to inspect file contents before editing, or to view truncated bash output from agent/turns/.
-Example: read({ "path": "output/1770648887.532179/result.json" })
+Example: read({ "path": "output/result.json" })
 Example: read({ "path": "agent/turns/1770648887.532179.json", "offset": 0, "limit": 50 })
 </tool>
 
 <tool>
 <name>write</name>
 Create or overwrite a file with the given content.
-- ALWAYS write generated outputs to output/<message_ts>/.
+- ALWAYS write generated outputs to output/.
+- Immediately rename ambiguous or generic filenames (like output.png, result.csv) to semantic names.
+- For one main transformed file, use "<name>-original.<ext>" for source and "<name>.<ext>" for final.
 - If modifying an existing file, prefer the edit tool, it is safer because it only changes the specific string you target.
 - Use write for new files or when you need to replace the entire content.
-Example: write({ "path": "output/1770648887.532179/report.csv", "content": "name,value\\nfoo,42\\n" })
+Example: write({ "path": "output/report.csv", "content": "name,value\\nfoo,42\\n" })
 </tool>
 
 <tool>
@@ -68,10 +70,10 @@ Example: edit({ "path": "app.py", "oldString": "old_name", "newString": "new_nam
 Upload a file from the sandbox to the Slack thread so the user can see or download it.
 - Call this as soon as a result file is ready, do not batch uploads at the end.
 - Only upload files the user asked for, or the single most relevant output if the task produces multiple files.
-- path: the file to upload, typically output/<message_ts>/filename.ext
+- path: the file to upload, typically output/filename.ext
 - filename: override the display name in Slack (defaults to the file's basename)
 - title: description shown in Slack alongside the file
-Example: showFile({ "path": "output/1770648887.532179/chart.png", "title": "Revenue chart" })
+Example: showFile({ "path": "output/chart.png", "title": "Revenue chart" })
 </tool>
 
 </tools>`;

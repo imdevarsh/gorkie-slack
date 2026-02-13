@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
-import { sandboxPath } from '~/lib/sandbox/paths';
+import { sandboxPath } from '~/lib/sandbox/utils';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 

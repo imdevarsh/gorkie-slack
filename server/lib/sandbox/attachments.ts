@@ -6,7 +6,7 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { attachmentsDir } from './paths';
+import { sandboxPath } from './utils';
 
 export const ATTACHMENTS_DIR = 'attachments';
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
@@ -26,7 +26,7 @@ export async function syncAttachments(
   }
 
   const ctxId = getContextId(context);
-  const dir = attachmentsDir(messageTs);
+  const dir = sandboxPath(ATTACHMENTS_DIR);
 
   await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
 

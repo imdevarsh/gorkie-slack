@@ -6,7 +6,7 @@ import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
 import { addHistory } from '~/lib/sandbox/history';
-import { outputDir, sandboxPath, turnsPath } from '~/lib/sandbox/paths';
+import { sandboxPath, turnsPath } from '~/lib/sandbox/utils';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
@@ -32,7 +32,7 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
 
         await sandbox.runCommand({
           cmd: 'mkdir',
-          args: ['-p', outputDir(ts), sandboxPath('agent/turns')],
+          args: ['-p', sandboxPath('output'), sandboxPath('agent/turns')],
         });
 
         await setStatus(context, {

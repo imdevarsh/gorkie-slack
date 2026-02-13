@@ -12,18 +12,6 @@ export function sandboxPath(relativePath: string): string {
   return path.join(SANDBOX_HOME, relativePath);
 }
 
-export function outputDir(messageTs: string): string {
-  return sandboxPath(path.join('output', messageTs));
-}
-
-export function attachmentsDir(messageTs: string): string {
-  return sandboxPath(path.join('attachments', messageTs));
-}
-
-export function turnsDir(): string {
-  return sandboxPath(path.join('agent', 'turns'));
-}
-
 export function turnsPath(messageTs: string): string {
   return sandboxPath(path.join('agent', 'turns', `${messageTs}.json`));
 }
