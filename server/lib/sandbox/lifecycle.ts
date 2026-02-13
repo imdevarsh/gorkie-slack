@@ -37,7 +37,9 @@ export async function stopSandbox(ctxId: string): Promise<void> {
   const previousSnapshotId =
     safeParseJson(snapshotRaw, snapshotRecordSchema)?.snapshotId ?? null;
 
-  const instance = await Sandbox.get({ sandboxId }).catch(() => null);
+  const instance = await Sandbox.get({ sandboxId, ...config.auth }).catch(
+    () => null
+  );
   if (!instance || instance.status !== 'running') {
     return;
   }
@@ -65,7 +67,9 @@ export async function reconnectSandbox(ctxId: string): Promise<Sandbox | null> {
     return null;
   }
 
-  const existing = await Sandbox.get({ sandboxId }).catch(() => null);
+  const existing = await Sandbox.get({ sandboxId, ...config.auth }).catch(
+    () => null
+  );
   if (existing?.status === 'running') {
     return existing;
   }
@@ -90,6 +94,7 @@ async function provision(context: SlackMessageContext): Promise<Sandbox> {
   const instance = await Sandbox.create({
     runtime: config.runtime,
     timeout: config.timeoutMs,
+    ...config.auth,
   });
 
   await makeFolders(instance);
@@ -126,6 +131,7 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
   const instance = await Sandbox.create({
     source: { type: 'snapshot', snapshotId },
     timeout: config.timeoutMs,
+    ...config.auth,
   }).catch((error: unknown) => {
     logger.warn(
       { snapshotId, error, ctxId },
@@ -147,7 +153,9 @@ async function restore(context: SlackMessageContext): Promise<Sandbox | null> {
 }
 
 async function forceStop(sandboxId: string): Promise<void> {
-  const instance = await Sandbox.get({ sandboxId }).catch(() => null);
+  const instance = await Sandbox.get({ sandboxId, ...config.auth }).catch(
+    () => null
+  );
   if (instance?.status === 'running') {
     await instance.stop().catch(() => null);
   }

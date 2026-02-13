@@ -1,3 +1,5 @@
+import { env } from '~/env';
+
 export const messageThreshold = 10;
 
 export const sandbox = {
@@ -8,6 +10,11 @@ export const sandbox = {
     maxBytes: 1_000_000_000,
   },
   snapshot: { ttl: 24 * 60 * 60 },
+  auth: {
+    teamId: env.VERCEL_TEAM_ID,
+    projectId: env.VERCEL_PROJECT_ID,
+    token: env.VERCEL_TOKEN,
+  }
 };
 
 export const tools = {

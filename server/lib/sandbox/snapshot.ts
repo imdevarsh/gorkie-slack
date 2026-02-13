@@ -8,7 +8,7 @@ export async function deleteSnapshot(
   ctxId: string
 ): Promise<void> {
   try {
-    const snapshot = await Snapshot.get({ snapshotId });
+    const snapshot = await Snapshot.get({ snapshotId, ...config.auth });
     await snapshot.delete();
     logger.info({ snapshotId, ctxId }, '[sandbox] Deleted snapshot');
   } catch (error) {
