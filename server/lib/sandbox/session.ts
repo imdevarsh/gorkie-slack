@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { Daytona, type Sandbox } from '@daytonaio/sdk';
 import { SandboxAgent, type Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
@@ -11,6 +10,7 @@ import {
   upsert,
 } from '~/db/queries/sandbox';
 import { env } from '~/env';
+import { systemPrompt } from '~/lib/ai/prompts';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
@@ -19,7 +19,6 @@ import { type PreviewAccess, waitForHealth } from './client';
 import { createSnapshot, SANDBOX_SNAPSHOT } from './snapshot';
 
 const OPENCODE_CONFIG_PATH = `${config.runtime.workdir}/opencode.json`;
-const PROMPT_PATH = new URL('../ai/prompts/sandbox.md', import.meta.url);
 
 const daytona = new Daytona({
   apiKey: config.daytona.apiKey,
@@ -173,7 +172,7 @@ async function createSandbox(
     snapshot: SANDBOX_SNAPSHOT,
   });
 
-  const prompt = readFileSync(PROMPT_PATH, 'utf8');
+  const prompt = systemPrompt({ agent: 'sandbox' });
   await sandbox.fs.uploadFile(
     Buffer.from(buildOpencodeConfig(prompt), 'utf8'),
     OPENCODE_CONFIG_PATH
@@ -267,45 +266,52 @@ export async function resolveSession(
     return createSandbox(context, threadId, channelId);
   }
 
-  const sandbox = await reconnectSandboxById(
-    threadId,
-    existing.sandboxId
-  ).catch((error: unknown) => {
-    if (error instanceof SandboxNotFoundError) {
-      return null;
+  await updateStatus(threadId, 'resuming');
+
+  try {
+    const sandbox = await reconnectSandboxById(
+      threadId,
+      existing.sandboxId
+    ).catch((error: unknown) => {
+      if (error instanceof SandboxNotFoundError) {
+        return null;
+      }
+      throw error;
+    });
+    if (!sandbox) {
+      return createSandbox(context, threadId, channelId);
     }
+
+    const access = await previewAccess(sandbox);
+    await waitForHealth(access, config.timeouts.healthMs).catch(async () => {
+      await startAgentServer(sandbox);
+      await waitForHealth(access, config.timeouts.healthMs);
+    });
+
+    const sdk = await connectSdk(access);
+    const session = await ensureSession(sdk, existing.sessionId);
+
+    await updateRuntime(threadId, {
+      sandboxId: sandbox.id,
+      sessionId: session.id,
+      previewUrl: access.baseUrl,
+      previewToken: access.previewToken,
+      previewExpiresAt: null,
+      status: 'active',
+    });
+    await markActivity(threadId);
+
+    return {
+      sdk,
+      sandbox,
+      session,
+      sessionId: session.id,
+      baseUrl: access.baseUrl,
+    };
+  } catch (error) {
+    await updateStatus(threadId, 'error');
     throw error;
-  });
-  if (!sandbox) {
-    return createSandbox(context, threadId, channelId);
   }
-
-  const access = await previewAccess(sandbox);
-  await waitForHealth(access, config.timeouts.healthMs).catch(async () => {
-    await startAgentServer(sandbox);
-    await waitForHealth(access, config.timeouts.healthMs);
-  });
-
-  const sdk = await connectSdk(access);
-  const session = await ensureSession(sdk, existing.sessionId);
-
-  await updateRuntime(threadId, {
-    sandboxId: sandbox.id,
-    sessionId: session.id,
-    previewUrl: access.baseUrl,
-    previewToken: access.previewToken,
-    previewExpiresAt: null,
-    status: 'active',
-  });
-  await markActivity(threadId);
-
-  return {
-    sdk,
-    sandbox,
-    session,
-    sessionId: session.id,
-    baseUrl: access.baseUrl,
-  };
 }
 
 export async function getSandbox(

@@ -168,7 +168,7 @@ export const sandbox = ({
         const summary =
           (await getSummary(runtime.sessionId, runtime)) ??
           'Task completed in sandbox.';
-    
+
         await setStatus(context, {
           status: 'is collecting outputs',
           loading: true,

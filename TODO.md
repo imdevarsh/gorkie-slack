@@ -11,3 +11,5 @@
 - TODO: Test if it self-timeouts without interaction
 - TODO: re-eval pricing
 - TODO: add observability and better loggign sandbox
+- The sandbox.ts is so cluttered, same with session.ts
+- remove REFACTOR.md
