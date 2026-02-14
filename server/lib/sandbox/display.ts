@@ -3,6 +3,7 @@ import type { Sandbox } from '@daytonaio/sdk';
 import type { SandboxAgent } from 'sandbox-agent';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { sandbox as config } from '~/config';
 
 export interface UploadedDisplayFile {
   path: string;
@@ -10,7 +11,7 @@ export interface UploadedDisplayFile {
   bytes: number;
 }
 
-const DISPLAY_DIR = 'output/display';
+const DISPLAY_DIR = `${config.runtime.workdir}/output/display`;
 
 interface UploadRuntime {
   sdk: SandboxAgent;

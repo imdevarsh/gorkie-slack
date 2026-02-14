@@ -81,7 +81,7 @@ async function getSummary(
   resolver: Awaited<ReturnType<typeof resolveSession>>
 ): Promise<string | null> {
   const events = await resolver.sdk
-    .getEvents({ sessionId, limit: 30 })
+    .getEvents({ sessionId, limit: 100 })
     .catch(() => null);
 
   if (!events?.items.length) {
@@ -96,7 +96,7 @@ async function getSummary(
 
   const texts: string[] = [];
   for (const event of assistantEvents) {
-    console.log('event', event);
+    console.log('event', JSON.stringify);
   }
 
   if (!texts.length) {
