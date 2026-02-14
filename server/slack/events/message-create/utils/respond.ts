@@ -1,10 +1,7 @@
 import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
 import { setStatus } from '~/lib/ai/utils/status';
-import logger from '~/lib/logger';
-import { stopSandbox } from '~/lib/sandbox';
 import type { ChatRequestHints, SlackMessageContext } from '~/types';
-import { getContextId } from '~/utils/context';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
@@ -13,8 +10,6 @@ export async function generateResponse(
   messages: ModelMessage[],
   requestHints: ChatRequestHints
 ) {
-  const ctxId = getContextId(context);
-
   try {
     await setStatus(context, {
       status: 'is thinking',
@@ -74,9 +69,5 @@ export async function generateResponse(
       success: false,
       error: e instanceof Error ? e.message : String(e),
     };
-  } finally {
-    stopSandbox(context).catch((error: unknown) => {
-      logger.warn({ error, ctxId }, 'Sandbox snapshot failed');
-    });
   }
 }

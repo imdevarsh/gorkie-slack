@@ -56,8 +56,8 @@ Returns a structured summary with key points, decisions, action items, and unres
 <tool>
 <name>sandbox</name>
 <description>
-Delegate a task to the sandbox agent for code execution, file processing, data analysis, or any task requiring a Linux environment.
-It runs shell commands, reads files, and uploads results to Slack.
+Delegate a task to the sandbox runtime for code execution, file processing, data analysis, or any task requiring a Linux environment.
+The runtime executes the task in a persistent per-thread session.
 
 Use when:
 - User asks you to run code, process files, analyze data, or generate output files
@@ -66,14 +66,13 @@ Use when:
 - Quick calculations or data transformations
 - User gives a direct URL and asks to download, convert, transcode, extract, or reformat content
 
-The sandbox agent handles all the details (finding files, running commands, uploading results) and returns a summary of what it did.
+The sandbox runtime handles the execution details and returns a summary.
 </description>
 <rules>
 - Call sandbox ONCE per user request unless the user explicitly asks for separate phases.
 - Provide a clear, specific task description with the complete user intent in one prompt.
 - Mention any relevant file names or paths from attachments
-- The sandbox agent will use showFile to upload results before returning
-- If the user asks to peforfm operations on a file, call sandbox first instead of replying with instructions.
+- If the user asks to perform operations on a file, call sandbox first instead of replying with instructions.
 </rules>
 </tool>
 

@@ -1,4 +1,4 @@
-import { ATTACHMENTS_DIR } from '~/lib/sandbox/attachments';
+import { ATTACHMENTS_DIR } from '~/lib/runtime/attachments';
 import type { SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 

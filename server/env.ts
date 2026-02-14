@@ -16,6 +16,8 @@ export const env = createEnv({
     OPT_IN_CHANNEL: z.string().optional(),
     // Redis
     REDIS_URL: z.string().min(1),
+    // Database
+    DATABASE_URL: z.string().min(1),
     // AI
     OPENROUTER_API_KEY: z.string().min(1).startsWith('sk-or-'),
     HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
@@ -32,6 +34,10 @@ export const env = createEnv({
     DAYTONA_API_URL: z.string().url().optional(),
     DAYTONA_TARGET: z.string().optional(),
     DAYTONA_SNAPSHOT: z.string().optional(),
+    // OpenCode
+    OPENCODE_MODEL: z.string().default('opencode/claude-sonnet-4-5'),
+    OPENCODE_OPENROUTER_BASE_URL: z.string().url().optional(),
+    GITHUB_TOKEN: z.string().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
