@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { Daytona, type Sandbox } from '@daytonaio/sdk';
 import { SandboxAgent, type Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
-import { db } from '~/db';
 import {
   clearDestroyed,
   getByThread,
@@ -16,8 +15,8 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { type PreviewAccess, parsePreviewUrl, waitForHealth } from './client';
-import { getSandboxImage } from './image';
+import { type PreviewAccess, waitForHealth } from './client';
+import { createSnapshot, SANDBOX_SNAPSHOT } from './snapshot';
 
 const OPENCODE_CONFIG_PATH = `${config.runtime.workdir}/opencode.json`;
 const PROMPT_PATH = new URL('./prompt.md', import.meta.url);
@@ -67,14 +66,13 @@ function buildOpencodeConfig(prompt: string): string {
 }
 
 async function startAgentServer(sandbox: Sandbox): Promise<void> {
-  const command = `pkill -f "sandbox-agent server" >/dev/null 2>&1 || true; nohup sandbox-agent server --token "$SANDBOX_AGENT_TOKEN" --host 0.0.0.0 --port ${config.runtime.agentPort} >/tmp/sandbox-agent.log 2>&1 &`;
+  const command = `pkill -f "sandbox-agent server" >/dev/null 2>&1 || true; nohup sandbox-agent server --no-token --host 0.0.0.0 --port ${config.runtime.agentPort} >/tmp/sandbox-agent.log 2>&1 &`;
 
   const result = await sandbox.process.executeCommand(
     command,
     config.runtime.workdir,
     {
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
-      SANDBOX_AGENT_TOKEN: env.SANDBOX_AGENT_TOKEN,
     }
   );
 
@@ -83,25 +81,25 @@ async function startAgentServer(sandbox: Sandbox): Promise<void> {
   }
 }
 
-async function previewAccess(
-  sandbox: Sandbox
-): Promise<PreviewAccess & { expiresAt: Date }> {
+async function previewAccess(sandbox: Sandbox): Promise<PreviewAccess> {
   const signed = await sandbox.getSignedPreviewUrl(
     config.runtime.agentPort,
     config.timeouts.previewTtlSeconds
   );
-  const access = parsePreviewUrl(signed.url);
+
+  const parsed = new URL(signed.url);
+  const previewToken = parsed.searchParams.get('tkn');
+  parsed.searchParams.delete('tkn');
 
   return {
-    ...access,
-    expiresAt: new Date(Date.now() + config.timeouts.previewTtlSeconds * 1000),
+    baseUrl: parsed.toString(),
+    previewToken,
   };
 }
 
 function connectSdk(access: PreviewAccess): Promise<SandboxAgent> {
   return SandboxAgent.connect({
     baseUrl: access.baseUrl,
-    token: env.SANDBOX_AGENT_TOKEN,
     ...(access.previewToken
       ? {
           headers: {
@@ -141,20 +139,21 @@ async function createSandbox(
     loading: true,
   });
 
-  const createOptions = {
+  const hasSnapshot = await daytona.snapshot
+    .get(SANDBOX_SNAPSHOT)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasSnapshot) {
+    await createSnapshot(daytona);
+  }
+
+  const sandbox = await daytona.create({
     autoStopInterval: config.timeouts.stopMinutes,
     autoArchiveInterval: config.timeouts.archiveMinutes,
     autoDeleteInterval: config.timeouts.deleteMinutes,
-    language: 'typescript',
-    image: getSandboxImage(),
-  } as const;
-
-  const sandbox = config.daytona.snapshot
-    ? await daytona.create({
-        ...createOptions,
-        snapshot: config.daytona.snapshot,
-      })
-    : await daytona.create(createOptions);
+    snapshot: SANDBOX_SNAPSHOT,
+  });
 
   const prompt = readFileSync(PROMPT_PATH, 'utf8');
   await sandbox.fs.uploadFile(
@@ -165,11 +164,7 @@ async function createSandbox(
   await startAgentServer(sandbox);
 
   const access = await previewAccess(sandbox);
-  await waitForHealth(
-    access,
-    env.SANDBOX_AGENT_TOKEN,
-    config.timeouts.healthMs
-  );
+  await waitForHealth(access, config.timeouts.healthMs);
 
   const sdk = await connectSdk(access);
   const session = await sdk.createSession({
@@ -181,20 +176,15 @@ async function createSandbox(
     },
   });
 
-  await db.transaction(async (tx) => {
-    await upsert(
-      {
-        threadId,
-        channelId,
-        sandboxId: sandbox.id,
-        sessionId: session.id,
-        previewUrl: access.baseUrl,
-        previewToken: access.previewToken,
-        previewExpiresAt: access.expiresAt,
-        status: 'active',
-      },
-      tx
-    );
+  await upsert({
+    threadId,
+    channelId,
+    sandboxId: sandbox.id,
+    sessionId: session.id,
+    previewUrl: access.baseUrl,
+    previewToken: access.previewToken,
+    previewExpiresAt: null,
+    status: 'active',
   });
 
   logger.info(
@@ -257,38 +247,23 @@ export async function resolveSession(
   }
 
   const access = await previewAccess(sandbox);
-  await waitForHealth(
-    access,
-    env.SANDBOX_AGENT_TOKEN,
-    config.timeouts.healthMs
-  ).catch(async () => {
+  await waitForHealth(access, config.timeouts.healthMs).catch(async () => {
     await startAgentServer(sandbox);
-    await waitForHealth(
-      access,
-      env.SANDBOX_AGENT_TOKEN,
-      config.timeouts.healthMs
-    );
+    await waitForHealth(access, config.timeouts.healthMs);
   });
 
   const sdk = await connectSdk(access);
   const session = await ensureSession(sdk, existing.sessionId);
 
-  await db.transaction(async (tx) => {
-    await updateRuntime(
-      threadId,
-      {
-        sandboxId: sandbox.id,
-        sessionId: session.id,
-        previewUrl: access.baseUrl,
-        previewToken: access.previewToken,
-        previewExpiresAt: access.expiresAt,
-        status: 'active',
-      },
-      tx
-    );
-
-    await markActivity(threadId, tx);
+  await updateRuntime(threadId, {
+    sandboxId: sandbox.id,
+    sessionId: session.id,
+    previewUrl: access.baseUrl,
+    previewToken: access.previewToken,
+    previewExpiresAt: null,
+    status: 'active',
   });
+  await markActivity(threadId);
 
   return {
     sdk,

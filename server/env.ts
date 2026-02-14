@@ -21,7 +21,6 @@ export const env = createEnv({
     // AI
     OPENROUTER_API_KEY: z.string().min(1).startsWith('sk-or-'),
     HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
-    SANDBOX_AGENT_TOKEN: z.string().min(1),
     // Logging
     LOG_DIRECTORY: z.string().optional().default('logs'),
     LOG_LEVEL: z
@@ -30,11 +29,10 @@ export const env = createEnv({
       .default('info'),
     // Exa
     EXA_API_KEY: z.string().min(1),
-    // Daytona Sandbox
+    // Daytona
     DAYTONA_API_KEY: z.string().min(1),
-    DAYTONA_API_URL: z.string().url().optional(),
+    DAYTONA_API_URL: z.url().optional(),
     DAYTONA_TARGET: z.string().optional(),
-    DAYTONA_SNAPSHOT: z.string().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

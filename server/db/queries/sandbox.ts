@@ -6,15 +6,8 @@ import {
   sandboxSessions,
 } from '~/db/schema';
 
-type DatabaseLike = typeof db;
-type TransactionLike = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type QueryDatabase = DatabaseLike | TransactionLike;
-
-export async function getByThread(
-  threadId: string,
-  database: QueryDatabase = db
-): Promise<SandboxSession | null> {
-  const rows = await database
+export async function getByThread(threadId: string): Promise<SandboxSession | null> {
+  const rows = await db
     .select()
     .from(sandboxSessions)
     .where(eq(sandboxSessions.threadId, threadId))
@@ -23,11 +16,8 @@ export async function getByThread(
   return rows[0] ?? null;
 }
 
-export async function upsert(
-  session: NewSandboxSession,
-  database: QueryDatabase = db
-): Promise<void> {
-  await database
+export async function upsert(session: NewSandboxSession): Promise<void> {
+  await db
     .insert(sandboxSessions)
     .values(session)
     .onConflictDoUpdate({
@@ -50,10 +40,9 @@ export async function upsert(
 
 export async function updateStatus(
   threadId: string,
-  status: string,
-  database: QueryDatabase = db
+  status: string
 ): Promise<void> {
-  await database
+  await db
     .update(sandboxSessions)
     .set({
       status,
@@ -65,11 +54,8 @@ export async function updateStatus(
     .where(eq(sandboxSessions.threadId, threadId));
 }
 
-export async function markActivity(
-  threadId: string,
-  database: QueryDatabase = db
-): Promise<void> {
-  await database
+export async function markActivity(threadId: string): Promise<void> {
+  await db
     .update(sandboxSessions)
     .set({
       updatedAt: new Date(),
@@ -86,10 +72,9 @@ export async function updateRuntime(
     previewToken?: string | null;
     previewExpiresAt?: Date | null;
     status?: string;
-  },
-  database: QueryDatabase = db
+  }
 ): Promise<void> {
-  await database
+  await db
     .update(sandboxSessions)
     .set({
       sandboxId: runtime.sandboxId,
@@ -104,11 +89,8 @@ export async function updateRuntime(
     .where(eq(sandboxSessions.threadId, threadId));
 }
 
-export async function clearDestroyed(
-  threadId: string,
-  database: QueryDatabase = db
-): Promise<void> {
-  await database
+export async function clearDestroyed(threadId: string): Promise<void> {
+  await db
     .update(sandboxSessions)
     .set({
       status: 'destroyed',

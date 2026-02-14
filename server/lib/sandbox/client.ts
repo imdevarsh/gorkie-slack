@@ -3,28 +3,14 @@ export interface PreviewAccess {
   previewToken: string | null;
 }
 
-const TRAILING_SLASH = /\/$/;
-
-export function parsePreviewUrl(url: string): PreviewAccess {
-  const parsed = new URL(url);
-  const previewToken = parsed.searchParams.get('tkn');
-  parsed.searchParams.delete('tkn');
-
-  return {
-    baseUrl: parsed.toString().replace(TRAILING_SLASH, ''),
-    previewToken,
-  };
-}
-
 export async function waitForHealth(
   access: PreviewAccess,
-  token: string,
   timeoutMs = 60_000
 ): Promise<void> {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
-    const headers = new Headers({ Authorization: `Bearer ${token}` });
+    const headers = new Headers();
     if (access.previewToken) {
       headers.set('x-daytona-preview-token', access.previewToken);
     }

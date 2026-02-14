@@ -21,6 +21,5 @@ export const sandbox = {
     apiKey: env.DAYTONA_API_KEY,
     apiUrl: env.DAYTONA_API_URL,
     target: env.DAYTONA_TARGET,
-    snapshot: env.DAYTONA_SNAPSHOT,
   },
 };
