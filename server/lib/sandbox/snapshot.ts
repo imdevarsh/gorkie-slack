@@ -1,13 +1,7 @@
 import { Snapshot } from '@vercel/sandbox';
 import { sandbox as config } from '~/config';
 import logger from '~/lib/logger';
-import {
-  addSnapIndex,
-  listExpiredSnapIndex,
-  removeSnapIndex,
-  removeSnapIndexRaw,
-  setSnap,
-} from './queries';
+import * as redis from './queries';
 
 export async function deleteSnapshot(
   snapshotId: string,
@@ -27,7 +21,7 @@ export async function deleteSnapshot(
 
 export async function cleanupSnapshots(): Promise<void> {
   const cutoff = Date.now() - config.snapshot.ttl * 1000;
-  const expired = await listExpiredSnapIndex(cutoff);
+  const expired = await redis.listExpiredSnapshotIndex(cutoff);
 
   if (expired.length === 0) {
     return;
@@ -37,21 +31,12 @@ export async function cleanupSnapshots(): Promise<void> {
     expired.map(async (entry) => {
       const [snapshotId, ctxId] = entry.split(':');
       if (!(snapshotId && ctxId)) {
-        await removeSnapIndexRaw(entry);
+        await redis.removeSnapshotIndexRaw(entry);
         return;
       }
 
       await deleteSnapshot(snapshotId, ctxId);
-      await removeSnapIndex(snapshotId, ctxId);
+      await redis.removeSnapshotIndex(snapshotId, ctxId);
     })
   );
-}
-
-export async function registerSnapshot(
-  ctxId: string,
-  snapshotId: string
-): Promise<void> {
-  const now = Date.now();
-  await setSnap(ctxId, { snapshotId, createdAt: now });
-  await addSnapIndex(snapshotId, ctxId, now);
 }

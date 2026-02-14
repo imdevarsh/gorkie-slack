@@ -4,23 +4,15 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { installTools, makeFolders, toolsDigest } from './bootstrap';
-import {
-  clearLiveId,
-  clearSnap,
-  getBaseSnap,
-  getLiveId,
-  getSnap,
-  setBaseSnap,
-  setLiveId,
-} from './queries';
-import { cleanupSnapshots, deleteSnapshot, registerSnapshot } from './snapshot';
+import { installTools, makeFolders } from './bootstrap';
+import * as redis from './queries';
+import { cleanupSnapshots, deleteSnapshot } from './snapshot';
 
 export class SandboxSession {
   private readonly ctxId: string;
-  private readonly context?: SlackMessageContext;
+  private readonly context: SlackMessageContext;
 
-  private constructor(ctxId: string, context?: SlackMessageContext) {
+  private constructor(ctxId: string, context: SlackMessageContext) {
     this.ctxId = ctxId;
     this.context = context;
   }
@@ -29,12 +21,8 @@ export class SandboxSession {
     return new SandboxSession(getContextId(context), context);
   }
 
-  static fromContextId(ctxId: string): SandboxSession {
-    return new SandboxSession(ctxId);
-  }
-
   async reconnect(): Promise<Sandbox | null> {
-    const sandboxId = await getLiveId(this.ctxId);
+    const { sandboxId } = await redis.getState(this.ctxId);
     if (!sandboxId) {
       return null;
     }
@@ -46,7 +34,7 @@ export class SandboxSession {
       return existing;
     }
 
-    await clearLiveId(this.ctxId);
+    await redis.clearSandbox(this.ctxId);
     return null;
   }
 
@@ -57,24 +45,20 @@ export class SandboxSession {
     }
 
     const instance = await this.provision();
-    await setLiveId(this.ctxId, instance.sandboxId);
+    await redis.setSandboxId(this.ctxId, instance.sandboxId);
     return instance;
   }
 
-  async execute<T>(run: (sandbox: Sandbox) => Promise<T>): Promise<T> {
-    const sandbox = await this.open();
-    return await run(sandbox);
-  }
-
   async close(): Promise<void> {
-    const sandboxId = await getLiveId(this.ctxId);
+    const state = await redis.getState(this.ctxId);
+    const sandboxId = state.sandboxId;
     if (!sandboxId) {
       return;
     }
 
-    await clearLiveId(this.ctxId);
+    await redis.clearSandbox(this.ctxId);
 
-    const previousSnapshotId = (await getSnap(this.ctxId))?.snapshotId;
+    const previousSnapshotId = state.snapshot?.snapshotId;
     const instance = await Sandbox.get({ sandboxId, ...config.auth }).catch(
       () => null
     );
@@ -90,17 +74,17 @@ export class SandboxSession {
       );
     });
 
-    const snap = await instance.snapshot().catch(() => null);
-    if (!snap) {
+    const nextSnapshot = await instance.snapshot().catch(() => null);
+    if (!nextSnapshot) {
       await forceStop(sandboxId);
       return;
     }
 
-    if (previousSnapshotId && previousSnapshotId !== snap.snapshotId) {
+    if (previousSnapshotId && previousSnapshotId !== nextSnapshot.snapshotId) {
       await deleteSnapshot(previousSnapshotId, this.ctxId);
     }
 
-    await registerSnapshot(this.ctxId, snap.snapshotId);
+    await redis.putSnapshot(this.ctxId, nextSnapshot.snapshotId, Date.now());
   }
 
   private async provision(): Promise<Sandbox> {
@@ -109,18 +93,21 @@ export class SandboxSession {
       return restored;
     }
 
-    await this.setLoad('is setting up the sandbox');
+    await setStatus(this.context, {
+      status: 'is setting up the sandbox',
+      loading: true,
+    });
 
-    const baseSnapshotId = await this.ensureBaseSnap();
+    const base = await this.getBase();
     const instance = await Sandbox.create({
-      ...(baseSnapshotId
-        ? { source: { type: 'snapshot' as const, snapshotId: baseSnapshotId } }
+      ...(base
+        ? { source: { type: 'snapshot' as const, snapshotId: base } }
         : { runtime: config.runtime }),
       timeout: config.timeoutMs,
       ...config.auth,
     });
 
-    if (!baseSnapshotId) {
+    if (!base) {
       await makeFolders(instance);
       await installTools(instance);
     }
@@ -129,7 +116,7 @@ export class SandboxSession {
       {
         ctxId: this.ctxId,
         sandboxId: instance.sandboxId,
-        source: baseSnapshotId ? 'base-snapshot' : 'runtime',
+        source: base ? 'base-snapshot' : 'runtime',
       },
       '[sandbox] Created new sandbox'
     );
@@ -138,7 +125,7 @@ export class SandboxSession {
   }
 
   private async restoreSnap(): Promise<Sandbox | null> {
-    const snapshot = await getSnap(this.ctxId);
+    const { snapshot } = await redis.getState(this.ctxId);
     if (!snapshot) {
       return null;
     }
@@ -147,11 +134,14 @@ export class SandboxSession {
 
     if (Date.now() - createdAt > config.snapshot.ttl * 1000) {
       await deleteSnapshot(snapshotId, this.ctxId);
-      await clearSnap(this.ctxId);
+      await redis.clearSnapshot(this.ctxId);
       return null;
     }
 
-    await this.setLoad('is restoring the sandbox');
+    await setStatus(this.context, {
+      status: 'is restoring the sandbox',
+      loading: true,
+    });
 
     const instance = await Sandbox.create({
       source: { type: 'snapshot', snapshotId },
@@ -166,7 +156,7 @@ export class SandboxSession {
     });
 
     if (!instance) {
-      await clearSnap(this.ctxId);
+      await redis.clearSnapshot(this.ctxId);
       return null;
     }
 
@@ -178,28 +168,13 @@ export class SandboxSession {
     return instance;
   }
 
-  private async ensureBaseSnap(): Promise<string | null> {
-    const digest = await toolsDigest().catch((error: unknown) => {
-      logger.warn(
-        { error },
-        '[sandbox] Failed to hash tools for base snapshot'
-      );
-      return null;
-    });
-    if (!digest) {
-      return null;
+  private async getBase(): Promise<string | null> {
+    const base = await redis.getBase();
+    if (base && base.runtime === config.runtime) {
+      return base.snapshotId;
     }
 
-    const baseSnapshot = await getBaseSnap();
-    if (
-      baseSnapshot &&
-      baseSnapshot.runtime === config.runtime &&
-      baseSnapshot.toolsDigest === digest
-    ) {
-      return baseSnapshot.snapshotId;
-    }
-
-    const previousId = baseSnapshot?.snapshotId;
+    const previousId = base?.snapshotId;
     const instance = await Sandbox.create({
       runtime: config.runtime,
       timeout: config.timeoutMs,
@@ -222,11 +197,10 @@ export class SandboxSession {
 
       const snapshot = await instance.snapshot();
       const createdAt = Date.now();
-      await setBaseSnap({
+      await redis.setBase({
         snapshotId: snapshot.snapshotId,
         createdAt,
         runtime: config.runtime,
-        toolsDigest: digest,
       });
 
       if (previousId && previousId !== snapshot.snapshotId) {
@@ -248,17 +222,6 @@ export class SandboxSession {
       }
     }
   }
-
-  private async setLoad(status: string): Promise<void> {
-    if (!this.context) {
-      return;
-    }
-
-    await setStatus(this.context, {
-      status,
-      loading: true,
-    });
-  }
 }
 
 export async function getSandbox(
@@ -268,13 +231,15 @@ export async function getSandbox(
   return await session.open();
 }
 
-export async function stopSandbox(ctxId: string): Promise<void> {
-  const session = SandboxSession.fromContextId(ctxId);
+export async function stopSandbox(context: SlackMessageContext): Promise<void> {
+  const session = SandboxSession.fromContext(context);
   await session.close();
 }
 
-export async function reconnectSandbox(ctxId: string): Promise<Sandbox | null> {
-  const session = SandboxSession.fromContextId(ctxId);
+export async function reconnectSandbox(
+  context: SlackMessageContext
+): Promise<Sandbox | null> {
+  const session = SandboxSession.fromContext(context);
   return await session.reconnect();
 }
 

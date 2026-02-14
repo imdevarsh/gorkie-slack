@@ -75,7 +75,7 @@ export async function generateResponse(
       error: e instanceof Error ? e.message : String(e),
     };
   } finally {
-    stopSandbox(ctxId).catch((error: unknown) => {
+    stopSandbox(context).catch((error: unknown) => {
       logger.warn({ error, ctxId }, 'Sandbox snapshot failed');
     });
   }

@@ -7,14 +7,6 @@ import { sandboxPath } from '~/lib/sandbox/utils';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
-const outputSchema = z.object({
-  path: z.string(),
-  count: z.number(),
-  truncated: z.boolean(),
-  output: z.string(),
-  matches: z.array(z.string()),
-});
-
 export const glob = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Find files by glob pattern in the sandbox.',
@@ -44,19 +36,23 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getSandbox(context);
-        const payload = Buffer.from(
-          JSON.stringify({ pattern, path: resolvedPath, limit })
-        ).toString('base64');
-
         const result = await sandbox.runCommand({
-          cmd: 'sh',
-          args: ['-c', 'PARAMS="$1" python3 agent/bin/glob.py', '--', payload],
+          cmd: 'fd',
+          args: [
+            '--glob',
+            '--color',
+            'never',
+            '--max-results',
+            String(limit + 1),
+            pattern,
+            resolvedPath,
+          ],
         });
 
         const stdout = await result.stdout();
         const stderr = await result.stderr();
 
-        if (result.exitCode !== 0) {
+        if (result.exitCode !== 0 && result.exitCode !== 1) {
           logger.warn(
             {
               ctxId,
@@ -67,7 +63,7 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
               stderr: stderr.slice(0, 1000),
               stdout: stdout.slice(0, 1000),
             },
-            '[sandbox] Glob command failed'
+            '[sandbox] fd command failed'
           );
           return {
             success: false,
@@ -75,20 +71,26 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
           };
         }
 
-        const data = outputSchema.parse(JSON.parse(stdout || '{}'));
+        const matches = stdout
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean);
+
+        const truncated = matches.length > limit;
+        const limited = truncated ? matches.slice(0, limit) : matches;
 
         logger.debug(
-          { ctxId, pattern, path: resolvedPath, count: data.count },
+          { ctxId, pattern, path: resolvedPath, count: limited.length },
           '[sandbox] Glob completed'
         );
 
         return {
           success: true,
-          path: data.path,
-          count: data.count,
-          truncated: data.truncated,
-          output: data.output,
-          matches: data.matches,
+          path: resolvedPath,
+          count: limited.length,
+          truncated,
+          output: limited.join('\n'),
+          matches: limited,
         };
       } catch (error) {
         logger.error(

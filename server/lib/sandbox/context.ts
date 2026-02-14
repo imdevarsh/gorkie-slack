@@ -1,7 +1,6 @@
 import type { ModelMessage } from 'ai';
 import { getConversationMessages } from '~/slack/conversations';
 import type { SandboxRequestHints, SlackMessageContext } from '~/types';
-import { getContextId } from '~/utils/context';
 import { resolveChannelName, resolveServerName } from '~/utils/slack';
 import { getTime } from '~/utils/time';
 import { reconnectSandbox } from './session';
@@ -9,8 +8,7 @@ import { reconnectSandbox } from './session';
 export async function peekFilesystem(
   context: SlackMessageContext
 ): Promise<string | null> {
-  const ctxId = getContextId(context);
-  const live = await reconnectSandbox(ctxId);
+  const live = await reconnectSandbox(context);
   if (!live) {
     return null;
   }

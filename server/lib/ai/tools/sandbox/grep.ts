@@ -7,13 +7,6 @@ import { sandboxPath } from '~/lib/sandbox/utils';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
-const outputSchema = z.object({
-  path: z.string(),
-  count: z.number(),
-  truncated: z.boolean(),
-  output: z.string(),
-});
-
 export const grep = ({ context }: { context: SlackMessageContext }) =>
   tool({
     description: 'Search file contents in the sandbox using a regex pattern.',
@@ -47,19 +40,31 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       try {
         const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
-        const payload = Buffer.from(
-          JSON.stringify({ pattern, path: resolvedPath, include, limit })
-        ).toString('base64');
+
+        const args = [
+          '--line-number',
+          '--no-heading',
+          '--color',
+          'never',
+          '--max-count',
+          String(limit + 1),
+        ];
+
+        if (include) {
+          args.push('--glob', include);
+        }
+
+        args.push(pattern, resolvedPath);
 
         const result = await sandbox.runCommand({
-          cmd: 'sh',
-          args: ['-c', 'PARAMS="$1" python3 agent/bin/grep.py', '--', payload],
+          cmd: 'rg',
+          args,
         });
 
         const stdout = await result.stdout();
         const stderr = await result.stderr();
 
-        if (result.exitCode !== 0) {
+        if (result.exitCode !== 0 && result.exitCode !== 1) {
           logger.warn(
             {
               ctxId,
@@ -71,26 +76,33 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
               stderr: stderr.slice(0, 1000),
               stdout: stdout.slice(0, 1000),
             },
-            '[sandbox] Grep command failed'
+            '[sandbox] rg command failed'
           );
           return {
             success: false,
             error: stderr || `Failed to search: ${pattern}`,
           };
         }
-        const data = outputSchema.parse(JSON.parse(stdout || '{}'));
+
+        const lines = stdout
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean);
+
+        const truncated = lines.length > limit;
+        const limited = truncated ? lines.slice(0, limit) : lines;
 
         logger.debug(
-          { ctxId, pattern, path: resolvedPath, include, count: data.count },
+          { ctxId, pattern, path: resolvedPath, include, count: limited.length },
           '[sandbox] Grep completed'
         );
 
         return {
           success: true,
-          path: data.path,
-          count: data.count,
-          truncated: data.truncated,
-          output: data.output,
+          path: resolvedPath,
+          count: limited.length,
+          truncated,
+          output: limited.join('\n'),
         };
       } catch (error) {
         logger.error(

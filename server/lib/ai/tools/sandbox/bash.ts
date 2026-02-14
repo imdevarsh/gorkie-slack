@@ -5,7 +5,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
 import { addHistory } from '~/lib/sandbox/history';
-import { clearLiveId } from '~/lib/sandbox/queries';
+import { clearSandbox } from '~/lib/sandbox/queries';
 import { sandboxPath, turnsPath } from '~/lib/sandbox/utils';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -85,7 +85,7 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error({ error, command, ctxId }, '[sandbox] Command crashed');
-        await clearLiveId(ctxId);
+        await clearSandbox(ctxId);
 
         return {
           output: '',
