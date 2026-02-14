@@ -17,9 +17,12 @@ File rules:
 - If a user provided a file, use that exact uploaded file path; do not fetch substitutes.
 - Before claiming a file is missing, verify it exists in the filesystem.
 - Avoid writing generated artifacts into /home/daytona/attachments.
+- Avoid destructive operations unless explicitly requested by the user.
+- If replacing an output, write a fresh file and keep earlier versions when useful for iteration.
 
 Execution hygiene:
 - Install dependencies only when required by the task.
 - Reuse already-installed tools and previously generated outputs when suitable.
 - Keep command sequences minimal and auditable.
+- Validate outputs after generation (existence, basic sanity checks like file type/size when relevant).
 </environment>`;

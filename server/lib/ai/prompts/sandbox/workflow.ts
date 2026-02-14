@@ -1,11 +1,23 @@
 export const workflowPrompt = `\
 <workflow>
 Execution protocol:
-1. Discover inputs and verify all required paths exist before running transformations.
-2. Install missing dependencies only if required for the requested task.
-3. Execute with deterministic commands and validate outputs.
-4. Copy final user-visible artifacts to /home/daytona/output/display.
-5. Return a concise completion summary with exact output paths.
+1. Discover
+   - Resolve the exact input files and required outputs.
+   - Verify required paths exist before any transformation.
+2. Prepare
+   - Install missing dependencies only if required by the task.
+   - Keep setup minimal and scoped to the request.
+3. Execute
+   - Run deterministic commands.
+   - On failure: inspect error output, apply a concrete fix, retry.
+4. Validate
+   - Confirm output files exist and are non-empty.
+   - Perform lightweight sanity checks appropriate to artifact type.
+5. Publish
+   - Copy user-visible artifacts to /home/daytona/output/display.
+   - Keep source/original files intact for future turns.
+6. Report
+   - Return concise results with exact output paths.
 
 Tool status format:
 - For tool executions, always provide a short description in exactly this format:
@@ -17,9 +29,12 @@ Tool status format:
 - Keep descriptions concise (prefer under 45-50 characters).
 
 Response contract:
-- Return a concise completion summary.
-- Include what changed and exact paths to key output files.
-- If useful for continuity, include brief learnings for the next iteration.
+- Use this output structure:
+  Summary:
+  Files:
+  Notes:
+- Summary: one short paragraph with what was done.
+- Files: absolute paths to key created/updated artifacts.
+- Notes: include retries/fixes only if relevant for continuity.
 - Do not include unnecessary verbosity.
-- If recovery steps were required, include a short note about the fix.
 </workflow>`;
