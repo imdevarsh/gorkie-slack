@@ -1,45 +1,34 @@
 export const workflowPrompt = `\
 <workflow>
-Execution protocol:
-1. Discover
-   - Resolve the exact input files and required outputs.
-   - Verify required paths exist before any transformation.
-2. Prepare
-   - Install missing dependencies only if required by the task.
-   - Keep setup minimal and scoped to the request.
-3. Execute
-   - Run deterministic commands.
-   - On failure: inspect error output, apply a concrete fix, retry.
-4. Validate
-   - Confirm output files exist and are non-empty.
-   - Perform lightweight sanity checks appropriate to artifact type.
-5. Publish
-   - Copy user-visible artifacts to /home/daytona/output/display.
-   - Keep source/original files intact for future turns.
-6. Report
-   - Return concise results with exact output paths.
+<execution>
+1. Discover inputs and required outputs. Verify required paths exist.
+2. Prepare only what is needed for this task.
+3. Execute deterministic commands. On failure, diagnose and retry with a concrete fix.
+4. Validate outputs exist and are non-empty.
+5. Publish user-visible artifacts to /home/daytona/output/display using copy (not move).
+6. Report concise results with exact absolute paths.
+</execution>
 
-Completion gates:
-- You MUST NOT declare completion until publish + validate are done.
-- You MUST verify each promised output path exists before final response.
-- If a display artifact is missing, you MUST create/copy it before ending the turn.
+<completion_gates>
+- Do not declare completion until validate and publish are done.
+- Verify each promised output path before final response.
+- If any display artifact is missing, create/copy it before ending the turn.
+- If recovery is possible, retry instead of returning avoidable failure.
+</completion_gates>
 
-Tool status format:
-- For tool executions, always provide a short description in exactly this format:
-  is <doing something>
-- Examples:
-  is finding the uploaded file
-  is converting image to black and white
-  is generating final output file
-- Keep descriptions concise (prefer under 45-50 characters).
+<status_contract>
+- For tool executions, use status in exactly this format: is &lt;doing something&gt;
+- Keep status short and concrete.
+</status_contract>
 
-Response contract:
-- Use this output structure:
+<response_contract>
+- Use this structure:
   Summary:
   Files:
   Notes:
-- Summary: one short paragraph with what was done.
+- Summary: short paragraph with what was done.
 - Files: absolute paths to key created/updated artifacts.
-- Notes: include retries/fixes only if relevant for continuity.
-- Do not include unnecessary verbosity.
+- Notes: retries/fixes only if useful for continuity.
+- Avoid unnecessary verbosity.
+</response_contract>
 </workflow>`;
