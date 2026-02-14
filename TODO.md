@@ -1,8 +1,6 @@
 # TODO
 
 - Audit security: authentication boundaries, data access, and tool permissions.
-- Revisit why `sandboxId` is stored in Redis with TTL 10 minutes; confirm necessity or adjust.
-- take a look at opencode, and it's tools https://github.com/anomalyco/opencode see what we wanna add to agent
 - Check With User DMs
 - Fix ratelimiting
 - fix lint
@@ -13,8 +11,8 @@
 - TODO: add observability and better loggign sandbox
 - The sandbox.ts is so cluttered, same with session.ts
 - remove REFACTOR.md
-- investigate why it takes insane amounts of tme to re-startup after resumed even though in daytona dashboard it's up
 - compare codebase with other examples
 - add a path function to join paths rather than ${config.runtime.workdir}/xyz
 - add proper LOGs on tools input / output like previous iteration
 - summary .at(-1) is not accurate?
+- enforce AI to write in displayed and follow status... it never does that btw.... maybe just give an uploadFile tool check in stream and call slack api
