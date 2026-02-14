@@ -35,6 +35,16 @@ export interface ResolvedSandboxSession {
   baseUrl: string;
 }
 
+function isSandboxMissingError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('not found') ||
+    normalized.includes('does not exist') ||
+    normalized.includes('sandbox not found')
+  );
+}
+
 function buildOpencodeConfig(prompt: string): string {
   return JSON.stringify(
     {
@@ -135,7 +145,7 @@ async function createSandbox(
   channelId: string
 ): Promise<ResolvedSandboxSession> {
   await setStatus(context, {
-    status: 'is provisoning a sandbox',
+    status: 'is provisioning a sandbox',
     loading: true,
   });
 
@@ -206,8 +216,13 @@ async function reconnectSandboxById(
   threadId: string,
   sandboxId: string
 ): Promise<Sandbox | null> {
-  const sandbox = await daytona.get(sandboxId).catch(() => null);
-  if (!sandbox) {
+  const sandbox = await daytona.get(sandboxId).catch((error: unknown) => {
+    if (isSandboxMissingError(error)) {
+      return null;
+    }
+    throw error;
+  });
+  if (sandbox === null) {
     await clearDestroyed(threadId);
     return null;
   }
@@ -242,10 +257,6 @@ export async function resolveSession(
     return createSandbox(context, threadId, channelId);
   }
 
-  await setStatus(context, {
-    status: 'is reconnecting to sandbox',
-    loading: true,
-  });
   const sandbox = await reconnectSandboxById(threadId, existing.sandboxId);
   if (!sandbox) {
     return createSandbox(context, threadId, channelId);

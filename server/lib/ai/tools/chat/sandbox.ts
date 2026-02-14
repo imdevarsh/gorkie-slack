@@ -63,47 +63,38 @@ function subscribeAgentEvents(params: {
   ctxId: string;
 }): () => void {
   const { session, context, ctxId } = params;
+  let lastStatus: string | null = null;
 
   return session.onEvent((event) => {
-    const eventType =
+    const update =
       (
         event.payload as {
-          params?: { update?: { sessionUpdate?: string } };
+          params?: {
+            update?: {
+              title?: string;
+              rawInput?: { description?: string };
+            };
+          };
         }
-      ).params?.update?.sessionUpdate ?? null;
-
-    const noisyEventTypes = new Set([
-      'agent_message_chunk',
-      'agent_thought_chunk',
-    ]);
-
-    if (eventType && noisyEventTypes.has(eventType)) {
-      return;
-    }
-
-    const preview = event.payload;
-
-    logger.info(
-      {
-        ctxId,
-        sessionId: session.id,
-        eventIndex: event.eventIndex,
-        sender: event.sender,
-        ...(preview ? { preview } : {}),
-      },
-      '[subagent] Sandbox event'
-    );
+      ).params?.update ?? null;
 
     if (event.sender !== 'agent') {
       return;
     }
 
-    setStatus(context, {
-      status: 'is running sandbox steps',
-      loading: true,
-    }).catch((error: unknown) => {
-      logger.debug({ error, ctxId }, '[subagent] Status update skipped');
-    });
+    const status = update?.rawInput?.description;
+    if (typeof status === 'string' && status.trim().length > 0) {
+      const nextStatus = status.trim().slice(0, 50);
+      if (nextStatus !== lastStatus) {
+        lastStatus = nextStatus;
+        setStatus(context, {
+          status: nextStatus,
+          loading: true,
+        }).catch((error: unknown) => {
+          logger.debug({ error, ctxId }, '[subagent] Status update skipped');
+        });
+      }
+    }
   });
 }
 

@@ -5,6 +5,8 @@ Rules:
 - Execute tasks directly and efficiently.
 - Keep all outputs SFW and safe for work.
 - Save user-visible artifacts to output/display/ with clear filenames.
+- For tool executions, always set a short `description` in the format: `is <doing something>`.
+  Example: `is converting image to black and white`.
 - Prefer concise status updates and a short final summary.
 - Avoid asking follow-up questions unless credentials or required inputs are missing.
 
