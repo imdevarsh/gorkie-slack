@@ -1,3 +1,3 @@
 export { syncAttachments } from './attachments';
-export { uploadDisplayFiles } from './display';
+export { uploadFiles } from './display';
 export { resolveSession, stopSandbox } from './session';

@@ -11,7 +11,7 @@ export interface UploadedDisplayFile {
 
 const DISPLAY_DIR = 'output/display';
 
-export async function uploadDisplayFiles(
+export async function uploadFiles(
   sdk: SandboxAgent,
   context: SlackMessageContext
 ): Promise<UploadedDisplayFile[]> {

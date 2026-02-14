@@ -2,12 +2,36 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
-import { syncAttachments } from '~/lib/sandbox/attachments';
-import { uploadDisplayFiles } from '~/lib/sandbox/display';
+import {
+  type PromptResourceLink,
+  syncAttachments,
+} from '~/lib/sandbox/attachments';
+import { uploadFiles } from '~/lib/sandbox/display';
 import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (typeof error === 'object' && error !== null) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.length > 0) {
+      return message;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+  return String(error);
+}
 
 function collectText(value: unknown, output: string[]): void {
   if (typeof value === 'string') {
@@ -89,20 +113,58 @@ export const sandbox = ({
 
       try {
         const runtime = await resolveSession(context);
-        await syncAttachments(runtime.sdk, context, files);
+        const resourceLinks = await syncAttachments(
+          runtime.sdk,
+          context,
+          files
+        );
 
-        await runtime.session.prompt([
+        await setStatus(context, {
+          status: 'is working in the sandbox',
+          loading: true,
+        });
+        const prompt = [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `${task}\n\nAt the end, provide a concise summary of what you changed and where outputs are located.`,
           },
-        ]);
+          ...resourceLinks,
+        ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
+
+        let agentEventCount = 0;
+        const unsubscribe = runtime.session.onEvent((event) => {
+          if (event.sender !== 'agent') {
+            return;
+          }
+          agentEventCount += 1;
+          if (agentEventCount === 1 || agentEventCount % 8 === 0) {
+            setStatus(context, {
+              status: 'is running sandbox steps',
+              loading: true,
+            }).catch((error: unknown) => {
+              logger.debug(
+                { error, ctxId },
+                '[subagent] Status update skipped'
+              );
+            });
+          }
+        });
+
+        try {
+          await runtime.session.prompt([...prompt]);
+        } finally {
+          unsubscribe();
+        }
 
         const summary =
           (await summarizeFromEvents(runtime.sessionId, runtime)) ??
           'Task completed in sandbox.';
 
-        const uploaded = await uploadDisplayFiles(runtime.sdk, context);
+        await setStatus(context, {
+          status: 'is collecting outputs',
+          loading: true,
+        });
+        const uploaded = await uploadFiles(runtime.sdk, context);
 
         logger.info(
           { ctxId, filesUploaded: uploaded.length },
@@ -115,10 +177,19 @@ export const sandbox = ({
           filesUploaded: uploaded,
         };
       } catch (error) {
-        logger.error({ error, ctxId }, '[subagent] Sandbox run failed');
+        const message = errorMessage(error);
+        logger.error(
+          {
+            error,
+            errorMessage: message,
+            errorName: error instanceof Error ? error.name : undefined,
+            ctxId,
+          },
+          '[subagent] Sandbox run failed'
+        );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: message,
         };
       }
     },

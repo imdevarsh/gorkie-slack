@@ -35,6 +35,7 @@ export interface ResolvedSandboxSession {
   baseUrl: string;
 }
 
+
 function buildOpencodeConfig(prompt: string): string {
   return JSON.stringify(
     {
@@ -135,7 +136,7 @@ async function createSandbox(
   channelId: string
 ): Promise<ResolvedSandboxSession> {
   await setStatus(context, {
-    status: 'is setting up the sandbox',
+    status: 'is provisoning a sandbox',
     loading: true,
   });
 
@@ -161,6 +162,7 @@ async function createSandbox(
     OPENCODE_CONFIG_PATH
   );
 
+  await setStatus(context, { status: 'is starting agent', loading: true });
   await startAgentServer(sandbox);
 
   const access = await previewAccess(sandbox);
@@ -241,6 +243,7 @@ export async function resolveSession(
     return createSandbox(context, threadId, channelId);
   }
 
+  await setStatus(context, { status: 'is reconnecting to sandbox', loading: true });
   const sandbox = await reconnectSandboxById(threadId, existing.sandboxId);
   if (!sandbox) {
     return createSandbox(context, threadId, channelId);
