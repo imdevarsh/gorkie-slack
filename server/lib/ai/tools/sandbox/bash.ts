@@ -1,12 +1,11 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { tools } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
-import { addHistory } from '~/lib/sandbox/history';
+import { appendSessionLog, truncateOutput } from '~/lib/sandbox/command-utils';
 import { clearSandbox } from '~/lib/sandbox/queries';
-import { sandboxPath, turnsPath } from '~/lib/sandbox/utils';
+import { sandboxPath } from '~/lib/sandbox/utils';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 
@@ -23,15 +22,13 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
     }),
     execute: async ({ command, workdir, status }) => {
       const ctxId = getContextId(context);
-      const ts = (context.event as { ts?: string }).ts ?? 'unknown';
-      const logPath = turnsPath(ts);
 
       try {
         const cwd = sandboxPath(workdir ?? '.');
         const sandbox = await getSandbox(context);
 
         await sandbox.process.executeCommand(
-          `mkdir -p ${sandboxPath('output')} ${sandboxPath('agent/turns')}`,
+          `mkdir -p ${sandboxPath('output')}`,
           cwd
         );
 
@@ -49,15 +46,15 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         const output = result.result;
         const exitCode = result.exitCode;
 
-        await addHistory(sandbox, logPath, {
+        await appendSessionLog(sandbox, {
+          ts: new Date().toISOString(),
           command,
           workdir: cwd,
-          status,
-          stdout: output,
           exitCode,
+          preview: output.slice(0, 400),
         });
 
-        const out = truncate(output || '(no output)', logPath);
+        const out = await truncateOutput(sandbox, output || '(no output)');
 
         logger.debug(
           {
@@ -72,7 +69,9 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
           output: out.text,
           error: '',
           exitCode,
-          ...(out.truncated ? { fullOutput: logPath } : {}),
+          ...(out.truncated && out.outputPath
+            ? { fullOutputPath: out.outputPath }
+            : {}),
         };
       } catch (error) {
         logger.error({ error, command, ctxId }, '[sandbox] Command crashed');
@@ -86,44 +85,3 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
       }
     },
   });
-
-function truncate(
-  raw: string,
-  logPath: string
-): { text: string; truncated: boolean } {
-  const lines = raw.split('\n');
-  const totalBytes = Buffer.byteLength(raw, 'utf-8');
-
-  if (
-    lines.length <= tools.bash.maxOutputLines &&
-    totalBytes <= tools.bash.maxOutputBytes
-  ) {
-    return { text: raw, truncated: false };
-  }
-
-  const kept: string[] = [];
-  let bytes = 0;
-  let hitBytes = false;
-
-  for (let i = 0; i < lines.length && i < tools.bash.maxOutputLines; i++) {
-    const line = lines[i] ?? '';
-    const size = Buffer.byteLength(line, 'utf-8') + (i > 0 ? 1 : 0);
-    if (bytes + size > tools.bash.maxOutputBytes) {
-      hitBytes = true;
-      break;
-    }
-    kept.push(line);
-    bytes += size;
-  }
-
-  const removed = hitBytes ? totalBytes - bytes : lines.length - kept.length;
-  const unit = hitBytes ? 'bytes' : 'lines';
-  const hint =
-    `Output truncated. Full content saved to: ${logPath}\n` +
-    'Use Read on that file with offset/limit, or Grep to search it.';
-
-  return {
-    text: `${kept.join('\n')}\n\n...${removed} ${unit} truncated...\n\n${hint}`,
-    truncated: true,
-  };
-}

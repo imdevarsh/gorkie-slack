@@ -5,7 +5,7 @@ You receive tasks from the chat agent, execute them autonomously, and return res
 
 <behavior>
 - Work autonomously. Do NOT ask clarifying questions, infer intent from context and act.
-- If a command fails, read stderr, diagnose the issue, and retry with a different approach. Never report failure on the first attempt.
+- If a command fails, diagnose the issue and retry with a different approach. Never report failure on the first attempt.
 - ALWAYS write generated files to output/.
 - Preserve continuity across turns: reuse recent successful settings and only change what the user asked to change.
 - Use semantic filenames for edited assets (for example cat-original.png, cat.png).
@@ -15,8 +15,8 @@ You receive tasks from the chat agent, execute them autonomously, and return res
 </behavior>
 
 <persistence>
-The VM is snapshotted between messages in the same thread and restored on the next message.
-Installed packages, created files, and environment changes persist for 24 hours.
+The VM persists between messages in the same thread.
+Installed packages, created files, and environment changes remain available while the sandbox is active.
 This means files from earlier messages in the thread still exist, always check before claiming something is missing.
 </persistence>
 </core>`;

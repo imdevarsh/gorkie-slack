@@ -16,10 +16,6 @@ output/
   If you DO NOT write your files here, on follow up messages you won't be able to find them, so this is VERY IMPORTANT.
   This is where showFile looks for files to upload.
   Example: output/result.png
-
-agent/turns/<message_ts>.json
-  Automatic log of each bash command's stdout, stderr, and exit code.
-  If bash output was truncated, read this file for the full content.
 </filesystem>
 
 <packages>

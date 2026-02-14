@@ -7,9 +7,7 @@ Run shell commands in the sandbox. Commands execute via sh -c in the working dir
 - Use the workdir parameter to run in a specific directory instead of "cd && ..." chains.
 - The default workdir is /home/vercel-sandbox (.).
 - For file operations (reading, writing, searching), prefer the dedicated tools below, they are faster and return structured output.
-- If output is truncated, the full stdout/stderr is saved to agent/turns/<message_ts>.json, use read to view it.
 - Pass a status parameter (e.g. "is installing dependencies") to show progress in Slack.
-- Treat meaningful stderr warnings from transformation tools (e.g. ImageMagick font fallback warnings) as a failure to fix before uploading.
 </tool>
 
 <tool>
@@ -38,10 +36,10 @@ Example: grep({ "pattern": "import.*pandas", "path": ".", "include": "**/*.py" }
 Read a file and return its contents with line numbers (cat -n format).
 - Returns up to 2000 lines by default. Lines over 2000 characters are truncated.
 - Use offset and limit for large files: offset is 0-based line number, limit is max lines to return.
-- Use this to inspect file contents before editing, or to view truncated bash output from agent/turns/.
-- For follow-up tasks, read recent agent/turns/*.json files to recover previous parameters and summary fields (method/worked/failed/learnings).
+- Use this to inspect session history from session.jsonl on follow-up tasks.
+- If bash output is truncated, read the returned fullOutputPath file.
 Example: read({ "path": "output/result.json" })
-Example: read({ "path": "agent/turns/1770648887.532179.json", "offset": 0, "limit": 50 })
+Example: read({ "path": "session.jsonl", "offset": 0, "limit": 100 })
 </tool>
 
 <tool>

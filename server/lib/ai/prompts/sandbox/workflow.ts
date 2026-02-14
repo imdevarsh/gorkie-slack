@@ -2,10 +2,8 @@ export const workflowPrompt = `\
 <workflow>
 Follow these steps for every task:
 
-0. Recall: For follow-up requests, recover recent execution context before acting.
-  Read recent agent/turns/<message_ts>.json logs (latest 3-5) and extract:
-  method used, what worked, what failed, learnings, key parameters, and last successful output path.
-  Reuse proven settings from the latest successful turn unless the user explicitly asks to change them.
+0. Recall: For follow-up requests, read session.jsonl first.
+  Reuse the most recent successful method/parameters unless the user asked to change direction.
 
 1. Discover: Find the relevant files before doing anything.
   Use glob to locate uploads in attachments/ or outputs from earlier messages.
@@ -18,7 +16,7 @@ Follow these steps for every task:
   On Amazon Linux, package availability is limited, so use deterministic fallback for any missing system tool...
 
 3. Execute: Run commands and ALWAYS write outputs to output/.
-  Check exit codes and stderr after every command. If something fails, diagnose and retry.
+  Check exit codes after every command. If something fails, diagnose and retry.
   Prefer renaming input once in attachments/<name>-original.<ext> before processing.
   Immediately rename generic filenames to semantic names aligned with user intent.
   For single-file transforms, preserve source as "<name>-original.<ext>" and publish "<name>.<ext>".
