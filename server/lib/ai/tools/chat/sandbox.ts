@@ -1,5 +1,4 @@
 import { tool } from 'ai';
-import type { Session } from 'sandbox-agent';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
@@ -8,6 +7,10 @@ import {
   syncAttachments,
 } from '~/lib/sandbox/attachments';
 import { uploadFiles } from '~/lib/sandbox/display';
+import {
+  subscribeSandboxEvents,
+  summarizeSandboxStream,
+} from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -32,55 +35,6 @@ function errorMessage(error: unknown): string {
     }
   }
   return String(error);
-}
-
-function subscribeEvents(params: {
-  session: Session;
-  context: SlackMessageContext;
-  ctxId: string;
-  stream: unknown[];
-}): () => void {
-  const { session, context, ctxId, stream } = params;
-  let lastStatus: string | null = null;
-
-  return session.onEvent((event) => {
-
-    const update =
-      (
-        event.payload as {
-          params?: {
-            update?: {
-              sessionUpdate?: string;
-              title?: string;
-              rawInput?: { description?: string };
-            };
-          };
-        }
-      ).params?.update ?? null;
-
-    if (update?.sessionUpdate?.endsWith('_chunk')) {
-      return;
-    }
-    stream.push(event.payload);
-
-    if (event.sender !== 'agent') {
-      return;
-    }
-    const status = update?.rawInput?.description;
-    if (typeof status === 'string' && status.trim().length > 0) {
-      const nextStatus = status.trim().slice(0, 50);
-      if (nextStatus !== lastStatus) {
-        lastStatus = nextStatus;
-        logger.info({ ctxId, status: nextStatus }, '[subagent] Status update');
-        setStatus(context, {
-          status: nextStatus,
-          loading: true,
-        }).catch((error: unknown) => {
-          logger.debug({ error, ctxId }, '[subagent] Status update skipped');
-        });
-      }
-    }
-  });
 }
 
 export const sandbox = ({
@@ -122,6 +76,7 @@ export const sandbox = ({
           status: 'is working in the sandbox',
           loading: true,
         });
+
         const prompt = [
           {
             type: 'text' as const,
@@ -131,8 +86,7 @@ export const sandbox = ({
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
 
         const stream: unknown[] = [];
-
-        const unsubscribe = subscribeEvents({
+        const unsubscribe = subscribeSandboxEvents({
           session: runtime.session,
           context,
           ctxId,
@@ -145,26 +99,7 @@ export const sandbox = ({
           unsubscribe();
         }
 
-        const summary = (() => {
-          console.log(JSON.stringify(stream, null, 2));
-          const last = stream.at(-2);
-
-          if (last === undefined) {
-            return 'Task completed in sandbox.';
-          }
-
-          logger.info(
-            { ctxId, last },
-            '[subagent] summary generated'
-          );
-
-          try {
-            return JSON.stringify(last);
-          } catch (error) {
-            logger.debug({ error }, '[subagent] Failed to stringify last event');
-            return 'Task completed in sandbox.';
-          }
-        })();
+        const summary = summarizeSandboxStream(stream);
 
         await setStatus(context, {
           status: 'is collecting outputs',

@@ -1,5 +1,5 @@
 import { Daytona, type Sandbox } from '@daytonaio/sdk';
-import { SandboxAgent, type Session } from 'sandbox-agent';
+import type { SandboxAgent, Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import {
   clearDestroyed,
@@ -9,16 +9,14 @@ import {
   updateStatus,
   upsert,
 } from '~/db/queries/sandbox';
-import { env } from '~/env';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { type PreviewAccess, waitForHealth } from './client';
+import { buildConfig, CONFIG_PATH } from './config';
+import { boot, createSession, ensureSession } from './runtime';
 import { createSnapshot, SANDBOX_SNAPSHOT } from './snapshot';
-
-const OPENCODE_CONFIG_PATH = `${config.runtime.workdir}/opencode.json`;
 
 const daytona = new Daytona({
   apiKey: config.daytona.apiKey,
@@ -52,99 +50,6 @@ function isNotFoundError(error: unknown): boolean {
   return status === 404 || statusCode === 404;
 }
 
-function buildOpencodeConfig(prompt: string): string {
-  return JSON.stringify(
-    {
-      $schema: 'https://opencode.ai/config.json',
-      model: 'openrouter/openai/gpt-5-mini',
-      share: 'disabled',
-      permission: 'allow',
-      provider: {
-        openrouter: {
-          options: {
-            baseURL: 'https://ai.hackclub.com/proxy/v1',
-            apiKey: '{env:HACKCLUB_API_KEY}',
-          },
-          models: {
-            'openai/gpt-5-mini': {},
-          },
-        },
-      },
-      agent: {
-        gorkie: {
-          mode: 'primary',
-          prompt,
-        },
-      },
-    },
-    null,
-    2
-  );
-}
-
-async function startAgentServer(sandbox: Sandbox): Promise<void> {
-  const command = `pkill -f "sandbox-agent server" >/dev/null 2>&1 || true; nohup sandbox-agent server --no-token --host 0.0.0.0 --port ${config.runtime.agentPort} >/tmp/sandbox-agent.log 2>&1 &`;
-
-  const result = await sandbox.process.executeCommand(
-    command,
-    config.runtime.workdir,
-    {
-      HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
-    }
-  );
-
-  if (result.exitCode !== 0) {
-    throw new Error(`Failed to start sandbox-agent server: ${result.result}`);
-  }
-}
-async function previewAccess(sandbox: Sandbox): Promise<PreviewAccess> {
-  const signed = await sandbox.getSignedPreviewUrl(
-    config.runtime.agentPort,
-    config.timeouts.previewTtlSeconds
-  );
-
-  const parsed = new URL(signed.url);
-  const previewToken = parsed.searchParams.get('tkn');
-  parsed.searchParams.delete('tkn');
-
-  return {
-    baseUrl: parsed.toString(),
-    previewToken,
-  };
-}
-
-function connectSdk(access: PreviewAccess): Promise<SandboxAgent> {
-  return SandboxAgent.connect({
-    baseUrl: access.baseUrl,
-    ...(access.previewToken
-      ? {
-          headers: {
-            'x-daytona-preview-token': access.previewToken,
-          },
-        }
-      : {}),
-  });
-}
-
-async function ensureSession(
-  sdk: SandboxAgent,
-  sessionId: string
-): Promise<Session> {
-  const resumed = await sdk.resumeSession(sessionId).catch(() => null);
-  if (resumed) {
-    return resumed;
-  }
-
-  return sdk.createSession({
-    id: sessionId,
-    agent: 'opencode',
-    sessionInit: {
-      cwd: config.runtime.workdir,
-      mcpServers: [],
-    },
-  });
-}
-
 async function createSandbox(
   context: SlackMessageContext,
   threadId: string,
@@ -173,24 +78,13 @@ async function createSandbox(
 
   const prompt = systemPrompt({ agent: 'sandbox' });
   await sandbox.fs.uploadFile(
-    Buffer.from(buildOpencodeConfig(prompt), 'utf8'),
-    OPENCODE_CONFIG_PATH
+    Buffer.from(buildConfig(prompt), 'utf8'),
+    CONFIG_PATH
   );
 
   await setStatus(context, { status: 'is starting agent', loading: true });
-  await startAgentServer(sandbox);
-  const access = await previewAccess(sandbox);
-  await waitForHealth(access, config.timeouts.healthMs);
-
-  const sdk = await connectSdk(access);
-  const session = await sdk.createSession({
-    id: threadId,
-    agent: 'opencode',
-    sessionInit: {
-      cwd: config.runtime.workdir,
-      mcpServers: [],
-    },
-  });
+  const { sdk, access } = await boot(sandbox);
+  const session = await createSession(sdk, threadId);
 
   await upsert({
     threadId,
@@ -199,7 +93,6 @@ async function createSandbox(
     sessionId: session.id,
     previewUrl: access.baseUrl,
     previewToken: access.previewToken,
-    previewExpiresAt: null,
     status: 'active',
   });
 
@@ -280,11 +173,7 @@ export async function resolveSession(
       return createSandbox(context, threadId, channelId);
     }
 
-    await startAgentServer(sandbox);
-    const access = await previewAccess(sandbox);
-    await waitForHealth(access, config.timeouts.healthMs);
-
-    const sdk = await connectSdk(access);
+    const { sdk, access } = await boot(sandbox);
     const session = await ensureSession(sdk, existing.sessionId);
 
     await updateRuntime(threadId, {
@@ -292,7 +181,6 @@ export async function resolveSession(
       sessionId: session.id,
       previewUrl: access.baseUrl,
       previewToken: access.previewToken,
-      previewExpiresAt: null,
       status: 'active',
     });
     await markActivity(threadId);

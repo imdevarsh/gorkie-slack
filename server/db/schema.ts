@@ -9,7 +9,6 @@ export const sandboxSessions = pgTable(
     sessionId: text('session_id').notNull(),
     previewUrl: text('preview_url'),
     previewToken: text('preview_token'),
-    previewExpiresAt: timestamp('preview_expires_at', { withTimezone: true }),
     status: text('status').notNull().default('creating'),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),

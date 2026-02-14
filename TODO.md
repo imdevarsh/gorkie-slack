@@ -14,5 +14,6 @@
 - compare codebase with other examples
 - add a path function to join paths rather than ${config.runtime.workdir}/xyz
 - add proper LOGs on tools input / output like previous iteration
-- summary .at(-1) is not accurate?
+- summary .at(-1) is not accurate? why does sb agent not pass the summary
 - enforce AI to write in displayed and follow status... it never does that btw.... maybe just give an uploadFile tool check in stream and call slack api
+- remove unused unwanted db fields

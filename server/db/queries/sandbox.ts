@@ -30,7 +30,6 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
         sessionId: session.sessionId,
         previewUrl: session.previewUrl ?? null,
         previewToken: session.previewToken ?? null,
-        previewExpiresAt: session.previewExpiresAt ?? null,
         status: session.status,
         pausedAt: session.pausedAt ?? null,
         resumedAt: session.resumedAt ?? null,
@@ -72,7 +71,6 @@ export async function updateRuntime(
     sessionId: string;
     previewUrl?: string | null;
     previewToken?: string | null;
-    previewExpiresAt?: Date | null;
     status?: string;
   }
 ): Promise<void> {
@@ -83,7 +81,6 @@ export async function updateRuntime(
       sessionId: runtime.sessionId,
       previewUrl: runtime.previewUrl ?? null,
       previewToken: runtime.previewToken ?? null,
-      previewExpiresAt: runtime.previewExpiresAt ?? null,
       ...(runtime.status ? { status: runtime.status } : {}),
       resumedAt: runtime.status === 'active' ? new Date() : undefined,
       updatedAt: new Date(),
