@@ -65,6 +65,22 @@ function subscribeAgentEvents(params: {
   const { session, context, ctxId } = params;
 
   return session.onEvent((event) => {
+    const eventType =
+      (
+        event.payload as {
+          params?: { update?: { sessionUpdate?: string } };
+        }
+      ).params?.update?.sessionUpdate ?? null;
+
+    const noisyEventTypes = new Set([
+      'agent_message_chunk',
+      'agent_thought_chunk',
+    ]);
+
+    if (eventType && noisyEventTypes.has(eventType)) {
+      return;
+    }
+
     const preview = event.payload;
 
     logger.info(
@@ -118,7 +134,6 @@ async function summarizeFromEvents(
     return null;
   }
 
-  console.log(texts.join('\n\n'));
   return texts.join('\n').slice(0, 1500);
 }
 
@@ -147,8 +162,10 @@ export const sandbox = ({
 
       const ctxId = getContextId(context);
 
+      let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
+
       try {
-        const runtime = await resolveSession(context);
+        runtime = await resolveSession(context);
         const resourceLinks = await syncAttachments(
           runtime.sdk,
           context,
@@ -214,6 +231,15 @@ export const sandbox = ({
           success: false,
           error: message,
         };
+      } finally {
+        if (runtime) {
+          await runtime.sdk.dispose().catch((error: unknown) => {
+            logger.debug(
+              { error, ctxId },
+              '[subagent] Failed to dispose sandbox SDK client'
+            );
+          });
+        }
       }
     },
   });
