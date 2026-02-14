@@ -71,7 +71,10 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
           ? data.replaceAll(oldString, newString)
           : data.replace(oldString, newString);
 
-        await sandbox.fs.uploadFile(Buffer.from(updated, 'utf-8'), resolvedPath);
+        await sandbox.fs.uploadFile(
+          Buffer.from(updated, 'utf-8'),
+          resolvedPath
+        );
 
         const replaced = replaceAll ? count : 1;
         logger.debug(

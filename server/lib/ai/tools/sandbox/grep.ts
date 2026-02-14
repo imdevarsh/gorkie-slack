@@ -1,5 +1,5 @@
-import { tool } from 'ai';
 import nodePath from 'node:path';
+import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
@@ -64,7 +64,13 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
         const limited = truncated ? lines.slice(0, limit) : lines;
 
         logger.debug(
-          { ctxId, pattern, path: resolvedPath, include, count: limited.length },
+          {
+            ctxId,
+            pattern,
+            path: resolvedPath,
+            include,
+            count: limited.length,
+          },
           '[sandbox] Grep completed'
         );
 

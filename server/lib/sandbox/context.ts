@@ -13,8 +13,8 @@ export async function peekFilesystem(
     return null;
   }
 
-  const result = await live
-    .process.executeCommand(
+  const result = await live.process
+    .executeCommand(
       "find attachments output -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -nr | cut -f2-"
     )
     .catch(() => null);

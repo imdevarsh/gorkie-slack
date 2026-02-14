@@ -28,7 +28,10 @@ export const write = ({ context }: { context: SlackMessageContext }) =>
       try {
         const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
-        await sandbox.fs.uploadFile(Buffer.from(content, 'utf-8'), resolvedPath);
+        await sandbox.fs.uploadFile(
+          Buffer.from(content, 'utf-8'),
+          resolvedPath
+        );
 
         logger.debug(
           { path: resolvedPath, ctxId },

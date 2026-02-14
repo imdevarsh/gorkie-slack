@@ -16,9 +16,9 @@ export async function appendSessionLog(
   sandbox: Sandbox,
   entry: SessionLogEntry
 ): Promise<void> {
-  const previous = await sandbox.fs.downloadFile(SESSION_LOG_PATH).catch(
-    () => null
-  );
+  const previous = await sandbox.fs
+    .downloadFile(SESSION_LOG_PATH)
+    .catch(() => null);
   const line = `${JSON.stringify(entry)}\n`;
   const next = previous
     ? Buffer.concat([previous, Buffer.from(line, 'utf-8')])

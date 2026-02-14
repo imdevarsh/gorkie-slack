@@ -1,0 +1,64 @@
+# Vercel
+
+> Source: `docs/deploy/vercel.mdx`
+> Canonical URL: https://sandboxagent.dev/docs/deploy/vercel
+> Description: Deploy Sandbox Agent inside a Vercel Sandbox.
+
+---
+## Prerequisites
+
+- `VERCEL_OIDC_TOKEN` or `VERCEL_ACCESS_TOKEN`
+- `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`
+
+## TypeScript example
+
+```typescript
+import { Sandbox } from "@vercel/sandbox";
+import { SandboxAgent } from "sandbox-agent";
+
+const envs: Record<string, string> = {};
+if (process.env.ANTHROPIC_API_KEY) envs.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+if (process.env.OPENAI_API_KEY) envs.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+const sandbox = await Sandbox.create({
+  runtime: "node24",
+  ports: [3000],
+});
+
+const run = async (cmd: string, args: string[] = []) => {
+  const result = await sandbox.runCommand({ cmd, args, env: envs });
+  if (result.exitCode !== 0) {
+    throw new Error(`Command failed: ${cmd} ${args.join(" ")}`);
+  }
+};
+
+await run("sh", ["-c", "curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh"]);
+await run("sandbox-agent", ["install-agent", "claude"]);
+await run("sandbox-agent", ["install-agent", "codex"]);
+
+await sandbox.runCommand({
+  cmd: "sandbox-agent",
+  args: ["server", "--no-token", "--host", "0.0.0.0", "--port", "3000"],
+  env: envs,
+  detached: true,
+});
+
+const baseUrl = sandbox.domain(3000);
+const sdk = await SandboxAgent.connect({ baseUrl });
+
+const session = await sdk.createSession({ agent: "claude" });
+
+const off = session.onEvent((event) => {
+  console.log(event.sender, event.payload);
+});
+
+await session.prompt([{ type: "text", text: "Summarize this repository" }]);
+off();
+
+await sandbox.stop();
+```
+
+## Authentication
+
+Vercel Sandboxes support OIDC token auth (recommended) and access-token auth.
+See [Vercel Sandbox docs](https://vercel.com/docs/functions/sandbox).

@@ -1,0 +1,54 @@
+# Local
+
+> Source: `docs/deploy/local.mdx`
+> Canonical URL: https://sandboxagent.dev/docs/deploy/local
+> Description: Run Sandbox Agent locally for development.
+
+---
+For local development, run Sandbox Agent directly on your machine.
+
+## With the CLI
+
+```bash
+# Install
+curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh
+
+# Run
+sandbox-agent server --no-token --host 127.0.0.1 --port 2468
+```
+
+Or with npm/Bun:
+
+#### npx
+
+```bash
+npx @sandbox-agent/cli@0.2.x server --no-token --host 127.0.0.1 --port 2468
+```
+
+#### bunx
+
+```bash
+bunx @sandbox-agent/cli@0.2.x server --no-token --host 127.0.0.1 --port 2468
+```
+
+## With the TypeScript SDK
+
+The SDK can spawn and manage the server as a subprocess:
+
+```typescript
+import { SandboxAgent } from "sandbox-agent";
+
+const sdk = await SandboxAgent.start();
+
+const session = await sdk.createSession({
+  agent: "claude",
+});
+
+await session.prompt([
+  { type: "text", text: "Summarize this repository." },
+]);
+
+await sdk.dispose();
+```
+
+This starts the server on an available local port and connects automatically.

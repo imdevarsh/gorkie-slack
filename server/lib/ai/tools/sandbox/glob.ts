@@ -37,7 +37,9 @@ export const glob = ({ context }: { context: SlackMessageContext }) =>
       try {
         const sandbox = await getSandbox(context);
         const response = await sandbox.fs.searchFiles(resolvedPath, pattern);
-        const matches = response.files.map((line) => line.trim()).filter(Boolean);
+        const matches = response.files
+          .map((line) => line.trim())
+          .filter(Boolean);
 
         const truncated = matches.length > limit;
         const limited = truncated ? matches.slice(0, limit) : matches;

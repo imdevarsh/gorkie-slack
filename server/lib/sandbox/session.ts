@@ -66,12 +66,17 @@ async function createSandbox(
         ...common,
       });
 
-  logger.info({ ctxId, sandboxId: sandbox.id }, '[sandbox] Created Daytona sandbox');
+  logger.info(
+    { ctxId, sandboxId: sandbox.id },
+    '[sandbox] Created Daytona sandbox'
+  );
 
   return sandbox;
 }
 
-export async function getSandbox(context: SlackMessageContext): Promise<Sandbox> {
+export async function getSandbox(
+  context: SlackMessageContext
+): Promise<Sandbox> {
   const ctxId = getContextId(context);
   const live = await reconnectById(ctxId);
 

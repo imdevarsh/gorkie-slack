@@ -1,0 +1,89 @@
+# Agent Sessions
+
+> Source: `docs/agent-sessions.mdx`
+> Canonical URL: https://sandboxagent.dev/docs/agent-sessions
+> Description: Create sessions, prompt agents, and inspect event history.
+
+---
+Sessions are the unit of interaction with an agent. Create one session per task, send prompts, and consume event history.
+
+For SDK-based flows, sessions can be restored after runtime/session loss when persistence is enabled.
+See [Session Restoration](/session-restoration).
+
+## Create a session
+
+```ts
+import { SandboxAgent } from "sandbox-agent";
+
+const sdk = await SandboxAgent.connect({
+  baseUrl: "http://127.0.0.1:2468",
+});
+
+const session = await sdk.createSession({
+  agent: "codex",
+  sessionInit: {
+    cwd: "/",
+    mcpServers: [],
+  },
+});
+
+console.log(session.id, session.agentSessionId);
+```
+
+## Send a prompt
+
+```ts
+const response = await session.prompt([
+  { type: "text", text: "Summarize the repository structure." },
+]);
+
+console.log(response.stopReason);
+```
+
+## Subscribe to live events
+
+```ts
+const unsubscribe = session.onEvent((event) => {
+  console.log(event.eventIndex, event.sender, event.payload);
+});
+
+await session.prompt([
+  { type: "text", text: "Explain the main entrypoints." },
+]);
+
+unsubscribe();
+```
+
+## Fetch persisted event history
+
+```ts
+const page = await sdk.getEvents({
+  sessionId: session.id,
+  limit: 50,
+});
+
+for (const event of page.items) {
+  console.log(event.id, event.createdAt, event.sender);
+}
+```
+
+## List and load sessions
+
+```ts
+const sessions = await sdk.listSessions({ limit: 20 });
+
+for (const item of sessions.items) {
+  console.log(item.id, item.agent, item.createdAt);
+}
+
+if (sessions.items.length > 0) {
+  const loaded = await sdk.resumeSession(sessions.items[0]!.id);
+  await loaded.prompt([{ type: "text", text: "Continue." }]);
+}
+```
+
+## Destroy a session
+
+```ts
+await sdk.destroySession(session.id);
+```
