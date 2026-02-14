@@ -6,7 +6,7 @@
 - Check With User DMs
 - Fix ratelimiting
 - fix lint
-- TODO: Langfuse is cursed because of running daytona in tool
+- TODO: Langfuse shows daytona tools run in sandbox tool? it is very cursed
 - TODO: Test multiple prompt / queue
 - TODO: Test if it self-timeouts without interaction
 - TODO: re-eval pricing
