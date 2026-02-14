@@ -40,9 +40,9 @@ export const read = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getSandbox(context);
-        const fileBuffer = await sandbox.readFileToBuffer({
-          path: resolvedPath,
-        });
+        const fileBuffer = await sandbox.fs
+          .downloadFile(resolvedPath)
+          .catch(() => null);
 
         if (!fileBuffer) {
           logger.warn(

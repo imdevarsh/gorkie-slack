@@ -14,20 +14,16 @@ export async function peekFilesystem(
   }
 
   const result = await live
-    .runCommand({
-      cmd: 'sh',
-      args: [
-        '-c',
-        "find attachments output -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -t$'\\t' -k1 -rn | cut -f2-",
-      ],
-    })
+    .process.executeCommand(
+      "find attachments output -type f -printf '%T@\\t%p\\n' 2>/dev/null | sort -nr | cut -f2-"
+    )
     .catch(() => null);
 
   if (!result) {
     return null;
   }
 
-  const stdout = await result.stdout();
+  const stdout = result.result;
   if (!stdout.trim()) {
     return null;
   }

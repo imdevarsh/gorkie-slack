@@ -30,10 +30,10 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         const cwd = sandboxPath(workdir ?? '.');
         const sandbox = await getSandbox(context);
 
-        await sandbox.runCommand({
-          cmd: 'mkdir',
-          args: ['-p', sandboxPath('output'), sandboxPath('agent/turns')],
-        });
+        await sandbox.process.executeCommand(
+          `mkdir -p ${sandboxPath('output')} ${sandboxPath('agent/turns')}`,
+          cwd
+        );
 
         await setStatus(context, {
           status: status ?? 'is running commands in the sandbox',
@@ -45,43 +45,34 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
           '[sandbox] Command execution started'
         );
 
-        const result = await sandbox.runCommand({
-          cmd: 'sh',
-          args: ['-c', command],
-          cwd,
-        });
-
-        const stdout = await result.stdout();
-        const stderr = await result.stderr();
+        const result = await sandbox.process.executeCommand(command, cwd);
+        const output = result.result;
         const exitCode = result.exitCode;
 
         await addHistory(sandbox, logPath, {
           command,
           workdir: cwd,
           status,
-          stdout,
-          stderr,
+          stdout: output,
           exitCode,
         });
 
-        const out = truncate(stdout || '(no output)', logPath);
-        const err = truncate(stderr, logPath);
+        const out = truncate(output || '(no output)', logPath);
 
         logger.debug(
           {
             ctxId,
             exitCode,
             out,
-            err,
           },
           '[sandbox] Command execution completed'
         );
 
         return {
           output: out.text,
-          error: err.text,
+          error: '',
           exitCode,
-          ...(out.truncated || err.truncated ? { fullOutput: logPath } : {}),
+          ...(out.truncated ? { fullOutput: logPath } : {}),
         };
       } catch (error) {
         logger.error({ error, command, ctxId }, '[sandbox] Command crashed');

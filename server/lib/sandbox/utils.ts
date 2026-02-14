@@ -1,15 +1,13 @@
 import path from 'node:path';
 
-const SANDBOX_HOME = '/home/vercel-sandbox';
-
 export function sandboxPath(relativePath: string): string {
   if (relativePath === '.' || relativePath === './') {
-    return SANDBOX_HOME;
+    return '.';
   }
   if (relativePath.startsWith('/')) {
     return relativePath;
   }
-  return path.join(SANDBOX_HOME, relativePath);
+  return relativePath;
 }
 
 export function turnsPath(messageTs: string): string {

@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.26",
+    "@daytonaio/sdk": "^0.143.0",
     "@exalabs/ai-sdk": "^1.0.5",
     "@langfuse/otel": "^4.5.1",
     "@langfuse/tracing": "^4.5.1",
@@ -25,7 +26,6 @@
     "@slack/types": "^2.19.0",
     "@t3-oss/env-core": "^0.13.10",
     "@types/pako": "^2.0.4",
-    "@vercel/sandbox": "^1.4.1",
     "ai": "^6.0.48",
     "ai-retry": "^1.0.2",
     "p-queue": "^9.1.0",

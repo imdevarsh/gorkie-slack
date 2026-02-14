@@ -33,9 +33,9 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
 
       try {
         const sandbox = await getSandbox(context);
-        const fileBuffer = await sandbox.readFileToBuffer({
-          path: resolvedPath,
-        });
+        const fileBuffer = await sandbox.fs
+          .downloadFile(resolvedPath)
+          .catch(() => null);
 
         if (!fileBuffer) {
           logger.warn(
@@ -71,9 +71,7 @@ export const edit = ({ context }: { context: SlackMessageContext }) =>
           ? data.replaceAll(oldString, newString)
           : data.replace(oldString, newString);
 
-        await sandbox.writeFiles([
-          { path: resolvedPath, content: Buffer.from(updated, 'utf-8') },
-        ]);
+        await sandbox.fs.uploadFile(Buffer.from(updated, 'utf-8'), resolvedPath);
 
         const replaced = replaceAll ? count : 1;
         logger.debug(

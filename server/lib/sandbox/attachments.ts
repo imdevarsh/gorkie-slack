@@ -1,4 +1,4 @@
-import type { Sandbox } from '@vercel/sandbox';
+import type { Sandbox } from '@daytonaio/sdk';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
@@ -28,7 +28,7 @@ export async function syncAttachments(
   const ctxId = getContextId(context);
   const dir = sandboxPath(ATTACHMENTS_DIR);
 
-  await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
+  await sandbox.process.executeCommand(`mkdir -p ${dir}`);
 
   const results = await Promise.all(
     files.map((file) => syncFile(sandbox, dir, file, ctxId))
@@ -66,7 +66,7 @@ async function syncFile(
   const safeName = name || `file-${file.id ?? 'unknown'}`;
 
   try {
-    await sandbox.writeFiles([{ path: `${dir}/${safeName}`, content }]);
+    await sandbox.fs.uploadFile(content, `${dir}/${safeName}`);
     return true;
   } catch (error) {
     logger.warn(

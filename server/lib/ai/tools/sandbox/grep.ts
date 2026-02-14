@@ -1,4 +1,5 @@
 import { tool } from 'ai';
+import nodePath from 'node:path';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
@@ -6,6 +7,12 @@ import { getSandbox } from '~/lib/sandbox';
 import { sandboxPath } from '~/lib/sandbox/utils';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+
+function toGlobRegex(globPattern: string): RegExp {
+  const escaped = globPattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const wildcard = escaped.replace(/\*/g, '.*').replace(/\?/g, '.');
+  return new RegExp(`^${wildcard}$`);
+}
 
 export const grep = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -40,53 +47,17 @@ export const grep = ({ context }: { context: SlackMessageContext }) =>
       try {
         const resolvedPath = sandboxPath(path);
         const sandbox = await getSandbox(context);
+        const matches = await sandbox.fs.findFiles(resolvedPath, pattern);
+        const includeRegex = include ? toGlobRegex(include) : null;
 
-        const args = [
-          '--line-number',
-          '--no-heading',
-          '--color',
-          'never',
-          '--max-count',
-          String(limit + 1),
-        ];
-
-        if (include) {
-          args.push('--glob', include);
-        }
-
-        args.push(pattern, resolvedPath);
-
-        const result = await sandbox.runCommand({
-          cmd: 'rg',
-          args,
-        });
-
-        const stdout = await result.stdout();
-        const stderr = await result.stderr();
-
-        if (result.exitCode !== 0 && result.exitCode !== 1) {
-          logger.warn(
-            {
-              ctxId,
-              pattern,
-              include,
-              path: resolvedPath,
-              limit,
-              exitCode: result.exitCode,
-              stderr: stderr.slice(0, 1000),
-              stdout: stdout.slice(0, 1000),
-            },
-            '[sandbox] rg command failed'
-          );
-          return {
-            success: false,
-            error: stderr || `Failed to search: ${pattern}`,
-          };
-        }
-
-        const lines = stdout
-          .split('\n')
-          .map((line) => line.trim())
+        const lines = matches
+          .filter((match) => {
+            if (!includeRegex) {
+              return true;
+            }
+            return includeRegex.test(nodePath.basename(match.file));
+          })
+          .map((match) => `${match.file}:${match.line}:${match.content}`)
           .filter(Boolean);
 
         const truncated = lines.length > limit;
