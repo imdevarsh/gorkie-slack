@@ -52,8 +52,7 @@ function isNotFoundError(error: unknown): boolean {
 
 async function createSandbox(
   context: SlackMessageContext,
-  threadId: string,
-  channelId: string
+  threadId: string
 ): Promise<ResolvedSandboxSession> {
   await setStatus(context, {
     status: 'is provisioning a sandbox',
@@ -88,11 +87,8 @@ async function createSandbox(
 
   await upsert({
     threadId,
-    channelId,
     sandboxId: sandbox.id,
     sessionId: session.id,
-    previewUrl: access.baseUrl,
-    previewToken: access.previewToken,
     status: 'active',
   });
 
@@ -149,12 +145,11 @@ export async function resolveSession(
   context: SlackMessageContext
 ): Promise<ResolvedSandboxSession> {
   const threadId = getContextId(context);
-  const channelId = context.event.channel ?? 'unknown-channel';
 
   const existing = await getByThread(threadId);
 
   if (!existing) {
-    return createSandbox(context, threadId, channelId);
+    return createSandbox(context, threadId);
   }
 
   await updateStatus(threadId, 'resuming');
@@ -170,7 +165,7 @@ export async function resolveSession(
       throw error;
     });
     if (!sandbox) {
-      return createSandbox(context, threadId, channelId);
+      return createSandbox(context, threadId);
     }
 
     const { sdk, access } = await boot(sandbox);
@@ -179,8 +174,6 @@ export async function resolveSession(
     await updateRuntime(threadId, {
       sandboxId: sandbox.id,
       sessionId: session.id,
-      previewUrl: access.baseUrl,
-      previewToken: access.previewToken,
       status: 'active',
     });
     await markActivity(threadId);
