@@ -96,7 +96,7 @@ async function getSummary(
 
   const texts: string[] = [];
   for (const event of assistantEvents) {
-    console.log('event', JSON.stringify);
+    console.log('event', JSON.stringify(event.payload));
   }
 
   if (!texts.length) {

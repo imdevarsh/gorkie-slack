@@ -15,3 +15,4 @@
 - remove REFACTOR.md
 - investigate why it takes insane amounts of tme to startup
 - compare codebase with other examples
+- add a path function to join paths rather than ${config.runtime.workdir}/xyz
