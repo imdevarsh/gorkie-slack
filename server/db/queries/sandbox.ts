@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '~/db';
 import {
   type NewSandboxSession,
@@ -6,9 +6,13 @@ import {
   sandboxSessions,
 } from '~/db/schema';
 
+type DatabaseLike = typeof db;
+type TransactionLike = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type QueryDatabase = DatabaseLike | TransactionLike;
+
 export async function getByThread(
   threadId: string,
-  database: typeof db = db
+  database: QueryDatabase = db
 ): Promise<SandboxSession | null> {
   const rows = await database
     .select()
@@ -21,7 +25,7 @@ export async function getByThread(
 
 export async function upsert(
   session: NewSandboxSession,
-  database: typeof db = db
+  database: QueryDatabase = db
 ): Promise<void> {
   await database
     .insert(sandboxSessions)
@@ -47,7 +51,7 @@ export async function upsert(
 export async function updateStatus(
   threadId: string,
   status: string,
-  database: typeof db = db
+  database: QueryDatabase = db
 ): Promise<void> {
   await database
     .update(sandboxSessions)
@@ -63,7 +67,7 @@ export async function updateStatus(
 
 export async function markActivity(
   threadId: string,
-  database: typeof db = db
+  database: QueryDatabase = db
 ): Promise<void> {
   await database
     .update(sandboxSessions)
@@ -83,7 +87,7 @@ export async function updateRuntime(
     previewExpiresAt?: Date | null;
     status?: string;
   },
-  database: typeof db = db
+  database: QueryDatabase = db
 ): Promise<void> {
   await database
     .update(sandboxSessions)
@@ -102,7 +106,7 @@ export async function updateRuntime(
 
 export async function clearDestroyed(
   threadId: string,
-  database: typeof db = db
+  database: QueryDatabase = db
 ): Promise<void> {
   await database
     .update(sandboxSessions)
@@ -111,5 +115,5 @@ export async function clearDestroyed(
       destroyedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(and(eq(sandboxSessions.threadId, threadId)));
+    .where(eq(sandboxSessions.threadId, threadId));
 }

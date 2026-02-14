@@ -21,7 +21,6 @@ export const env = createEnv({
     // AI
     OPENROUTER_API_KEY: z.string().min(1).startsWith('sk-or-'),
     HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
-    SANDBOX_HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
     SANDBOX_AGENT_TOKEN: z.string().min(1),
     // Logging
     LOG_DIRECTORY: z.string().optional().default('logs'),

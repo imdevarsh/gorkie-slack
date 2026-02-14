@@ -1,17 +1,8 @@
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { Daytona, type Sandbox } from '@daytonaio/sdk';
-import { sql } from 'drizzle-orm';
 import { SandboxAgent, type Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import { db } from '~/db';
-import { env } from '~/env';
-import { setStatus } from '~/lib/ai/utils/status';
-import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
-import { getContextId } from '~/utils/context';
-import { type PreviewAccess, parsePreviewUrl, waitForHealth } from './client';
-import { getSandboxImage } from './image';
 import {
   clearDestroyed,
   getByThread,
@@ -19,12 +10,16 @@ import {
   updateRuntime,
   updateStatus,
   upsert,
-} from './queries';
+} from '~/db/queries/sandbox';
+import { env } from '~/env';
+import { setStatus } from '~/lib/ai/utils/status';
+import logger from '~/lib/logger';
+import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
+import { type PreviewAccess, parsePreviewUrl, waitForHealth } from './client';
+import { getSandboxImage } from './image';
 
-const AGENT_PORT = 3000;
-const PREVIEW_TTL_SECONDS = 4 * 60 * 60;
-const HOME_DIR = '/home/daytona';
-const OPENCODE_CONFIG_PATH = `${HOME_DIR}/opencode.json`;
+const OPENCODE_CONFIG_PATH = `${config.runtime.workdir}/opencode.json`;
 const PROMPT_PATH = new URL('./prompt.md', import.meta.url);
 
 const daytona = new Daytona({
@@ -32,8 +27,6 @@ const daytona = new Daytona({
   ...(config.daytona.apiUrl ? { apiUrl: config.daytona.apiUrl } : {}),
   ...(config.daytona.target ? { target: config.daytona.target } : {}),
 });
-
-const threadLocks = new Map<string, Promise<void>>();
 
 export interface ResolvedSandboxSession {
   sdk: SandboxAgent;
@@ -43,59 +36,23 @@ export interface ResolvedSandboxSession {
   baseUrl: string;
 }
 
-function advisoryLockKey(threadId: string): bigint {
-  const digest = createHash('sha256').update(threadId).digest();
-  const firstEight = digest.subarray(0, 8);
-  const hex = firstEight.toString('hex');
-  return BigInt.asUintN(63, BigInt(`0x${hex}`));
-}
-
-async function withThreadLock<T>(
-  threadId: string,
-  fn: () => Promise<T>
-): Promise<T> {
-  const previous = threadLocks.get(threadId) ?? Promise.resolve();
-  let release!: () => void;
-  const current = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-
-  threadLocks.set(
-    threadId,
-    previous.then(() => current)
-  );
-  await previous;
-
-  try {
-    return await fn();
-  } finally {
-    release();
-    if (threadLocks.get(threadId) === current) {
-      threadLocks.delete(threadId);
-    }
-  }
-}
-
-function withDbAdvisoryLock<T>(
-  threadId: string,
-  fn: (database: typeof db) => Promise<T>
-): Promise<T> {
-  const key = advisoryLockKey(threadId);
-
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(${key});`);
-    return fn(tx as unknown as typeof db);
-  });
-}
-
 function buildOpencodeConfig(prompt: string): string {
   return JSON.stringify(
     {
       $schema: 'https://opencode.ai/config.json',
+      model: 'openrouter/openai/gpt-5-mini',
       share: 'disabled',
       permission: 'allow',
       provider: {
-        openrouter: { models: {} },
+        openrouter: {
+          options: {
+            baseURL: 'https://ai.hackclub.com/proxy/v1',
+            apiKey: '{env:HACKCLUB_API_KEY}',
+          },
+          models: {
+            'openai/gpt-5-mini': {},
+          },
+        },
       },
       agent: {
         gorkie: {
@@ -110,11 +67,13 @@ function buildOpencodeConfig(prompt: string): string {
 }
 
 async function startAgentServer(sandbox: Sandbox): Promise<void> {
+  const command = `pkill -f "sandbox-agent server" >/dev/null 2>&1 || true; nohup sandbox-agent server --token "$SANDBOX_AGENT_TOKEN" --host 0.0.0.0 --port ${config.runtime.agentPort} >/tmp/sandbox-agent.log 2>&1 &`;
+
   const result = await sandbox.process.executeCommand(
-    'pkill -f "sandbox-agent server" >/dev/null 2>&1 || true; nohup sandbox-agent server --token "$SANDBOX_AGENT_TOKEN" --host 0.0.0.0 --port 3000 >/tmp/sandbox-agent.log 2>&1 &',
-    HOME_DIR,
+    command,
+    config.runtime.workdir,
     {
-      HACKCLUB_API_KEY: env.SANDBOX_HACKCLUB_API_KEY,
+      HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
       SANDBOX_AGENT_TOKEN: env.SANDBOX_AGENT_TOKEN,
     }
   );
@@ -128,13 +87,14 @@ async function previewAccess(
   sandbox: Sandbox
 ): Promise<PreviewAccess & { expiresAt: Date }> {
   const signed = await sandbox.getSignedPreviewUrl(
-    AGENT_PORT,
-    PREVIEW_TTL_SECONDS
+    config.runtime.agentPort,
+    config.timeouts.previewTtlSeconds
   );
   const access = parsePreviewUrl(signed.url);
+
   return {
     ...access,
-    expiresAt: new Date(Date.now() + PREVIEW_TTL_SECONDS * 1000),
+    expiresAt: new Date(Date.now() + config.timeouts.previewTtlSeconds * 1000),
   };
 }
 
@@ -165,7 +125,7 @@ async function ensureSession(
     id: sessionId,
     agent: 'opencode',
     sessionInit: {
-      cwd: HOME_DIR,
+      cwd: config.runtime.workdir,
       mcpServers: [],
     },
   });
@@ -174,8 +134,7 @@ async function ensureSession(
 async function createSandbox(
   context: SlackMessageContext,
   threadId: string,
-  channelId: string,
-  database: typeof db
+  channelId: string
 ): Promise<ResolvedSandboxSession> {
   await setStatus(context, {
     status: 'is setting up the sandbox',
@@ -183,9 +142,9 @@ async function createSandbox(
   });
 
   const createOptions = {
-    autoStopInterval: config.autoStopMinutes,
-    autoArchiveInterval: config.autoArchiveMinutes,
-    autoDeleteInterval: config.autoDeleteMinutes,
+    autoStopInterval: config.timeouts.stopMinutes,
+    autoArchiveInterval: config.timeouts.archiveMinutes,
+    autoDeleteInterval: config.timeouts.deleteMinutes,
     language: 'typescript',
     image: getSandboxImage(),
   } as const;
@@ -206,31 +165,37 @@ async function createSandbox(
   await startAgentServer(sandbox);
 
   const access = await previewAccess(sandbox);
-  await waitForHealth(access, env.SANDBOX_AGENT_TOKEN);
+  await waitForHealth(
+    access,
+    env.SANDBOX_AGENT_TOKEN,
+    config.timeouts.healthMs
+  );
 
   const sdk = await connectSdk(access);
   const session = await sdk.createSession({
     id: threadId,
     agent: 'opencode',
     sessionInit: {
-      cwd: HOME_DIR,
+      cwd: config.runtime.workdir,
       mcpServers: [],
     },
   });
 
-  await upsert(
-    {
-      threadId,
-      channelId,
-      sandboxId: sandbox.id,
-      sessionId: session.id,
-      previewUrl: access.baseUrl,
-      previewToken: access.previewToken,
-      previewExpiresAt: access.expiresAt,
-      status: 'active',
-    },
-    database
-  );
+  await db.transaction(async (tx) => {
+    await upsert(
+      {
+        threadId,
+        channelId,
+        sandboxId: sandbox.id,
+        sessionId: session.id,
+        previewUrl: access.baseUrl,
+        previewToken: access.previewToken,
+        previewExpiresAt: access.expiresAt,
+        status: 'active',
+      },
+      tx
+    );
+  });
 
   logger.info(
     { threadId, sandboxId: sandbox.id },
@@ -274,58 +239,64 @@ async function reconnectSandboxById(
   return sandbox;
 }
 
-export function resolveSession(
+export async function resolveSession(
   context: SlackMessageContext
 ): Promise<ResolvedSandboxSession> {
   const threadId = getContextId(context);
   const channelId = context.event.channel ?? 'unknown-channel';
 
-  return withThreadLock(threadId, () => {
-    return withDbAdvisoryLock(threadId, async (database) => {
-      const existing = await getByThread(threadId, database);
+  const existing = await getByThread(threadId);
 
-      if (!existing) {
-        return createSandbox(context, threadId, channelId, database);
-      }
+  if (!existing) {
+    return createSandbox(context, threadId, channelId);
+  }
 
-      const sandbox = await reconnectSandboxById(threadId, existing.sandboxId);
-      if (!sandbox) {
-        return createSandbox(context, threadId, channelId, database);
-      }
+  const sandbox = await reconnectSandboxById(threadId, existing.sandboxId);
+  if (!sandbox) {
+    return createSandbox(context, threadId, channelId);
+  }
 
-      const access = await previewAccess(sandbox);
-      await waitForHealth(access, env.SANDBOX_AGENT_TOKEN).catch(async () => {
-        await startAgentServer(sandbox);
-        await waitForHealth(access, env.SANDBOX_AGENT_TOKEN);
-      });
-
-      const sdk = await connectSdk(access);
-      const session = await ensureSession(sdk, existing.sessionId);
-
-      await updateRuntime(
-        threadId,
-        {
-          sandboxId: sandbox.id,
-          sessionId: session.id,
-          previewUrl: access.baseUrl,
-          previewToken: access.previewToken,
-          previewExpiresAt: access.expiresAt,
-          status: 'active',
-        },
-        database
-      );
-
-      await markActivity(threadId, database);
-
-      return {
-        sdk,
-        sandbox,
-        session,
-        sessionId: session.id,
-        baseUrl: access.baseUrl,
-      };
-    });
+  const access = await previewAccess(sandbox);
+  await waitForHealth(
+    access,
+    env.SANDBOX_AGENT_TOKEN,
+    config.timeouts.healthMs
+  ).catch(async () => {
+    await startAgentServer(sandbox);
+    await waitForHealth(
+      access,
+      env.SANDBOX_AGENT_TOKEN,
+      config.timeouts.healthMs
+    );
   });
+
+  const sdk = await connectSdk(access);
+  const session = await ensureSession(sdk, existing.sessionId);
+
+  await db.transaction(async (tx) => {
+    await updateRuntime(
+      threadId,
+      {
+        sandboxId: sandbox.id,
+        sessionId: session.id,
+        previewUrl: access.baseUrl,
+        previewToken: access.previewToken,
+        previewExpiresAt: access.expiresAt,
+        status: 'active',
+      },
+      tx
+    );
+
+    await markActivity(threadId, tx);
+  });
+
+  return {
+    sdk,
+    sandbox,
+    session,
+    sessionId: session.id,
+    baseUrl: access.baseUrl,
+  };
 }
 
 export async function getSandbox(
