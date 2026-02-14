@@ -35,7 +35,6 @@ export interface ResolvedSandboxSession {
   baseUrl: string;
 }
 
-
 function buildOpencodeConfig(prompt: string): string {
   return JSON.stringify(
     {
@@ -243,7 +242,10 @@ export async function resolveSession(
     return createSandbox(context, threadId, channelId);
   }
 
-  await setStatus(context, { status: 'is reconnecting to sandbox', loading: true });
+  await setStatus(context, {
+    status: 'is reconnecting to sandbox',
+    loading: true,
+  });
   const sandbox = await reconnectSandboxById(threadId, existing.sandboxId);
   if (!sandbox) {
     return createSandbox(context, threadId, channelId);
@@ -298,5 +300,17 @@ export async function reconnectSandbox(
 
 export async function stopSandbox(context: SlackMessageContext): Promise<void> {
   const threadId = getContextId(context);
+  const existing = await getByThread(threadId);
+  if (existing) {
+    const sandbox = await daytona.get(existing.sandboxId).catch(() => null);
+    if (sandbox?.state === 'started') {
+      await sandbox.stop().catch((error: unknown) => {
+        logger.warn(
+          { error, threadId, sandboxId: existing.sandboxId },
+          '[sandbox] Failed to stop sandbox'
+        );
+      });
+    }
+  }
   await updateStatus(threadId, 'paused');
 }

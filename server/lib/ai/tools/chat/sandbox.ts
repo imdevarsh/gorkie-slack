@@ -1,4 +1,5 @@
 import { tool } from 'ai';
+import type { Session } from 'sandbox-agent';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
@@ -56,6 +57,40 @@ function collectText(value: unknown, output: string[]): void {
   }
 }
 
+function subscribeAgentEvents(params: {
+  session: Session;
+  context: SlackMessageContext;
+  ctxId: string;
+}): () => void {
+  const { session, context, ctxId } = params;
+
+  return session.onEvent((event) => {
+    const preview = event.payload;
+
+    logger.info(
+      {
+        ctxId,
+        sessionId: session.id,
+        eventIndex: event.eventIndex,
+        sender: event.sender,
+        ...(preview ? { preview } : {}),
+      },
+      '[subagent] Sandbox event'
+    );
+
+    if (event.sender !== 'agent') {
+      return;
+    }
+
+    setStatus(context, {
+      status: 'is running sandbox steps',
+      loading: true,
+    }).catch((error: unknown) => {
+      logger.debug({ error, ctxId }, '[subagent] Status update skipped');
+    });
+  });
+}
+
 async function summarizeFromEvents(
   sessionId: string,
   resolver: Awaited<ReturnType<typeof resolveSession>>
@@ -83,6 +118,7 @@ async function summarizeFromEvents(
     return null;
   }
 
+  console.log(texts.join('\n\n'));
   return texts.join('\n').slice(0, 1500);
 }
 
@@ -131,23 +167,10 @@ export const sandbox = ({
           ...resourceLinks,
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
 
-        let agentEventCount = 0;
-        const unsubscribe = runtime.session.onEvent((event) => {
-          if (event.sender !== 'agent') {
-            return;
-          }
-          agentEventCount += 1;
-          if (agentEventCount === 1 || agentEventCount % 8 === 0) {
-            setStatus(context, {
-              status: 'is running sandbox steps',
-              loading: true,
-            }).catch((error: unknown) => {
-              logger.debug(
-                { error, ctxId },
-                '[subagent] Status update skipped'
-              );
-            });
-          }
+        const unsubscribe = subscribeAgentEvents({
+          session: runtime.session,
+          context,
+          ctxId,
         });
 
         try {
