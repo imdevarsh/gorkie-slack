@@ -6,3 +6,12 @@ export const snapshotRecordSchema = z.object({
 });
 
 export type SnapshotRecord = z.infer<typeof snapshotRecordSchema>;
+
+export const baseSnapshotRecordSchema = z.object({
+  snapshotId: z.string(),
+  createdAt: z.number(),
+  runtime: z.string(),
+  toolsDigest: z.string(),
+});
+
+export type BaseSnapshotRecord = z.infer<typeof baseSnapshotRecordSchema>;

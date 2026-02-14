@@ -4,7 +4,7 @@ import type { SandboxRequestHints, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { resolveChannelName, resolveServerName } from '~/utils/slack';
 import { getTime } from '~/utils/time';
-import { reconnectSandbox } from './lifecycle';
+import { reconnectSandbox } from './session';
 
 export async function peekFilesystem(
   context: SlackMessageContext

@@ -2,10 +2,10 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { tools } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
-import { redis, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getSandbox } from '~/lib/sandbox';
 import { addHistory } from '~/lib/sandbox/history';
+import { clearLiveId } from '~/lib/sandbox/queries';
 import { sandboxPath, turnsPath } from '~/lib/sandbox/utils';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -85,7 +85,7 @@ export const bash = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error({ error, command, ctxId }, '[sandbox] Command crashed');
-        await redis.del(redisKeys.sandbox(ctxId));
+        await clearLiveId(ctxId);
 
         return {
           output: '',
