@@ -34,30 +34,7 @@ function errorMessage(error: unknown): string {
   return String(error);
 }
 
-function collectText(value: unknown, output: string[]): void {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed) {
-      output.push(trimmed);
-    }
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectText(item, output);
-    }
-    return;
-  }
-
-  if (typeof value === 'object' && value !== null) {
-    for (const nested of Object.values(value)) {
-      collectText(nested, output);
-    }
-  }
-}
-
-function subscribeAgentEvents(params: {
+function subscribeEvents(params: {
   session: Session;
   context: SlackMessageContext;
   ctxId: string;
@@ -99,7 +76,7 @@ function subscribeAgentEvents(params: {
   });
 }
 
-async function summarizeFromEvents(
+async function getSummary(
   sessionId: string,
   resolver: Awaited<ReturnType<typeof resolveSession>>
 ): Promise<string | null> {
@@ -119,7 +96,7 @@ async function summarizeFromEvents(
 
   const texts: string[] = [];
   for (const event of assistantEvents) {
-    collectText(event.payload, texts);
+    console.log('event', event);
   }
 
   if (!texts.length) {
@@ -176,7 +153,7 @@ export const sandbox = ({
           ...resourceLinks,
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
 
-        const unsubscribe = subscribeAgentEvents({
+        const unsubscribe = subscribeEvents({
           session: runtime.session,
           context,
           ctxId,
@@ -189,19 +166,16 @@ export const sandbox = ({
         }
 
         const summary =
-          (await summarizeFromEvents(runtime.sessionId, runtime)) ??
+          (await getSummary(runtime.sessionId, runtime)) ??
           'Task completed in sandbox.';
-
+    
         await setStatus(context, {
           status: 'is collecting outputs',
           loading: true,
         });
-        const uploaded = await uploadFiles(runtime, context);
+        await uploadFiles(runtime, context);
 
-        logger.info(
-          { ctxId },
-          '[subagent] Sandbox run completed'
-        );
+        logger.info({ ctxId }, '[subagent] Sandbox run completed');
 
         return {
           success: true,

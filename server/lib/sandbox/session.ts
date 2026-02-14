@@ -19,7 +19,7 @@ import { type PreviewAccess, waitForHealth } from './client';
 import { createSnapshot, SANDBOX_SNAPSHOT } from './snapshot';
 
 const OPENCODE_CONFIG_PATH = `${config.runtime.workdir}/opencode.json`;
-const PROMPT_PATH = new URL('./prompt.md', import.meta.url);
+const PROMPT_PATH = new URL('../ai/prompts/sandbox.md', import.meta.url);
 
 const daytona = new Daytona({
   apiKey: config.daytona.apiKey,
@@ -33,6 +33,24 @@ export interface ResolvedSandboxSession {
   session: Session;
   sessionId: string;
   baseUrl: string;
+}
+
+class SandboxNotFoundError extends Error {}
+
+function isNotFoundError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  if (message.includes('not found') || message.includes('404')) {
+    return true;
+  }
+
+  const status = (error as { status?: number; statusCode?: number }).status;
+  const statusCode = (error as { status?: number; statusCode?: number })
+    .statusCode;
+  return status === 404 || statusCode === 404;
 }
 
 function buildOpencodeConfig(prompt: string): string {
@@ -205,26 +223,33 @@ async function createSandbox(
 async function reconnectSandboxById(
   threadId: string,
   sandboxId: string
-): Promise<Sandbox | null> {
-  const sandbox = await daytona.get(sandboxId).catch((_error: unknown) => null);
-  if (sandbox === null) {
+): Promise<Sandbox> {
+  const sandbox = await daytona.get(sandboxId).catch((error: unknown) => {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    logger.warn(
+      { error, sandboxId, threadId },
+      '[sandbox] Failed to load existing Daytona sandbox'
+    );
+    throw error;
+  });
+
+  if (!sandbox) {
     await clearDestroyed(threadId);
-    return null;
+    throw new SandboxNotFoundError(
+      `Sandbox ${sandboxId} no longer exists for thread ${threadId}`
+    );
   }
 
   if (sandbox.state !== 'started') {
-    const started = await sandbox.start().catch((error: unknown) => {
+    await sandbox.start().catch((error: unknown) => {
       logger.warn(
         { error, sandboxId, threadId },
         '[sandbox] Failed to start existing Daytona sandbox'
       );
-      return null;
+      throw error;
     });
-
-    if (!started) {
-      await clearDestroyed(threadId);
-      return null;
-    }
   }
 
   return sandbox;
@@ -242,7 +267,15 @@ export async function resolveSession(
     return createSandbox(context, threadId, channelId);
   }
 
-  const sandbox = await reconnectSandboxById(threadId, existing.sandboxId);
+  const sandbox = await reconnectSandboxById(
+    threadId,
+    existing.sandboxId
+  ).catch((error: unknown) => {
+    if (error instanceof SandboxNotFoundError) {
+      return null;
+    }
+    throw error;
+  });
   if (!sandbox) {
     return createSandbox(context, threadId, channelId);
   }
