@@ -4,11 +4,8 @@ export const sandboxSessions = pgTable(
   'sandbox_sessions',
   {
     threadId: text('thread_id').primaryKey(),
-    channelId: text('channel_id').notNull(),
     sandboxId: text('sandbox_id').notNull(),
     sessionId: text('session_id').notNull(),
-    previewUrl: text('preview_url'),
-    previewToken: text('preview_token'),
     status: text('status').notNull().default('creating'),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),

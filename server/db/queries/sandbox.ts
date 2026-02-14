@@ -25,11 +25,8 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
     .onConflictDoUpdate({
       target: sandboxSessions.threadId,
       set: {
-        channelId: session.channelId,
         sandboxId: session.sandboxId,
         sessionId: session.sessionId,
-        previewUrl: session.previewUrl ?? null,
-        previewToken: session.previewToken ?? null,
         status: session.status,
         pausedAt: session.pausedAt ?? null,
         resumedAt: session.resumedAt ?? null,
@@ -69,8 +66,6 @@ export async function updateRuntime(
   runtime: {
     sandboxId: string;
     sessionId: string;
-    previewUrl?: string | null;
-    previewToken?: string | null;
     status?: string;
   }
 ): Promise<void> {
@@ -79,8 +74,6 @@ export async function updateRuntime(
     .set({
       sandboxId: runtime.sandboxId,
       sessionId: runtime.sessionId,
-      previewUrl: runtime.previewUrl ?? null,
-      previewToken: runtime.previewToken ?? null,
       ...(runtime.status ? { status: runtime.status } : {}),
       resumedAt: runtime.status === 'active' ? new Date() : undefined,
       updatedAt: new Date(),
