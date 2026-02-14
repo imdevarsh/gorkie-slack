@@ -1,9 +1,9 @@
 import nodePath from 'node:path';
 import type { Sandbox } from '@daytonaio/sdk';
 import type { SandboxAgent } from 'sandbox-agent';
+import { sandbox as config } from '~/config';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
-import { sandbox as config } from '~/config';
 
 export interface UploadedDisplayFile {
   path: string;

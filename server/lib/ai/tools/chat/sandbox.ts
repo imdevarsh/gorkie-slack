@@ -38,16 +38,19 @@ function subscribeEvents(params: {
   session: Session;
   context: SlackMessageContext;
   ctxId: string;
+  stream: unknown[];
 }): () => void {
-  const { session, context, ctxId } = params;
+  const { session, context, ctxId, stream } = params;
   let lastStatus: string | null = null;
 
   return session.onEvent((event) => {
+
     const update =
       (
         event.payload as {
           params?: {
             update?: {
+              sessionUpdate?: string;
               title?: string;
               rawInput?: { description?: string };
             };
@@ -55,10 +58,14 @@ function subscribeEvents(params: {
         }
       ).params?.update ?? null;
 
+    if (update?.sessionUpdate?.endsWith('_chunk')) {
+      return;
+    }
+    stream.push(event.payload);
+
     if (event.sender !== 'agent') {
       return;
     }
-
     const status = update?.rawInput?.description;
     if (typeof status === 'string' && status.trim().length > 0) {
       const nextStatus = status.trim().slice(0, 50);
@@ -74,36 +81,6 @@ function subscribeEvents(params: {
       }
     }
   });
-}
-
-async function getSummary(
-  sessionId: string,
-  resolver: Awaited<ReturnType<typeof resolveSession>>
-): Promise<string | null> {
-  const events = await resolver.sdk
-    .getEvents({ sessionId, limit: 100 })
-    .catch(() => null);
-
-  if (!events?.items.length) {
-    return null;
-  }
-
-  const assistantEvents = events.items
-    .slice()
-    .reverse()
-    .filter((event) => event.sender === 'agent')
-    .slice(0, 8);
-
-  const texts: string[] = [];
-  for (const event of assistantEvents) {
-    console.log('event', JSON.stringify(event.payload));
-  }
-
-  if (!texts.length) {
-    return null;
-  }
-
-  return texts.join('\n').slice(0, 1500);
 }
 
 export const sandbox = ({
@@ -153,10 +130,13 @@ export const sandbox = ({
           ...resourceLinks,
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
 
+        const stream: unknown[] = [];
+
         const unsubscribe = subscribeEvents({
           session: runtime.session,
           context,
           ctxId,
+          stream,
         });
 
         try {
@@ -165,9 +145,25 @@ export const sandbox = ({
           unsubscribe();
         }
 
-        const summary =
-          (await getSummary(runtime.sessionId, runtime)) ??
-          'Task completed in sandbox.';
+        const summary = (() => {
+          const last = stream.at(-1);
+
+          if (last === undefined) {
+            return 'Task completed in sandbox.';
+          }
+
+          logger.info(
+            { ctxId, last },
+            '[subagent] summary generated'
+          );
+
+          try {
+            return JSON.stringify(last);
+          } catch (error) {
+            logger.debug({ error }, '[subagent] Failed to stringify last event');
+            return 'Task completed in sandbox.';
+          }
+        })();
 
         await setStatus(context, {
           status: 'is collecting outputs',
