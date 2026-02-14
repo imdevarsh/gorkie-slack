@@ -5,11 +5,7 @@ This refactor should proceed, but with corrected assumptions.
 
 The original plan is directionally right (replace custom sandbox agent stack), but it has several dangerous inaccuracies:
 1. Signed Daytona preview URLs are ephemeral and should not be treated as durable identity.
-2. `sandbox-agent` OpenCode compatibility is useful but explicitly experimental.
-3. Session persistence behavior differs depending on whether you use:
-   - native `sandbox-agent` TypeScript SDK sessions, or
-   - OpenCode-compatible HTTP sessions under `/opencode/*`.
-4. Session recovery must handle four independent failures: sandbox missing, sandbox stopped, agent server down, logical session missing.
+2. Session recovery must handle four independent failures: sandbox missing, sandbox stopped, agent server down, logical session missing.
 
 This document replaces the earlier plan with a production-safe design.
 
@@ -81,12 +77,11 @@ Confirmed facts:
 1. Stable control plane is `/v1/*` (`/v1/health`, `/v1/fs/*`, etc).
 2. OpenCode compatibility is mounted under `/opencode/*`.
 3. OpenCode compatibility is documented as experimental.
-4. OpenCode compat layer can persist metadata via sqlite when `OPENCODE_COMPAT_DB_PATH` is set.
-5. Auth token is optional but available (`--token` + bearer auth).
+4. Auth token is optional but available (`--token` + bearer auth).
 
 Takeaway for Gorkie:
 - Treat `/v1/*` as primary stable surface.
-- Treat `/opencode/*` as optional adapter, not hard dependency.
+- Do not adopt `/opencode/*` in production path.
 
 ### D) Daytona SDK behavior
 Confirmed from installed SDK and docs:
@@ -107,8 +102,7 @@ Slack thread key (channel + thread_ts, or dm:user)
   -> Postgres row (sandbox_sessions)
     -> Daytona sandbox (sandbox_id)
       -> sandbox-agent process on port 3000
-        -> native sandbox-agent session (preferred)
-        -> optional opencode-compat session (/opencode/*)
+        -> native sandbox-agent session
 ```
 
 ### Thread key reality in Gorkie
@@ -120,11 +114,18 @@ Implication:
 - One sandbox per DM user (across all DM messages).
 - One sandbox per channel thread.
 
+Cost note:
+- Keeping one sandbox per DM user is usually cheaper than DM-per-thread because it avoids creating many short-lived sandboxes.
+- Control cost with lifecycle, not finer DM sharding:
+  - `autoStopInterval=5` minutes
+  - `autoArchiveInterval=60` minutes
+  - `autoDeleteInterval=2880` minutes (2 days), with a comment to bump to 7 days if needed.
+
 ---
 
-## Decision: Native SDK vs OpenCode-compat
+## Decision
 
-### Recommended for production: Native `sandbox-agent` SDK
+Use native `sandbox-agent` SDK only.
 Use:
 - `SandboxAgent.connect({ baseUrl, token? })`
 - `sdk.getHealth()`
@@ -136,14 +137,6 @@ Why:
 - Better API stability.
 - Clear restore semantics in SDK docs.
 - Avoid coupling to compat edge cases.
-
-### Optional mode: OpenCode-compat HTTP (`/opencode/*`)
-Use only if you need OpenCode SDK parity.
-
-Hard requirements if used:
-- Base path must include `/opencode`.
-- Health for compat server semantics is `/opencode/global/health`.
-- Configure persistent `OPENCODE_COMPAT_DB_PATH`.
 
 ---
 
@@ -164,11 +157,8 @@ export const sandboxSessions = pgTable(
 
     sandboxId: text('sandbox_id').notNull(),
 
-    // Native SDK local session id OR compat session id, based on mode
+    // Native SDK local session id
     sessionId: text('session_id').notNull(),
-
-    // 'native' | 'opencode_compat'
-    sessionMode: text('session_mode').notNull().default('native'),
 
     // Cached preview info; not identity
     previewUrl: text('preview_url'),
@@ -246,13 +236,30 @@ Mitigations:
 5. Audit alerts for abnormal usage.
 
 ### `sandbox-agent` auth token
-For defense in depth, run with token:
+Enforce token (required), run with:
 
 ```bash
 sandbox-agent server --token "$SANDBOX_AGENT_TOKEN" --host 0.0.0.0 --port 3000
 ```
 
-Store `SANDBOX_AGENT_TOKEN` in DB row only if needed for reconnect, or regenerate on each boot and keep process-local in resolver execution context.
+Connection rule:
+- `SandboxAgent.connect({ baseUrl, token: env.SANDBOX_AGENT_TOKEN })`
+
+Storage rule:
+- Do not persist per-sandbox tokens in DB.
+- Use one service-level token from app env for all sandbox-agent instances.
+
+### Agent Prompt Customization
+Use a dedicated prompt file checked into repo:
+- `server/lib/sandbox/agent-prompt.md`
+
+Load it when creating the session and pass as the first system text in the prompt payload.
+
+Rules for this prompt:
+- working directory is `/home/daytona`
+- write user-visible artifacts into `output/display/`
+- be concise and execution-focused
+- never ask follow-up questions unless blocked by missing credentials
 
 ---
 
@@ -262,7 +269,7 @@ Store `SANDBOX_AGENT_TOKEN` in DB row only if needed for reconnect, or regenerat
 
 1. Derive `threadId` from `getContextId(context)`.
 2. Acquire per-thread mutex in process.
-3. Acquire DB coordination lock (advisory lock by thread hash) for multi-replica safety.
+3. Acquire DB coordination lock (Postgres advisory lock by thread hash) for multi-replica safety.
 4. Lookup existing row.
 5. If row exists:
    - Load sandbox by `sandboxId`.
@@ -272,12 +279,11 @@ Store `SANDBOX_AGENT_TOKEN` in DB row only if needed for reconnect, or regenerat
    - Ensure server healthy (`/v1/health`).
    - If unhealthy: restart server process and retry health.
    - Ensure logical session exists:
-     - native mode: `sdk.resumeSession(sessionId)`; if missing, create replacement.
-     - compat mode: `GET /opencode/session/{id}`; if missing, recreate and update.
+     - `sdk.resumeSession(sessionId)`; if missing, create replacement.
    - Mark `active`, update timestamps.
    - Return handles.
 6. Create new path:
-   - `daytona.create({ image: getSandboxImage(), autoStopInterval: 15 })`
+   - `daytona.create({ image: getSandboxImage(), autoStopInterval: 5, autoArchiveInterval: 60, autoDeleteInterval: 2880 })`
    - write `opencode.json` and prompt file.
    - start `sandbox-agent` with process-level key.
    - fetch preview URL.
@@ -315,23 +321,29 @@ Retry policy:
 - hard timeout 60s
 - one automatic prompt retry after successful rehydrate
 
+## Postgres Advisory Locks (What and Why)
+Use `pg_advisory_xact_lock` (or session-level equivalent) keyed by a stable hash of `threadId`.
+
+Why:
+- In multi-replica deployments, two workers can receive messages for the same thread simultaneously.
+- Without DB-level lock, both can race to create/start sandboxes and write conflicting session rows.
+- Advisory lock ensures only one resolver mutates that thread’s sandbox/session state at a time.
+
+Pattern:
+1. Begin transaction.
+2. Acquire advisory lock for `hash(threadId)`.
+3. Read/update `sandbox_sessions` row.
+4. Commit.
+
 ---
 
-## Integration Mode Details
+## Integration Details
 
 ### Native mode details
 - Health: `sdk.getHealth()` (`/v1/health`)
 - Session create: `sdk.createSession({ agent: 'opencode', sessionInit: { cwd: '/home/daytona', mcpServers: [] } })`
 - Session restore: `sdk.resumeSession(sessionId)`
 - Prompt: `session.prompt([{ type: 'text', text: task }])`
-
-### Compat mode details
-- Base path must be `/opencode`
-- Create: `POST /opencode/session`
-- Exists: `GET /opencode/session/{id}`
-- Prompt: `POST /opencode/session/{id}/message`
-- Health: `GET /opencode/global/health`
-- Persist compatibility metadata via `OPENCODE_COMPAT_DB_PATH=/home/daytona/.cache/sandbox-agent/opencode-sessions.db`
 
 ---
 
@@ -342,7 +354,7 @@ Retry policy:
 - `server/db/schema.ts`
 - `drizzle.config.ts`
 - `server/lib/sandbox/image.ts`
-- `server/lib/sandbox/client.ts` (if compat mode retained)
+- `server/lib/sandbox/client.ts`
 - `server/lib/sandbox/display.ts`
 - `server/lib/sandbox/agent-prompt.md`
 
@@ -415,9 +427,8 @@ Keep existing Daytona vars:
 ## Implementation Phases
 
 ### Phase 0: Guardrails first
-1. Add feature flag `SANDBOX_RUNTIME_MODE=native|compat`.
-2. Default to `native`.
-3. Keep old code path behind temporary fallback flag until rollout complete.
+1. Add feature flag `SANDBOX_RUNTIME_ENABLED=true|false`.
+2. Keep old code path behind temporary fallback flag until rollout complete.
 
 ### Phase 1: Persistence foundations
 1. Add Drizzle + Neon wiring.
@@ -471,7 +482,7 @@ Add counters:
 - prompt retries
 
 Runbook snippets:
-- If frequent session replacement: inspect `OPENCODE_COMPAT_DB_PATH` and sandbox-agent restarts.
+- If frequent session replacement: inspect sandbox-agent restarts and session restore logs.
 - If frequent health failures: inspect `/tmp/sandbox-agent.log` and Daytona network tier.
 - If 401/403 on preview URL: regenerate signed URL immediately.
 
@@ -507,12 +518,9 @@ If major regression:
 
 ## Open Decisions (Need explicit sign-off)
 
-1. Final mode default:
-   - `native` (recommended)
-   - `compat` (only if strict OpenCode API parity is mandatory)
-2. Whether to enforce `--token` for sandbox-agent server.
-3. Whether to add DB advisory locks now or defer until multi-replica deployment.
-4. DM mapping behavior:
+1. Whether to enforce `--token` for sandbox-agent server.
+2. Whether to add DB advisory locks now or defer until multi-replica deployment.
+3. DM mapping behavior:
    - keep one sandbox per user DM
    - or isolate by DM thread key equivalent
 
@@ -530,10 +538,8 @@ Docs:
 - https://sandboxagent.dev/docs/sdk-overview
 - https://sandboxagent.dev/docs/session-persistence
 - https://sandboxagent.dev/docs/session-restoration
-- https://sandboxagent.dev/docs/opencode-compatibility
 - https://www.daytona.io/docs/llms.txt
 - https://orm.drizzle.team/llms.txt
-- https://opencode.ai/docs/server/
 - https://opencode.ai/docs/providers/openrouter/
 
 Local source checkpoints reviewed:
@@ -543,5 +549,4 @@ Local source checkpoints reviewed:
 - `serverbox/packages/sdk/src/serverbox.ts`
 - `serverbox/packages/proxy/src/auto-resume.ts`
 - `sandbox-agent/server/packages/sandbox-agent/src/router.rs`
-- `sandbox-agent/server/packages/opencode-adapter/src/lib.rs`
 - `sandbox-agent/sdks/typescript/src/client.ts`
