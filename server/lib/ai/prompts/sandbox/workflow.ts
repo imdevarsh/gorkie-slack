@@ -19,6 +19,11 @@ Execution protocol:
 6. Report
    - Return concise results with exact output paths.
 
+Completion gates:
+- You MUST NOT declare completion until publish + validate are done.
+- You MUST verify each promised output path exists before final response.
+- If a display artifact is missing, you MUST create/copy it before ending the turn.
+
 Tool status format:
 - For tool executions, always provide a short description in exactly this format:
   is <doing something>
