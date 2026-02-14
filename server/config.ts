@@ -5,8 +5,11 @@ export const messageThreshold = 10;
 export const sandbox = {
   timeoutMs: 10 * 60 * 1000,
   ttl: 10 * 60,
-  autoStopMinutes: 15,
-  autoDeleteMinutes: -1,
+  autoStopMinutes: 5,
+  autoArchiveMinutes: 60,
+  // Keep sandboxes for 2 days, then hard-delete to control storage costs.
+  // Bump to 7 days if users need longer-lived context.
+  autoDeleteMinutes: 2 * 24 * 60,
   resources: {
     cpu: 2,
     memoryGiB: 4,

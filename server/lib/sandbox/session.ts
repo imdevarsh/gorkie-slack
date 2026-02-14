@@ -53,6 +53,7 @@ async function createSandbox(
 
   const common = {
     autoStopInterval: config.autoStopMinutes,
+    autoArchiveInterval: config.autoArchiveMinutes,
     autoDeleteInterval: config.autoDeleteMinutes,
     language: 'typescript',
   } as const;

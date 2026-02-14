@@ -9,6 +9,11 @@ The original plan is directionally right (replace custom sandbox agent stack), b
 
 This document replaces the earlier plan with a production-safe design.
 
+## Mandatory Preflight
+Before starting any implementation work for this refactor, read:
+- `~/.claude/conventions`
+- `~/.claude/AGENTS.md`
+
 ---
 
 ## Scope
@@ -35,14 +40,12 @@ Important patterns:
 2. Persisted `resume_fail_count`, `last_error`, health/activity timestamps.
 3. Session reattach logic when session ID is missing:
    - check by ID
-   - try title-based reuse
-   - else create replacement.
+   - create replacement session if missing.
 4. Per-thread in-process lock to prevent concurrent duplicate creates.
 
 Takeaway for Gorkie:
 - Keep the status/resume model.
 - Keep per-thread lock logic.
-- Keep title-based session recovery as fallback.
 
 ### B) `serverbox` (overkill but useful ideas)
 Key files reviewed:
@@ -147,7 +150,7 @@ Use Drizzle + Postgres (Neon). Keep one authoritative row per thread key.
 ### Table: `sandbox_sessions`
 
 ```ts
-import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const sandboxSessions = pgTable(
   'sandbox_sessions',
@@ -166,13 +169,6 @@ export const sandboxSessions = pgTable(
     previewExpiresAt: timestamp('preview_expires_at', { withTimezone: true }),
 
     status: text('status').notNull().default('creating'),
-    lastError: text('last_error'),
-    resumeFailCount: integer('resume_fail_count').notNull().default(0),
-
-    lastActivityAt: timestamp('last_activity_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    lastHealthOkAt: timestamp('last_health_ok_at', { withTimezone: true }),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),
     destroyedAt: timestamp('destroyed_at', { withTimezone: true }),
@@ -181,10 +177,7 @@ export const sandboxSessions = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    statusActivityIdx: index('sandbox_sessions_status_activity_idx').on(
-      table.status,
-      table.lastActivityAt
-    ),
+    statusIdx: index('sandbox_sessions_status_idx').on(table.status),
     pausedIdx: index('sandbox_sessions_paused_idx').on(table.pausedAt),
     updatedIdx: index('sandbox_sessions_updated_idx').on(table.updatedAt),
   })
@@ -208,12 +201,13 @@ Because signed preview URLs expire. `sandboxId` is the durable lookup key.
 
 ### Provider key handling
 Use dedicated key:
-- `SANDBOX_OPENROUTER_API_KEY`
+- `SANDBOX_HACKCLUB_API_KEY`
 
 Do:
 - Pass it only to `sandbox.process.executeCommand(..., env)` when launching `sandbox-agent`.
 - Keep it out of sandbox `envVars` at create time.
 - Keep it out of files (`auth.json` not required for this plan).
+- Treat this key as sensitive even though Hack Club AI routes to OpenRouter internally.
 
 Example launch:
 
@@ -221,7 +215,7 @@ Example launch:
 await sandbox.process.executeCommand(
   'nohup sandbox-agent server --host 0.0.0.0 --port 3000 >/tmp/sandbox-agent.log 2>&1 &',
   '/home/daytona',
-  { OPENROUTER_API_KEY: env.SANDBOX_OPENROUTER_API_KEY }
+  { HACKCLUB_API_KEY: env.SANDBOX_HACKCLUB_API_KEY }
 );
 ```
 
@@ -251,7 +245,7 @@ Storage rule:
 
 ### Agent Prompt Customization
 Use a dedicated prompt file checked into repo:
-- `server/lib/sandbox/agent-prompt.md`
+- `server/lib/sandbox/prompt.md`
 
 Load it when creating the session and pass as the first system text in the prompt payload.
 
@@ -260,6 +254,7 @@ Rules for this prompt:
 - write user-visible artifacts into `output/display/`
 - be concise and execution-focused
 - never ask follow-up questions unless blocked by missing credentials
+- keep all high-signal constraints currently present in existing sandbox prompt set (tone, safety, execution order, artifact behavior)
 
 ---
 
@@ -312,7 +307,7 @@ Rules for this prompt:
 |---|---|---|---|
 | Sandbox not found | Daytona `get` fails | recreate sandbox + session | `status=destroyed` then upsert new active row |
 | Sandbox stopped | sandbox state | `sandbox.start()` then health check | `status=resuming` -> `active` |
-| Agent server down | `/v1/health` fails | restart process + poll health | increment `resumeFailCount` on retries |
+| Agent server down | `/v1/health` fails | restart process + poll health | update `status=error` if recovery fails |
 | Session missing | resume/get session fails | create replacement session id | update `sessionId`, `status=active` |
 | Preview URL expired | network/401/404 through preview | regenerate preview URL/token | refresh preview columns |
 
@@ -356,7 +351,7 @@ Pattern:
 - `server/lib/sandbox/image.ts`
 - `server/lib/sandbox/client.ts`
 - `server/lib/sandbox/display.ts`
-- `server/lib/sandbox/agent-prompt.md`
+- `server/lib/sandbox/prompt.md`
 
 ### Rewrite
 - `server/lib/sandbox/session.ts`
@@ -414,8 +409,8 @@ Keep:
 
 Add:
 - `DATABASE_URL`
-- `SANDBOX_OPENROUTER_API_KEY`
-- `SANDBOX_AGENT_TOKEN` (recommended, optional)
+- `SANDBOX_HACKCLUB_API_KEY`
+- `SANDBOX_AGENT_TOKEN` (required)
 
 Keep existing Daytona vars:
 - `DAYTONA_API_KEY`
@@ -428,7 +423,7 @@ Keep existing Daytona vars:
 
 ### Phase 0: Guardrails first
 1. Add feature flag `SANDBOX_RUNTIME_ENABLED=true|false`.
-2. Keep old code path behind temporary fallback flag until rollout complete.
+2. Ship with token required and advisory locks enabled from first rollout.
 
 ### Phase 1: Persistence foundations
 1. Add Drizzle + Neon wiring.
@@ -512,17 +507,15 @@ Keep temporary runtime flag for one release window:
 If major regression:
 1. flip env flag back to `legacy`
 2. keep migrated DB table (non-breaking)
-3. investigate using stored `lastError` and logs
+3. investigate using structured logs and Daytona sandbox logs
 
 ---
 
-## Open Decisions (Need explicit sign-off)
+## Locked Decisions
 
-1. Whether to enforce `--token` for sandbox-agent server.
-2. Whether to add DB advisory locks now or defer until multi-replica deployment.
-3. DM mapping behavior:
-   - keep one sandbox per user DM
-   - or isolate by DM thread key equivalent
+1. Enforce `sandbox-agent` token authentication (`--token` required).
+2. Enable Postgres advisory locks from initial implementation.
+3. Keep one sandbox per DM user (`dm:<user_id>` mapping). (same expiration config)
 
 ---
 
@@ -540,7 +533,6 @@ Docs:
 - https://sandboxagent.dev/docs/session-restoration
 - https://www.daytona.io/docs/llms.txt
 - https://orm.drizzle.team/llms.txt
-- https://opencode.ai/docs/providers/openrouter/
 
 Local source checkpoints reviewed:
 - `opencord/src/sandbox/manager.ts`
