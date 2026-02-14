@@ -1,23 +1,115 @@
-import { sandbox as config } from '~/config';
-import { redis, redisKeys } from '~/lib/kv';
+import { and, eq } from 'drizzle-orm';
+import { db } from '~/db';
+import {
+  type NewSandboxSession,
+  type SandboxSession,
+  sandboxSessions,
+} from '~/db/schema';
 
-export interface State {
-  sandboxId: string | null;
+export async function getByThread(
+  threadId: string,
+  database: typeof db = db
+): Promise<SandboxSession | null> {
+  const rows = await database
+    .select()
+    .from(sandboxSessions)
+    .where(eq(sandboxSessions.threadId, threadId))
+    .limit(1);
+
+  return rows[0] ?? null;
 }
 
-export async function getState(ctxId: string): Promise<State> {
-  const sandboxId = await redis.get(redisKeys.sandbox(ctxId));
-  return { sandboxId: sandboxId ?? null };
-}
-
-export async function setSandboxId(
-  ctxId: string,
-  sandboxId: string
+export async function upsert(
+  session: NewSandboxSession,
+  database: typeof db = db
 ): Promise<void> {
-  await redis.set(redisKeys.sandbox(ctxId), sandboxId);
-  await redis.expire(redisKeys.sandbox(ctxId), config.ttl);
+  await database
+    .insert(sandboxSessions)
+    .values(session)
+    .onConflictDoUpdate({
+      target: sandboxSessions.threadId,
+      set: {
+        channelId: session.channelId,
+        sandboxId: session.sandboxId,
+        sessionId: session.sessionId,
+        previewUrl: session.previewUrl ?? null,
+        previewToken: session.previewToken ?? null,
+        previewExpiresAt: session.previewExpiresAt ?? null,
+        status: session.status,
+        pausedAt: session.pausedAt ?? null,
+        resumedAt: session.resumedAt ?? null,
+        destroyedAt: session.destroyedAt ?? null,
+        updatedAt: new Date(),
+      },
+    });
 }
 
-export async function clearSandbox(ctxId: string): Promise<void> {
-  await redis.del(redisKeys.sandbox(ctxId));
+export async function updateStatus(
+  threadId: string,
+  status: string,
+  database: typeof db = db
+): Promise<void> {
+  await database
+    .update(sandboxSessions)
+    .set({
+      status,
+      pausedAt: status === 'paused' ? new Date() : null,
+      resumedAt: status === 'active' ? new Date() : null,
+      destroyedAt: status === 'destroyed' ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(sandboxSessions.threadId, threadId));
+}
+
+export async function markActivity(
+  threadId: string,
+  database: typeof db = db
+): Promise<void> {
+  await database
+    .update(sandboxSessions)
+    .set({
+      updatedAt: new Date(),
+    })
+    .where(eq(sandboxSessions.threadId, threadId));
+}
+
+export async function updateRuntime(
+  threadId: string,
+  runtime: {
+    sandboxId: string;
+    sessionId: string;
+    previewUrl?: string | null;
+    previewToken?: string | null;
+    previewExpiresAt?: Date | null;
+    status?: string;
+  },
+  database: typeof db = db
+): Promise<void> {
+  await database
+    .update(sandboxSessions)
+    .set({
+      sandboxId: runtime.sandboxId,
+      sessionId: runtime.sessionId,
+      previewUrl: runtime.previewUrl ?? null,
+      previewToken: runtime.previewToken ?? null,
+      previewExpiresAt: runtime.previewExpiresAt ?? null,
+      ...(runtime.status ? { status: runtime.status } : {}),
+      resumedAt: runtime.status === 'active' ? new Date() : undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(sandboxSessions.threadId, threadId));
+}
+
+export async function clearDestroyed(
+  threadId: string,
+  database: typeof db = db
+): Promise<void> {
+  await database
+    .update(sandboxSessions)
+    .set({
+      status: 'destroyed',
+      destroyedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(sandboxSessions.threadId, threadId)));
 }

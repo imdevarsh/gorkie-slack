@@ -1,4 +1,4 @@
-import type { Sandbox } from '@daytonaio/sdk';
+import type { SandboxAgent } from 'sandbox-agent';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
@@ -6,13 +6,12 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { sandboxPath } from './utils';
 
 export const ATTACHMENTS_DIR = 'attachments';
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 
 export async function syncAttachments(
-  sandbox: Sandbox,
+  sdk: SandboxAgent,
   context: SlackMessageContext,
   files?: SlackFile[]
 ): Promise<void> {
@@ -26,12 +25,13 @@ export async function syncAttachments(
   }
 
   const ctxId = getContextId(context);
-  const dir = sandboxPath(ATTACHMENTS_DIR);
 
-  await sandbox.process.executeCommand(`mkdir -p ${dir}`);
+  await sdk.mkdirFs({ path: ATTACHMENTS_DIR }).catch(() => {
+    // Directory may already exist.
+  });
 
   const results = await Promise.all(
-    files.map((file) => syncFile(sandbox, dir, file, ctxId))
+    files.map((file) => syncFile(sdk, file, ctxId))
   );
 
   if (results.some((ok) => !ok)) {
@@ -50,8 +50,7 @@ export async function syncAttachments(
 }
 
 async function syncFile(
-  sandbox: Sandbox,
-  dir: string,
+  sdk: SandboxAgent,
   file: SlackFile,
   ctxId: string
 ): Promise<boolean> {
@@ -66,7 +65,7 @@ async function syncFile(
   const safeName = name || `file-${file.id ?? 'unknown'}`;
 
   try {
-    await sandbox.fs.uploadFile(content, `${dir}/${safeName}`);
+    await sdk.writeFsFile({ path: `${ATTACHMENTS_DIR}/${safeName}` }, content);
     return true;
   } catch (error) {
     logger.warn(

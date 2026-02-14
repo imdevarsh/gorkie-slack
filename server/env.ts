@@ -16,9 +16,13 @@ export const env = createEnv({
     OPT_IN_CHANNEL: z.string().optional(),
     // Redis
     REDIS_URL: z.string().min(1),
+    // Database
+    DATABASE_URL: z.string().url(),
     // AI
     OPENROUTER_API_KEY: z.string().min(1).startsWith('sk-or-'),
     HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
+    SANDBOX_HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
+    SANDBOX_AGENT_TOKEN: z.string().min(1),
     // Logging
     LOG_DIRECTORY: z.string().optional().default('logs'),
     LOG_LEVEL: z
