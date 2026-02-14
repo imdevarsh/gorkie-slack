@@ -99,6 +99,7 @@ The sandbox agent handles all the details (finding files, running commands, uplo
 <rules>
 - THIS ENDS THE LOOP. Do NOT call any other tools after reply.
 - Content is an array where each item becomes a separate message.
+- If you include a fenced code block, keep the entire block (opening fence, code, closing fence) in ONE content item. Never split one code block across multiple items.
 - Offset counts back from the LATEST user message, not the one before.
 </rules>
 </tool>
