@@ -35,16 +35,6 @@ export interface ResolvedSandboxSession {
   baseUrl: string;
 }
 
-function isSandboxMissingError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes('not found') ||
-    normalized.includes('does not exist') ||
-    normalized.includes('sandbox not found')
-  );
-}
-
 function buildOpencodeConfig(prompt: string): string {
   return JSON.stringify(
     {
@@ -216,12 +206,7 @@ async function reconnectSandboxById(
   threadId: string,
   sandboxId: string
 ): Promise<Sandbox | null> {
-  const sandbox = await daytona.get(sandboxId).catch((error: unknown) => {
-    if (isSandboxMissingError(error)) {
-      return null;
-    }
-    throw error;
-  });
+  const sandbox = await daytona.get(sandboxId).catch((_error: unknown) => null);
   if (sandbox === null) {
     await clearDestroyed(threadId);
     return null;

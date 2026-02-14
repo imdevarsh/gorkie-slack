@@ -1,4 +1,5 @@
 import nodePath from 'node:path';
+import type { Sandbox } from '@daytonaio/sdk';
 import type { SandboxAgent } from 'sandbox-agent';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
@@ -11,8 +12,13 @@ export interface UploadedDisplayFile {
 
 const DISPLAY_DIR = 'output/display';
 
+interface UploadRuntime {
+  sdk: SandboxAgent;
+  sandbox: Sandbox;
+}
+
 export async function uploadFiles(
-  sdk: SandboxAgent,
+  runtime: UploadRuntime,
   context: SlackMessageContext
 ): Promise<UploadedDisplayFile[]> {
   const channelId = (context.event as { channel?: string }).channel;
@@ -23,7 +29,7 @@ export async function uploadFiles(
     return [];
   }
 
-  const entries = await sdk
+  const entries = await runtime.sdk
     .listFsEntries({ path: DISPLAY_DIR })
     .catch(() => []);
 
@@ -34,14 +40,16 @@ export async function uploadFiles(
       continue;
     }
 
-    const file = await sdk.readFsFile({ path: entry.path }).catch(() => null);
+    const file = await runtime.sdk
+      .readFsFile({ path: entry.path })
+      .catch(() => null);
     if (!file) {
       continue;
     }
 
     const filename = nodePath.basename(entry.path) || 'artifact';
 
-    await context.client.files
+    const uploadOk = await context.client.files
       .uploadV2({
         channel_id: channelId,
         thread_ts: threadTs ?? messageTs,
@@ -49,17 +57,30 @@ export async function uploadFiles(
         filename,
         title: filename,
       })
+      .then(() => true)
       .catch((error: unknown) => {
         logger.warn(
           { error, path: entry.path },
           '[sandbox] Failed to upload display artifact'
         );
+        return false;
       });
+
+    if (!uploadOk) {
+      continue;
+    }
 
     uploaded.push({
       path: entry.path,
       filename,
       bytes: file.byteLength,
+    });
+
+    await runtime.sandbox.fs.deleteFile(entry.path).catch((error: unknown) => {
+      logger.warn(
+        { error, path: entry.path },
+        '[sandbox] Failed to cleanup uploaded artifact'
+      );
     });
   }
 

@@ -4,9 +4,11 @@ import logger from '~/lib/logger';
 export const SANDBOX_SNAPSHOT = 'gorkie-sandbox';
 
 function createSnapshotImage() {
-  return Image.base('node:22-bookworm-slim')
+  return Image.debianSlim('3.12')
+    .pipInstall(['requests', 'pillow', 'matplotlib', 'numpy', 'pandas'])
     .runCommands(
-      'apt-get update && apt-get install -y git curl ca-certificates && rm -rf /var/lib/apt/lists/*',
+      'apt-get update && apt-get install -y git curl ca-certificates imagemagick ffmpeg zip unzip jq && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*',
+      'pip cache purge',
       'curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh',
       'sandbox-agent install-agent opencode',
       'mkdir -p /home/daytona/output/display /home/daytona/attachments'

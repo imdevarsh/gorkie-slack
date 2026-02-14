@@ -87,6 +87,7 @@ function subscribeAgentEvents(params: {
       const nextStatus = status.trim().slice(0, 50);
       if (nextStatus !== lastStatus) {
         lastStatus = nextStatus;
+        logger.info({ ctxId, status: nextStatus }, '[subagent] Status update');
         setStatus(context, {
           status: nextStatus,
           loading: true,
@@ -195,17 +196,16 @@ export const sandbox = ({
           status: 'is collecting outputs',
           loading: true,
         });
-        const uploaded = await uploadFiles(runtime.sdk, context);
+        const uploaded = await uploadFiles(runtime, context);
 
         logger.info(
-          { ctxId, filesUploaded: uploaded.length },
+          { ctxId },
           '[subagent] Sandbox run completed'
         );
 
         return {
           success: true,
           summary,
-          filesUploaded: uploaded,
         };
       } catch (error) {
         const message = errorMessage(error);

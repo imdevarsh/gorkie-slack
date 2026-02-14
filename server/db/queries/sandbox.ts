@@ -6,7 +6,9 @@ import {
   sandboxSessions,
 } from '~/db/schema';
 
-export async function getByThread(threadId: string): Promise<SandboxSession | null> {
+export async function getByThread(
+  threadId: string
+): Promise<SandboxSession | null> {
   const rows = await db
     .select()
     .from(sandboxSessions)
