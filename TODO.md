@@ -13,6 +13,8 @@
 - TODO: add observability and better loggign sandbox
 - The sandbox.ts is so cluttered, same with session.ts
 - remove REFACTOR.md
-- investigate why it takes insane amounts of tme to startup
+- investigate why it takes insane amounts of tme to re-startup after resumed even though in daytona dashboard it's up
 - compare codebase with other examples
 - add a path function to join paths rather than ${config.runtime.workdir}/xyz
+- add proper LOGs on tools input / output like previous iteration
+- summary .at(-1) is not accurate?

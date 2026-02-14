@@ -146,7 +146,8 @@ export const sandbox = ({
         }
 
         const summary = (() => {
-          const last = stream.at(-1);
+          console.log(JSON.stringify(stream, null, 2));
+          const last = stream.at(-2);
 
           if (last === undefined) {
             return 'Task completed in sandbox.';
