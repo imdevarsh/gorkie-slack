@@ -97,7 +97,6 @@ async function startAgentServer(sandbox: Sandbox): Promise<void> {
     throw new Error(`Failed to start sandbox-agent server: ${result.result}`);
   }
 }
-
 async function previewAccess(sandbox: Sandbox): Promise<PreviewAccess> {
   const signed = await sandbox.getSignedPreviewUrl(
     config.runtime.agentPort,
@@ -180,7 +179,6 @@ async function createSandbox(
 
   await setStatus(context, { status: 'is starting agent', loading: true });
   await startAgentServer(sandbox);
-
   const access = await previewAccess(sandbox);
   await waitForHealth(access, config.timeouts.healthMs);
 
@@ -282,11 +280,9 @@ export async function resolveSession(
       return createSandbox(context, threadId, channelId);
     }
 
+    await startAgentServer(sandbox);
     const access = await previewAccess(sandbox);
-    await waitForHealth(access, config.timeouts.healthMs).catch(async () => {
-      await startAgentServer(sandbox);
-      await waitForHealth(access, config.timeouts.healthMs);
-    });
+    await waitForHealth(access, config.timeouts.healthMs);
 
     const sdk = await connectSdk(access);
     const session = await ensureSession(sdk, existing.sessionId);
