@@ -50,11 +50,11 @@ export function subscribeEvents(params: {
 
     const liveStatus = update.rawInput?.description;
     if (typeof liveStatus === 'string' && liveStatus.trim().length > 0) {
-      const nextStatus = liveStatus.trim().slice(0, 50);
+      const nextStatus = liveStatus.trim().slice(0, 51);
       if (nextStatus !== lastStatus) {
         lastStatus = nextStatus;
         setStatus(context, {
-          status: liveStatus,
+          status: nextStatus,
           loading: true,
         }).catch((error: unknown) => {
           logger.debug({ error, ctxId }, '[subagent] Status update skipped');
