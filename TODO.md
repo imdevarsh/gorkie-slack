@@ -10,6 +10,7 @@
 2. Rewrite `server/lib/ai/tools/chat/sandbox.ts` to new E2B delegation path.
 3. Rebuild sandbox execution agent and typed sandbox tools.
 4. Complete compile/lint/manual validation matrix.
+5. Implement E2B inactivity auto-delete policy (nuke sandbox after X idle time); currently not implemented because pause vs delete cost is near-equal, but we still want deterministic cleanup semantics.
 
 ## Gate Before Merge
 1. `bun x tsc --noEmit` passes.
