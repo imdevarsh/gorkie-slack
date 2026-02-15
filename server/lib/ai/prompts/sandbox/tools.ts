@@ -70,8 +70,8 @@ Example: edit({ "path": "app.py", "oldString": "old_name", "newString": "new_nam
 <tool>
 <name>showFile</name>
 Upload a file from the sandbox to the Slack thread so the user can see or download it.
-- Call this as soon as a result file is ready, do not batch uploads at the end.
-- Only upload files the user asked for, or the single most relevant output if the task produces multiple files.
+- Upload multiple files ONLY when the user explicitly requests multiple deliverables.
+- Do not upload originals, intermediates, logs, or debug artifacts unless explicitly requested.
 - path: the file to upload, typically output/filename.ext
 - filename: override the display name in Slack (defaults to the file's basename)
 - title: description shown in Slack alongside the file

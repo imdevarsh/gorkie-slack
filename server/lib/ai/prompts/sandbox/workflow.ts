@@ -28,8 +28,9 @@ Follow these steps for every task:
   For GitHub release assets, do not guess filenames under /releases/latest/download/. Resolve assets via API browser_download_url or use source tarball fallback.
   Tip: For status messages, do NOT go over 30-40 chars, otherwise slack rejects it...
 
-4. Upload: Call showFile for the finished result.
-  Do this immediately when the file is ready, not at the very end.
+4. Upload: Call showFile for the primary finished result only.
+  Upload additional files only if the user explicitly asked for multiple outputs.
+  Never upload intermediate/debug files unless explicitly requested.
 
 5. Summarize: Return a compact structured summary with these exact sections:
   Method:
