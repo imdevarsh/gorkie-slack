@@ -1,3 +1,2 @@
-export { syncAttachments } from './attachments';
-export { uploadFiles } from './display';
-export { resolveSession, stopSandbox } from './session';
+export { ATTACHMENTS_DIR, syncAttachments } from './attachments';
+export { destroySandbox, ensureSandbox, pauseSandbox } from './runtime';

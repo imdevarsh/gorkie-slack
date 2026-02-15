@@ -5,14 +5,13 @@ export const workflowPrompt = `\
 2. Prepare only what is needed for this task.
 3. Execute deterministic commands. On failure, diagnose and retry with a concrete fix.
 4. Validate outputs exist and are non-empty.
-5. Publish user-visible artifacts to /home/daytona/output/display using copy (not move).
+5. Upload user-visible artifacts with showFile.
 6. Report concise results with exact absolute paths.
 </execution>
 
 <completion_gates>
-- Do not declare completion until validate and publish are done.
+- Do not declare completion until validate and showFile uploads are done.
 - Verify each promised output path before final response.
-- Create/copy missing display artifacts before ending the turn.
 - If recovery is possible, retry instead of returning avoidable failure.
 </completion_gates>
 

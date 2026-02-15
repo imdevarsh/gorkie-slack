@@ -1,9 +1,11 @@
 # Agents Refactor Preflight
 
-Before starting any work in this refactor context:
+Before implementing refactor work:
 1. Read `REFACTOR.md`.
-2. Read `~/.claude/conventions` (or `~/.claude/conventionsj` if that is the file in your environment).
-3. Read `~/.claude/AGENTS.md`.
-4. Read `TODO_REFACTOR_IMPLEMENTATION.md`.
+2. Read `MAIN_BRANCH_SANDBOX_INVESTIGATION.md`.
+3. Read `TODO_REFACTOR_IMPLEMENTATION.md`.
+4. Use `TODO_REFACTOR_IMPLEMENTATION.md` as the single source of execution order and acceptance criteria.
 
-Do not begin implementation steps until all four are reviewed.
+Implementation rule:
+1. Hard-cut E2B only.
+2. No legacy compatibility paths.

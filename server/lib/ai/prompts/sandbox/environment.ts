@@ -4,17 +4,13 @@ export const environmentPrompt = `\
 - Working directory: /home/daytona
 - Attachments: /home/daytona/attachments
 - Output workspace: /home/daytona/output
-- Slack display staging: /home/daytona/output/display
 </paths>
 
 <rules>
 - Use absolute paths in shell commands.
 - Treat sandbox state as persistent across thread follow-ups.
 - Write generated artifacts under /home/daytona/output.
-- Stage Slack-visible artifacts by copying them into /home/daytona/output/display.
-- Copy, do not move, when staging display files.
-- Keep originals in /home/daytona/output for future turns.
-- Treat /home/daytona/output/display as ephemeral: files there may be cleared after upload.
+- Upload user-visible artifacts with showFile.
 - Use the exact uploaded file path when the user references an upload.
 - Verify file existence before claiming a file is missing.
 - Avoid writing generated artifacts into /home/daytona/attachments.

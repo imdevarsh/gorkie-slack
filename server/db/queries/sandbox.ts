@@ -25,9 +25,10 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
     .onConflictDoUpdate({
       target: sandboxSessions.threadId,
       set: {
+        channelId: session.channelId,
         sandboxId: session.sandboxId,
-        sessionId: session.sessionId,
         status: session.status,
+        lastError: session.lastError ?? null,
         pausedAt: session.pausedAt ?? null,
         resumedAt: session.resumedAt ?? null,
         destroyedAt: session.destroyedAt ?? null,
@@ -38,12 +39,14 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
 
 export async function updateStatus(
   threadId: string,
-  status: string
+  status: string,
+  lastError?: string | null
 ): Promise<void> {
   await db
     .update(sandboxSessions)
     .set({
       status,
+      ...(lastError !== undefined ? { lastError } : {}),
       pausedAt: status === 'paused' ? new Date() : null,
       resumedAt: status === 'active' ? new Date() : null,
       destroyedAt: status === 'destroyed' ? new Date() : null,
@@ -56,26 +59,6 @@ export async function markActivity(threadId: string): Promise<void> {
   await db
     .update(sandboxSessions)
     .set({
-      updatedAt: new Date(),
-    })
-    .where(eq(sandboxSessions.threadId, threadId));
-}
-
-export async function updateRuntime(
-  threadId: string,
-  runtime: {
-    sandboxId: string;
-    sessionId: string;
-    status?: string;
-  }
-): Promise<void> {
-  await db
-    .update(sandboxSessions)
-    .set({
-      sandboxId: runtime.sandboxId,
-      sessionId: runtime.sessionId,
-      ...(runtime.status ? { status: runtime.status } : {}),
-      resumedAt: runtime.status === 'active' ? new Date() : undefined,
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));

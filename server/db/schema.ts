@@ -4,9 +4,10 @@ export const sandboxSessions = pgTable(
   'sandbox_sessions',
   {
     threadId: text('thread_id').primaryKey(),
+    channelId: text('channel_id').notNull(),
     sandboxId: text('sandbox_id').notNull(),
-    sessionId: text('session_id').notNull(),
     status: text('status').notNull().default('creating'),
+    lastError: text('last_error'),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),
     destroyedAt: timestamp('destroyed_at', { withTimezone: true }),

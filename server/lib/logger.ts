@@ -32,7 +32,13 @@ targets.push({
   level: logLevel,
 });
 
-if (!isProd) {
+if (isProd) {
+  targets.push({
+    target: 'pino/file',
+    options: { destination: 1 },
+    level: logLevel,
+  });
+} else {
   targets.push({
     target: 'pino-pretty',
     options: {
@@ -43,21 +49,15 @@ if (!isProd) {
     },
     level: logLevel,
   });
-} else {
-  targets.push({
-    target: 'pino/file',
-    options: { destination: 1 },
-    level: logLevel,
-  });
 }
 
 const transport = targets.length > 0 ? createTransport({ targets }) : undefined;
 
 const logger = transport
   ? pino(
-    { level: logLevel, timestamp: pino.stdTimeFunctions.isoTime },
-    transport
-  )
+      { level: logLevel, timestamp: pino.stdTimeFunctions.isoTime },
+      transport
+    )
   : pino({ level: logLevel, timestamp: pino.stdTimeFunctions.isoTime });
 
 export default logger;

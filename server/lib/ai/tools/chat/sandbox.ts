@@ -1,67 +1,29 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { sandboxAgent } from '~/lib/ai/agents/sandbox-agent';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
-import {
-  type PromptResourceLink,
-  syncAttachments,
-} from '~/lib/sandbox/attachments';
-import { uploadFiles } from '~/lib/sandbox/display';
-import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
-import { resolveSession } from '~/lib/sandbox/session';
+import { syncAttachments } from '~/lib/sandbox/attachments';
+import { ensureSandbox } from '~/lib/sandbox/runtime';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 
-async function waitForStreamToSettle(
-  stream: unknown[],
-  startLength: number
-): Promise<void> {
-  const timeoutMs = 5 * 60_000;
-  const idleMs = 6000;
-  const pollMs = 300;
-  const startedAt = Date.now();
-  let lastGrowthAt = Date.now();
-  let sawNewEvents = false;
-  let knownLength = stream.length;
-
-  while (Date.now() - startedAt < timeoutMs) {
-    if (stream.length > knownLength) {
-      knownLength = stream.length;
-      lastGrowthAt = Date.now();
-      sawNewEvents = stream.length > startLength;
-    }
-
-    if (sawNewEvents && Date.now() - lastGrowthAt >= idleMs) {
-      return;
-    }
-
-    await new Promise((resolve) => {
-      setTimeout(resolve, pollMs);
-    });
-  }
-
-  throw new Error('Timed out waiting for sandbox agent response stream');
+function normalizeStatus(status: string): string {
+  const trimmed = status.trim();
+  const prefixed = trimmed.startsWith('is ') ? trimmed : `is ${trimmed}`;
+  return prefixed.slice(0, 49);
 }
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
+
   if (typeof error === 'string') {
     return error;
   }
-  if (typeof error === 'object' && error !== null) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === 'string' && message.length > 0) {
-      return message;
-    }
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
+
   return String(error);
 }
 
@@ -74,73 +36,73 @@ export const sandbox = ({
 }) =>
   tool({
     description:
-      'Delegate a task to the sandbox runtime for code execution, file processing, or data analysis.',
+      'Delegate execution-heavy tasks to persistent E2B sandbox agent.',
     inputSchema: z.object({
       task: z
         .string()
+        .min(1)
         .describe(
-          'A clear description of what to accomplish in the sandbox. Include file names, expected outputs, and any specific instructions.'
+          'Clear sandbox task with expected outputs and constraints. Mention exact filenames when possible.'
         ),
     }),
     execute: async ({ task }) => {
+      const ctxId = getContextId(context);
+
       await setStatus(context, {
-        status: 'is delegating a task to the sandbox',
+        status: normalizeStatus('is delegating to sandbox'),
         loading: true,
       });
 
-      const ctxId = getContextId(context);
-
-      let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
-
       try {
-        runtime = await resolveSession(context);
-        const resourceLinks = await syncAttachments(
-          runtime.sdk,
+        const runtime = await ensureSandbox(context);
+
+        await setStatus(context, {
+          status: normalizeStatus('is syncing attachments'),
+          loading: true,
+        });
+
+        const attachments = await syncAttachments(
+          runtime.sandbox,
           context,
           files
         );
 
         await setStatus(context, {
-          status: 'is working in the sandbox',
+          status: normalizeStatus('is running sandbox steps'),
           loading: true,
         });
 
-        const prompt = [
-          {
-            type: 'text' as const,
-            text: `${task}\n\nAt the end, provide a detailed summary, as well as any relevant files as attachments. Files are NOT shown to the user, unless put inside the \`output/display\` folder.`,
-          },
-          ...resourceLinks,
-        ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
-
-        const stream: unknown[] = [];
-        const unsubscribe = subscribeEvents({
-          session: runtime.session,
+        const agent = sandboxAgent({
           context,
-          ctxId,
-          stream,
+          sandbox: runtime.sandbox,
         });
-
-        try {
-          const streamStartLength = stream.length;
-          await runtime.session.send(
-            'session/prompt',
-            { prompt: [...prompt] },
-            { notification: true }
-          );
-          await waitForStreamToSettle(stream, streamStartLength);
-        } finally {
-          unsubscribe();
-        }
-
-        const response = getResponse(stream);
-        await setStatus(context, {
-          status: 'is collecting outputs',
-          loading: true,
+        const result = await agent.generate({
+          prompt: [
+            'Complete this sandbox task:',
+            task,
+            '',
+            'Attachments available in sandbox:',
+            attachments.length > 0
+              ? attachments
+                  .map(
+                    (file) =>
+                      `- ${file.path}${file.mimeType ? ` (${file.mimeType})` : ''}`
+                  )
+                  .join('\n')
+              : '- none',
+            '',
+            'Important: call showFile for every artifact that should be uploaded to Slack.',
+          ].join('\n'),
         });
-        await uploadFiles(runtime, context);
+        const response = result.text;
 
-        logger.info({ ctxId, response }, '[subagent] Sandbox run completed');
+        logger.info(
+          {
+            ctxId,
+            sandboxId: runtime.sandboxId,
+          },
+          '[sandbox] Sandbox run completed'
+        );
 
         return {
           success: true,
@@ -151,25 +113,15 @@ export const sandbox = ({
         logger.error(
           {
             error,
-            errorMessage: message,
-            errorName: error instanceof Error ? error.name : undefined,
             ctxId,
           },
-          '[subagent] Sandbox run failed'
+          '[sandbox] Sandbox run failed'
         );
+
         return {
           success: false,
           error: message,
         };
-      } finally {
-        if (runtime) {
-          await runtime.sdk.dispose().catch((error: unknown) => {
-            logger.debug(
-              { error, ctxId },
-              '[subagent] Failed to dispose sandbox SDK client'
-            );
-          });
-        }
       }
     },
   });

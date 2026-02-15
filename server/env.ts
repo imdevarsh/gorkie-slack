@@ -29,10 +29,9 @@ export const env = createEnv({
       .default('info'),
     // Exa
     EXA_API_KEY: z.string().min(1),
-    // Daytona
-    DAYTONA_API_KEY: z.string().min(1),
-    DAYTONA_API_URL: z.url().optional(),
-    DAYTONA_TARGET: z.string().optional(),
+    // E2B
+    E2B_API_KEY: z.string().min(1),
+    E2B_TEMPLATE: z.string().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
