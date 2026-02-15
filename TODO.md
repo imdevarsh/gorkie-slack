@@ -1,19 +1,28 @@
 # TODO
 
-- Audit security: authentication boundaries, data access, and tool permissions.
-- Check With User DMs
-- Fix ratelimiting
-- fix lint
-- TODO: Langfuse shows daytona tools run in sandbox tool? it is very cursed
-- TODO: Test multiple prompt / queue
-- TODO: Test if it self-timeouts without interaction
-- TODO: re-eval pricing
-- TODO: add observability and better loggign sandbox
-- The sandbox.ts is so cluttered, same with session.ts
-- remove REFACTOR.md
-- compare codebase with other examples
-- add a path function to join paths rather than ${config.runtime.workdir}/xyz
-- add proper LOGs on tools input / output like previous iteration
-- summary .at(-1) is not accurate? why does sb agent not pass the summary
-- enforce AI to write in displayed and follow status... it never does that btw.... maybe just give an uploadFile tool check in stream and call slack api
-- remove unused unwanted db fields
+## P0 - Hard Cut to E2B
+- Delete all Daytona + sandbox-agent + OpenCode transport code.
+- Rebuild sandbox runtime as E2B-only.
+- Rebuild sandbox tooling as E2B-only typed tools.
+- Remove old DB fields and queries tied to old stack.
+- Keep orchestrator -> sandbox execution agent pattern from main.
+
+## P0 - Security
+- Ensure provider keys never enter sandbox env/files.
+- Ensure Slack token never enters sandbox env/files.
+- Add error taxonomy for sandbox failures.
+
+## P1 - Reliability
+- Add per-thread lock for sandbox lifecycle.
+- Add idempotent ensure/reuse behavior.
+- Add timeout + retry policy tests.
+
+## P1 - Observability
+- Add structured logs for tool input/output summaries.
+- Add lifecycle logs for create/reuse/destroy.
+- Clean up tracing so sandbox runs are coherent.
+
+## P2 - Cleanup
+- Remove dead imports/exports after hard cut.
+- Simplify path handling helpers.
+- Fix remaining lint/type debt.
