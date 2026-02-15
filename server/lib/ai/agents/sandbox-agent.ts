@@ -5,12 +5,14 @@ import { provider } from '~/lib/ai/providers';
 import {
   bash,
   editFile,
+  extendSandboxTimeout,
   globFiles,
   grepFiles,
   readFile,
   showFile,
   writeFile,
 } from '~/lib/ai/tools/sandbox';
+import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 
 export const sandboxAgent = ({
@@ -31,6 +33,22 @@ export const sandboxAgent = ({
       globFiles: globFiles({ context, sandbox }),
       grepFiles: grepFiles({ context, sandbox }),
       showFile: showFile({ context, sandbox }),
+    },
+    prepareStep: async ({ stepNumber }) => {
+      try {
+        await extendSandboxTimeout(sandbox);
+      } catch (error) {
+        logger.warn(
+          {
+            error,
+            stepNumber,
+            sandboxId: sandbox.sandboxId,
+          },
+          '[subagent] Failed to extend sandbox timeout before step'
+        );
+      }
+
+      return {};
     },
     stopWhen: [stepCountIs(30)],
     experimental_telemetry: {

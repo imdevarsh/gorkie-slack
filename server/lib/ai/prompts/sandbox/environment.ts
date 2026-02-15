@@ -1,7 +1,7 @@
 export const environmentPrompt = `\
 <environment>
 <filesystem>
-Use absolute paths (starting with /home/vercel-sandbox) in bash commands and showFile inputs to avoid workdir-related mistakes.
+Use absolute paths (starting with /home/user) in bash commands and showFile inputs to avoid workdir-related mistakes.
 Relative paths are allowed, but absolute paths are preferred for reliability.
 
 attachments/
@@ -26,20 +26,18 @@ agent/turns/<message_ts>.json
 Do not assume any tool is pre-installed beyond the base OS, Node.js, and Python 3.
 Always install before first use:
 
-  System packages: sudo dnf install -y <package>
+  System packages: sudo apt-get update && sudo apt-get install -y <package>
   Python packages: pip3 install <package>
   Node packages:   npm install -g <package>
 
-On Amazon Linux 2023, many packages are not available in default repos.
 Use this install pattern for system tools:
-  - Try one package-manager install attempt, and avoid installing curl/wget/file unless absolutely required (curl-minimal is typically present).
-  - If dnf returns "No match" / "Unable to find a match", stop retrying dnf for that tool.
-  - Fall back to a pinned standalone binary/archive in output/<tool>/ and run it via absolute path.
-  - If extracting .tar.xz archives, ensure xz is installed first: sudo dnf install -y xz
-  - After installing ALWAYS delete the archive, and other folders with artifacts to save storage...
+  - Try apt-get install first.
+  - If apt cannot find the package, fall back to a pinned standalone binary/archive in output/<tool>/ and run it via absolute path.
+  - If extracting .tar.xz archives, ensure xz is installed first: sudo apt-get install -y xz
+  - After installing ALWAYS delete temporary archives and folders to save storage.
 
 Common installs:
-  sudo dnf install -y ImageMagick poppler-utils tesseract
+  sudo apt-get update && sudo apt-get install -y imagemagick poppler-utils tesseract-ocr
   pip3 install pandas matplotlib pillow requests
 </packages>
 </environment>`;

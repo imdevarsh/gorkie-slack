@@ -71,6 +71,7 @@ async function createSandbox(
   const createOpts = {
     apiKey: config.e2b.apiKey,
     timeoutMs: config.timeoutMs,
+    autoPause: true,
     allowInternetAccess: true,
     metadata: {
       threadId,
@@ -80,8 +81,8 @@ async function createSandbox(
   };
 
   const sandbox = config.e2b.template
-    ? await Sandbox.create(config.e2b.template, createOpts)
-    : await Sandbox.create(createOpts);
+    ? await Sandbox.betaCreate(config.e2b.template, createOpts)
+    : await Sandbox.betaCreate(createOpts);
 
   await ensureRuntimeDirectories(sandbox);
   await sandbox.setTimeout(config.timeoutMs);
@@ -182,6 +183,10 @@ export async function pauseSandbox(
       apiKey: config.e2b.apiKey,
     });
     await updateStatus(threadId, 'paused', null);
+    logger.info(
+      { threadId, sandboxId: existing.sandboxId },
+      '[sandbox] Paused E2B sandbox'
+    );
   } catch (error) {
     logger.warn(
       { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },

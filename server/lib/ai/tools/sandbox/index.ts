@@ -1,3 +1,4 @@
+export { extendSandboxTimeout } from './_shared';
 export { editFile } from './edit';
 export { globFiles } from './glob';
 export { grepFiles } from './grep';

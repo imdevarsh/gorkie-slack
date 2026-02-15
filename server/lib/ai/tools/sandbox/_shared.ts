@@ -1,6 +1,7 @@
 import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
+import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 
 export interface SandboxToolDeps {
@@ -50,4 +51,37 @@ export function resolveTimeout(timeoutMs?: number): number {
   }
 
   return Math.max(1000, Math.min(timeoutMs, config.timeoutMs));
+}
+
+export async function extendSandboxTimeout(
+  sandbox: Sandbox,
+  minimumTimeoutMs?: number
+): Promise<void> {
+  const requiredRemainingMs = Math.max(
+    config.commandTimeoutMs,
+    minimumTimeoutMs ?? 0
+  );
+
+  try {
+    const info = await sandbox.getInfo();
+    const endAtMs =
+      info.endAt instanceof Date
+        ? info.endAt.getTime()
+        : new Date(String(info.endAt)).getTime();
+    const remainingMs = Number.isFinite(endAtMs) ? endAtMs - Date.now() : 0;
+
+    if (remainingMs >= requiredRemainingMs) {
+      return;
+    }
+
+    await sandbox.setTimeout(config.timeoutMs);
+  } catch (error) {
+    logger.warn(
+      {
+        error,
+        requiredRemainingMs,
+      },
+      '[sandbox] Failed to extend sandbox timeout'
+    );
+  }
 }
