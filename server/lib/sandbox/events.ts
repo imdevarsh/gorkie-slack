@@ -106,9 +106,7 @@ export function subscribeEvents(params: {
 }
 
 export function getResponse(stream: unknown[]): string | undefined {
-  function getText(
-    content: SessionUpdatePayload['content']
-  ): string | null {
+  function getText(content: SessionUpdatePayload['content']): string | null {
     const text = typeof content === 'string' ? content : content?.text;
     if (typeof text !== 'string') {
       return null;
@@ -134,7 +132,6 @@ export function getResponse(stream: unknown[]): string | undefined {
   }
 
   const summary = chunks.join('').trim();
-  console.log('summary', { summary });
   if (summary.length > 0) {
     return summary;
   }
