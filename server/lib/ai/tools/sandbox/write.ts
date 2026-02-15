@@ -18,16 +18,45 @@ export const writeFile = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ filePath, content, description }) => {
       await setToolStatus(context, description);
+      logger.info(
+        {
+          input: {
+            filePath,
+            description,
+            bytes: Buffer.byteLength(content, 'utf8'),
+          },
+        },
+        '[subagent] writing file'
+      );
 
       try {
         await sandbox.files.write(filePath, content);
-
-        return {
+        const bytes = Buffer.byteLength(content, 'utf8');
+        const output = {
           success: true,
           path: filePath,
-          bytes: Buffer.byteLength(content, 'utf8'),
+          bytes,
         };
+
+        logger.info(
+          {
+            output,
+          },
+          '[subagent] write file'
+        );
+
+        return output;
       } catch (error) {
+        logger.warn(
+          {
+            output: {
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          '[subagent] write file'
+        );
+
         logger.error(
           { error, filePath },
           '[sandbox-tool] Failed to write file'

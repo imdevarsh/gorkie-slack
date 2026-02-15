@@ -34,6 +34,12 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
       await setToolStatus(context, description);
 
       const baseDir = resolveCwd(cwd);
+      logger.info(
+        {
+          input: { pattern, cwd: baseDir, description },
+        },
+        '[subagent] finding files'
+      );
       const command = [
         'bash -lc',
         shellEscape(
@@ -53,14 +59,33 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
           .map((line) => line.trim())
           .filter((line) => line.length > 0);
 
-        return {
+        const output = {
           success: result.exitCode === 0,
           matches,
           count: matches.length,
           truncated: result.stdout.length > MAX_OUTPUT_CHARS,
           stderr: truncate(result.stderr, MAX_OUTPUT_CHARS),
         };
+
+        logger.info(
+          {
+            output,
+          },
+          '[subagent] glob files'
+        );
+
+        return output;
       } catch (error) {
+        logger.warn(
+          {
+            output: {
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          '[subagent] glob files'
+        );
+
         logger.error(
           { error, pattern, cwd: baseDir },
           '[sandbox-tool] Glob failed'

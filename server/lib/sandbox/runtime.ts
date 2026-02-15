@@ -35,6 +35,26 @@ function isMissingSandboxError(error: unknown): boolean {
   );
 }
 
+function errorDetails(error: unknown): Record<string, unknown> {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      cause:
+        typeof error.cause === 'object' && error.cause !== null
+          ? error.cause
+          : (error.cause ?? null),
+    };
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    return error as Record<string, unknown>;
+  }
+
+  return { error: String(error) };
+}
+
 async function ensureRuntimeDirectories(sandbox: Sandbox): Promise<void> {
   await Promise.all([
     sandbox.files.makeDir(config.paths.workdir),
@@ -78,7 +98,12 @@ async function createSandbox(
   });
 
   logger.info(
-    { threadId, sandboxId: sandbox.sandboxId },
+    {
+      threadId,
+      sandboxId: sandbox.sandboxId,
+      template: config.e2b.template ?? 'default',
+      timeoutMs: config.timeoutMs,
+    },
     '[sandbox] Created E2B sandbox'
   );
 
@@ -124,7 +149,7 @@ export async function ensureSandbox(
     };
   } catch (error) {
     logger.warn(
-      { error, threadId, sandboxId: existing.sandboxId },
+      { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
       '[sandbox] Failed to reconnect E2B sandbox'
     );
 
@@ -159,7 +184,7 @@ export async function pauseSandbox(
     await updateStatus(threadId, 'paused', null);
   } catch (error) {
     logger.warn(
-      { error, threadId, sandboxId: existing.sandboxId },
+      { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
       '[sandbox] Failed to pause E2B sandbox'
     );
   }
@@ -179,9 +204,13 @@ export async function destroySandbox(
     await Sandbox.kill(existing.sandboxId, {
       apiKey: config.e2b.apiKey,
     });
+    logger.info(
+      { threadId, sandboxId: existing.sandboxId },
+      '[sandbox] Destroyed E2B sandbox'
+    );
   } catch (error) {
     logger.warn(
-      { error, threadId, sandboxId: existing.sandboxId },
+      { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
       '[sandbox] Failed to kill E2B sandbox'
     );
   } finally {

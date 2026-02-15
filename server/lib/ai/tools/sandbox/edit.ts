@@ -32,6 +32,18 @@ export const editFile = ({ context, sandbox }: SandboxToolDeps) =>
       description,
     }) => {
       await setToolStatus(context, description);
+      logger.info(
+        {
+          input: {
+            filePath,
+            description,
+            replaceAll,
+            oldPreview: oldText.slice(0, 100),
+            newPreview: newText.slice(0, 100),
+          },
+        },
+        '[subagent] editing file'
+      );
 
       try {
         const current = await sandbox.files.read(filePath);
@@ -52,12 +64,31 @@ export const editFile = ({ context, sandbox }: SandboxToolDeps) =>
 
         const occurrences = replaceAll ? current.split(oldText).length - 1 : 1;
 
-        return {
+        const output = {
           success: true,
           path: filePath,
           replacements: occurrences,
         };
+
+        logger.info(
+          {
+            output,
+          },
+          '[subagent] edit file'
+        );
+
+        return output;
       } catch (error) {
+        logger.warn(
+          {
+            output: {
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          '[subagent] edit file'
+        );
+
         logger.error({ error, filePath }, '[sandbox-tool] Failed to edit file');
         return {
           success: false,

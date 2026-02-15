@@ -10,8 +10,9 @@ import {
 } from './_shared';
 
 const MAX_OUTPUT_CHARS = 20_000;
+const MAX_COMMAND_CHARS = 500;
 
-export const runCommand = ({ context, sandbox }: SandboxToolDeps) =>
+export const bash = ({ context, sandbox }: SandboxToolDeps) =>
   tool({
     description:
       'Run a shell command in the sandbox. Always set description in format: is <doing something>.',
@@ -37,6 +38,30 @@ export const runCommand = ({ context, sandbox }: SandboxToolDeps) =>
       const startedAt = Date.now();
       const resolvedCwd = resolveCwd(cwd);
       const resolvedTimeout = resolveTimeout(timeoutMs);
+      const commandPreview = truncate(command, MAX_COMMAND_CHARS);
+      const input = {
+        command: commandPreview,
+        description,
+        timeoutMs: resolvedTimeout,
+        workdir: resolvedCwd,
+      };
+
+      logger.info(
+        {
+          tool: 'bash',
+          input: {},
+        },
+        '[subagent] Tool started'
+      );
+      logger.info(
+        {
+          tool: 'bash',
+          status: 'in_progress',
+          input,
+          output: null,
+        },
+        '[subagent] Tool update'
+      );
 
       try {
         const result = await sandbox.commands.run(command, {
@@ -50,13 +75,22 @@ export const runCommand = ({ context, sandbox }: SandboxToolDeps) =>
 
         logger.info(
           {
-            tool: 'runCommand',
-            cwd: resolvedCwd,
-            timeoutMs: resolvedTimeout,
-            exitCode: result.exitCode,
-            durationMs,
+            tool: 'bash',
+            status: 'completed',
+            input,
+            output: {
+              metadata: {
+                description,
+                exit: result.exitCode,
+                durationMs,
+                output: stdout,
+                truncated: result.stdout.length > MAX_OUTPUT_CHARS,
+              },
+              output: stdout,
+              stderr,
+            },
           },
-          '[sandbox-tool] Command completed'
+          '[subagent] Tool update'
         );
 
         return {
@@ -81,23 +115,34 @@ export const runCommand = ({ context, sandbox }: SandboxToolDeps) =>
             stdout: string;
             stderr: string;
           };
+          const stdout = truncate(commandError.stdout, MAX_OUTPUT_CHARS);
+          const stderr = truncate(commandError.stderr, MAX_OUTPUT_CHARS);
 
           logger.warn(
             {
-              tool: 'runCommand',
-              cwd: resolvedCwd,
-              timeoutMs: resolvedTimeout,
-              exitCode: commandError.exitCode,
-              durationMs,
+              tool: 'bash',
+              status: 'completed',
+              input,
+              output: {
+                metadata: {
+                  description,
+                  exit: commandError.exitCode,
+                  durationMs,
+                  output: stdout,
+                  truncated: commandError.stdout.length > MAX_OUTPUT_CHARS,
+                },
+                output: stdout,
+                stderr,
+              },
             },
-            '[sandbox-tool] Command exited with error'
+            '[subagent] Tool update'
           );
 
           return {
             success: false,
             exitCode: commandError.exitCode,
-            stdout: truncate(commandError.stdout, MAX_OUTPUT_CHARS),
-            stderr: truncate(commandError.stderr, MAX_OUTPUT_CHARS),
+            stdout,
+            stderr,
             durationMs,
           };
         }
@@ -105,7 +150,7 @@ export const runCommand = ({ context, sandbox }: SandboxToolDeps) =>
         logger.error(
           {
             error,
-            tool: 'runCommand',
+            tool: 'bash',
             cwd: resolvedCwd,
             timeoutMs: resolvedTimeout,
             durationMs,

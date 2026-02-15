@@ -3,11 +3,11 @@ import { stepCountIs, ToolLoopAgent } from 'ai';
 import { sandboxPrompt } from '~/lib/ai/prompts/sandbox';
 import { provider } from '~/lib/ai/providers';
 import {
+  bash,
   editFile,
   globFiles,
   grepFiles,
   readFile,
-  runCommand,
   showFile,
   writeFile,
 } from '~/lib/ai/tools/sandbox';
@@ -24,7 +24,7 @@ export const sandboxAgent = ({
     model: provider.languageModel('agent-model'),
     instructions: sandboxPrompt(),
     tools: {
-      runCommand: runCommand({ context, sandbox }),
+      bash: bash({ context, sandbox }),
       readFile: readFile({ context, sandbox }),
       writeFile: writeFile({ context, sandbox }),
       editFile: editFile({ context, sandbox }),

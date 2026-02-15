@@ -26,6 +26,12 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ filePath, filename, description }) => {
       await setToolStatus(context, description);
+      logger.info(
+        {
+          input: { filePath, filename: filename ?? null, description },
+        },
+        '[subagent] uploading file'
+      );
 
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs =
@@ -51,13 +57,32 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
           title: uploadName,
         });
 
-        return {
+        const output = {
           success: true,
           filePath,
           filename: uploadName,
           bytes: bytes.byteLength,
         };
+
+        logger.info(
+          {
+            output,
+          },
+          '[subagent] show file'
+        );
+
+        return output;
       } catch (error) {
+        logger.warn(
+          {
+            output: {
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          '[subagent] show file'
+        );
+
         logger.error(
           { error, filePath },
           '[sandbox-tool] Failed to upload file to Slack'

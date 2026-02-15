@@ -7,10 +7,10 @@ export const sandbox = {
   commandTimeoutMs: 120_000,
   idleTtlSeconds: 10 * 60,
   paths: {
-    workdir: '/home/daytona',
-    attachments: '/home/daytona/attachments',
-    output: '/home/daytona/output',
-    turns: '/home/daytona/agent/turns',
+    workdir: '/home/user',
+    attachments: '/home/user/attachments',
+    output: '/home/user/output',
+    turns: '/home/user/agent/turns',
   },
   timeouts: {
     stopMinutes: 5,

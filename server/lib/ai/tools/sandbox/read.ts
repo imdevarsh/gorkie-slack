@@ -25,6 +25,12 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ filePath, description }) => {
       await setToolStatus(context, description);
+      logger.info(
+        {
+          input: { filePath, description },
+        },
+        '[subagent] reading file'
+      );
 
       try {
         const info = await sandbox.files.getInfo(filePath);
@@ -48,14 +54,33 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
         }
 
         const text = await sandbox.files.read(filePath);
-        return {
+        const output = {
           success: true,
           path: filePath,
           type: 'file',
           content: truncate(text, MAX_TEXT_CHARS),
           truncated: text.length > MAX_TEXT_CHARS,
         };
+
+        logger.info(
+          {
+            output,
+          },
+          '[subagent] read file'
+        );
+
+        return output;
       } catch (error) {
+        logger.warn(
+          {
+            output: {
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          '[subagent] read file'
+        );
+
         if (error instanceof NotFoundError) {
           return {
             success: false,
