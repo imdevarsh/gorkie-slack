@@ -13,33 +13,6 @@ import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 
-const SECRET_EXFILTRATION_PATTERNS = [
-  /\bprintenv\b/i,
-  /\b(show|print|dump|read|cat|reveal|list)\s+(all\s+)?env(ironment)?\b/i,
-  /\benvironment variables?\b/i,
-  /\/proc\/\d+\/environ/i,
-  /\/proc\/self\/environ/i,
-  /\benviron\b/i,
-  /\bapi[_ -]?key\b/i,
-  /\btoken\b/i,
-  /\bsecret\b/i,
-  /\bcredential(s)?\b/i,
-  /\bprivate[_ -]?key\b/i,
-  /\baccess[_ -]?key\b/i,
-  /\baws[_ -]?(secret|access)\b/i,
-] as const;
-
-function isSecretExfiltrationRequest(task: string): boolean {
-  const normalized = task.trim();
-  if (normalized.length === 0) {
-    return false;
-  }
-
-  return SECRET_EXFILTRATION_PATTERNS.some((pattern) =>
-    pattern.test(normalized)
-  );
-}
-
 async function waitForStreamToSettle(
   stream: unknown[],
   startLength: number
@@ -110,14 +83,6 @@ export const sandbox = ({
         ),
     }),
     execute: async ({ task }) => {
-      if (isSecretExfiltrationRequest(task)) {
-        return {
-          success: false,
-          error:
-            'Refused: secret exfiltration requests are not allowed (environment variables, tokens, API keys, credentials, or /proc/*/environ).',
-        };
-      }
-
       await setStatus(context, {
         status: 'is delegating a task to the sandbox',
         loading: true,
