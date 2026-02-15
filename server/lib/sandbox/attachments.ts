@@ -1,4 +1,4 @@
-import type { Sandbox } from '@vercel/sandbox';
+import type { SandboxAgent } from 'sandbox-agent';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
@@ -6,74 +6,93 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { sandboxPath } from './utils';
 
 export const ATTACHMENTS_DIR = 'attachments';
+const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}`;
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 
+export interface PromptResourceLink {
+  type: 'resource_link';
+  name: string;
+  uri: string;
+  mimeType?: string;
+}
+
 export async function syncAttachments(
-  sandbox: Sandbox,
+  sdk: SandboxAgent,
   context: SlackMessageContext,
   files?: SlackFile[]
-): Promise<void> {
+): Promise<PromptResourceLink[]> {
   if (!files?.length) {
-    return;
+    return [];
   }
 
   const messageTs = context.event.ts;
   if (!messageTs) {
-    return;
+    return [];
   }
 
   const ctxId = getContextId(context);
-  const dir = sandboxPath(ATTACHMENTS_DIR);
 
-  await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
+  await sdk.mkdirFs({ path: ATTACHMENTS_ABS_DIR }).catch(() => {
+    // Directory may already exist.
+  });
 
   const results = await Promise.all(
-    files.map((file) => syncFile(sandbox, dir, file, ctxId))
+    files.map((file) => syncFile(sdk, file, ctxId))
   );
 
-  if (results.some((ok) => !ok)) {
+  const uploaded = results.filter(
+    (item): item is PromptResourceLink => item !== null
+  );
+
+  if (uploaded.length !== files.length) {
     logger.warn({ messageTs, ctxId }, '[sandbox] Attachment sync incomplete');
-    return;
   }
 
   logger.info(
     {
-      count: files.length,
+      count: uploaded.length,
       messageTs,
       ctxId,
     },
     '[sandbox] Attachments synced'
   );
+
+  return uploaded;
 }
 
 async function syncFile(
-  sandbox: Sandbox,
-  dir: string,
+  sdk: SandboxAgent,
   file: SlackFile,
   ctxId: string
-): Promise<boolean> {
+): Promise<PromptResourceLink | null> {
   const content = await downloadAttachment(file, ctxId);
   if (!content) {
-    return false;
+    return null;
   }
 
   const name = sanitizeFilename(file.name ?? 'attachment', {
     replacement: '_',
   });
   const safeName = name || `file-${file.id ?? 'unknown'}`;
+  const path = `${ATTACHMENTS_ABS_DIR}/${safeName}`;
+  const uri = new URL(`file://${path}`).toString();
 
   try {
-    await sandbox.writeFiles([{ path: `${dir}/${safeName}`, content }]);
-    return true;
+    await sdk.writeFsFile({ path }, content);
+    return {
+      type: 'resource_link',
+      name: safeName,
+      uri,
+      ...(file.mimetype ? { mimeType: file.mimetype } : {}),
+    };
   } catch (error) {
     logger.warn(
       { error, fileId: file.id, name: file.name, ctxId },
       '[sandbox] Failed to write attachment'
     );
-    return false;
+    return null;
   }
 }
 

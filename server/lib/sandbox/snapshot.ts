@@ -1,59 +1,39 @@
-import { Snapshot } from '@vercel/sandbox';
-import { sandbox as config } from '~/config';
-import { redis, redisKeys } from '~/lib/kv';
+import { type Daytona, Image } from '@daytonaio/sdk';
 import logger from '~/lib/logger';
 
-export async function deleteSnapshot(
-  snapshotId: string,
-  ctxId: string
-): Promise<void> {
-  try {
-    const snapshot = await Snapshot.get({ snapshotId, ...config.auth });
-    await snapshot.delete();
-    logger.info({ snapshotId, ctxId }, '[sandbox] Deleted snapshot');
-  } catch (error) {
-    logger.warn(
-      { snapshotId, error, ctxId },
-      '[sandbox] Failed to delete snapshot'
-    );
-  }
+export const SANDBOX_SNAPSHOT = 'gorkie-sandbox';
+
+function createSnapshotImage() {
+  return Image.debianSlim('3.12')
+    .pipInstall(['requests', 'pillow', 'matplotlib', 'numpy', 'pandas'])
+    .runCommands(
+      'apt-get update && apt-get install -y git curl ca-certificates imagemagick ffmpeg zip unzip jq && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*',
+      'pip cache purge',
+      'curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh',
+      'sandbox-agent install-agent opencode',
+      'mkdir -p /home/daytona/output/display /home/daytona/attachments'
+    )
+    .workdir('/home/daytona');
 }
 
-export async function cleanupSnapshots(): Promise<void> {
-  const cutoff = Date.now() - config.snapshot.ttl * 1000;
-  const expired = await redis.zrangebyscore(
-    redisKeys.snapshotIndex(),
-    0,
-    cutoff
+export async function createSnapshot(daytona: Daytona): Promise<void> {
+  logger.info({ snapshot: SANDBOX_SNAPSHOT }, '[sandbox] Creating snapshot');
+  await daytona.snapshot.create(
+    {
+      name: SANDBOX_SNAPSHOT,
+      image: createSnapshotImage(),
+    },
+    {
+      onLogs: (chunk) => {
+        logger.info(
+          {
+            snapshot: SANDBOX_SNAPSHOT,
+            log: typeof chunk === 'string' ? chunk : JSON.stringify(chunk),
+          },
+          '[sandbox] Snapshot build log'
+        );
+      },
+    }
   );
-
-  if (expired.length === 0) {
-    return;
-  }
-
-  await Promise.all(
-    expired.map(async (entry) => {
-      const [snapshotId, ctxId] = entry.split(':');
-      if (!(snapshotId && ctxId)) {
-        await redis.zrem(redisKeys.snapshotIndex(), entry);
-        return;
-      }
-
-      await deleteSnapshot(snapshotId, ctxId);
-      await redis.zrem(redisKeys.snapshotIndex(), entry);
-    })
-  );
-}
-
-export async function registerSnapshot(
-  ctxId: string,
-  snapshotId: string
-): Promise<void> {
-  const now = Date.now();
-  await redis.set(
-    redisKeys.snapshot(ctxId),
-    JSON.stringify({ snapshotId, createdAt: now })
-  );
-  await redis.expire(redisKeys.snapshot(ctxId), config.snapshot.ttl);
-  await redis.zadd(redisKeys.snapshotIndex(), now, `${snapshotId}:${ctxId}`);
+  logger.info({ snapshot: SANDBOX_SNAPSHOT }, '[sandbox] Snapshot ready');
 }

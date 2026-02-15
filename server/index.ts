@@ -2,7 +2,6 @@ import { LangfuseSpanProcessor } from '@langfuse/otel';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import { cleanupSnapshots } from '~/lib/sandbox/snapshot';
 import { createSlackApp } from '~/slack/app';
 
 const sdk = new NodeSDK({
@@ -22,15 +21,6 @@ async function main() {
 
   await app.start(env.PORT);
   logger.info({ port: env.PORT }, 'Slack Bolt app listening for events');
-
-  setInterval(
-    () => {
-      cleanupSnapshots().catch((error: unknown) => {
-        logger.warn({ error }, 'Snapshot cleanup failed');
-      });
-    },
-    30 * 60 * 1000
-  );
 }
 
 main().catch(async (error) => {

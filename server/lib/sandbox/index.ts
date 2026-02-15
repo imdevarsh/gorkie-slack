@@ -1,3 +1,3 @@
-export type { SandboxContext } from './context';
-export { buildSandboxContext, peekFilesystem } from './context';
-export { getSandbox, stopSandbox } from './lifecycle';
+export { syncAttachments } from './attachments';
+export { uploadFiles } from './display';
+export { resolveSession, stopSandbox } from './session';

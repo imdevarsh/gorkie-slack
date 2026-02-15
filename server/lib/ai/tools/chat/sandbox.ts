@@ -1,13 +1,69 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { sandboxAgent } from '~/lib/ai/agents';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
-import { buildSandboxContext, getSandbox } from '~/lib/sandbox';
-import { syncAttachments } from '~/lib/sandbox/attachments';
+import {
+  type PromptResourceLink,
+  syncAttachments,
+} from '~/lib/sandbox/attachments';
+import { uploadFiles } from '~/lib/sandbox/display';
+import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
+import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
+
+async function waitForStreamToSettle(
+  stream: unknown[],
+  startLength: number
+): Promise<void> {
+  const timeoutMs = 5 * 60_000;
+  const idleMs = 6000;
+  const pollMs = 300;
+  const startedAt = Date.now();
+  let lastGrowthAt = Date.now();
+  let sawNewEvents = false;
+  let knownLength = stream.length;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (stream.length > knownLength) {
+      knownLength = stream.length;
+      lastGrowthAt = Date.now();
+      sawNewEvents = stream.length > startLength;
+    }
+
+    if (sawNewEvents && Date.now() - lastGrowthAt >= idleMs) {
+      return;
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, pollMs);
+    });
+  }
+
+  throw new Error('Timed out waiting for sandbox agent response stream');
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (typeof error === 'object' && error !== null) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.length > 0) {
+      return message;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+  return String(error);
+}
 
 export const sandbox = ({
   context,
@@ -18,7 +74,7 @@ export const sandbox = ({
 }) =>
   tool({
     description:
-      'Delegate a task to the sandbox agent for code execution, file processing, or data analysis.',
+      'Delegate a task to the sandbox runtime for code execution, file processing, or data analysis.',
     inputSchema: z.object({
       task: z
         .string()
@@ -34,33 +90,86 @@ export const sandbox = ({
 
       const ctxId = getContextId(context);
 
+      let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
+
       try {
-        const instance = await getSandbox(context);
-        await syncAttachments(instance, context, files);
+        runtime = await resolveSession(context);
+        const resourceLinks = await syncAttachments(
+          runtime.sdk,
+          context,
+          files
+        );
 
-        const { messages, requestHints } = await buildSandboxContext(context);
-
-        const agent = sandboxAgent({ context, requestHints });
-        const result = await agent.generate({
-          messages: [...messages, { role: 'user', content: task }],
+        await setStatus(context, {
+          status: 'is working in the sandbox',
+          loading: true,
         });
 
-        logger.info(
-          { steps: result.steps.length, ctxId },
-          '[subagent] Sandbox run completed'
-        );
+        const prompt = [
+          {
+            type: 'text' as const,
+            text: `${task}\n\nAt the end, provide a detailed summary, as well as any relevant files as attachments. Files are NOT shown to the user, unless put inside the \`output/display\` folder.`,
+          },
+          ...resourceLinks,
+        ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
+
+        const stream: unknown[] = [];
+        const unsubscribe = subscribeEvents({
+          session: runtime.session,
+          context,
+          ctxId,
+          stream,
+        });
+
+        try {
+          const streamStartLength = stream.length;
+          await runtime.session.send(
+            'session/prompt',
+            { prompt: [...prompt] },
+            { notification: true }
+          );
+          await waitForStreamToSettle(stream, streamStartLength);
+        } finally {
+          unsubscribe();
+        }
+
+        const response = getResponse(stream);
+        await setStatus(context, {
+          status: 'is collecting outputs',
+          loading: true,
+        });
+        await uploadFiles(runtime, context);
+
+        logger.info({ ctxId, response }, '[subagent] Sandbox run completed');
 
         return {
           success: true,
-          summary: result.text || 'Task completed.',
-          steps: result.steps.length,
+          response,
         };
       } catch (error) {
-        logger.error({ error, ctxId }, '[subagent] Sandbox run failed');
+        const message = errorMessage(error);
+        logger.error(
+          {
+            error,
+            errorMessage: message,
+            errorName: error instanceof Error ? error.name : undefined,
+            ctxId,
+          },
+          '[subagent] Sandbox run failed'
+        );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: message,
         };
+      } finally {
+        if (runtime) {
+          await runtime.sdk.dispose().catch((error: unknown) => {
+            logger.debug(
+              { error, ctxId },
+              '[subagent] Failed to dispose sandbox SDK client'
+            );
+          });
+        }
       }
     },
   });

@@ -1,0 +1,131 @@
+# Cloudflare
+
+> Source: `docs/deploy/cloudflare.mdx`
+> Canonical URL: https://sandboxagent.dev/docs/deploy/cloudflare
+> Description: Deploy Sandbox Agent inside a Cloudflare Sandbox.
+
+---
+## Prerequisites
+
+- Cloudflare account with Workers paid plan
+- Docker for local `wrangler dev`
+- `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`
+
+Cloudflare Sandbox SDK is beta. See [Sandbox SDK docs](https://developers.cloudflare.com/sandbox/).
+
+## Quick start
+
+```bash
+npm create cloudflare@latest -- my-sandbox --template=cloudflare/sandbox-sdk/examples/minimal
+cd my-sandbox
+```
+
+## Dockerfile
+
+```dockerfile
+FROM cloudflare/sandbox:0.7.0
+
+RUN curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh
+RUN sandbox-agent install-agent claude && sandbox-agent install-agent codex
+
+EXPOSE 8000
+```
+
+## TypeScript proxy example
+
+```typescript
+import { getSandbox, type Sandbox } from "@cloudflare/sandbox";
+export { Sandbox } from "@cloudflare/sandbox";
+
+type Env = {
+  Sandbox: DurableObjectNamespace<Sandbox>;
+  ANTHROPIC_API_KEY?: string;
+  OPENAI_API_KEY?: string;
+};
+
+const PORT = 8000;
+
+async function isServerRunning(sandbox: Sandbox): Promise<boolean> {
+  try {
+    const result = await sandbox.exec(`curl -sf http://localhost:${PORT}/v1/health`);
+    return result.success;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureRunning(sandbox: Sandbox, env: Env): Promise<void> {
+  if (await isServerRunning(sandbox)) return;
+
+  const envVars: Record<string, string> = {};
+  if (env.ANTHROPIC_API_KEY) envVars.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
+  if (env.OPENAI_API_KEY) envVars.OPENAI_API_KEY = env.OPENAI_API_KEY;
+  await sandbox.setEnvVars(envVars);
+
+  await sandbox.startProcess(`sandbox-agent server --no-token --host 0.0.0.0 --port ${PORT}`);
+
+  for (let i = 0; i < 30; i++) {
+    if (await isServerRunning(sandbox)) return;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
+  throw new Error("sandbox-agent failed to start");
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const match = url.pathname.match(/^\/sandbox\/([^/]+)(\/.*)?$/);
+
+    if (!match) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    const [, name, path = "/"] = match;
+    const sandbox = getSandbox(env.Sandbox, name);
+    await ensureRunning(sandbox, env);
+
+    return sandbox.containerFetch(
+      new Request(`http://localhost${path}${url.search}`, request),
+      PORT,
+    );
+  },
+};
+```
+
+## Connect from a client
+
+```typescript
+import { SandboxAgent } from "sandbox-agent";
+
+const sdk = await SandboxAgent.connect({
+  baseUrl: "http://localhost:8787/sandbox/my-sandbox",
+});
+
+const session = await sdk.createSession({ agent: "claude" });
+
+const off = session.onEvent((event) => {
+  console.log(event.sender, event.payload);
+});
+
+await session.prompt([{ type: "text", text: "Summarize this repository" }]);
+off();
+```
+
+## Local development
+
+```bash
+npm run dev
+```
+
+Test health:
+
+```bash
+curl http://localhost:8787/sandbox/demo/v1/health
+```
+
+## Production deployment
+
+```bash
+wrangler deploy
+```

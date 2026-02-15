@@ -1,0 +1,73 @@
+# Daytona
+
+> Source: `docs/deploy/daytona.mdx`
+> Canonical URL: https://sandboxagent.dev/docs/deploy/daytona
+> Description: Run Sandbox Agent in a Daytona workspace.
+
+---
+Daytona Tier 3+ is required for access to common model provider endpoints.
+See [Daytona network limits](https://www.daytona.io/docs/en/network-limits/).
+
+## Prerequisites
+
+- `DAYTONA_API_KEY`
+- `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`
+
+## TypeScript example
+
+```typescript
+import { Daytona } from "@daytonaio/sdk";
+import { SandboxAgent } from "sandbox-agent";
+
+const daytona = new Daytona();
+
+const envVars: Record<string, string> = {};
+if (process.env.ANTHROPIC_API_KEY) envVars.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+if (process.env.OPENAI_API_KEY) envVars.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+const sandbox = await daytona.create({ envVars });
+
+await sandbox.process.executeCommand(
+  "curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh"
+);
+
+await sandbox.process.executeCommand("sandbox-agent install-agent claude");
+await sandbox.process.executeCommand("sandbox-agent install-agent codex");
+
+await sandbox.process.executeCommand(
+  "nohup sandbox-agent server --no-token --host 0.0.0.0 --port 3000 >/tmp/sandbox-agent.log 2>&1 &"
+);
+
+await new Promise((r) => setTimeout(r, 2000));
+
+const baseUrl = (await sandbox.getSignedPreviewUrl(3000, 4 * 60 * 60)).url;
+const sdk = await SandboxAgent.connect({ baseUrl });
+
+const session = await sdk.createSession({ agent: "claude" });
+await session.prompt([{ type: "text", text: "Summarize this repository" }]);
+
+await sandbox.delete();
+```
+
+## Using snapshots for faster startup
+
+```typescript
+import { Daytona, Image } from "@daytonaio/sdk";
+
+const daytona = new Daytona();
+const SNAPSHOT = "sandbox-agent-ready";
+
+const hasSnapshot = await daytona.snapshot.get(SNAPSHOT).then(() => true, () => false);
+
+if (!hasSnapshot) {
+  await daytona.snapshot.create({
+    name: SNAPSHOT,
+    image: Image.base("ubuntu:22.04").runCommands(
+      "apt-get update && apt-get install -y curl ca-certificates",
+      "curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh",
+      "sandbox-agent install-agent claude",
+      "sandbox-agent install-agent codex",
+    ),
+  });
+}
+```
