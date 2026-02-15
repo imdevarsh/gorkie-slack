@@ -80,7 +80,7 @@ export const sandbox = ({
         const prompt = [
           {
             type: 'text' as const,
-            text: `${task}\n\nAt the end, provide a concise summary of what you changed and where outputs are located.`,
+            text: `${task}\n\nAt the end, provide a detailed summary, as well as any relevant files as attachments. Files are NOT shown to the user, unless put inside the \`output/display\` folder.`,
           },
           ...resourceLinks,
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
