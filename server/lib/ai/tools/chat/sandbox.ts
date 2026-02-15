@@ -9,6 +9,7 @@ import {
 import { uploadFiles } from '~/lib/sandbox/display';
 import {
   subscribeEvents,
+  getResponse,
 } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
@@ -79,7 +80,7 @@ export const sandbox = ({
         const prompt = [
           {
             type: 'text' as const,
-            text: `${task}\n\nAt the end, provide a summary of what you changed and where outputs are located.`,
+            text: `${task}\n\nAt the end, provide a concise summary of what you changed and where outputs are located.`,
           },
           ...resourceLinks,
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
@@ -93,23 +94,23 @@ export const sandbox = ({
         });
 
         try {
-          const response = await runtime.session.prompt([...prompt]);
-          console.log('Sandbox prompt response:', JSON.stringify(response));
+          await runtime.session.prompt([...prompt]);
         } finally {
           unsubscribe();
         }
 
+        const response = getResponse(stream);
         await setStatus(context, {
           status: 'is collecting outputs',
           loading: true,
         });
         await uploadFiles(runtime, context);
 
-        logger.info({ ctxId }, '[subagent] Sandbox run completed');
+        logger.info({ ctxId, response }, '[subagent] Sandbox run completed');
 
         return {
           success: true,
-          response: 'Sandbox task completed. Outputs have been uploaded to the thread.',
+          response,
         };
       } catch (error) {
         const message = errorMessage(error);

@@ -29,13 +29,16 @@ export function subscribeEvents(params: {
   session: Session;
   context: SlackMessageContext;
   ctxId: string;
+  stream: unknown[];
 }): () => void {
-  const { session, context, ctxId } = params;
+  const { session, context, ctxId, stream } = params;
   let lastStatus: string | null = null;
   const seenToolUpdates = new Set<string>();
   const toolNameByCallId = new Map<string, string>();
 
   return session.onEvent((event) => {
+    stream.push(event.payload);
+
     if (event.sender !== 'agent') {
       return;
     }
@@ -51,7 +54,7 @@ export function subscribeEvents(params: {
       if (nextStatus !== lastStatus) {
         lastStatus = nextStatus;
         setStatus(context, {
-          status: nextStatus,
+          status: liveStatus,
           loading: true,
         }).catch((error: unknown) => {
           logger.debug({ error, ctxId }, '[subagent] Status update skipped');
@@ -100,4 +103,39 @@ export function subscribeEvents(params: {
       );
     }
   });
+}
+
+export function getResponse(stream: unknown[]): string | undefined {
+  function getText(
+    content: SessionUpdatePayload['content']
+  ): string | null {
+    const text = typeof content === 'string' ? content : content?.text;
+    if (typeof text !== 'string') {
+      return null;
+    }
+
+    return text.length > 0 ? text : null;
+  }
+
+  const chunks: string[] = [];
+
+  for (const payload of stream) {
+    const update = readUpdate(payload);
+    if (!update?.sessionUpdate) {
+      continue;
+    }
+
+    if (update.sessionUpdate === 'agent_message_chunk') {
+      const text = getText(update.content);
+      if (text) {
+        chunks.push(text);
+      }
+    }
+  }
+
+  const summary = chunks.join('').trim();
+  console.log('summary', { summary });
+  if (summary.length > 0) {
+    return summary;
+  }
 }
