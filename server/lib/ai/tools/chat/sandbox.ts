@@ -9,7 +9,6 @@ import {
 import { uploadFiles } from '~/lib/sandbox/display';
 import {
   subscribeEvents,
-  summarizeStream,
 } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
@@ -80,7 +79,7 @@ export const sandbox = ({
         const prompt = [
           {
             type: 'text' as const,
-            text: `${task}\n\nAt the end, provide a concise summary of what you changed and where outputs are located.`,
+            text: `${task}\n\nAt the end, provide a summary of what you changed and where outputs are located.`,
           },
           ...resourceLinks,
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
@@ -94,12 +93,11 @@ export const sandbox = ({
         });
 
         try {
-          await runtime.session.prompt([...prompt]);
+          const response = await runtime.session.prompt([...prompt]);
+          console.log('Sandbox prompt response:', JSON.stringify(response));
         } finally {
           unsubscribe();
         }
-
-        const summary = summarizeStream(stream);
 
         await setStatus(context, {
           status: 'is collecting outputs',
@@ -111,7 +109,7 @@ export const sandbox = ({
 
         return {
           success: true,
-          summary,
+          response: 'Sandbox task completed. Outputs have been uploaded to the thread.',
         };
       } catch (error) {
         const message = errorMessage(error);

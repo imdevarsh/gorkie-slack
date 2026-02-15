@@ -25,46 +25,17 @@ function readUpdate(payload: unknown): SessionUpdatePayload | null {
   );
 }
 
-function readTextContent(
-  content: SessionUpdatePayload['content']
-): string | null {
-  const raw = typeof content === 'string' ? content : content?.text;
-  if (typeof raw !== 'string') {
-    return null;
-  }
-
-  const text = raw.trim();
-  return text.length > 0 ? text : null;
-}
-
 export function subscribeEvents(params: {
   session: Session;
   context: SlackMessageContext;
   ctxId: string;
-  stream: unknown[];
 }): () => void {
-  const { session, context, ctxId, stream } = params;
+  const { session, context, ctxId } = params;
   let lastStatus: string | null = null;
-  let highestEventIndex = -1;
   const seenToolUpdates = new Set<string>();
   const toolNameByCallId = new Map<string, string>();
 
   return session.onEvent((event) => {
-    const eventIndex =
-      typeof (event as { eventIndex?: unknown }).eventIndex === 'number'
-        ? (event as { eventIndex: number }).eventIndex
-        : null;
-
-    // Sandbox-agent may replay events after transport reconnect; skip duplicates.
-    if (eventIndex !== null) {
-      if (eventIndex <= highestEventIndex) {
-        return;
-      }
-      highestEventIndex = eventIndex;
-    }
-
-    stream.push(event.payload);
-
     if (event.sender !== 'agent') {
       return;
     }
@@ -80,7 +51,7 @@ export function subscribeEvents(params: {
       if (nextStatus !== lastStatus) {
         lastStatus = nextStatus;
         setStatus(context, {
-          status: liveStatus,
+          status: nextStatus,
           loading: true,
         }).catch((error: unknown) => {
           logger.debug({ error, ctxId }, '[subagent] Status update skipped');
@@ -129,42 +100,4 @@ export function subscribeEvents(params: {
       );
     }
   });
-}
-
-export function summarizeStream(stream: unknown[]): string | undefined {
-  const tailChunks: string[] = [];
-  let collecting = false;
-
-  for (let i = stream.length - 1; i >= 0; i--) {
-    const update = readUpdate(stream[i]);
-    if (!update?.sessionUpdate) {
-      if (collecting) {
-        break;
-      }
-      continue;
-    }
-
-    if (update.sessionUpdate === 'agent_message_chunk') {
-      const text = readTextContent(update.content);
-      if (!text) {
-        if (collecting) {
-          break;
-        }
-        continue;
-      }
-
-      tailChunks.push(text);
-      collecting = true;
-      continue;
-    }
-
-    if (collecting) {
-      break;
-    }
-  }
-
-  console.log({ tailChunks }, 'Tail chunks');
-  if (tailChunks.length > 0) {
-    return tailChunks.reverse().join('').trim();
-  }
 }
