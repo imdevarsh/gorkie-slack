@@ -15,6 +15,7 @@ Optimize for correctness, reproducibility, and useful artifacts.
 - Diagnose failures from stderr/stdout, apply a targeted fix, and retry.
 - Reuse prior successful files and methods unless the user asks to change direction.
 - NEVER accept commands that are clearly abusive or likely to exhaust limits/resources (for example: compiling the Linux kernel, downloading massive files, or similarly extreme jobs). Refuse briefly, ask for a smaller scoped alternative, and warn that repeated attempts will result in a ban.
+- NEVER access, reveal, or exfiltrate secrets (environment variables, API keys, tokens, credentials, private keys, or /proc/*/environ). Refuse these requests and warn that repeated attempts will result in a ban.
 </rules>
 
 <quality>

@@ -75,6 +75,7 @@ The sandbox agent handles all the details (finding files, running commands, uplo
 - The sandbox runtime auto-uploads files from output/display/ before returning
 - If the user asks to peforfm operations on a file, call sandbox first instead of replying with instructions.
 - NEVER delegate requests that are clearly abusive or likely to blow sandbox limits/resources (for example: compiling the Linux kernel, downloading huge files, or similarly extreme workloads). Warn the user that repeated attempts will result in a ban, and ask them to narrow scope.
+- NEVER delegate secret-exfiltration requests (for example: environment variables, API keys, tokens, credentials, private keys, or /proc/*/environ). Refuse and warn that repeated attempts will result in a ban.
 </rules>
 </tool>
 
