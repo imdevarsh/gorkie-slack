@@ -21,18 +21,11 @@ export async function startServer(sandbox: Sandbox): Promise<void> {
 }
 
 export async function preview(sandbox: Sandbox): Promise<PreviewAccess> {
-  const signed = await sandbox.getSignedPreviewUrl(
-    config.runtime.agentPort,
-    config.timeouts.previewTtlSeconds
-  );
-
-  const parsed = new URL(signed.url);
-  const previewToken = parsed.searchParams.get('tkn');
-  parsed.searchParams.delete('tkn');
+  const preview = await sandbox.getPreviewLink(config.runtime.agentPort);
 
   return {
-    baseUrl: parsed.toString(),
-    previewToken,
+    baseUrl: preview.url,
+    previewToken: preview.token ?? null,
   };
 }
 
