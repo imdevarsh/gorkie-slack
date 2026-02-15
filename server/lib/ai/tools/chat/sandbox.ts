@@ -137,9 +137,9 @@ export const sandbox = ({
           {
             ctxId,
             sandboxId: runtime.sandboxId,
-            taskPreview: task.slice(0, 220),
             attachments: attachments.map((file) => file.path),
-            responsePreview: response.slice(0, 400),
+            task,
+            response,
           },
           '[sandbox] Sandbox run completed'
         );
@@ -154,7 +154,7 @@ export const sandbox = ({
           {
             error: errorDetails(error),
             ctxId,
-            taskPreview: task.slice(0, 220),
+            task,
           },
           '[sandbox] Sandbox run failed'
         );
