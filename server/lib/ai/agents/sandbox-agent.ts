@@ -1,6 +1,6 @@
 import type { Sandbox } from '@e2b/code-interpreter';
 import { stepCountIs, ToolLoopAgent } from 'ai';
-import { sandboxPrompt } from '~/lib/ai/prompts/sandbox';
+import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
 import {
   bash,
@@ -13,18 +13,24 @@ import {
   writeFile,
 } from '~/lib/ai/tools/sandbox';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SandboxRequestHints, SlackMessageContext } from '~/types';
 
 export const sandboxAgent = ({
   context,
   sandbox,
+  requestHints,
 }: {
   context: SlackMessageContext;
   sandbox: Sandbox;
+  requestHints?: SandboxRequestHints;
 }) =>
   new ToolLoopAgent({
     model: provider.languageModel('agent-model'),
-    instructions: sandboxPrompt(),
+    instructions: systemPrompt({
+      agent: 'sandbox',
+      context,
+      requestHints,
+    }),
     tools: {
       bash: bash({ context, sandbox }),
       readFile: readFile({ context, sandbox }),

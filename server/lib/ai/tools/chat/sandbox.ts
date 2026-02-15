@@ -4,6 +4,7 @@ import { sandboxAgent } from '~/lib/ai/agents/sandbox-agent';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
+import { buildSandboxContext } from '~/lib/sandbox/context';
 import { ensureSandbox, pauseSandbox } from '~/lib/sandbox/runtime';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -109,27 +110,24 @@ export const sandbox = ({
           loading: true,
         });
 
+        const { messages, requestHints } = await buildSandboxContext(
+          context,
+          runtime.sandbox
+        );
+
         const agent = sandboxAgent({
           context,
           sandbox: runtime.sandbox,
+          requestHints,
         });
         const result = await agent.generate({
-          prompt: [
-            'Complete this sandbox task:',
-            task,
-            '',
-            'Attachments available in sandbox:',
-            attachments.length > 0
-              ? attachments
-                  .map(
-                    (file) =>
-                      `- ${file.path}${file.mimeType ? ` (${file.mimeType})` : ''}`
-                  )
-                  .join('\n')
-              : '- none',
-            '',
-            'Important: call showFile for every artifact that should be uploaded to Slack.',
-          ].join('\n'),
+          messages: [
+            ...messages,
+            {
+              role: 'user',
+              content: task,
+            },
+          ],
         });
         const response = result.text;
 
