@@ -6,6 +6,7 @@ import {
   listPausedForAutoDelete,
   updateStatus,
 } from '~/db/queries/sandbox';
+import { env } from '~/env';
 import logger from '~/lib/logger';
 
 let janitorTimer: ReturnType<typeof setInterval> | null = null;
@@ -30,7 +31,7 @@ async function runSweep(): Promise<void> {
 
       try {
         await Sandbox.kill(session.sandboxId, {
-          apiKey: config.e2b.apiKey,
+          apiKey: env.E2B_API_KEY,
         });
         await clearDestroyed(session.threadId);
         logger.info(

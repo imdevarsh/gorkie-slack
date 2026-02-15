@@ -31,7 +31,6 @@ export const env = createEnv({
     EXA_API_KEY: z.string().min(1),
     // E2B
     E2B_API_KEY: z.string().min(1),
-    E2B_TEMPLATE: z.string().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

@@ -7,9 +7,11 @@ import {
   updateStatus,
   upsert,
 } from '~/db/queries/sandbox';
+import { env } from '~/env';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import { buildTemplateIfMissing, getTemplate } from './template.build';
 
 export interface ResolvedSandbox {
   sandbox: Sandbox;
@@ -32,6 +34,17 @@ function isMissingSandboxError(error: unknown): boolean {
     message.includes('not found') ||
     message.includes('404') ||
     message.includes('does not exist')
+  );
+}
+
+function isMissingTemplateError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  return (
+    message.includes('template') &&
+    (message.includes('not found') ||
+      message.includes('does not exist') ||
+      message.includes('unknown template') ||
+      message.includes('404'))
   );
 }
 
@@ -68,8 +81,9 @@ async function createSandbox(
   context: SlackMessageContext,
   threadId: string
 ): Promise<ResolvedSandbox> {
+  const template = getTemplate();
   const createOpts = {
-    apiKey: config.e2b.apiKey,
+    apiKey: env.E2B_API_KEY,
     timeoutMs: config.timeoutMs,
     autoPause: true,
     allowInternetAccess: true,
@@ -80,9 +94,17 @@ async function createSandbox(
     },
   };
 
-  const sandbox = config.e2b.template
-    ? await Sandbox.betaCreate(config.e2b.template, createOpts)
-    : await Sandbox.betaCreate(createOpts);
+  let sandbox: Sandbox;
+  try {
+    sandbox = await Sandbox.betaCreate(template, createOpts);
+  } catch (error) {
+    if (!isMissingTemplateError(error)) {
+      throw error;
+    }
+
+    await buildTemplateIfMissing(template);
+    sandbox = await Sandbox.betaCreate(template, createOpts);
+  }
 
   await ensureRuntimeDirectories(sandbox);
   await sandbox.setTimeout(config.timeoutMs);
@@ -102,7 +124,7 @@ async function createSandbox(
     {
       threadId,
       sandboxId: sandbox.sandboxId,
-      template: config.e2b.template ?? 'default',
+      template,
       timeoutMs: config.timeoutMs,
     },
     '[sandbox] Created E2B sandbox'
@@ -129,7 +151,7 @@ export async function ensureSandbox(
 
   try {
     const sandbox = await Sandbox.connect(existing.sandboxId, {
-      apiKey: config.e2b.apiKey,
+      apiKey: env.E2B_API_KEY,
       timeoutMs: config.timeoutMs,
     });
 
@@ -180,7 +202,7 @@ export async function pauseSandbox(
 
   try {
     await Sandbox.betaPause(existing.sandboxId, {
-      apiKey: config.e2b.apiKey,
+      apiKey: env.E2B_API_KEY,
     });
     await updateStatus(threadId, 'paused', null);
     logger.info(
@@ -207,7 +229,7 @@ export async function destroySandbox(
 
   try {
     await Sandbox.kill(existing.sandboxId, {
-      apiKey: config.e2b.apiKey,
+      apiKey: env.E2B_API_KEY,
     });
     logger.info(
       { threadId, sandboxId: existing.sandboxId },

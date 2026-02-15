@@ -1,5 +1,3 @@
-import { env } from '~/env';
-
 export const messageThreshold = 10;
 
 export const sandbox = {
@@ -15,9 +13,5 @@ export const sandbox = {
   },
   attachments: {
     maxBytes: 1_000_000_000,
-  },
-  e2b: {
-    apiKey: env.E2B_API_KEY,
-    template: env.E2B_TEMPLATE,
   },
 };
