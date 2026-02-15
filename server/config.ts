@@ -3,7 +3,7 @@ export const messageThreshold = 10;
 export const sandbox = {
   timeoutMs: 10 * 60 * 1000,
   commandTimeoutMs: 120_000,
-  autoDeleteAfterMs: 24 * 60 * 60 * 1000,
+  autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
   janitorIntervalMs: 60 * 1000,
   paths: {
     workdir: '/home/user',
