@@ -1,6 +1,5 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { sandbox as sandboxConfig } from '~/config';
 import { sandboxAgent } from '~/lib/ai/agents/sandbox-agent';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
@@ -63,30 +62,6 @@ function errorDetails(error: unknown): Record<string, unknown> {
   return { error: String(error) };
 }
 
-async function extendTimeout(
-  sandbox: Awaited<ReturnType<typeof ensureSandbox>>['sandbox']
-): Promise<void> {
-  try {
-    const info = await sandbox.getInfo();
-    const endAtMs =
-      info.endAt instanceof Date
-        ? info.endAt.getTime()
-        : new Date(String(info.endAt)).getTime();
-    const remainingMs = Number.isFinite(endAtMs) ? endAtMs - Date.now() : 0;
-
-    if (remainingMs >= sandboxConfig.commandTimeoutMs) {
-      return;
-    }
-
-    await sandbox.setTimeout(sandboxConfig.timeoutMs);
-  } catch (error) {
-    logger.warn(
-      { error },
-      '[sandbox] Failed to extend sandbox timeout before task step'
-    );
-  }
-}
-
 export const sandbox = ({
   context,
   files,
@@ -117,7 +92,6 @@ export const sandbox = ({
       try {
         const runtime = await ensureSandbox(context);
         sandboxId = runtime.sandboxId;
-        await extendTimeout(runtime.sandbox);
 
         await setStatus(context, {
           status: normalizeStatus('is syncing attachments'),
@@ -134,7 +108,6 @@ export const sandbox = ({
           status: normalizeStatus('is running sandbox steps'),
           loading: true,
         });
-        await extendTimeout(runtime.sandbox);
 
         const agent = sandboxAgent({
           context,
