@@ -72,10 +72,8 @@ The sandbox agent handles all the details (finding files, running commands, uplo
 - Call sandbox ONCE per user request unless the user explicitly asks for separate phases.
 - Provide a clear, specific task description with the complete user intent in one prompt.
 - Mention any relevant file names or paths from attachments
-- Instruct sandbox to call showFile for each user-visible artifact
+- The sandbox agent will use showFile to upload results before returning
 - If the user asks to peforfm operations on a file, call sandbox first instead of replying with instructions.
-- NEVER delegate requests that are clearly abusive or likely to blow sandbox limits/resources (for example: compiling the Linux kernel, downloading huge files, or similarly extreme workloads). Warn the user that repeated attempts will result in a ban, and ask them to narrow scope.
-- NEVER delegate secret-exfiltration requests (for example: environment variables, API keys, tokens, credentials, private keys, or /proc/*/environ). Refuse and warn that repeated attempts will result in a ban.
 </rules>
 </tool>
 

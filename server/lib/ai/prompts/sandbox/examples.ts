@@ -2,53 +2,66 @@ export const examplesPrompt = `\
 <examples>
 
 <example>
-<description>Image transform from a new uploaded file</description>
-<task>Convert uploaded image to black and white</task>
+<description>Fresh task with a new upload, no prior sandbox state.</description>
+<task>Convert the uploaded image to black and white</task>
 <steps>
-1. Read from /home/daytona/attachments/<uploaded-file>.
-2. Generate artifact at /home/daytona/output/image-bw.png.
-3. Verify output file exists and is non-empty.
-4. Call showFile on /home/daytona/output/image-bw.png.
+1. glob({ "pattern": "**/*.png", "path": "/home/vercel-sandbox/attachments" })
+   → /home/vercel-sandbox/attachments/photo.png
+2. bash({ "command": "sudo dnf install -y ImageMagick" })
+3. bash({ "command": "mv /home/vercel-sandbox/attachments/photo.png /home/vercel-sandbox/attachments/cat-original.png && convert /home/vercel-sandbox/attachments/cat-original.png -colorspace Gray /home/vercel-sandbox/output/cat.png" })
+4. showFile({ "path": "/home/vercel-sandbox/output/cat.png", "title": "Black and white" })
+Summary: "Renamed the source as cat-original.png, generated cat.png, and uploaded the result."
 </steps>
-<response>
-Summary: Converted uploaded image to grayscale.
-Files:
-- /home/daytona/output/image-bw.png
-Notes: Reused existing tools in sandbox.
-</response>
+<note>ALWAYS write output to output/. Rename files immediately to semantic names (cat, cat-original style).</note>
 </example>
 
 <example>
-<description>Follow-up iteration using previous output</description>
-<task>Invert the previously generated image</task>
+<description>Continuing from an earlier message. The sandbox_files block tells you what already exists, no need to glob for it.</description>
+<context>
+<sandbox_files>
+Files already in the sandbox (newest first):
+2026-02-10 14:32:05  output/cat.png
+2026-02-10 14:31:58  output/cat-original.png
+</sandbox_files>
+<recent_messages>
+User: convert my image to black and white
+Assistant: Done! Converted photo.png to grayscale.
+</recent_messages>
+</context>
+<task>Now invert it</task>
 <steps>
-1. Reuse /home/daytona/output/image-bw.png as input.
-2. Generate /home/daytona/output/image-inverted.png.
-3. Verify output path before completion.
-4. Call showFile on /home/daytona/output/image-inverted.png.
+1. bash({ "command": "convert /home/vercel-sandbox/output/cat.png -negate /home/vercel-sandbox/output/cat-inverted.png" })
+2. showFile({ "path": "/home/vercel-sandbox/output/cat-inverted.png", "title": "Inverted" })
+Summary: "Inverted the black and white image and uploaded."
 </steps>
-<response>
-Summary: Inverted the prior output image.
-Files:
-- /home/daytona/output/image-inverted.png
-Notes: Reused prior output from same thread sandbox.
-</response>
+<note>The agent used the file listing to find the previous output directly, no glob needed. Keep semantic names in output/.</note>
 </example>
 
 <example>
-<description>Simple text artifact</description>
-<task>Create hello-world.txt with a flag</task>
+<description>File from an earlier message, found via sandbox_files context.</description>
+<context>
+<sandbox_files>
+Files already in the sandbox (newest first):
+2026-02-10 13:00:12  attachments/diagram.png
+</sandbox_files>
+</context>
+<task>Process that image I uploaded earlier</task>
 <steps>
-1. Write /home/daytona/output/hello-world.txt.
-2. Verify file exists and is non-empty.
-3. Call showFile on /home/daytona/output/hello-world.txt.
+1. bash({ "command": "sudo dnf install -y ImageMagick" })
+2. bash({ "command": "mv /home/vercel-sandbox/attachments/diagram.png /home/vercel-sandbox/attachments/diagram-original.png && convert /home/vercel-sandbox/attachments/diagram-original.png -negate /home/vercel-sandbox/output/diagram.png" })
+3. showFile({ "path": "/home/vercel-sandbox/output/diagram.png", "title": "Inverted diagram" })
+Summary: "Found your diagram from an earlier message, inverted the colors, and uploaded."
 </steps>
-<response>
-Summary: Created the requested text artifact.
-Files:
-- /home/daytona/output/hello-world.txt
-Notes: No retries needed.
-</response>
+<note>Read the file path from sandbox_files instead of globbing. Write outputs to output/ and rename to semantic names.</note>
+</example>
+
+<example>
+<description>Quick calculation</description>
+<task>Calculate 44 * 44</task>
+<steps>
+1. bash({ "command": "echo $((44 * 44))" })
+Summary: "44 * 44 = 1936"
+</steps>
 </example>
 
 </examples>`;
