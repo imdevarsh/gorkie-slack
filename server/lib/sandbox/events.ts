@@ -28,20 +28,16 @@ function readUpdate(payload: unknown): SessionUpdatePayload | null {
 function readTextContent(
   content: SessionUpdatePayload['content']
 ): string | null {
-  if (typeof content === 'string') {
-    const text = content.trim();
-    return text.length > 0 ? text : null;
+  const raw = typeof content === 'string' ? content : content?.text;
+  if (typeof raw !== 'string') {
+    return null;
   }
 
-  if (typeof content?.text === 'string') {
-    const text = content.text.trim();
-    return text.length > 0 ? text : null;
-  }
-
-  return null;
+  const text = raw.trim();
+  return text.length > 0 ? text : null;
 }
 
-export function subscribeSandboxEvents(params: {
+export function subscribeEvents(params: {
   session: Session;
   context: SlackMessageContext;
   ctxId: string;
@@ -84,7 +80,7 @@ export function subscribeSandboxEvents(params: {
       if (nextStatus !== lastStatus) {
         lastStatus = nextStatus;
         setStatus(context, {
-          status: nextStatus,
+          status: liveStatus,
           loading: true,
         }).catch((error: unknown) => {
           logger.debug({ error, ctxId }, '[subagent] Status update skipped');
@@ -135,49 +131,40 @@ export function subscribeSandboxEvents(params: {
   });
 }
 
-export function summarizeSandboxStream(stream: unknown[]): string {
-  let lastAgentMessage: string | null = null;
-  const chunkParts: string[] = [];
+export function summarizeStream(stream: unknown[]): string | undefined {
+  const tailChunks: string[] = [];
+  let collecting = false;
 
-  for (const payload of stream) {
-    const update = readUpdate(payload);
+  for (let i = stream.length - 1; i >= 0; i--) {
+    const update = readUpdate(stream[i]);
     if (!update?.sessionUpdate) {
-      continue;
-    }
-
-    if (update.sessionUpdate === 'agent_message') {
-      const text = readTextContent(update.content);
-      if (text) {
-        lastAgentMessage = text;
+      if (collecting) {
+        break;
       }
       continue;
     }
 
     if (update.sessionUpdate === 'agent_message_chunk') {
       const text = readTextContent(update.content);
-      if (text) {
-        chunkParts.push(text);
+      if (!text) {
+        if (collecting) {
+          break;
+        }
+        continue;
       }
+
+      tailChunks.push(text);
+      collecting = true;
+      continue;
+    }
+
+    if (collecting) {
+      break;
     }
   }
 
-  if (lastAgentMessage) {
-    return lastAgentMessage.slice(0, 1500);
-  }
-
-  const chunkSummary = chunkParts.join('').trim();
-  if (chunkSummary.length > 0) {
-    return chunkSummary.slice(0, 1500);
-  }
-
-  const last = stream.at(-1);
-  if (last === undefined) {
-    return 'Task completed in sandbox.';
-  }
-
-  try {
-    return JSON.stringify(last).slice(0, 1500);
-  } catch {
-    return 'Task completed in sandbox.';
+  console.log({ tailChunks }, 'Tail chunks');
+  if (tailChunks.length > 0) {
+    return tailChunks.reverse().join('').trim();
   }
 }

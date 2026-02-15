@@ -8,8 +8,8 @@ import {
 } from '~/lib/sandbox/attachments';
 import { uploadFiles } from '~/lib/sandbox/display';
 import {
-  subscribeSandboxEvents,
-  summarizeSandboxStream,
+  subscribeEvents,
+  summarizeStream,
 } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
@@ -86,7 +86,7 @@ export const sandbox = ({
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
 
         const stream: unknown[] = [];
-        const unsubscribe = subscribeSandboxEvents({
+        const unsubscribe = subscribeEvents({
           session: runtime.session,
           context,
           ctxId,
@@ -99,7 +99,7 @@ export const sandbox = ({
           unsubscribe();
         }
 
-        const summary = summarizeSandboxStream(stream);
+        const summary = summarizeStream(stream);
 
         await setStatus(context, {
           status: 'is collecting outputs',
