@@ -50,7 +50,7 @@ export function subscribeEvents(params: {
 
     const liveStatus = update.rawInput?.description;
     if (typeof liveStatus === 'string' && liveStatus.trim().length > 0) {
-      const nextStatus = liveStatus.trim().slice(0, 51);
+      const nextStatus = liveStatus.trim().slice(0, 45);
       if (nextStatus !== lastStatus) {
         lastStatus = nextStatus;
         setStatus(context, {
