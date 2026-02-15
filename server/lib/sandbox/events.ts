@@ -7,6 +7,7 @@ interface SessionUpdatePayload {
   sessionUpdate?: string;
   status?: string;
   title?: string;
+  toolCallId?: string;
   rawInput?: { description?: string } & Record<string, unknown>;
   rawOutput?: Record<string, unknown>;
   content?: { text?: string } | string;
@@ -48,8 +49,24 @@ export function subscribeSandboxEvents(params: {
 }): () => void {
   const { session, context, ctxId, stream } = params;
   let lastStatus: string | null = null;
+  let highestEventIndex = -1;
+  const seenToolUpdates = new Set<string>();
+  const toolNameByCallId = new Map<string, string>();
 
   return session.onEvent((event) => {
+    const eventIndex =
+      typeof (event as { eventIndex?: unknown }).eventIndex === 'number'
+        ? (event as { eventIndex: number }).eventIndex
+        : null;
+
+    // Sandbox-agent may replay events after transport reconnect; skip duplicates.
+    if (eventIndex !== null) {
+      if (eventIndex <= highestEventIndex) {
+        return;
+      }
+      highestEventIndex = eventIndex;
+    }
+
     stream.push(event.payload);
 
     if (event.sender !== 'agent') {
@@ -76,10 +93,15 @@ export function subscribeSandboxEvents(params: {
     }
 
     if (update.sessionUpdate === 'tool_call') {
+      const toolCallId =
+        update.toolCallId ?? `unknown:${update.title ?? 'tool'}`;
+      const toolName = update.title ?? 'unknown';
+      toolNameByCallId.set(toolCallId, toolName);
+      seenToolUpdates.add(`${toolCallId}:pending`);
       logger.info(
         {
           ctxId,
-          tool: update.title ?? 'unknown',
+          tool: toolName,
           input: update.rawInput ?? null,
         },
         '[subagent] Tool started'
@@ -88,11 +110,21 @@ export function subscribeSandboxEvents(params: {
     }
 
     if (update.sessionUpdate === 'tool_call_update') {
+      const toolCallId =
+        update.toolCallId ?? `unknown:${update.title ?? 'tool'}`;
+      const toolName =
+        toolNameByCallId.get(toolCallId) ?? update.title ?? 'unknown';
+      const statusKey = `${toolCallId}:${update.status ?? 'unknown'}`;
+      if (seenToolUpdates.has(statusKey)) {
+        return;
+      }
+      seenToolUpdates.add(statusKey);
+
       const level = update.status === 'failed' ? 'warn' : 'info';
       logger[level](
         {
           ctxId,
-          tool: update.title ?? 'unknown',
+          tool: toolName,
           status: update.status ?? 'unknown',
           input: update.rawInput ?? null,
           output: update.rawOutput ?? null,

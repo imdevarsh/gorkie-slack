@@ -5,7 +5,7 @@ import { env } from '~/env';
 import { type PreviewAccess, waitForHealth } from './client';
 
 export async function startServer(sandbox: Sandbox): Promise<void> {
-  const command = `pkill -f "sandbox-agent server" >/dev/null 2>&1 || true; nohup sandbox-agent server --no-token --host 0.0.0.0 --port ${config.runtime.agentPort} >/tmp/sandbox-agent.log 2>&1 &`;
+  const command = `if pgrep -f "sandbox-agent server --no-token --host 0.0.0.0 --port ${config.runtime.agentPort}" >/dev/null 2>&1; then echo "sandbox-agent already running"; exit 0; fi; nohup sandbox-agent server --no-token --host 0.0.0.0 --port ${config.runtime.agentPort} >/tmp/sandbox-agent.log 2>&1 &`;
 
   const result = await sandbox.process.executeCommand(
     command,

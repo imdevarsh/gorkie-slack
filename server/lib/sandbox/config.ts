@@ -6,7 +6,7 @@ export function buildConfig(prompt: string): string {
   return JSON.stringify(
     {
       $schema: 'https://opencode.ai/config.json',
-      model: 'openrouter/openai/gpt-5-mini',
+      model: 'openrouter/google/gemini-3-flash-preview',
       share: 'disabled',
       permission: 'allow',
       provider: {
@@ -17,6 +17,7 @@ export function buildConfig(prompt: string): string {
           },
           models: {
             'openai/gpt-5-mini': {},
+            'google/gemini-3-flash-preview': {},
           },
         },
       },

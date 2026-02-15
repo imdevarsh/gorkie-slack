@@ -12,7 +12,7 @@ export const workflowPrompt = `\
 <completion_gates>
 - Do not declare completion until validate and publish are done.
 - Verify each promised output path before final response.
-- If any display artifact is missing, create/copy it before ending the turn.
+- Create/copy missing display artifacts before ending the turn.
 - If recovery is possible, retry instead of returning avoidable failure.
 </completion_gates>
 
