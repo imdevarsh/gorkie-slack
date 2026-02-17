@@ -13,8 +13,10 @@ async function startServer(sandbox: Sandbox): Promise<void> {
     { HACKCLUB_API_KEY: env.HACKCLUB_API_KEY }
   );
 
+  // exitCode is always 0 for backgrounded processes; actual startup
+  // verification happens via the health check in boot().
   if (result.exitCode !== 0) {
-    throw new Error(`Failed to start sandbox-agent server: ${result.result}`);
+    throw new Error(`Failed to launch sandbox-agent server: ${result.result}`);
   }
 }
 

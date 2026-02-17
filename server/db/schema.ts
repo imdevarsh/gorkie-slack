@@ -15,7 +15,8 @@ export const sandboxSessions = pgTable(
       .defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (table) => ({
     statusIdx: index('sandbox_sessions_status_idx').on(table.status),
