@@ -4,15 +4,13 @@ import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import { type PreviewAccess, waitForHealth } from './client';
 
-export async function startServer(sandbox: Sandbox): Promise<void> {
-  const command = `if pgrep -f "sandbox-agent server --no-token --host 0.0.0.0 --port ${config.runtime.agentPort}" >/dev/null 2>&1; then echo "sandbox-agent already running"; exit 0; fi; nohup sandbox-agent server --no-token --host 0.0.0.0 --port ${config.runtime.agentPort} >/tmp/sandbox-agent.log 2>&1 &`;
+const SERVER_ARGS = `--no-token --host 0.0.0.0 --port ${config.runtime.agentPort}`;
 
+async function startServer(sandbox: Sandbox): Promise<void> {
   const result = await sandbox.process.executeCommand(
-    command,
+    `nohup sandbox-agent server ${SERVER_ARGS} >/tmp/sandbox-agent.log 2>&1 &`,
     config.runtime.workdir,
-    {
-      HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
-    }
+    { HACKCLUB_API_KEY: env.HACKCLUB_API_KEY }
   );
 
   if (result.exitCode !== 0) {
@@ -20,21 +18,38 @@ export async function startServer(sandbox: Sandbox): Promise<void> {
   }
 }
 
-export async function preview(sandbox: Sandbox): Promise<PreviewAccess> {
+async function getPreviewAccess(sandbox: Sandbox): Promise<PreviewAccess> {
   const preview = await sandbox.getPreviewLink(config.runtime.agentPort);
-
   return {
     baseUrl: preview.url,
     previewToken: preview.token ?? null,
   };
 }
 
+async function isHealthy(access: PreviewAccess): Promise<boolean> {
+  const headers = new Headers();
+  if (access.previewToken) {
+    headers.set('x-daytona-preview-token', access.previewToken);
+  }
+
+  const response = await fetch(`${access.baseUrl}/v1/health`, {
+    method: 'GET',
+    headers,
+  }).catch(() => null);
+
+  return response?.ok === true;
+}
+
 export async function boot(
   sandbox: Sandbox
 ): Promise<{ sdk: SandboxAgent; access: PreviewAccess }> {
-  await startServer(sandbox);
-  const access = await preview(sandbox);
-  await waitForHealth(access, config.timeouts.healthMs);
+  const access = await getPreviewAccess(sandbox);
+
+  if (!(await isHealthy(access))) {
+    await startServer(sandbox);
+    await waitForHealth(access, config.timeouts.healthMs);
+  }
+
   const sdk = await connect(access);
   return { sdk, access };
 }
