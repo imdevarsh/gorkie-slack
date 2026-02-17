@@ -13,7 +13,7 @@ function createImage() {
       'pip cache purge',
       'curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh',
       'sandbox-agent install-agent opencode',
-      'mkdir -p /home/daytona/output /home/daytona/attachments /opt/mcp/gorkie'
+      'mkdir -p /home/daytona/output /home/daytona/attachments /opt/mcp'
     )
     .workdir('/home/daytona');
 }

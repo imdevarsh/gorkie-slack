@@ -1,5 +1,9 @@
 import { Daytona, type Sandbox } from '@daytonaio/sdk';
-import type { SandboxAgent, Session } from 'sandbox-agent';
+import {
+  buildInspectorUrl,
+  type SandboxAgent,
+  type Session,
+} from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import {
   clearDestroyed,
@@ -9,6 +13,7 @@ import {
   updateStatus,
   upsert,
 } from '~/db/queries/sandbox';
+import { env } from '~/env';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
@@ -33,6 +38,34 @@ export interface ResolvedSandboxSession {
 }
 
 class SandboxNotFoundError extends Error {}
+
+function logInspectorUrl(params: {
+  baseUrl: string;
+  previewToken: string | null;
+  sessionId: string;
+  threadId: string;
+}): void {
+  if (env.NODE_ENV !== 'development') {
+    return;
+  }
+
+  const { baseUrl, previewToken, sessionId, threadId } = params;
+  const inspectorUrl = buildInspectorUrl({
+    baseUrl,
+    ...(previewToken
+      ? {
+          headers: {
+            'x-daytona-preview-token': previewToken,
+          },
+        }
+      : {}),
+  });
+
+  logger.info(
+    { threadId, sessionId, inspectorUrl },
+    '[sandbox] Inspector UI (dev)'
+  );
+}
 
 function isNotFoundError(error: unknown): boolean {
   if (!(error instanceof Error)) {
@@ -85,6 +118,12 @@ async function createSandbox(
     await setStatus(context, { status: 'is starting agent', loading: true });
     const { sdk, access } = await boot(sandbox);
     const session = await createSession(sdk, threadId);
+    logInspectorUrl({
+      baseUrl: access.baseUrl,
+      previewToken: access.previewToken,
+      sessionId: session.id,
+      threadId,
+    });
 
     await upsert({
       threadId,
@@ -180,6 +219,12 @@ export async function resolveSession(
 
     const { sdk, access } = await boot(sandbox);
     const session = await ensureSession(sdk, existing.sessionId);
+    logInspectorUrl({
+      baseUrl: access.baseUrl,
+      previewToken: access.previewToken,
+      sessionId: session.id,
+      threadId,
+    });
 
     await updateRuntime(threadId, {
       sandboxId: sandbox.id,
