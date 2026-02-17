@@ -2,10 +2,6 @@ export const workflowPrompt = `\
 <workflow>
 Follow these steps for every task:
 
-0. Recall: For follow-up requests, recover recent execution context before acting.
-  Check what files exist from earlier messages and reuse proven settings
-  unless the user explicitly asks to change them.
-
 1. Discover: Find the relevant files before doing anything.
   Use glob to locate uploads in attachments/ or outputs from earlier messages.
   Never claim a file does not exist without checking first.

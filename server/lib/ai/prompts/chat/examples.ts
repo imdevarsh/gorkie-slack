@@ -42,7 +42,7 @@ export const examplesPrompt = `\
 <title>Image processing with attachment</title>
 <user>[uploads photo.png] Invert this to black and white</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Find the uploaded 'photo.png' in attachments/ and invert it to black and white using ImageMagick. Save result to output/ and use showFile to upload it to Slack." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Find the uploaded 'photo.png' in attachments/ and invert it to black and white using ImageMagick. Save result and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done! I inverted your image to black and white."] }</input></tool>
 </workflow>
 </example>
@@ -78,7 +78,7 @@ export const examplesPrompt = `\
 <title>Data export from sandbox</title>
 <user>Generate a report of that data as CSV</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Generate a CSV report from the data. Save result to output/ and use showFile to upload it to Slack." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Generate a CSV report from the data. Save result and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the CSV report."] }</input></tool>
 </workflow>
 </example>
@@ -87,7 +87,7 @@ export const examplesPrompt = `\
 <title>Public URL video download</title>
 <user>download this video https://www.youtube.com/watch?v=dQw4w9WgXcQ</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Download the video from https://www.youtube.com/watch?v=dQw4w9WgXcQ into output/ as MP4. Rename to a semantic filename, then use showFile to upload it to Slack. If needed, install yt-dlp and ffmpeg. If download requires auth or fails, include the exact error in the summary." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Download the video from https://www.youtube.com/watch?v=dQw4w9WgXcQ into output/ as MP4. Rename to a semantic filename, then upload it with showFile. If needed, install yt-dlp and ffmpeg. If download requires auth or fails, include the exact error in the summary." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done. I downloaded the video and uploaded the MP4 file in this thread."] }</input></tool>
 </workflow>
 </example>
