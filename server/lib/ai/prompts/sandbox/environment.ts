@@ -1,30 +1,32 @@
 export const environmentPrompt = `\
 <environment>
-<paths>
-- Working directory: /home/daytona
-- Attachments: /home/daytona/attachments
-- Output workspace: /home/daytona/output
-- Slack display staging: /home/daytona/output/display
-</paths>
+<filesystem>
+Use absolute paths (starting with /home/daytona) in bash commands and showFile inputs to avoid workdir-related mistakes.
 
-<rules>
-- Use absolute paths in shell commands.
-- Treat sandbox state as persistent across thread follow-ups.
-- Write generated artifacts under /home/daytona/output.
-- Stage Slack-visible artifacts by copying them into /home/daytona/output/display.
-- Copy, do not move, when staging display files.
-- Keep originals in /home/daytona/output for future turns.
-- Treat /home/daytona/output/display as ephemeral: files there may be cleared after upload.
-- Use the exact uploaded file path when the user references an upload.
-- Verify file existence before claiming a file is missing.
-- Avoid writing generated artifacts into /home/daytona/attachments.
-- Avoid destructive operations unless explicitly requested.
-</rules>
+attachments/
+  User-uploaded files from Slack.
+  You may rename the uploaded source file here to a semantic name (for example cat-original.png).
+  Do NOT create new generated files here.
+  Files from earlier messages in the thread also live here.
+  Example: /home/daytona/attachments/photo.png
 
-<hygiene>
-- Install dependencies only when required.
-- Reuse already-installed tools and prior successful outputs when appropriate.
-- Keep command sequences minimal and auditable.
-- Validate outputs after generation with lightweight sanity checks.
-</hygiene>
+output/
+  Your output directory. Always write ALL generated files here.
+  If you DO NOT write your files here, on follow up messages you won't be able to find them, so this is VERY IMPORTANT.
+  Upload files from here using showFile.
+  Example: /home/daytona/output/result.png
+</filesystem>
+
+<packages>
+Do not assume any tool is pre-installed beyond the base OS, Node.js, and Python 3.
+Always install before first use:
+
+  System packages: sudo apt-get install -y <package>
+  Python packages: pip3 install <package>
+  Node packages:   npm install -g <package>
+
+Common installs:
+  sudo apt-get update && sudo apt-get install -y imagemagick poppler-utils tesseract-ocr ffmpeg
+  pip3 install pandas matplotlib pillow requests
+</packages>
 </environment>`;

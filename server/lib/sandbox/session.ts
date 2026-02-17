@@ -75,35 +75,45 @@ async function createSandbox(
     snapshot: SANDBOX_SNAPSHOT,
   });
 
-  const prompt = systemPrompt({ agent: 'sandbox' });
-  await sandbox.fs.uploadFile(
-    Buffer.from(buildConfig(prompt), 'utf8'),
-    CONFIG_PATH
-  );
+  try {
+    const prompt = systemPrompt({ agent: 'sandbox', context });
+    await sandbox.fs.uploadFile(
+      Buffer.from(buildConfig(prompt), 'utf8'),
+      CONFIG_PATH
+    );
 
-  await setStatus(context, { status: 'is starting agent', loading: true });
-  const { sdk, access } = await boot(sandbox);
-  const session = await createSession(sdk, threadId);
+    await setStatus(context, { status: 'is starting agent', loading: true });
+    const { sdk, access } = await boot(sandbox);
+    const session = await createSession(sdk, threadId);
 
-  await upsert({
-    threadId,
-    sandboxId: sandbox.id,
-    sessionId: session.id,
-    status: 'active',
-  });
+    await upsert({
+      threadId,
+      sandboxId: sandbox.id,
+      sessionId: session.id,
+      status: 'active',
+    });
 
-  logger.info(
-    { threadId, sandboxId: sandbox.id },
-    '[sandbox] Created sandbox session'
-  );
+    logger.info(
+      { threadId, sandboxId: sandbox.id },
+      '[sandbox] Created sandbox session'
+    );
 
-  return {
-    sdk,
-    sandbox,
-    session,
-    sessionId: session.id,
-    baseUrl: access.baseUrl,
-  };
+    return {
+      sdk,
+      sandbox,
+      session,
+      sessionId: session.id,
+      baseUrl: access.baseUrl,
+    };
+  } catch (error) {
+    await sandbox.stop().catch((stopError: unknown) => {
+      logger.warn(
+        { error: stopError, sandboxId: sandbox.id, threadId },
+        '[sandbox] Failed to stop sandbox after creation failure'
+      );
+    });
+    throw error;
+  }
 }
 
 async function reconnectSandboxById(
@@ -189,25 +199,6 @@ export async function resolveSession(
     await updateStatus(threadId, 'error');
     throw error;
   }
-}
-
-export async function getSandbox(
-  context: SlackMessageContext
-): Promise<Sandbox> {
-  const resolved = await resolveSession(context);
-  return resolved.sandbox;
-}
-
-export async function reconnectSandbox(
-  context: SlackMessageContext
-): Promise<Sandbox | null> {
-  const threadId = getContextId(context);
-  const existing = await getByThread(threadId);
-  if (!existing) {
-    return null;
-  }
-
-  return reconnectSandboxById(threadId, existing.sandboxId);
 }
 
 export async function stopSandbox(context: SlackMessageContext): Promise<void> {

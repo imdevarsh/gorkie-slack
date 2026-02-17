@@ -6,7 +6,6 @@ import {
   type PromptResourceLink,
   syncAttachments,
 } from '~/lib/sandbox/attachments';
-import { uploadFiles } from '~/lib/sandbox/display';
 import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
@@ -77,7 +76,7 @@ export const sandbox = ({
         const prompt = [
           {
             type: 'text' as const,
-            text: `${task}\n\nAt the end, provide a detailed summary, as well as any relevant files as attachments. Files are NOT shown to the user, unless put inside the \`output/display\` folder.`,
+            text: `${task}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`,
           },
           ...resourceLinks,
         ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
@@ -85,6 +84,7 @@ export const sandbox = ({
         const stream: unknown[] = [];
         const unsubscribe = subscribeEvents({
           session: runtime.session,
+          runtime,
           context,
           ctxId,
           stream,
@@ -97,11 +97,6 @@ export const sandbox = ({
         }
 
         const response = getResponse(stream);
-        await setStatus(context, {
-          status: 'is collecting outputs',
-          loading: true,
-        });
-        await uploadFiles(runtime, context);
 
         logger.info({ ctxId, response }, '[subagent] Sandbox run completed');
 

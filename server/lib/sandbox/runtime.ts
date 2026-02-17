@@ -3,6 +3,11 @@ import { SandboxAgent, type Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import { type PreviewAccess, waitForHealth } from './client';
+import {
+  loadMcpServerBundle,
+  SANDBOX_MCP_DIR,
+  SANDBOX_MCP_SERVER_PATH,
+} from './mcp';
 
 const SERVER_ARGS = `--no-token --host 0.0.0.0 --port ${config.runtime.agentPort}`;
 
@@ -42,6 +47,17 @@ async function isHealthy(access: PreviewAccess): Promise<boolean> {
   return response?.ok === true;
 }
 
+async function setupMcpServer(sdk: SandboxAgent): Promise<void> {
+  const server = await loadMcpServerBundle();
+  await sdk.mkdirFs({ path: '/opt/mcp' }).catch(() => {
+    // Directory may already exist.
+  });
+  await sdk.mkdirFs({ path: SANDBOX_MCP_DIR }).catch(() => {
+    // Directory may already exist.
+  });
+  await sdk.writeFsFile({ path: SANDBOX_MCP_SERVER_PATH }, server);
+}
+
 export async function boot(
   sandbox: Sandbox
 ): Promise<{ sdk: SandboxAgent; access: PreviewAccess }> {
@@ -53,6 +69,8 @@ export async function boot(
   }
 
   const sdk = await connect(access);
+  await setupMcpServer(sdk);
+
   return { sdk, access };
 }
 
@@ -90,7 +108,14 @@ export function createSession(
     agent: 'opencode',
     sessionInit: {
       cwd: config.runtime.workdir,
-      mcpServers: [],
+      mcpServers: [
+        {
+          name: 'gorkie',
+          command: 'node',
+          args: [SANDBOX_MCP_SERVER_PATH],
+          env: [],
+        },
+      ],
     },
   });
 }

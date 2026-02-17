@@ -1,7 +1,10 @@
 import type { Session } from 'sandbox-agent';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
+import { showFileInputSchema } from '~/lib/validators/sandbox';
 import type { SlackMessageContext } from '~/types';
+import type { ResolvedSandboxSession } from './session';
+import { showFile } from './show-file';
 
 interface SessionUpdatePayload {
   sessionUpdate?: string;
@@ -25,16 +28,67 @@ function readUpdate(payload: unknown): SessionUpdatePayload | null {
   );
 }
 
+function handleTools(params: {
+  update: SessionUpdatePayload;
+  runtime: ResolvedSandboxSession;
+  context: SlackMessageContext;
+  ctxId: string;
+}): boolean {
+  const { update, runtime, context, ctxId } = params;
+
+  if (update.sessionUpdate === 'tool_call') {
+    const toolName = update.title ?? 'unknown';
+    logger.info(
+      { ctxId, tool: toolName, input: update.rawInput ?? null },
+      '[subagent] Tool started'
+    );
+    return true;
+  }
+
+  if (update.sessionUpdate !== 'tool_call_update') {
+    return false;
+  }
+
+  const toolName = update.title ?? 'unknown';
+  const status = update.status ?? 'unknown';
+  logger[status === 'failed' ? 'warn' : 'info'](
+    {
+      ctxId,
+      tool: toolName,
+      status,
+      input: update.rawInput ?? null,
+      output: update.rawOutput ?? null,
+    },
+    '[subagent] Tool update'
+  );
+
+  if (toolName !== 'showFile' || status !== 'completed') {
+    return true;
+  }
+
+  const parsed = showFileInputSchema.safeParse(update.rawInput);
+  if (!parsed.success) {
+    return true;
+  }
+
+  showFile({ input: parsed.data, runtime, context, ctxId }).catch(
+    (error: unknown) => {
+      logger.debug({ error, ctxId }, '[subagent] showFile handler failed');
+    }
+  );
+
+  return true;
+}
+
 export function subscribeEvents(params: {
   session: Session;
+  runtime: ResolvedSandboxSession;
   context: SlackMessageContext;
   ctxId: string;
   stream: unknown[];
 }): () => void {
-  const { session, context, ctxId, stream } = params;
+  const { session, runtime, context, ctxId, stream } = params;
   let lastStatus: string | null = null;
-  const seenToolUpdates = new Set<string>();
-  const toolNameByCallId = new Map<string, string>();
 
   return session.onEvent((event) => {
     stream.push(event.payload);
@@ -62,46 +116,7 @@ export function subscribeEvents(params: {
       }
     }
 
-    if (update.sessionUpdate === 'tool_call') {
-      const toolCallId =
-        update.toolCallId ?? `unknown:${update.title ?? 'tool'}`;
-      const toolName = update.title ?? 'unknown';
-      toolNameByCallId.set(toolCallId, toolName);
-      seenToolUpdates.add(`${toolCallId}:pending`);
-      logger.info(
-        {
-          ctxId,
-          tool: toolName,
-          input: update.rawInput ?? null,
-        },
-        '[subagent] Tool started'
-      );
-      return;
-    }
-
-    if (update.sessionUpdate === 'tool_call_update') {
-      const toolCallId =
-        update.toolCallId ?? `unknown:${update.title ?? 'tool'}`;
-      const toolName =
-        toolNameByCallId.get(toolCallId) ?? update.title ?? 'unknown';
-      const statusKey = `${toolCallId}:${update.status ?? 'unknown'}`;
-      if (seenToolUpdates.has(statusKey)) {
-        return;
-      }
-      seenToolUpdates.add(statusKey);
-
-      const level = update.status === 'failed' ? 'warn' : 'info';
-      logger[level](
-        {
-          ctxId,
-          tool: toolName,
-          status: update.status ?? 'unknown',
-          input: update.rawInput ?? null,
-          output: update.rawOutput ?? null,
-        },
-        '[subagent] Tool update'
-      );
-    }
+    handleTools({ update, runtime, context, ctxId });
   });
 }
 

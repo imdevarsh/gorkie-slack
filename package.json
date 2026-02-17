@@ -25,6 +25,7 @@
     "@exalabs/ai-sdk": "^1.0.5",
     "@langfuse/otel": "^4.5.1",
     "@langfuse/tracing": "^4.5.1",
+    "@modelcontextprotocol/sdk": "^1.20.0",
     "@neondatabase/serverless": "^1.0.2",
     "@openrouter/ai-sdk-provider": "^2.0.0",
     "@opentelemetry/sdk-node": "^0.211.0",

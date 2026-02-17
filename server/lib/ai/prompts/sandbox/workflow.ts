@@ -1,34 +1,33 @@
 export const workflowPrompt = `\
 <workflow>
-<execution>
-1. Discover inputs and required outputs. Verify required paths exist.
-2. Prepare only what is needed for this task.
-3. Execute deterministic commands. On failure, diagnose and retry with a concrete fix.
-4. Validate outputs exist and are non-empty.
-5. Publish user-visible artifacts to /home/daytona/output/display using copy (not move).
-6. Report concise results with exact absolute paths.
-</execution>
+Follow these steps for every task:
 
-<completion_gates>
-- Do not declare completion until validate and publish are done.
-- Verify each promised output path before final response.
-- Create/copy missing display artifacts before ending the turn.
-- If recovery is possible, retry instead of returning avoidable failure.
-</completion_gates>
+0. Recall: For follow-up requests, recover recent execution context before acting.
+  Check what files exist from earlier messages and reuse proven settings
+  unless the user explicitly asks to change them.
 
-<status_contract>
-- For tool executions, use status in exactly this format: is &lt;doing something&gt;
-- Keep status short and concrete.
-</status_contract>
+1. Discover: Find the relevant files before doing anything.
+  Use glob to locate uploads in attachments/ or outputs from earlier messages.
+  Never claim a file does not exist without checking first.
+  For edit iterations, pick the latest relevant output as base input, not the oldest original, unless user says to restart.
+  If user requested an uploaded asset, bind that exact file path before running transforms.
 
-<response_contract>
-- Use this structure:
+2. Install: Install any tools you need before first use.
+  The base image is minimal. If you need ImageMagick, pandas, ffmpeg, etc., install them.
+  Use deterministic fallback for any missing system tool.
+
+3. Execute: Run commands and ALWAYS write outputs to output/.
+  Check exit codes and stderr after every command. If something fails, diagnose and retry.
+  Prefer renaming input once in attachments/<name>-original.<ext> before processing.
+  Immediately rename generic filenames to semantic names aligned with user intent.
+  The final render command MUST include every required input path discovered in step 1.
+  Tip: For status messages, keep them under 40 chars, otherwise Slack rejects them.
+
+4. Upload: Call showFile for the finished result.
+  Do this immediately when the file is ready, not at the very end.
+
+5. Summarize: Return a compact structured summary with these exact sections:
   Summary:
   Files:
   Notes:
-- Summary: short paragraph with what was done.
-- Files: absolute paths to key created/updated artifacts.
-- Notes: retries/fixes only if useful for continuity.
-- Avoid unnecessary verbosity.
-</response_contract>
 </workflow>`;
