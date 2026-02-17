@@ -28,16 +28,62 @@ function readUpdate(payload: unknown): SessionUpdatePayload | null {
   );
 }
 
+function handleShowFileTool(params: {
+  update: SessionUpdatePayload;
+  runtime: ResolvedSandboxSession;
+  context: SlackMessageContext;
+  ctxId: string;
+}): void {
+  const { update, runtime, context, ctxId } = params;
+
+  const parsed = showFileInputSchema.safeParse(update.rawInput);
+  if (!parsed.success) {
+    return;
+  }
+
+  showFile({ input: parsed.data, runtime, context, ctxId }).catch(
+    (error: unknown) => {
+      logger.debug({ error, ctxId }, '[subagent] showFile handler failed');
+    }
+  );
+}
+
+function handleCompletedTool(params: {
+  update: SessionUpdatePayload;
+  toolName: string;
+  runtime: ResolvedSandboxSession;
+  context: SlackMessageContext;
+  ctxId: string;
+}): void {
+  const { update, toolName, runtime, context, ctxId } = params;
+
+  switch (toolName) {
+    case 'customTools_showFile': {
+      handleShowFileTool({ update, runtime, context, ctxId });
+      return;
+    }
+    default:
+      return;
+  }
+}
+
 function handleTools(params: {
   update: SessionUpdatePayload;
   runtime: ResolvedSandboxSession;
   context: SlackMessageContext;
   ctxId: string;
+  toolByCall: Map<string, string>;
 }): boolean {
-  const { update, runtime, context, ctxId } = params;
+  const { update, runtime, context, ctxId, toolByCall } = params;
 
   if (update.sessionUpdate === 'tool_call') {
-    const toolName = update.title ?? 'unknown';
+    const toolName =
+      typeof update.title === 'string' && update.title.trim().length > 0
+        ? update.title.trim()
+        : 'unknown';
+    if (typeof update.toolCallId === 'string') {
+      toolByCall.set(update.toolCallId, toolName);
+    }
     logger.info(
       { ctxId, tool: toolName, input: update.rawInput ?? null },
       '[subagent] Tool started'
@@ -49,8 +95,22 @@ function handleTools(params: {
     return false;
   }
 
-  const toolName = update.title ?? 'unknown';
+  const title =
+    typeof update.title === 'string' && update.title.trim().length > 0
+      ? update.title.trim()
+      : null;
+  const toolName =
+    (typeof update.toolCallId === 'string'
+      ? toolByCall.get(update.toolCallId)
+      : null) ??
+    title ??
+    'unknown';
   const status = update.status ?? 'unknown';
+
+  if (status === 'completed' && typeof update.toolCallId === 'string') {
+    toolByCall.delete(update.toolCallId);
+  }
+
   logger[status === 'failed' ? 'warn' : 'info'](
     {
       ctxId,
@@ -62,20 +122,11 @@ function handleTools(params: {
     '[subagent] Tool update'
   );
 
-  if (toolName !== 'showFile' || status !== 'completed') {
+  if (status !== 'completed') {
     return true;
   }
 
-  const parsed = showFileInputSchema.safeParse(update.rawInput);
-  if (!parsed.success) {
-    return true;
-  }
-
-  showFile({ input: parsed.data, runtime, context, ctxId }).catch(
-    (error: unknown) => {
-      logger.debug({ error, ctxId }, '[subagent] showFile handler failed');
-    }
-  );
+  handleCompletedTool({ update, toolName, runtime, context, ctxId });
 
   return true;
 }
@@ -89,6 +140,7 @@ export function subscribeEvents(params: {
 }): () => void {
   const { session, runtime, context, ctxId, stream } = params;
   let lastStatus: string | null = null;
+  const toolByCall = new Map<string, string>();
 
   return session.onEvent((event) => {
     stream.push(event.payload);
@@ -116,7 +168,7 @@ export function subscribeEvents(params: {
       }
     }
 
-    handleTools({ update, runtime, context, ctxId });
+    handleTools({ update, runtime, context, ctxId, toolByCall });
   });
 }
 
