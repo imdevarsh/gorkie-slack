@@ -7,42 +7,14 @@ import {
   syncAttachments,
 } from '~/lib/sandbox/attachments';
 import { uploadFiles } from '~/lib/sandbox/display';
-import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
+import {
+  subscribeEvents,
+  getResponse,
+} from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-
-async function waitForStreamToSettle(
-  stream: unknown[],
-  startLength: number
-): Promise<void> {
-  const timeoutMs = 5 * 60_000;
-  const idleMs = 6000;
-  const pollMs = 300;
-  const startedAt = Date.now();
-  let lastGrowthAt = Date.now();
-  let sawNewEvents = false;
-  let knownLength = stream.length;
-
-  while (Date.now() - startedAt < timeoutMs) {
-    if (stream.length > knownLength) {
-      knownLength = stream.length;
-      lastGrowthAt = Date.now();
-      sawNewEvents = stream.length > startLength;
-    }
-
-    if (sawNewEvents && Date.now() - lastGrowthAt >= idleMs) {
-      return;
-    }
-
-    await new Promise((resolve) => {
-      setTimeout(resolve, pollMs);
-    });
-  }
-
-  throw new Error('Timed out waiting for sandbox agent response stream');
-}
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -122,13 +94,7 @@ export const sandbox = ({
         });
 
         try {
-          const streamStartLength = stream.length;
-          await runtime.session.send(
-            'session/prompt',
-            { prompt: [...prompt] },
-            { notification: true }
-          );
-          await waitForStreamToSettle(stream, streamStartLength);
+          await runtime.session.prompt([...prompt]);
         } finally {
           unsubscribe();
         }
