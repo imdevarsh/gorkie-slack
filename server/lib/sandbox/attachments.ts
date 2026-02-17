@@ -1,4 +1,4 @@
-import type { SandboxAgent } from 'sandbox-agent';
+import type { Sandbox } from '@daytonaio/sdk';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
@@ -19,7 +19,7 @@ export interface PromptResourceLink {
 }
 
 export async function syncAttachments(
-  sdk: SandboxAgent,
+  sandbox: Sandbox,
   context: SlackMessageContext,
   files?: SlackFile[]
 ): Promise<PromptResourceLink[]> {
@@ -34,12 +34,12 @@ export async function syncAttachments(
 
   const ctxId = getContextId(context);
 
-  await sdk.mkdirFs({ path: ATTACHMENTS_ABS_DIR }).catch(() => {
+  await sandbox.fs.createFolder(ATTACHMENTS_ABS_DIR, '755').catch(() => {
     // Directory may already exist.
   });
 
   const results = await Promise.all(
-    files.map((file) => syncFile(sdk, file, ctxId))
+    files.map((file) => syncFile(sandbox, file, ctxId))
   );
 
   const uploaded = results.filter(
@@ -63,7 +63,7 @@ export async function syncAttachments(
 }
 
 async function syncFile(
-  sdk: SandboxAgent,
+  sandbox: Sandbox,
   file: SlackFile,
   ctxId: string
 ): Promise<PromptResourceLink | null> {
@@ -80,7 +80,7 @@ async function syncFile(
   const uri = new URL(`file://${path}`).toString();
 
   try {
-    await sdk.writeFsFile({ path }, content);
+    await sandbox.fs.uploadFile(content, path);
     return {
       type: 'resource_link',
       name: safeName,

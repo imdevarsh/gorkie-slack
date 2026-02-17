@@ -1,6 +1,5 @@
 import nodePath from 'node:path';
 import type { Sandbox } from '@daytonaio/sdk';
-import type { SandboxAgent } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
@@ -14,7 +13,6 @@ export interface UploadedDisplayFile {
 const DISPLAY_DIR = `${config.runtime.workdir}/output/display`;
 
 interface UploadRuntime {
-  sdk: SandboxAgent;
   sandbox: Sandbox;
 }
 
@@ -30,25 +28,27 @@ export async function uploadFiles(
     return [];
   }
 
-  const entries = await runtime.sdk
-    .listFsEntries({ path: DISPLAY_DIR })
+  const entries = await runtime.sandbox.fs
+    .listFiles(DISPLAY_DIR)
     .catch(() => []);
 
   const uploaded: UploadedDisplayFile[] = [];
 
   for (const entry of entries) {
-    if (entry.entryType !== 'file') {
+    if (entry.isDir) {
       continue;
     }
 
-    const file = await runtime.sdk
-      .readFsFile({ path: entry.path })
+    const entryPath = nodePath.posix.join(DISPLAY_DIR, entry.name);
+
+    const file = await runtime.sandbox.fs
+      .downloadFile(entryPath)
       .catch(() => null);
     if (!file) {
       continue;
     }
 
-    const filename = nodePath.basename(entry.path) || 'artifact';
+    const filename = nodePath.basename(entryPath) || 'artifact';
 
     const uploadOk = await context.client.files
       .uploadV2({
@@ -61,7 +61,7 @@ export async function uploadFiles(
       .then(() => true)
       .catch((error: unknown) => {
         logger.warn(
-          { error, path: entry.path },
+          { error, path: entryPath },
           '[sandbox] Failed to upload display artifact'
         );
         return false;
@@ -72,14 +72,14 @@ export async function uploadFiles(
     }
 
     uploaded.push({
-      path: entry.path,
+      path: entryPath,
       filename,
       bytes: file.byteLength,
     });
 
-    await runtime.sandbox.fs.deleteFile(entry.path).catch((error: unknown) => {
+    await runtime.sandbox.fs.deleteFile(entryPath).catch((error: unknown) => {
       logger.warn(
-        { error, path: entry.path },
+        { error, path: entryPath },
         '[sandbox] Failed to cleanup uploaded artifact'
       );
     });

@@ -8,7 +8,6 @@ export const sandbox = {
     archiveMinutes: 60,
     deleteMinutes: 2 * 24 * 60,
     healthMs: 60_000,
-    previewTtlSeconds: 4 * 60 * 60,
   },
   runtime: {
     agentPort: 3000,

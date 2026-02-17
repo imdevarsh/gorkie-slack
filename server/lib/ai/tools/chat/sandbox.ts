@@ -7,10 +7,7 @@ import {
   syncAttachments,
 } from '~/lib/sandbox/attachments';
 import { uploadFiles } from '~/lib/sandbox/display';
-import {
-  subscribeEvents,
-  getResponse,
-} from '~/lib/sandbox/events';
+import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -67,7 +64,7 @@ export const sandbox = ({
       try {
         runtime = await resolveSession(context);
         const resourceLinks = await syncAttachments(
-          runtime.sdk,
+          runtime.sandbox,
           context,
           files
         );
