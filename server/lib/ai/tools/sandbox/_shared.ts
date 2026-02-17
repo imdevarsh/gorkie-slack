@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 import { setStatus } from '~/lib/ai/utils/status';
@@ -51,6 +52,15 @@ export function resolveTimeout(timeoutMs?: number): number {
   }
 
   return Math.max(1000, Math.min(timeoutMs, config.timeoutMs));
+}
+
+export function resolvePathInSandbox(inputPath: string, cwd?: string): string {
+  if (path.posix.isAbsolute(inputPath)) {
+    return path.posix.normalize(inputPath);
+  }
+
+  const base = resolveCwd(cwd);
+  return path.posix.normalize(path.posix.join(base, inputPath));
 }
 
 export async function extendSandboxTimeout(

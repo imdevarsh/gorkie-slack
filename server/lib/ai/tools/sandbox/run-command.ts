@@ -6,10 +6,9 @@ import {
   resolveTimeout,
   type SandboxToolDeps,
   setToolStatus,
-  truncate,
 } from './_shared';
+import { formatSize, truncateTail } from './truncate';
 
-const MAX_OUTPUT_CHARS = 20_000;
 const MAX_COMMAND_CHARS = 500;
 
 export const bash = ({ context, sandbox }: SandboxToolDeps) =>
@@ -38,7 +37,10 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
       const startedAt = Date.now();
       const resolvedCwd = resolveCwd(cwd);
       const resolvedTimeout = resolveTimeout(timeoutMs);
-      const commandPreview = truncate(command, MAX_COMMAND_CHARS);
+      const commandPreview =
+        command.length > MAX_COMMAND_CHARS
+          ? `${command.slice(0, MAX_COMMAND_CHARS)}...`
+          : command;
       const input = {
         command: commandPreview,
         description,
@@ -49,18 +51,9 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
       logger.info(
         {
           tool: 'bash',
-          input: {},
+          input,
         },
         '[subagent] Tool started'
-      );
-      logger.info(
-        {
-          tool: 'bash',
-          status: 'in_progress',
-          input,
-          output: null,
-        },
-        '[subagent] Tool update'
       );
 
       try {
@@ -70,36 +63,36 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
         });
 
         const durationMs = Date.now() - startedAt;
-        const stdout = truncate(result.stdout, MAX_OUTPUT_CHARS);
-        const stderr = truncate(result.stderr, MAX_OUTPUT_CHARS);
+        const stdoutTruncation = truncateTail(result.stdout);
+        const stderrTruncation = truncateTail(result.stderr);
+
+        const truncationNotice = stdoutTruncation.truncated
+          ? `stdout truncated (${stdoutTruncation.truncatedBy ?? 'unknown'} limit ${formatSize(stdoutTruncation.maxBytes)} / ${stdoutTruncation.maxLines} lines)`
+          : null;
+
+        const output = {
+          success: result.exitCode === 0,
+          exitCode: result.exitCode,
+          stdout:
+            truncationNotice && stdoutTruncation.content.length > 0
+              ? `${stdoutTruncation.content}\n\n[${truncationNotice}]`
+              : stdoutTruncation.content,
+          stderr: stderrTruncation.content,
+          durationMs,
+          truncated: stdoutTruncation.truncated || stderrTruncation.truncated,
+        };
 
         logger.info(
           {
             tool: 'bash',
             status: 'completed',
             input,
-            output: {
-              metadata: {
-                description,
-                exit: result.exitCode,
-                durationMs,
-                output: stdout,
-                truncated: result.stdout.length > MAX_OUTPUT_CHARS,
-              },
-              output: stdout,
-              stderr,
-            },
+            output,
           },
           '[subagent] Tool update'
         );
 
-        return {
-          success: result.exitCode === 0,
-          exitCode: result.exitCode,
-          stdout,
-          stderr,
-          durationMs,
-        };
+        return output;
       } catch (error) {
         const durationMs = Date.now() - startedAt;
 
@@ -115,35 +108,16 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
             stdout: string;
             stderr: string;
           };
-          const stdout = truncate(commandError.stdout, MAX_OUTPUT_CHARS);
-          const stderr = truncate(commandError.stderr, MAX_OUTPUT_CHARS);
-
-          logger.warn(
-            {
-              tool: 'bash',
-              status: 'completed',
-              input,
-              output: {
-                metadata: {
-                  description,
-                  exit: commandError.exitCode,
-                  durationMs,
-                  output: stdout,
-                  truncated: commandError.stdout.length > MAX_OUTPUT_CHARS,
-                },
-                output: stdout,
-                stderr,
-              },
-            },
-            '[subagent] Tool update'
-          );
+          const stdoutTruncation = truncateTail(commandError.stdout);
+          const stderrTruncation = truncateTail(commandError.stderr);
 
           return {
             success: false,
             exitCode: commandError.exitCode,
-            stdout,
-            stderr,
+            stdout: stdoutTruncation.content,
+            stderr: stderrTruncation.content,
             durationMs,
+            truncated: stdoutTruncation.truncated || stderrTruncation.truncated,
           };
         }
 

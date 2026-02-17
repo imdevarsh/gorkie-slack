@@ -1,8 +1,10 @@
 export { extendSandboxTimeout } from './_shared';
 export { editFile } from './edit';
-export { globFiles } from './glob';
+export { findFiles } from './find';
 export { grepFiles } from './grep';
+export { listFiles } from './ls';
 export { readFile } from './read';
 export { bash } from './run-command';
 export { showFile } from './show-file';
+export * from './truncate';
 export { writeFile } from './write';
