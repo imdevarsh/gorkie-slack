@@ -6,8 +6,7 @@ const LOCAL_MCP_ENTRY = join(
   '../ai/tools/sandbox/index.ts'
 );
 
-export const SANDBOX_MCP_NAME = 'gorkie';
-export const SANDBOX_MCP_DIR = '/opt/mcp/gorkie';
+export const SANDBOX_MCP_DIR = '/opt/mcp/custom-tools';
 export const SANDBOX_MCP_SERVER_PATH = `${SANDBOX_MCP_DIR}/mcp-server.cjs`;
 
 let mcpServer: Promise<Uint8Array> | null = null;

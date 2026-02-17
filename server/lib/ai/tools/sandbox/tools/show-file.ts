@@ -3,8 +3,8 @@ import path from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
-export const showFile = (server: McpServer): void =>
-  void server.registerTool(
+export const showFile = (server: McpServer): void => {
+  server.registerTool(
     'showFile',
     {
       description: 'Mark a sandbox file for Slack upload',
@@ -36,3 +36,4 @@ export const showFile = (server: McpServer): void =>
       };
     }
   );
+};

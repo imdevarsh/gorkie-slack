@@ -11,7 +11,8 @@ async function startServer(sandbox: Sandbox): Promise<void> {
   const result = await sandbox.process.executeCommand(
     `nohup sandbox-agent server ${SERVER_ARGS} >/tmp/sandbox-agent.log 2>&1 &`,
     config.runtime.workdir,
-    { HACKCLUB_API_KEY: env.HACKCLUB_API_KEY }
+    { HACKCLUB_API_KEY: env.HACKCLUB_API_KEY },
+    0
   );
 
   // exitCode is always 0 for backgrounded processes; actual startup
@@ -43,12 +44,21 @@ async function isHealthy(access: PreviewAccess): Promise<boolean> {
   return response?.ok === true;
 }
 
-async function setupMcpServer(sdk: SandboxAgent): Promise<void> {
+async function setupMCPServer(sdk: SandboxAgent): Promise<void> {
   const server = await loadMCPServer();
-  await sdk.mkdirFs({ path: SANDBOX_MCP_DIR }).catch(() => {
-    // Directory may already exist.
-  });
+  await sdk.mkdirFs({ path: SANDBOX_MCP_DIR });
   await sdk.writeFsFile({ path: SANDBOX_MCP_SERVER_PATH }, server);
+  await sdk.setMcpConfig(
+    {
+      directory: config.runtime.workdir,
+      mcpName: 'customTools',
+    },
+    {
+      type: 'local',
+      command: 'node',
+      args: [SANDBOX_MCP_SERVER_PATH],
+    }
+  );
 }
 
 export async function boot(
@@ -62,7 +72,7 @@ export async function boot(
   }
 
   const sdk = await connect(access);
-  await setupMcpServer(sdk);
+  await setupMCPServer(sdk);
 
   return { sdk, access };
 }
@@ -101,14 +111,7 @@ export function createSession(
     agent: 'opencode',
     sessionInit: {
       cwd: config.runtime.workdir,
-      mcpServers: [
-        {
-          name: 'gorkie',
-          command: 'node',
-          args: [SANDBOX_MCP_SERVER_PATH],
-          env: [],
-        },
-      ],
+      mcpServers: [],
     },
   });
 }

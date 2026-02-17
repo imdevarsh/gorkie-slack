@@ -6,7 +6,7 @@ const tools = [showFile] as const;
 
 async function main(): Promise<void> {
   const server = new McpServer({
-    name: 'gorkie',
+    name: 'customTools',
     version: '1.0.0',
   });
 

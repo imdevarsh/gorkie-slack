@@ -3,6 +3,11 @@ import { z } from 'zod';
 
 export const env = createEnv({
   extends: [],
+  shared: {
+    NODE_ENV: z
+      .enum(['development', 'production', 'test'])
+      .default('development'),
+  },
   server: {
     // Slack
     SLACK_BOT_TOKEN: z.string().min(1),
