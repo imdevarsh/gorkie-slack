@@ -10,13 +10,13 @@ export const SANDBOX_MCP_NAME = 'gorkie';
 export const SANDBOX_MCP_DIR = '/opt/mcp/gorkie';
 export const SANDBOX_MCP_SERVER_PATH = `${SANDBOX_MCP_DIR}/mcp-server.cjs`;
 
-let mcpServerBundle: Promise<Uint8Array> | null = null;
+let mcpServer: Promise<Uint8Array> | null = null;
 
 function formatBuildErrors(logs: Array<{ message?: string }>): string {
   return logs.map((log) => log.message ?? 'unknown build error').join('; ');
 }
 
-async function buildMcpServer(): Promise<Uint8Array> {
+async function buildMCPServer(): Promise<Uint8Array> {
   const result = await build({
     entrypoints: [LOCAL_MCP_ENTRY],
     target: 'node',
@@ -39,10 +39,10 @@ async function buildMcpServer(): Promise<Uint8Array> {
   return new Uint8Array(bytes);
 }
 
-export function loadMcpServerBundle(): Promise<Uint8Array> {
-  if (!mcpServerBundle) {
-    mcpServerBundle = buildMcpServer();
+export function loadMCPServer(): Promise<Uint8Array> {
+  if (!mcpServer) {
+    mcpServer = buildMCPServer();
   }
 
-  return mcpServerBundle;
+  return mcpServer;
 }

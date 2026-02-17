@@ -3,11 +3,7 @@ import { SandboxAgent, type Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import { type PreviewAccess, waitForHealth } from './client';
-import {
-  loadMcpServerBundle,
-  SANDBOX_MCP_DIR,
-  SANDBOX_MCP_SERVER_PATH,
-} from './mcp';
+import { loadMCPServer, SANDBOX_MCP_DIR, SANDBOX_MCP_SERVER_PATH } from './mcp';
 
 const SERVER_ARGS = `--no-token --host 0.0.0.0 --port ${config.runtime.agentPort}`;
 
@@ -48,10 +44,7 @@ async function isHealthy(access: PreviewAccess): Promise<boolean> {
 }
 
 async function setupMcpServer(sdk: SandboxAgent): Promise<void> {
-  const server = await loadMcpServerBundle();
-  await sdk.mkdirFs({ path: '/opt/mcp' }).catch(() => {
-    // Directory may already exist.
-  });
+  const server = await loadMCPServer();
   await sdk.mkdirFs({ path: SANDBOX_MCP_DIR }).catch(() => {
     // Directory may already exist.
   });

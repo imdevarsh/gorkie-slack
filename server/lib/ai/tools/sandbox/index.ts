@@ -1,6 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { registerShowFileTool } from './tools/show-file';
+import { showFile } from './tools/show-file';
+
+const tools = [showFile] as const;
 
 async function main(): Promise<void> {
   const server = new McpServer({
@@ -8,7 +10,9 @@ async function main(): Promise<void> {
     version: '1.0.0',
   });
 
-  registerShowFileTool(server);
+  for (const tool of tools) {
+    tool(server);
+  }
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

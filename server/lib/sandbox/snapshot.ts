@@ -3,7 +3,7 @@ import logger from '~/lib/logger';
 
 export const SANDBOX_SNAPSHOT = 'gorkie-sandbox';
 
-function createSnapshotImage() {
+function createImage() {
   return Image.debianSlim('3.12')
     .pipInstall(['requests', 'pillow', 'matplotlib', 'numpy', 'pandas'])
     .runCommands(
@@ -21,7 +21,7 @@ export async function createSnapshot(daytona: Daytona): Promise<void> {
   await daytona.snapshot.create(
     {
       name: SANDBOX_SNAPSHOT,
-      image: createSnapshotImage(),
+      image: createImage(),
     },
     {
       onLogs: (chunk) => {
