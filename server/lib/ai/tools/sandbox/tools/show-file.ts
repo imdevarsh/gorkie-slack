@@ -4,14 +4,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
 export const showFile = (server: McpServer): void => {
-  server.registerTool(
+  server.tool(
     'showFile',
+    'Mark a sandbox file for Slack upload',
     {
-      description: 'Mark a sandbox file for Slack upload',
-      inputSchema: {
-        path: z.string().describe('Absolute file path to upload'),
-        title: z.string().optional().describe('Optional title for Slack'),
-      },
+      path: z.string().describe('Absolute file path to upload'),
+      title: z.string().optional().describe('Optional title for Slack'),
     },
     ({ path: filePath, title }) => {
       if (!path.isAbsolute(filePath)) {

@@ -3,7 +3,7 @@ import { SandboxAgent, type Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import { type PreviewAccess, waitForHealth } from './client';
-import { loadMCPServer, SANDBOX_MCP_DIR, SANDBOX_MCP_SERVER_PATH } from './mcp';
+import { mcpServer, SANDBOX_MCP_DIR, SANDBOX_MCP_SERVER_PATH } from './mcp';
 
 const SERVER_ARGS = `--no-token --host 0.0.0.0 --port ${config.runtime.agentPort}`;
 
@@ -45,8 +45,16 @@ async function isHealthy(access: PreviewAccess): Promise<boolean> {
 }
 
 async function setupMCPServer(sdk: SandboxAgent): Promise<void> {
-  const server = await loadMCPServer();
-  await sdk.mkdirFs({ path: SANDBOX_MCP_DIR });
+  const server = await mcpServer();
+  await sdk.mkdirFs({ path: SANDBOX_MCP_DIR }).catch((error: unknown) => {
+    if (
+      error instanceof Error &&
+      error.message.toLowerCase().includes('already exists')
+    ) {
+      return;
+    }
+    throw error;
+  });
   await sdk.writeFsFile({ path: SANDBOX_MCP_SERVER_PATH }, server);
   await sdk.setMcpConfig(
     {
@@ -57,6 +65,8 @@ async function setupMCPServer(sdk: SandboxAgent): Promise<void> {
       type: 'local',
       command: 'node',
       args: [SANDBOX_MCP_SERVER_PATH],
+      env: {},
+      enabled: true,
     }
   );
 }
@@ -96,7 +106,24 @@ export async function ensureSession(
 ): Promise<Session> {
   const resumed = await sdk.resumeSession(sessionId).catch(() => null);
   if (resumed) {
-    return resumed;
+    const servers = resumed.toRecord().sessionInit?.mcpServers;
+    const hasCustomTools = Array.isArray(servers)
+      ? servers.some(
+          (server) =>
+            server.name === 'customTools' &&
+            'command' in server &&
+            server.command === 'node' &&
+            'args' in server &&
+            server.args.includes(SANDBOX_MCP_SERVER_PATH)
+        )
+      : false;
+
+    if (hasCustomTools) {
+      return resumed;
+    }
+
+    await sdk.destroySession(sessionId).catch(() => {});
+    return createSession(sdk, sessionId);
   }
 
   return createSession(sdk, sessionId);
@@ -111,7 +138,14 @@ export function createSession(
     agent: 'opencode',
     sessionInit: {
       cwd: config.runtime.workdir,
-      mcpServers: [],
+      mcpServers: [
+        {
+          name: 'customTools',
+          command: 'node',
+          args: [SANDBOX_MCP_SERVER_PATH],
+          env: [],
+        },
+      ],
     },
   });
 }
