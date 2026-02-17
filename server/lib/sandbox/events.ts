@@ -115,7 +115,8 @@ export function getResponse(stream: unknown[]): string | undefined {
     return text.length > 0 ? text : null;
   }
 
-  const chunks: string[] = [];
+  let chunks: string[] = [];
+  let lastMessage: string[] = [];
 
   for (const payload of stream) {
     const update = readUpdate(payload);
@@ -128,10 +129,17 @@ export function getResponse(stream: unknown[]): string | undefined {
       if (text) {
         chunks.push(text);
       }
+    } else if (chunks.length > 0) {
+      lastMessage = chunks;
+      chunks = [];
     }
   }
 
-  const summary = chunks.join('').trim();
+  if (chunks.length > 0) {
+    lastMessage = chunks;
+  }
+
+  const summary = lastMessage.join('').trim();
   if (summary.length > 0) {
     return summary;
   }

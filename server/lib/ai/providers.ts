@@ -59,6 +59,6 @@ const summariserModel = createRetryable({
 export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
-    'summariser-model': summariserModel
+    'summariser-model': summariserModel,
   },
 });
