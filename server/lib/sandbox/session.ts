@@ -19,7 +19,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-import { buildConfig, CONFIG_PATH } from './config';
+import { configureAgent } from './config';
 import { boot, createSession, ensureSession } from './runtime';
 import { createSnapshot, SANDBOX_SNAPSHOT } from './snapshot';
 
@@ -110,10 +110,7 @@ async function createSandbox(
 
   try {
     const prompt = systemPrompt({ agent: 'sandbox', context });
-    await sandbox.fs.uploadFile(
-      Buffer.from(buildConfig(prompt), 'utf8'),
-      CONFIG_PATH
-    );
+    await configureAgent(sandbox, prompt);
 
     await setStatus(context, { status: 'is starting agent', loading: true });
     const { sdk, access } = await boot(sandbox);

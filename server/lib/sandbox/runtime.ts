@@ -11,7 +11,9 @@ async function startServer(sandbox: Sandbox): Promise<void> {
   const result = await sandbox.process.executeCommand(
     `nohup sandbox-agent server ${SERVER_ARGS} >/tmp/sandbox-agent.log 2>&1 &`,
     config.runtime.workdir,
-    { HACKCLUB_API_KEY: env.HACKCLUB_API_KEY },
+    {
+      HACKCLUB_API_KEY: env.HACKCLUB_API_KEY
+    },
     0
   );
 
@@ -135,7 +137,7 @@ export function createSession(
 ): Promise<Session> {
   return sdk.createSession({
     id: sessionId,
-    agent: 'opencode',
+    agent: 'pi',
     sessionInit: {
       cwd: config.runtime.workdir,
       mcpServers: [
