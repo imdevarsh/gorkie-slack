@@ -95,7 +95,12 @@ async function createSandbox(
   const hasSnapshot = await daytona.snapshot
     .get(SANDBOX_SNAPSHOT)
     .then(() => true)
-    .catch(() => false);
+    .catch((error: unknown) => {
+      if (isNotFoundError(error)) {
+        return false;
+      }
+      throw error;
+    });
 
   if (!hasSnapshot) {
     await createSnapshot(daytona);

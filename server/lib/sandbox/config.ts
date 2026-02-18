@@ -17,6 +17,17 @@ export function buildConfig(prompt: string): {
     {
       defaultProvider: 'openrouter',
       defaultModel: 'google/gemini-3-flash-preview',
+      retry: {
+        enabled: true,
+        maxRetries: 3,
+        baseDelayMs: 2000,
+        maxDelayMs: 60_000,
+      },
+      enabledModels: [
+        'google/gemini-3-flash-preview',
+        'google/gemini-2.5-flash',
+        'openai/gpt-5-mini',
+      ],
     },
     null,
     2
@@ -40,6 +51,16 @@ export function buildConfig(prompt: string): {
     null,
     2
   );
+  const auth = JSON.stringify(
+    {
+      openrouter: {
+        type: 'api_key',
+        key: 'HACKCLUB_API_KEY',
+      },
+    },
+    null,
+    2
+  );
 
   return {
     paths: [piDir, agentDir],
@@ -47,6 +68,7 @@ export function buildConfig(prompt: string): {
       { path: `${piDir}/SYSTEM.md`, content: prompt },
       { path: `${agentDir}/settings.json`, content: settings },
       { path: `${agentDir}/models.json`, content: models },
+      { path: `${agentDir}/auth.json`, content: auth },
     ],
   };
 }
@@ -56,11 +78,21 @@ export async function configureAgent(
   prompt: string
 ): Promise<void> {
   const bootstrap = buildConfig(prompt);
-  await sandbox.process.executeCommand(
-    `mkdir -p ${bootstrap.paths.map((path) => `"${path}"`).join(' ')}`,
-    sandboxConfig.runtime.workdir
-  );
+  for (const path of bootstrap.paths) {
+    await sandbox.fs.createFolder(path, '700').catch((error: unknown) => {
+      if (
+        error instanceof Error &&
+        error.message.toLowerCase().includes('already exists')
+      ) {
+        return;
+      }
+      throw error;
+    });
+    await sandbox.fs.setFilePermissions(path, { mode: '700' });
+  }
+
   for (const file of bootstrap.files) {
     await sandbox.fs.uploadFile(Buffer.from(file.content, 'utf8'), file.path);
+    await sandbox.fs.setFilePermissions(file.path, { mode: '600' });
   }
 }

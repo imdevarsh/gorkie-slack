@@ -12,6 +12,7 @@ async function startServer(sandbox: Sandbox): Promise<void> {
     `nohup sandbox-agent server ${SERVER_ARGS} >/tmp/sandbox-agent.log 2>&1 &`,
     config.runtime.workdir,
     {
+      HOME: config.runtime.workdir,
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY
     },
     0
@@ -108,24 +109,7 @@ export async function ensureSession(
 ): Promise<Session> {
   const resumed = await sdk.resumeSession(sessionId).catch(() => null);
   if (resumed) {
-    const servers = resumed.toRecord().sessionInit?.mcpServers;
-    const hasCustomTools = Array.isArray(servers)
-      ? servers.some(
-          (server) =>
-            server.name === 'customTools' &&
-            'command' in server &&
-            server.command === 'node' &&
-            'args' in server &&
-            server.args.includes(SANDBOX_MCP_SERVER_PATH)
-        )
-      : false;
-
-    if (hasCustomTools) {
-      return resumed;
-    }
-
-    await sdk.destroySession(sessionId).catch(() => {});
-    return createSession(sdk, sessionId);
+    return resumed;
   }
 
   return createSession(sdk, sessionId);
