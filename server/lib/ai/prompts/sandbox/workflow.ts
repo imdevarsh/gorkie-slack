@@ -22,7 +22,6 @@ Follow these steps for every task:
 
 4. Upload: Call showFile for the finished result.
   Do this immediately when the file is ready, not at the very end.
-  showFile also requires status and should describe the upload step.
 
 5. Summarize: Return a compact structured summary with these exact sections:
   Summary:
