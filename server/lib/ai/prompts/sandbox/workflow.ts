@@ -17,10 +17,12 @@ Follow these steps for every task:
   Prefer renaming input once in attachments/<name>-original.<ext> before processing.
   Immediately rename generic filenames to semantic names aligned with user intent.
   The final render command MUST include every required input path discovered in step 1.
-  Tip: For status messages, keep them under 40 chars, otherwise Slack rejects them.
+  EVERY tool call MUST include a required status field using "is <verb> ..." phrasing.
+  Tip: Keep status under 40 chars, otherwise Slack rejects it.
 
 4. Upload: Call showFile for the finished result.
   Do this immediately when the file is ready, not at the very end.
+  showFile also requires status and should describe the upload step.
 
 5. Summarize: Return a compact structured summary with these exact sections:
   Summary:

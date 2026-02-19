@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import nodePath from 'node:path';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import {
   createBashTool,
@@ -61,6 +63,19 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
       }),
     }),
     execute(_toolCallId, { path, title }) {
+      if (!nodePath.isAbsolute(path)) {
+        throw new Error('showFile.path must be absolute');
+      }
+
+      if (!fs.existsSync(path)) {
+        throw new Error(`File not found: ${path}`);
+      }
+
+      const stat = fs.statSync(path);
+      if (!stat.isFile()) {
+        throw new Error(`Path is not a file: ${path}`);
+      }
+
       return {
         content: [
           {
