@@ -31,11 +31,10 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
       parameters: Type.Intersect([
         builtIn.parameters,
         Type.Object({
-          status: Type.Optional(
-            Type.String({
-              description: 'Optional progress/status note for the caller UI',
-            })
-          ),
+          status: Type.String({
+            description:
+              "Required brief operation status in present-progressive form, e.g. 'is fetching data', 'is reading files'.",
+          }),
         }),
       ]),
     });
@@ -56,11 +55,10 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
           description: 'Optional title to display in Slack',
         })
       ),
-      status: Type.Optional(
-        Type.String({
-          description: 'Optional progress/status note for the caller UI',
-        })
-      ),
+      status: Type.String({
+        description:
+          "Required brief operation status in present-progressive form, e.g. 'is uploading file'.",
+      }),
     }),
     execute(_toolCallId, { path, title }) {
       return {
