@@ -95,6 +95,7 @@ export function createSession(
     agent: 'pi',
     sessionInit: {
       cwd: config.runtime.workdir,
+      mcpServers: [],
     },
   });
 }

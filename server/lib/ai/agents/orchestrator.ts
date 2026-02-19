@@ -14,7 +14,6 @@ import { searchWeb } from '~/lib/ai/tools/chat/search-web';
 import { skip } from '~/lib/ai/tools/chat/skip';
 import { summariseThread } from '~/lib/ai/tools/chat/summarise-thread';
 import { successToolCall } from '~/lib/ai/utils';
-import { setStatus } from '~/lib/ai/utils/status';
 import type { ChatRequestHints, SlackMessageContext } from '~/types';
 import type { SlackFile } from '~/utils/images';
 
