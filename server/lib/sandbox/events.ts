@@ -36,8 +36,17 @@ function handleShowFileTool(params: {
 }): void {
   const { update, runtime, context, ctxId } = params;
 
-  const parsed = showFileInputSchema.safeParse(update.rawInput);
+  const candidateInput = update.rawInput ?? update.rawOutput?.details;
+  const parsed = showFileInputSchema.safeParse(candidateInput);
   if (!parsed.success) {
+    logger.debug(
+      {
+        ctxId,
+        rawInput: update.rawInput ?? null,
+        rawOutput: update.rawOutput ?? null,
+      },
+      '[subagent] showFile handler skipped: invalid payload'
+    );
     return;
   }
 
@@ -58,7 +67,7 @@ function handleCompletedTool(params: {
   const { update, toolName, runtime, context, ctxId } = params;
 
   switch (toolName) {
-    case 'customTools_showFile': {
+    case 'showFile': {
       handleShowFileTool({ update, runtime, context, ctxId });
       return;
     }
@@ -154,7 +163,7 @@ export function subscribeEvents(params: {
       return;
     }
 
-    const liveStatus = update.rawInput?.description;
+    const liveStatus = update.rawInput?.status;
     if (typeof liveStatus === 'string' && liveStatus.trim().length > 0) {
       const nextStatus = liveStatus.trim().slice(0, 49);
       if (nextStatus !== lastStatus) {

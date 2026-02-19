@@ -7,14 +7,14 @@ function createImage() {
   return Image.debianSlim('3.12')
     .pipInstall(['requests', 'pillow', 'matplotlib', 'numpy', 'pandas'])
     .runCommands(
-      'apt-get update && apt-get install -y git curl ca-certificates imagemagick ffmpeg zip unzip jq && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*',
+      'apt-get update && apt-get install -y git curl ca-certificates imagemagick ffmpeg zip unzip jq ripgrep sudo && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*',
       'curl -fsSL https://deb.nodesource.com/setup_24.x | bash -',
       'apt-get install -y nodejs',
       'pip cache purge',
       'npm install -g @mariozechner/pi-coding-agent',
       'curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh',
       'sandbox-agent install-agent pi',
-      'mkdir -p /home/daytona/output /home/daytona/attachments /opt/mcp'
+      'mkdir -p /home/daytona/output /home/daytona/attachments'
     )
     .workdir('/home/daytona');
 }

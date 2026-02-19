@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import type { Sandbox } from '@daytonaio/sdk';
 import { sandbox as sandboxConfig } from '~/config';
 
@@ -6,69 +7,33 @@ export interface SandboxBootstrapFile {
   content: string;
 }
 
-export function buildConfig(prompt: string): {
+function readTemplate(path: string): Promise<string> {
+  return readFile(new URL(path, import.meta.url), 'utf8');
+}
+
+export async function buildConfig(prompt: string): Promise<{
   paths: string[];
   files: SandboxBootstrapFile[];
-} {
+}> {
   const piDir = `${sandboxConfig.runtime.workdir}/.pi`;
   const agentDir = `${piDir}/agent`;
+  const extensionsDir = `${piDir}/extensions`;
 
-  const settings = JSON.stringify(
-    {
-      defaultProvider: 'openrouter',
-      defaultModel: 'google/gemini-3-flash-preview',
-      retry: {
-        enabled: true,
-        maxRetries: 3,
-        baseDelayMs: 2000,
-        maxDelayMs: 60_000,
-      },
-      enabledModels: [
-        'google/gemini-3-flash-preview',
-        'google/gemini-2.5-flash',
-        'openai/gpt-5-mini',
-      ],
-    },
-    null,
-    2
-  );
-
-  const models = JSON.stringify(
-    {
-      providers: {
-        openrouter: {
-          baseUrl: 'https://ai.hackclub.com/proxy/v1',
-          api: 'openai-completions',
-          apiKey: 'HACKCLUB_API_KEY',
-          authHeader: true,
-          models: [
-            { id: 'google/gemini-3-flash-preview' },
-            { id: 'openai/gpt-5-mini' },
-          ],
-        },
-      },
-    },
-    null,
-    2
-  );
-  const auth = JSON.stringify(
-    {
-      openrouter: {
-        type: 'api_key',
-        key: 'HACKCLUB_API_KEY',
-      },
-    },
-    null,
-    2
-  );
+  const [settings, models, auth, toolsExtension] = await Promise.all([
+    readTemplate('./settings.json'),
+    readTemplate('./models.json'),
+    readTemplate('./auth.json'),
+    readTemplate('./extensions/tools.ts'),
+  ]);
 
   return {
-    paths: [piDir, agentDir],
+    paths: [piDir, agentDir, extensionsDir],
     files: [
       { path: `${piDir}/SYSTEM.md`, content: prompt },
       { path: `${agentDir}/settings.json`, content: settings },
       { path: `${agentDir}/models.json`, content: models },
       { path: `${agentDir}/auth.json`, content: auth },
+      { path: `${extensionsDir}/tools.ts`, content: toolsExtension },
     ],
   };
 }
@@ -77,7 +42,8 @@ export async function configureAgent(
   sandbox: Sandbox,
   prompt: string
 ): Promise<void> {
-  const bootstrap = buildConfig(prompt);
+  const bootstrap = await buildConfig(prompt);
+
   for (const path of bootstrap.paths) {
     await sandbox.fs.createFolder(path, '700').catch((error: unknown) => {
       if (

@@ -3,7 +3,6 @@ import { SandboxAgent, type Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import { type PreviewAccess, waitForHealth } from './client';
-import { mcpServer, SANDBOX_MCP_DIR, SANDBOX_MCP_SERVER_PATH } from './mcp';
 
 const SERVER_ARGS = `--no-token --host 0.0.0.0 --port ${config.runtime.agentPort}`;
 
@@ -13,7 +12,7 @@ async function startServer(sandbox: Sandbox): Promise<void> {
     config.runtime.workdir,
     {
       HOME: config.runtime.workdir,
-      HACKCLUB_API_KEY: env.HACKCLUB_API_KEY
+      HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
     },
     0
   );
@@ -47,33 +46,6 @@ async function isHealthy(access: PreviewAccess): Promise<boolean> {
   return response?.ok === true;
 }
 
-async function setupMCPServer(sdk: SandboxAgent): Promise<void> {
-  const server = await mcpServer();
-  await sdk.mkdirFs({ path: SANDBOX_MCP_DIR }).catch((error: unknown) => {
-    if (
-      error instanceof Error &&
-      error.message.toLowerCase().includes('already exists')
-    ) {
-      return;
-    }
-    throw error;
-  });
-  await sdk.writeFsFile({ path: SANDBOX_MCP_SERVER_PATH }, server);
-  await sdk.setMcpConfig(
-    {
-      directory: config.runtime.workdir,
-      mcpName: 'customTools',
-    },
-    {
-      type: 'local',
-      command: 'node',
-      args: [SANDBOX_MCP_SERVER_PATH],
-      env: {},
-      enabled: true,
-    }
-  );
-}
-
 export async function boot(
   sandbox: Sandbox
 ): Promise<{ sdk: SandboxAgent; access: PreviewAccess }> {
@@ -85,7 +57,6 @@ export async function boot(
   }
 
   const sdk = await connect(access);
-  await setupMCPServer(sdk);
 
   return { sdk, access };
 }
@@ -124,14 +95,6 @@ export function createSession(
     agent: 'pi',
     sessionInit: {
       cwd: config.runtime.workdir,
-      mcpServers: [
-        {
-          name: 'customTools',
-          command: 'node',
-          args: [SANDBOX_MCP_SERVER_PATH],
-          env: [],
-        },
-      ],
     },
   });
 }
