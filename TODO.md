@@ -20,3 +20,6 @@
 - Show tool call on prepareStep to reduce lag
 - When tool is complete (finishStep) update title to the past form
 - Articulate the bash tool inputs and outputs, e.g exit codes better
+
+- Also, for upload files round to mb/gb whatever
+- For prepareStep, always run tool call
