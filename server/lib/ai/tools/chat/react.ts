@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { errorMessage, toLogError } from '~/utils/error';
 
 // TODO: Add offset or timestamp support so that the bot can react to previous messages?
 export const react = ({ context }: { context: SlackMessageContext }) =>
@@ -46,12 +47,12 @@ export const react = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { error, channel: channelId, messageTs, emojis },
+          { ...toLogError(error), channel: channelId, messageTs, emojis },
           'Failed to add Slack reactions'
         );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

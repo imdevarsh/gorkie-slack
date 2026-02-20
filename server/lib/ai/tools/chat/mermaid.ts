@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { errorMessage, toLogError } from '~/utils/error';
 
 const PLUS_REGEX = /\+/g;
 const SLASH_REGEX = /\//g;
@@ -93,12 +94,12 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { error, channel: channelId },
+          { ...toLogError(error), channel: channelId },
           'Failed to create Mermaid diagram'
         );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

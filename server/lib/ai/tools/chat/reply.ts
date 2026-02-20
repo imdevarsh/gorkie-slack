@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { errorMessage, toLogError } from '~/utils/error';
 import { getSlackUserName } from '~/utils/users';
 
 interface SlackHistoryMessage {
@@ -135,12 +136,12 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { error, channel: channelId, type, offset },
+          { ...toLogError(error), channel: channelId, type, offset },
           'Failed to send Slack reply'
         );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

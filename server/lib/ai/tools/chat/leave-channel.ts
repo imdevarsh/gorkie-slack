@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { errorMessage, toLogError } from '~/utils/error';
 
 export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
   tool({
@@ -26,12 +27,12 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
         });
       } catch (error) {
         logger.error(
-          { error, channel: context.event.channel },
+          { ...toLogError(error), channel: context.event.channel },
           'Failed to leave channel'
         );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
 

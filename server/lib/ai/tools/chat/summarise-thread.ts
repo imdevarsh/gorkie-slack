@@ -6,6 +6,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getConversationMessages } from '~/slack/conversations';
 import type { SlackMessageContext } from '~/types';
+import { errorMessage, toLogError } from '~/utils/error';
 
 export const summariseThread = ({
   context,
@@ -77,12 +78,12 @@ export const summariseThread = ({
         };
       } catch (error) {
         logger.error(
-          { error, channelId, threadTs },
+          { ...toLogError(error), channelId, threadTs },
           'Failed to summarise thread'
         );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },
