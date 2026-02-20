@@ -1,30 +1,30 @@
 import { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 import {
-  claimPausedForAutoDelete,
+  claimPausedForDelete,
   clearDestroyed,
-  listPausedForAutoDelete,
+  listPausedForDelete,
   updateStatus,
 } from '~/db/queries/sandbox';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 
-let janitorTimer: ReturnType<typeof setInterval> | null = null;
-let isSweepRunning = false;
+let timer: ReturnType<typeof setInterval> | null = null;
+let isRunning = false;
 
-async function runSweep(): Promise<void> {
-  if (isSweepRunning) {
+async function cleanup(): Promise<void> {
+  if (isRunning) {
     return;
   }
 
-  isSweepRunning = true;
+  isRunning = true;
 
   try {
     const cutoff = new Date(Date.now() - config.autoDeleteAfterMs);
-    const candidates = await listPausedForAutoDelete(cutoff);
+    const candidates = await listPausedForDelete(cutoff);
 
     for (const session of candidates) {
-      const claimed = await claimPausedForAutoDelete(session.threadId);
+      const claimed = await claimPausedForDelete(session.threadId);
       if (!claimed) {
         continue;
       }
@@ -55,30 +55,26 @@ async function runSweep(): Promise<void> {
       }
     }
   } finally {
-    isSweepRunning = false;
+    isRunning = false;
   }
 }
 
 export function startSandboxJanitor(): void {
-  if (janitorTimer) {
+  if (timer) {
     return;
   }
 
-  janitorTimer = setInterval(() => {
-    runSweep().catch((error) => {
+  timer = setInterval(() => {
+    cleanup().catch((error) => {
       logger.error(
         { error },
         '[sandbox-janitor] Unexpected error while running sweep'
       );
     });
   }, config.janitorIntervalMs);
-  janitorTimer.unref();
+  timer.unref();
 
   logger.info(
-    {
-      janitorIntervalMs: config.janitorIntervalMs,
-      autoDeleteAfterMs: config.autoDeleteAfterMs,
-    },
     '[sandbox-janitor] Started'
   );
 }

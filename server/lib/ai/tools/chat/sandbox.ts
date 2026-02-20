@@ -72,7 +72,7 @@ export const sandbox = ({
 }) =>
   tool({
     description:
-      'Delegate execution-heavy tasks to persistent E2B sandbox agent.',
+      'Delegate execution-heavy tasks to persistent sandbox agent.',
     inputSchema: z.object({
       task: z
         .string()
@@ -169,7 +169,7 @@ export const sandbox = ({
               ctxId,
               sandboxId,
             },
-            '[sandbox] Failed to pause E2B sandbox after task'
+            '[sandbox] Failed to pause sandbox after task'
           );
         });
       }

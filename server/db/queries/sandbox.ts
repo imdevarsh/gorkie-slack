@@ -72,7 +72,7 @@ export async function clearDestroyed(threadId: string): Promise<void> {
     .where(eq(sandboxSessions.threadId, threadId));
 }
 
-export function listPausedForAutoDelete(
+export function listPausedForDelete(
   cutoff: Date,
   limit = 50
 ): Promise<Pick<SandboxSession, 'threadId' | 'sandboxId'>[]> {
@@ -92,7 +92,7 @@ export function listPausedForAutoDelete(
     .limit(limit);
 }
 
-export async function claimPausedForAutoDelete(
+export async function claimPausedForDelete(
   threadId: string
 ): Promise<boolean> {
   const rows = await db

@@ -5,13 +5,7 @@ import logger from '~/lib/logger';
 const buildPromises = new Map<string, Promise<string>>();
 const DEFAULT_TEMPLATE = 'gorkie-sandbox:latest';
 
-function normalizeTemplateName(templateRef: string): string {
-  const trimmed = templateRef.trim();
-  const separator = trimmed.indexOf(':');
-  return separator === -1 ? trimmed : trimmed.slice(0, separator);
-}
-
-async function buildTemplate(templateRef: string): Promise<string> {
+async function buildTemplate(name: string): Promise<string> {
   const build = await Template.build(
     Template()
       .fromBaseImage()
@@ -37,7 +31,7 @@ async function buildTemplate(templateRef: string): Promise<string> {
       ])
       .setUser('user')
       .setWorkdir('/home/user'),
-    templateRef,
+    name,
     {
       apiKey: env.E2B_API_KEY,
       onBuildLogs: defaultBuildLogger(),
@@ -46,7 +40,7 @@ async function buildTemplate(templateRef: string): Promise<string> {
 
   logger.info(
     {
-      templateRef: build.name,
+      name: build.name,
       templateId: build.templateId,
       buildId: build.buildId,
     },
@@ -60,10 +54,14 @@ export function getTemplate(): string {
   return DEFAULT_TEMPLATE;
 }
 
-export async function buildTemplateIfMissing(
-  templateRef: string
-): Promise<string> {
-  const normalized = templateRef.trim();
+export async function buildTemplateIfMissing(name: string): Promise<string> {
+  const normalized = name.trim();
+  const exists = await Template.exists(normalized, { apiKey: env.E2B_API_KEY });
+
+  if (exists) {
+    return normalized;
+  }
+
   const inFlight = buildPromises.get(normalized);
   if (inFlight) {
     return await inFlight;
@@ -71,11 +69,12 @@ export async function buildTemplateIfMissing(
 
   logger.info(
     {
-      templateRef: normalized,
-      templateName: normalizeTemplateName(normalized),
+      name: normalized,
+      templateName: normalized,
     },
     '[sandbox] Building missing E2B template'
   );
+
   const promise = buildTemplate(normalized);
   buildPromises.set(normalized, promise);
 

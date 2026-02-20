@@ -37,17 +37,6 @@ function isMissingSandboxError(error: unknown): boolean {
   );
 }
 
-function isMissingTemplateError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : '';
-  return (
-    message.includes('template') &&
-    (message.includes('not found') ||
-      message.includes('does not exist') ||
-      message.includes('unknown template') ||
-      message.includes('404'))
-  );
-}
-
 function errorDetails(error: unknown): Record<string, unknown> {
   if (error instanceof Error) {
     return {
@@ -94,17 +83,8 @@ async function createSandbox(
     },
   };
 
-  let sandbox: Sandbox;
-  try {
-    sandbox = await Sandbox.betaCreate(template, createOpts);
-  } catch (error) {
-    if (!isMissingTemplateError(error)) {
-      throw error;
-    }
-
-    await buildTemplateIfMissing(template);
-    sandbox = await Sandbox.betaCreate(template, createOpts);
-  }
+  await buildTemplateIfMissing(template);
+  const sandbox = await Sandbox.betaCreate(template, createOpts);
 
   await ensureRuntimeDirectories(sandbox);
   await sandbox.setTimeout(config.timeoutMs);
@@ -126,7 +106,7 @@ async function createSandbox(
       template,
       timeoutMs: config.timeoutMs,
     },
-    '[sandbox] Created E2B sandbox'
+    '[sandbox] Created sandbox'
   );
 
   return {
@@ -161,7 +141,7 @@ export async function ensureSandbox(
 
     logger.info(
       { threadId, sandboxId: existing.sandboxId },
-      '[sandbox] Reused E2B sandbox'
+      '[sandbox] Reused sandbox'
     );
 
     return {
@@ -172,7 +152,7 @@ export async function ensureSandbox(
   } catch (error) {
     logger.warn(
       { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
-      '[sandbox] Failed to reconnect E2B sandbox'
+      '[sandbox] Failed to reconnect sandbox'
     );
 
     if (isMissingSandboxError(error)) {
@@ -202,12 +182,12 @@ export async function pauseSandbox(
     await updateStatus(threadId, 'paused');
     logger.info(
       { threadId, sandboxId: existing.sandboxId },
-      '[sandbox] Paused E2B sandbox'
+      '[sandbox] Paused sandbox'
     );
   } catch (error) {
     logger.warn(
       { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
-      '[sandbox] Failed to pause E2B sandbox'
+      '[sandbox] Failed to pause sandbox'
     );
   }
 }
@@ -228,12 +208,12 @@ export async function destroySandbox(
     });
     logger.info(
       { threadId, sandboxId: existing.sandboxId },
-      '[sandbox] Destroyed E2B sandbox'
+      '[sandbox] Destroyed sandbox'
     );
   } catch (error) {
     logger.warn(
       { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
-      '[sandbox] Failed to kill E2B sandbox'
+      '[sandbox] Failed to kill sandbox'
     );
   } finally {
     await clearDestroyed(threadId);
