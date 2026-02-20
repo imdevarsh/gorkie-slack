@@ -59,6 +59,6 @@ export const sandboxAgent = ({
     stopWhen: [stepCountIs(30)],
     experimental_telemetry: {
       isEnabled: true,
-      functionId: 'sandbox-agent',
+      functionId: 'sandbox',
     },
   });
