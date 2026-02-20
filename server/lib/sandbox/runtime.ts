@@ -117,7 +117,6 @@ async function createSandbox(
     resumedAt: new Date(),
     destroyedAt: null,
     pausedAt: null,
-    lastError: null,
   });
 
   logger.info(
@@ -147,7 +146,7 @@ export async function ensureSandbox(
     return createSandbox(context, threadId);
   }
 
-  await updateStatus(threadId, 'resuming', null);
+  await updateStatus(threadId, 'resuming');
 
   try {
     const sandbox = await Sandbox.connect(existing.sandboxId, {
@@ -157,7 +156,7 @@ export async function ensureSandbox(
 
     await sandbox.setTimeout(config.timeoutMs);
     await ensureRuntimeDirectories(sandbox);
-    await updateStatus(threadId, 'active', null);
+    await updateStatus(threadId, 'active');
     await markActivity(threadId);
 
     logger.info(
@@ -181,11 +180,7 @@ export async function ensureSandbox(
       return createSandbox(context, threadId);
     }
 
-    await updateStatus(
-      threadId,
-      'error',
-      error instanceof Error ? error.message : String(error)
-    );
+    await updateStatus(threadId, 'error');
     throw error;
   }
 }
@@ -204,7 +199,7 @@ export async function pauseSandbox(
     await Sandbox.betaPause(existing.sandboxId, {
       apiKey: env.E2B_API_KEY,
     });
-    await updateStatus(threadId, 'paused', null);
+    await updateStatus(threadId, 'paused');
     logger.info(
       { threadId, sandboxId: existing.sandboxId },
       '[sandbox] Paused E2B sandbox'

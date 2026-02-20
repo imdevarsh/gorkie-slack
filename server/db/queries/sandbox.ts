@@ -28,7 +28,6 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
         channelId: session.channelId,
         sandboxId: session.sandboxId,
         status: session.status,
-        lastError: session.lastError ?? null,
         pausedAt: session.pausedAt ?? null,
         resumedAt: session.resumedAt ?? null,
         destroyedAt: session.destroyedAt ?? null,
@@ -39,14 +38,12 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
 
 export async function updateStatus(
   threadId: string,
-  status: string,
-  lastError?: string | null
+  status: string
 ): Promise<void> {
   await db
     .update(sandboxSessions)
     .set({
       status,
-      ...(lastError !== undefined ? { lastError } : {}),
       pausedAt: status === 'paused' ? new Date() : null,
       resumedAt: status === 'active' ? new Date() : null,
       destroyedAt: status === 'destroyed' ? new Date() : null,

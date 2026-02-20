@@ -43,11 +43,7 @@ async function runSweep(): Promise<void> {
           '[sandbox-janitor] Auto-deleted idle sandbox'
         );
       } catch (error) {
-        await updateStatus(
-          session.threadId,
-          'paused',
-          error instanceof Error ? error.message : String(error)
-        );
+        await updateStatus(session.threadId, 'paused');
         logger.warn(
           {
             error,
