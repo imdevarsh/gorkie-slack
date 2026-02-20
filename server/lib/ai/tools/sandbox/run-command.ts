@@ -103,8 +103,8 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
         };
         const outputText =
           result.exitCode === 0
-            ? `${stdout ? `output:\n${truncate(stdout, 300)}` : 'output: <empty>'}\n\n**Exit code: 0**`
-            : `${stderr ? `error:\n${truncate(stderr, 300)}` : 'error: <empty>'}\n\n**Exit code: ${result.exitCode}**`;
+            ? `${stdout ? `output:\n${truncate(stdout, 300)}` : 'output: <empty>'}\n\n*Exit code: 0*`
+            : `${stderr ? `error:\n${truncate(stderr, 300)}` : 'error: <empty>'}\n\n*Exit code: ${result.exitCode}*`;
         await finishTask(
           stream,
           task,
