@@ -1,6 +1,7 @@
 import type { WebClient } from '@slack/web-api';
 import type { ModelMessage, UserContent } from 'ai';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { shouldUse } from '~/utils/messages';
 
@@ -87,7 +88,10 @@ export async function getConversationMessages({
             userId;
           userNameCache.set(userId, name);
         } catch (error) {
-          logger.warn({ error, userId }, 'Failed to fetch Slack user info');
+          logger.warn(
+            { ...toLogError(error), userId },
+            'Failed to fetch Slack user info'
+          );
           userNameCache.set(userId, userId);
         }
       })
@@ -156,7 +160,7 @@ export async function getConversationMessages({
     return modelMessages;
   } catch (error) {
     logger.error(
-      { error, channel, threadTs },
+      { ...toLogError(error), channel, threadTs },
       'Failed to fetch conversation history'
     );
     return [];

@@ -11,6 +11,7 @@ import { env } from '~/env';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import { toLogError } from '~/utils/error';
 import { buildTemplateIfMissing, getTemplate } from './template.build';
 
 export interface ResolvedSandbox {
@@ -35,26 +36,6 @@ function isMissingSandboxError(error: unknown): boolean {
     message.includes('404') ||
     message.includes('does not exist')
   );
-}
-
-function errorDetails(error: unknown): Record<string, unknown> {
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      cause:
-        typeof error.cause === 'object' && error.cause !== null
-          ? error.cause
-          : (error.cause ?? null),
-    };
-  }
-
-  if (typeof error === 'object' && error !== null) {
-    return error as Record<string, unknown>;
-  }
-
-  return { error: String(error) };
 }
 
 async function createSandbox(
@@ -140,7 +121,7 @@ export async function ensureSandbox(
     };
   } catch (error) {
     logger.warn(
-      { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
+      { ...toLogError(error), threadId, sandboxId: existing.sandboxId },
       '[sandbox] Failed to reconnect sandbox'
     );
 
@@ -175,7 +156,7 @@ export async function pauseSandbox(
     );
   } catch (error) {
     logger.warn(
-      { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
+      { ...toLogError(error), threadId, sandboxId: existing.sandboxId },
       '[sandbox] Failed to pause sandbox'
     );
   }
@@ -201,7 +182,7 @@ export async function destroySandbox(
     );
   } catch (error) {
     logger.warn(
-      { error: errorDetails(error), threadId, sandboxId: existing.sandboxId },
+      { ...toLogError(error), threadId, sandboxId: existing.sandboxId },
       '[sandbox] Failed to kill sandbox'
     );
   } finally {

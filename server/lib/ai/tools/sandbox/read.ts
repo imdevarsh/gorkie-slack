@@ -2,6 +2,7 @@ import { FileType, NotFoundError } from '@e2b/code-interpreter';
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { errorMessage, toLogError } from '~/utils/error';
 import { type SandboxToolDeps, setToolStatus, truncate } from './_shared';
 
 const MAX_TEXT_CHARS = 40_000;
@@ -75,7 +76,7 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
           {
             output: {
               success: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: errorMessage(error),
             },
           },
           '[subagent] read file'
@@ -88,11 +89,14 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
           };
         }
 
-        logger.error({ error, filePath }, '[sandbox-tool] Failed to read path');
+        logger.error(
+          { ...toLogError(error), filePath },
+          '[sandbox-tool] Failed to read path'
+        );
 
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

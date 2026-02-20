@@ -13,6 +13,7 @@ import {
   resetMessageCount,
 } from '~/utils/message-rate-limiter';
 import { shouldUse } from '~/utils/messages';
+import { toLogError } from '~/utils/error';
 import { getTrigger } from '~/utils/triggers';
 import { generateResponse } from './utils/respond';
 
@@ -89,7 +90,7 @@ async function getAuthorName(
     );
   } catch (error) {
     logger.warn(
-      { error, userId, ctxId },
+      { ...toLogError(error), userId, ctxId },
       'Failed to fetch user info for logging'
     );
     return userId;
@@ -202,6 +203,9 @@ export async function execute(args: MessageEventArgs) {
   return getQueue(ctxId)
     .add(async () => handleMessage(args))
     .catch((error: unknown) => {
-      logger.error({ error, ctxId }, 'Failed to process queued message');
+      logger.error(
+        { ...toLogError(error), ctxId },
+        'Failed to process queued message'
+      );
     });
 }

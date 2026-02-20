@@ -8,6 +8,7 @@ import { buildSandboxContext } from '~/lib/sandbox/context';
 import { ensureSandbox, pauseSandbox } from '~/lib/sandbox/runtime';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
 
 function normalizeStatus(status: string): string {
@@ -16,7 +17,7 @@ function normalizeStatus(status: string): string {
   return prefixed.slice(0, 49);
 }
 
-function errorMessage(error: unknown): string {
+function sandboxErrorMessage(error: unknown): string {
   if (typeof error === 'object' && error !== null) {
     const cause = (error as { cause?: { code?: string; message?: string } })
       .cause;
@@ -32,35 +33,7 @@ function errorMessage(error: unknown): string {
     }
   }
 
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  if (typeof error === 'string') {
-    return error;
-  }
-
-  return String(error);
-}
-
-function errorDetails(error: unknown): Record<string, unknown> {
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      cause:
-        typeof error.cause === 'object' && error.cause !== null
-          ? error.cause
-          : (error.cause ?? null),
-    };
-  }
-
-  if (typeof error === 'object' && error !== null) {
-    return error as Record<string, unknown>;
-  }
-
-  return { error: String(error) };
+  return errorMessage(error);
 }
 
 export const sandbox = ({
@@ -71,8 +44,7 @@ export const sandbox = ({
   files?: SlackFile[];
 }) =>
   tool({
-    description:
-      'Delegate execution-heavy tasks to persistent sandbox agent.',
+    description: 'Delegate execution-heavy tasks to persistent sandbox agent.',
     inputSchema: z.object({
       task: z
         .string()
@@ -147,12 +119,14 @@ export const sandbox = ({
           response,
         };
       } catch (error) {
-        const message = errorMessage(error);
+        const message = sandboxErrorMessage(error);
         logger.error(
           {
-            error: errorDetails(error),
+            ...toLogError(error),
             ctxId,
+            sandboxId,
             task,
+            message,
           },
           '[sandbox] Sandbox run failed'
         );
@@ -165,7 +139,7 @@ export const sandbox = ({
         await pauseSandbox(context).catch((error: unknown) => {
           logger.warn(
             {
-              error,
+              ...toLogError(error),
               ctxId,
               sandboxId,
             },

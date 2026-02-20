@@ -4,6 +4,7 @@ import { env } from '~/env';
 import logger from '~/lib/logger';
 import { startSandboxJanitor } from '~/lib/sandbox/janitor';
 import { createSlackApp } from '~/slack/app';
+import { toLogError } from '~/utils/error';
 
 const sdk = new NodeSDK({
   spanProcessors: [new LangfuseSpanProcessor()],
@@ -26,7 +27,7 @@ async function main() {
 }
 
 main().catch(async (error) => {
-  logger.error({ error }, 'Failed to start Slack Bolt app');
+  logger.error({ ...toLogError(error) }, 'Failed to start Slack Bolt app');
   await sdk.shutdown();
   process.exitCode = 1;
 });

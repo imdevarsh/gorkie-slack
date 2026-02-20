@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { toLogError } from '~/utils/error';
 import { normalizeSlackUserId } from '~/utils/users';
 
 export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
@@ -51,7 +52,7 @@ export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
           },
         };
       } catch (error) {
-        logger.error({ error }, 'Error in getUserInfo');
+        logger.error({ ...toLogError(error) }, 'Error in getUserInfo');
         return {
           success: false,
           error: 'Failed to fetch Slack user info',

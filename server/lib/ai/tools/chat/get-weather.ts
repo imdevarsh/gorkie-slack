@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 
 export const getWeather = tool({
   description: 'Get the current weather at a location',
@@ -23,7 +24,7 @@ export const getWeather = tool({
       const weatherData: unknown = await response.json();
       return weatherData;
     } catch (error) {
-      logger.error({ error }, 'Error in getWeather');
+      logger.error({ ...toLogError(error) }, 'Error in getWeather');
       return {
         success: false,
         error: 'Failed to fetch weather',

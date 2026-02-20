@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { errorMessage, toLogError } from '~/utils/error';
 
 export const scheduleReminder = ({
   context,
@@ -62,10 +63,13 @@ export const scheduleReminder = ({
           content: `Scheduled reminder for ${userId} successfully`,
         };
       } catch (error) {
-        logger.error({ error, userId }, 'Failed to schedule reminder');
+        logger.error(
+          { ...toLogError(error), userId },
+          'Failed to schedule reminder'
+        );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

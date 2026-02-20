@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { errorMessage, toLogError } from '~/utils/error';
 import { type SandboxToolDeps, setToolStatus } from './_shared';
 
 export const editFile = ({ context, sandbox }: SandboxToolDeps) =>
@@ -83,16 +84,19 @@ export const editFile = ({ context, sandbox }: SandboxToolDeps) =>
           {
             output: {
               success: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: errorMessage(error),
             },
           },
           '[subagent] edit file'
         );
 
-        logger.error({ error, filePath }, '[sandbox-tool] Failed to edit file');
+        logger.error(
+          { ...toLogError(error), filePath },
+          '[sandbox-tool] Failed to edit file'
+        );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },
