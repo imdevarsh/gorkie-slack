@@ -17,25 +17,6 @@ function normalizeStatus(status: string): string {
   return prefixed.slice(0, 49);
 }
 
-function sandboxErrorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null) {
-    const cause = (error as { cause?: { code?: string; message?: string } })
-      .cause;
-    const code = cause?.code;
-    const causeMessage = cause?.message ?? '';
-
-    if (
-      code === '42703' &&
-      typeof causeMessage === 'string' &&
-      causeMessage.includes('sandbox_sessions')
-    ) {
-      return 'Sandbox DB schema is outdated. Run `bun run db:push` and restart the bot.';
-    }
-  }
-
-  return errorMessage(error);
-}
-
 export const sandbox = ({
   context,
   files,
@@ -119,7 +100,7 @@ export const sandbox = ({
           response,
         };
       } catch (error) {
-        const message = sandboxErrorMessage(error);
+        const message = errorMessage(error);
         logger.error(
           {
             ...toLogError(error),
