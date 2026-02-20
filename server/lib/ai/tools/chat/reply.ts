@@ -112,7 +112,7 @@ export const reply = ({
 
       const task = await createTask(stream, {
         title: 'Sending reply',
-        details: content[0]?.slice(0, 100),
+        details: content[0],
       });
 
       try {
