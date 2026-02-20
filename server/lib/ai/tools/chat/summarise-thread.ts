@@ -27,10 +27,6 @@ export const summariseThread = ({
     }),
     execute: async ({ instructions }) => {
       const ctxId = getContextId(context);
-      await setStatus(context, {
-        status: 'is reading the thread',
-        loading: true,
-      });
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
 

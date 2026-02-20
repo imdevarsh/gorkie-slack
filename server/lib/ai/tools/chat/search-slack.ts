@@ -32,7 +32,6 @@ export const searchSlack = ({
     }),
     execute: async ({ query }) => {
       const ctxId = getContextId(context);
-      await setStatus(context, { status: 'is searching Slack', loading: true });
       const action_token = (context.event as AssistantThreadEvent)
         .assistant_thread?.action_token;
 

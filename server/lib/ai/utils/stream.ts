@@ -7,6 +7,7 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream, TaskChunk } from '~/types';
 import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
+import { setStatus } from './status';
 
 export async function initStream(
   context: SlackMessageContext
@@ -21,7 +22,7 @@ export async function initStream(
       ts: '',
       client: context.client,
       tasks: new Map(),
-      understandComplete: false,
+      thought: false,
       noop: true,
     };
   }
@@ -52,7 +53,7 @@ export async function initStream(
       ts: '',
       client: context.client,
       tasks: new Map(),
-      understandComplete: false,
+      thought: false,
       noop: true,
     };
   }
@@ -62,17 +63,19 @@ export async function initStream(
     ts,
     client: context.client,
     tasks: new Map(),
-    understandComplete: false,
+    thought: false,
   };
 
   await safeAppend(stream, [
     {
       type: 'task_update',
-      id: '0-understand-task',
-      title: 'Understanding the task...',
+      id: 'thinking',
+      title: 'Thinking',
+      details: 'Identifying the task',
       status: 'in_progress',
     },
   ]);
+  await setStatus(context, { status: '' });
 
   return stream;
 }

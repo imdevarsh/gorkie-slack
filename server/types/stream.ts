@@ -14,6 +14,6 @@ export interface Stream {
   ts: string;
   client: WebClient;
   tasks: Map<string, string>;
-  understandComplete: boolean;
+  thought: boolean;
   noop?: true;
 }

@@ -35,10 +35,6 @@ export const scheduleReminder = ({
     }),
     execute: async ({ text, seconds }) => {
       const ctxId = getContextId(context);
-      await setStatus(context, {
-        status: 'is scheduling a reminder',
-        loading: true,
-      });
       const userId = (context.event as { user?: string }).user;
 
       if (!userId) {

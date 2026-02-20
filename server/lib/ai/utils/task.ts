@@ -6,15 +6,15 @@ export async function createTask(
   { title, details }: { title: string; details?: string }
 ): Promise<string> {
   const taskId = crypto.randomUUID();
-    stream.tasks.set(taskId, title);
+  stream.tasks.set(taskId, title);
   const chunks: TaskChunk[] = [];
 
-  if (!stream.understandComplete) {
-    stream.understandComplete = true;
+  if (!stream.thought) {
+    stream.thought = true;
     chunks.push({
       type: 'task_update',
-      id: '0-understand-task',
-      title: 'Understanding the task...',
+      id: 'thinking',
+      title: 'Thought',
       status: 'complete',
     });
   }

@@ -25,11 +25,6 @@ export const getUserInfo = ({
     }),
     execute: async ({ userId }) => {
       const ctxId = getContextId(context);
-      await setStatus(context, {
-        status: 'is fetching user info',
-        loading: true,
-      });
-
       const task = await createTask(stream, {
         title: 'Looking up user info',
         details: userId,
