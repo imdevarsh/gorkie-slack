@@ -29,8 +29,10 @@ export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
         .string()
         .min(4)
         .max(80)
-        .default('is finding files')
-        .describe('Status text in format: is <doing something>.'),
+        .default('Finding files')
+        .describe(
+          'Brief title for this operation, e.g. "Finding TypeScript files", "Listing output files".'
+        ),
     }),
     execute: async ({ pattern, cwd, description }) => {
       const ctxId = getContextId(context);
@@ -51,7 +53,7 @@ export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
         'bash -lc',
         shellEscape(
           `cd ${shellEscape(baseDir)} && ` +
-          `find . -path ${shellEscape(`./${pattern}`)} -print | sed 's#^./##'`
+            `find . -path ${shellEscape(`./${pattern}`)} -print | sed 's#^./##'`
         ),
       ].join(' ');
 

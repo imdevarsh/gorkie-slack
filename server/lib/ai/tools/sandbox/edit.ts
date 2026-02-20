@@ -24,8 +24,10 @@ export const editFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         .string()
         .min(4)
         .max(80)
-        .default('is editing files')
-        .describe('Status text in format: is <doing something>.'),
+        .default('Editing files')
+        .describe(
+          'Brief title for this operation, e.g. "Editing main.ts", "Updating config".'
+        ),
     }),
     execute: async ({
       filePath,
@@ -57,12 +59,7 @@ export const editFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         const current = await sandbox.files.read(filePath);
 
         if (!current.includes(oldText)) {
-          await finishTask(
-            stream,
-            task,
-            'error',
-            'oldText not found in file'
-          );
+          await finishTask(stream, task, 'error', 'oldText not found in file');
           return {
             success: false,
             error: 'oldText not found in file',

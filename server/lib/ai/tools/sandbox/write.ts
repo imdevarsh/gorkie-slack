@@ -16,8 +16,10 @@ export const writeFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         .string()
         .min(4)
         .max(80)
-        .default('is writing files')
-        .describe('Status text in format: is <doing something>.'),
+        .default('Writing files')
+        .describe(
+          'Brief title for this operation, e.g. "Writing package.json", "Creating config file".'
+        ),
     }),
     execute: async ({ filePath, content, description }) => {
       const ctxId = getContextId(context);

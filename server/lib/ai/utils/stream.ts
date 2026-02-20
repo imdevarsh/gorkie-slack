@@ -21,6 +21,7 @@ export async function initStream(
       ts: '',
       client: context.client,
       tasks: new Map(),
+      understandComplete: false,
       noop: true,
     };
   }
@@ -51,6 +52,7 @@ export async function initStream(
       ts: '',
       client: context.client,
       tasks: new Map(),
+      understandComplete: false,
       noop: true,
     };
   }
@@ -60,6 +62,7 @@ export async function initStream(
     ts,
     client: context.client,
     tasks: new Map(),
+    understandComplete: false,
   };
 
   await safeAppend(stream, [

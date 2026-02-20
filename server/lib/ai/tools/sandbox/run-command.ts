@@ -16,15 +16,16 @@ const MAX_COMMAND_CHARS = 500;
 
 export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
-    description:
-      'Run a shell command in the sandbox. Always set description in format: is <doing something>.',
+    description: 'Run a shell command in the sandbox.',
     inputSchema: z.object({
       command: z.string().min(1).describe('Shell command to execute.'),
       description: z
         .string()
         .min(4)
         .max(80)
-        .describe('Status text in format: is <doing something>.'),
+        .describe(
+          'Brief title for this operation, e.g. "Running npm install", "Building project".'
+        ),
       cwd: z.string().optional().describe('Working directory for command.'),
       timeoutMs: z
         .number()

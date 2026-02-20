@@ -23,8 +23,10 @@ export const readFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         .string()
         .min(4)
         .max(80)
-        .default('is reading files')
-        .describe('Status text in format: is <doing something>.'),
+        .default('Reading files')
+        .describe(
+          'Brief title for this operation, e.g. "Reading package.json", "Listing src directory".'
+        ),
     }),
     execute: async ({ filePath, description }) => {
       const ctxId = getContextId(context);

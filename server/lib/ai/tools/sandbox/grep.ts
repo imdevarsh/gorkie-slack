@@ -26,8 +26,10 @@ export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
         .string()
         .min(4)
         .max(80)
-        .default('is searching files')
-        .describe('Status text in format: is <doing something>.'),
+        .default('Searching files')
+        .describe(
+          'Brief title for this operation, e.g. "Searching for imports", "Finding function references".'
+        ),
     }),
     execute: async ({ pattern, cwd, description }) => {
       const ctxId = getContextId(context);

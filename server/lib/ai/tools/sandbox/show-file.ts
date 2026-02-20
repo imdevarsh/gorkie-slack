@@ -24,8 +24,10 @@ export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         .string()
         .min(4)
         .max(80)
-        .default('is uploading files')
-        .describe('Status text in format: is <doing something>.'),
+        .default('Uploading files')
+        .describe(
+          'Brief title for this operation, e.g. "Uploading chart.png", "Sharing report.pdf".'
+        ),
     }),
     execute: async ({ filePath, filename, description }) => {
       const ctxId = getContextId(context);

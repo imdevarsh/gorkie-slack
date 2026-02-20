@@ -13,22 +13,22 @@ export const searchWeb = ({
   ...baseSearchWeb,
   execute: baseSearchWeb.execute
     ? async (
-      ...args: Parameters<NonNullable<typeof baseSearchWeb.execute>>
-    ) => {
-      const task = await createTask(stream, {
-        title: 'Searching the web',
-        details: args[0]?.query,
-      });
-      try {
-        const result = await (
-          baseSearchWeb.execute as NonNullable<typeof baseSearchWeb.execute>
-        )(...args);
-        await finishTask(stream, task, 'complete');
-        return result;
-      } catch (err) {
-        await finishTask(stream, task, 'error');
-        throw err;
+        ...args: Parameters<NonNullable<typeof baseSearchWeb.execute>>
+      ) => {
+        const task = await createTask(stream, {
+          title: 'Searching the web',
+          details: args[0]?.query,
+        });
+        try {
+          const result = await (
+            baseSearchWeb.execute as NonNullable<typeof baseSearchWeb.execute>
+          )(...args);
+          await finishTask(stream, task, 'complete');
+          return result;
+        } catch (err) {
+          await finishTask(stream, task, 'error');
+          throw err;
+        }
       }
-    }
     : undefined,
 });
