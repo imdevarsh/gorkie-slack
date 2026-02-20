@@ -7,6 +7,19 @@ import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SandboxToolDeps } from './_shared';
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 ** 2) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  if (bytes < 1024 ** 3) {
+    return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  }
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}
+
 export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
     description:
@@ -87,7 +100,7 @@ export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           stream,
           task,
           'complete',
-          `Uploaded ${output.filename} (${output.bytes} bytes)`
+          `Uploaded ${output.filename} (${formatBytes(output.bytes)})`
         );
         return output;
       } catch (error) {

@@ -23,3 +23,5 @@
 
 - Also, for upload files round to mb/gb whatever
 - For prepareStep, always run tool call
+- Do NOT truncate the task text... 
+- Again Running Sandbox -> Ran Sandbox

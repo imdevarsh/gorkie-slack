@@ -42,7 +42,7 @@ export const sandbox = ({
 
       const taskId = await createTask(stream, {
         title: 'Running sandbox',
-        details: task.slice(0, 120),
+        details: task,
       });
 
       try {
