@@ -151,7 +151,7 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
             '[subagent] Tool update'
           );
 
-          const errText = `Exit code: ${commandError.exitCode}\ncwd: ${resolvedCwd}\n${commandError.stderr ? `stderr:\n${truncate(commandError.stderr, 300)}` : 'stderr: <empty>'}`;
+          const errText = `${commandError.stderr ? `stderr:\n${truncate(commandError.stderr, 300)}\n\n*Exit code: ${commandError.exitCode}*` : 'stderr: <empty>'}`;
           await finishTask(stream, task, 'error', errText);
           return {
             success: false,
