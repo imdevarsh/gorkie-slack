@@ -17,4 +17,6 @@
 2. `bun run lint` passes.
 3. Manual Slack sandbox scenarios pass with sandbox reuse and display uploads.
 
-- On prepare step ALWAYS show tool UI, also e.g for thinking -> thought do the same for done opeartions, e.g tools like bash don't show success like sending reply does
+- Show tool call on prepareStep to reduce lag
+- When tool is complete (finishStep) update title to the past form
+- Articulate the bash tool inputs and outputs, e.g exit codes better
