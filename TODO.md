@@ -26,3 +26,4 @@
 - Also, for web search show sources (new param in slack sdk)
 - For sending 4 replies said (showing only first reply)
 - if one thing has an error the whole task is marked as failed (fix it)
+- if the items exceed the limit they split into another plan, why? and the remaining steps vanished (https://hackclub.slack.com/archives/C0A6C5F52BE/p1771610325086369)
