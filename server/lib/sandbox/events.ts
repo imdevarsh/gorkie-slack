@@ -152,32 +152,39 @@ export function subscribeEvents(params: {
   const toolByCall = new Map<string, string>();
 
   return session.onEvent((event) => {
-    stream.push(event.payload);
+    try {
+      stream.push(event.payload);
 
-    if (event.sender !== 'agent') {
-      return;
-    }
-
-    const update = readUpdate(event.payload);
-    if (!update) {
-      return;
-    }
-
-    const liveStatus = update.rawInput?.status;
-    if (typeof liveStatus === 'string' && liveStatus.trim().length > 0) {
-      const nextStatus = liveStatus.trim().slice(0, 49);
-      if (nextStatus !== lastStatus) {
-        lastStatus = nextStatus;
-        setStatus(context, {
-          status: nextStatus,
-          loading: true,
-        }).catch((error: unknown) => {
-          logger.debug({ error, ctxId }, '[subagent] Status update skipped');
-        });
+      if (event.sender !== 'agent') {
+        return;
       }
-    }
 
-    handleTools({ update, runtime, context, ctxId, toolByCall });
+      const update = readUpdate(event.payload);
+      if (!update) {
+        return;
+      }
+
+      const liveStatus = update.rawInput?.status;
+      if (typeof liveStatus === 'string' && liveStatus.trim().length > 0) {
+        const nextStatus = liveStatus.trim().slice(0, 49);
+        if (nextStatus !== lastStatus) {
+          lastStatus = nextStatus;
+          setStatus(context, {
+            status: nextStatus,
+            loading: true,
+          }).catch((error: unknown) => {
+            logger.debug({ error, ctxId }, '[subagent] Status update skipped');
+          });
+        }
+      }
+
+      handleTools({ update, runtime, context, ctxId, toolByCall });
+    } catch (error) {
+      logger.warn(
+        { error, ctxId },
+        '[subagent] Failed to process session event'
+      );
+    }
   });
 }
 

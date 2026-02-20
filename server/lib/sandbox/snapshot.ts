@@ -7,7 +7,7 @@ function createImage() {
   return Image.debianSlim('3.12')
     .pipInstall(['requests', 'pillow', 'matplotlib', 'numpy', 'pandas'])
     .runCommands(
-      'apt-get update && apt-get install -y git curl ca-certificates imagemagick ffmpeg zip unzip jq ripgrep sudo && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*',
+      'apt-get update && apt-get install -y git curl ca-certificates imagemagick ffmpeg zip unzip jq ripgrep fd-find sudo && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*',
       'curl -fsSL https://deb.nodesource.com/setup_24.x | bash -',
       'apt-get install -y nodejs',
       'pip cache purge',

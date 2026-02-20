@@ -10,6 +10,14 @@ const sdk = new NodeSDK({
 
 sdk.start();
 
+process.on('unhandledRejection', (reason) => {
+  logger.error({ error: reason }, 'Unhandled promise rejection');
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error({ error }, 'Uncaught exception');
+});
+
 async function main() {
   const { app, socketMode } = createSlackApp();
 
