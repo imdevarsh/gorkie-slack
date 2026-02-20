@@ -1,87 +1,9 @@
 import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
 import { setStatus } from '~/lib/ai/utils/status';
-import logger from '~/lib/logger';
 import type { ChatRequestHints, SlackMessageContext } from '~/types';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
-
-interface SlackTextStream {
-  append: (text: string) => Promise<void>;
-  stop: () => Promise<void>;
-}
-
-async function createTextStream(
-  context: SlackMessageContext
-): Promise<SlackTextStream | null> {
-  const channel = (context.event as { channel?: string }).channel;
-  const userId = (context.event as { user?: string }).user;
-  const teamId = context.teamId;
-  const threadTs =
-    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
-
-  if (!(channel && threadTs)) {
-    return null;
-  }
-
-  const started = await context.client
-    .apiCall('chat.startStream', {
-      channel,
-      thread_ts: threadTs,
-      ...(userId && teamId
-        ? {
-            recipient_user_id: userId,
-            recipient_team_id: teamId,
-          }
-        : {}),
-    })
-    .catch((error: unknown) => {
-      logger.debug(
-        { error, channel, threadTs },
-        '[chat] startStream for text failed'
-      );
-      return null;
-    });
-
-  const streamTs =
-    started &&
-    typeof started === 'object' &&
-    typeof (started as { ts?: unknown }).ts === 'string'
-      ? (started as unknown as { ts: string }).ts
-      : null;
-  if (!streamTs) {
-    return null;
-  }
-
-  let queue = Promise.resolve();
-  const enqueue = (fn: () => Promise<void>): Promise<void> => {
-    queue = queue.then(fn).catch((error: unknown) => {
-      logger.debug(
-        { error, channel, streamTs },
-        '[chat] text stream update failed'
-      );
-    });
-    return queue;
-  };
-
-  return {
-    append: (text) =>
-      enqueue(async () => {
-        await context.client.apiCall('chat.appendStream', {
-          channel,
-          ts: streamTs,
-          chunks: [{ type: 'markdown_text', text }],
-        });
-      }),
-    stop: () =>
-      enqueue(async () => {
-        await context.client.apiCall('chat.stopStream', {
-          channel,
-          ts: streamTs,
-        });
-      }),
-  };
-}
 
 export async function generateResponse(
   context: SlackMessageContext,
@@ -128,7 +50,7 @@ export async function generateResponse(
 
     const agent = orchestratorAgent({ context, requestHints, files });
 
-    const result = await agent.stream({
+    const { toolCalls } = await agent.generate({
       messages: [
         ...messages,
         {
@@ -137,22 +59,6 @@ export async function generateResponse(
         },
       ],
     });
-    let textStream: SlackTextStream | null = null;
-
-    for await (const delta of result.textStream) {
-      if (!delta) {
-        continue;
-      }
-      if (!textStream) {
-        textStream = await createTextStream(context);
-      }
-      await textStream?.append(delta);
-    }
-
-    if (textStream) {
-      await textStream.stop();
-    }
-    const toolCalls = await result.toolCalls;
 
     await setStatus(context, { status: '' });
 

@@ -16,20 +16,6 @@ interface SessionUpdatePayload {
   content?: { text?: string } | string;
 }
 
-export type SandboxTaskStatus =
-  | 'pending'
-  | 'in_progress'
-  | 'complete'
-  | 'error';
-
-export interface SandboxTaskUpdate {
-  taskId: string;
-  title: string;
-  status: SandboxTaskStatus;
-  details?: string;
-  output?: string;
-}
-
 function readUpdate(payload: unknown): SessionUpdatePayload | null {
   return (
     (
@@ -40,27 +26,6 @@ function readUpdate(payload: unknown): SessionUpdatePayload | null {
       }
     ).params?.update ?? null
   );
-}
-
-function extractText(value: unknown): string | undefined {
-  if (!value || typeof value !== 'object') {
-    return undefined;
-  }
-
-  const content = (value as { content?: unknown }).content;
-  if (!Array.isArray(content)) {
-    return undefined;
-  }
-
-  const firstText = content.find(
-    (entry) =>
-      typeof entry === 'object' &&
-      entry !== null &&
-      (entry as { type?: unknown }).type === 'text' &&
-      typeof (entry as { text?: unknown }).text === 'string'
-  ) as { text?: string } | undefined;
-
-  return firstText?.text;
 }
 
 function handleShowFileTool(params: {
@@ -117,9 +82,8 @@ function handleTools(params: {
   context: SlackMessageContext;
   ctxId: string;
   toolByCall: Map<string, string>;
-  onTaskUpdate?: (update: SandboxTaskUpdate) => void | Promise<void>;
 }): boolean {
-  const { update, runtime, context, ctxId, toolByCall, onTaskUpdate } = params;
+  const { update, runtime, context, ctxId, toolByCall } = params;
 
   if (update.sessionUpdate === 'tool_call') {
     const toolName =
@@ -133,19 +97,6 @@ function handleTools(params: {
       { ctxId, tool: toolName, input: update.rawInput ?? null },
       '[subagent] Tool started'
     );
-    if (typeof update.toolCallId === 'string') {
-      const taskPromise = onTaskUpdate?.({
-        taskId: update.toolCallId,
-        title: toolName,
-        status: 'pending',
-      });
-      taskPromise?.catch((error: unknown) => {
-        logger.debug(
-          { error, ctxId },
-          '[subagent] Task update callback failed'
-        );
-      });
-    }
     return true;
   }
 
@@ -180,33 +131,6 @@ function handleTools(params: {
     '[subagent] Tool update'
   );
 
-  const taskId =
-    typeof update.toolCallId === 'string' ? update.toolCallId : undefined;
-  if (taskId) {
-    let mappedStatus: SandboxTaskStatus = 'pending';
-    if (status === 'completed') {
-      mappedStatus = 'complete';
-    } else if (status === 'failed') {
-      mappedStatus = 'error';
-    } else if (status === 'in_progress') {
-      mappedStatus = 'in_progress';
-    }
-    const taskPromise = onTaskUpdate?.({
-      taskId,
-      title: toolName,
-      status: mappedStatus,
-      details:
-        mappedStatus === 'in_progress' &&
-        typeof update.rawInput?.status === 'string'
-          ? update.rawInput.status
-          : undefined,
-      output: extractText(update.rawOutput),
-    });
-    taskPromise?.catch((error: unknown) => {
-      logger.debug({ error, ctxId }, '[subagent] Task update callback failed');
-    });
-  }
-
   if (status !== 'completed') {
     return true;
   }
@@ -222,9 +146,8 @@ export function subscribeEvents(params: {
   context: SlackMessageContext;
   ctxId: string;
   stream: unknown[];
-  onTaskUpdate?: (update: SandboxTaskUpdate) => void | Promise<void>;
 }): () => void {
-  const { session, runtime, context, ctxId, stream, onTaskUpdate } = params;
+  const { session, runtime, context, ctxId, stream } = params;
   let lastStatus: string | null = null;
   const toolByCall = new Map<string, string>();
 
@@ -254,7 +177,7 @@ export function subscribeEvents(params: {
       }
     }
 
-    handleTools({ update, runtime, context, ctxId, toolByCall, onTaskUpdate });
+    handleTools({ update, runtime, context, ctxId, toolByCall });
   });
 }
 
