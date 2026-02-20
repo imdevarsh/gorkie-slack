@@ -71,7 +71,7 @@ export async function initStream(
       type: 'task_update',
       id: 'thinking',
       title: 'Thinking',
-      details: 'Identifying the task',
+      details: 'Figuring out the next steps...',
       status: 'in_progress',
     },
   ]);
