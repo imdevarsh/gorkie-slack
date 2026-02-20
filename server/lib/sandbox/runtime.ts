@@ -73,7 +73,6 @@ async function createSandbox(
   logger.info(
     {
       ctxId: threadId,
-      threadId,
       sandboxId: sandbox.sandboxId,
       template,
       timeoutMs: config.timeoutMs,
@@ -111,7 +110,7 @@ export async function ensureSandbox(
     await markActivity(threadId);
 
     logger.info(
-      { ctxId: threadId, threadId, sandboxId: existing.sandboxId },
+      { ctxId: threadId, sandboxId: existing.sandboxId },
       '[sandbox] Reused sandbox'
     );
 
@@ -125,7 +124,6 @@ export async function ensureSandbox(
       {
         ...toLogError(error),
         ctxId: threadId,
-        threadId,
         sandboxId: existing.sandboxId,
       },
       '[sandbox] Failed to reconnect sandbox'
@@ -157,7 +155,7 @@ export async function pauseSandbox(
     });
     await updateStatus(threadId, 'paused');
     logger.info(
-      { ctxId: threadId, threadId, sandboxId: existing.sandboxId },
+      { ctxId: threadId, sandboxId: existing.sandboxId },
       '[sandbox] Paused sandbox'
     );
   } catch (error) {
@@ -165,7 +163,6 @@ export async function pauseSandbox(
       {
         ...toLogError(error),
         ctxId: threadId,
-        threadId,
         sandboxId: existing.sandboxId,
       },
       '[sandbox] Failed to pause sandbox'
@@ -188,7 +185,7 @@ export async function destroySandbox(
       apiKey: env.E2B_API_KEY,
     });
     logger.info(
-      { ctxId: threadId, threadId, sandboxId: existing.sandboxId },
+      { ctxId: threadId, sandboxId: existing.sandboxId },
       '[sandbox] Destroyed sandbox'
     );
   } catch (error) {
@@ -196,7 +193,6 @@ export async function destroySandbox(
       {
         ...toLogError(error),
         ctxId: threadId,
-        threadId,
         sandboxId: existing.sandboxId,
       },
       '[sandbox] Failed to kill sandbox'

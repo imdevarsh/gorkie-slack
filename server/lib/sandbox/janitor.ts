@@ -8,6 +8,7 @@ import {
 } from '~/db/queries/sandbox';
 import { env } from '~/env';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
@@ -36,7 +37,7 @@ async function cleanup(): Promise<void> {
         await clearDestroyed(session.threadId);
         logger.info(
           {
-            threadId: session.threadId,
+            ctxId: session.threadId,
             sandboxId: session.sandboxId,
             cutoff,
           },
@@ -46,8 +47,8 @@ async function cleanup(): Promise<void> {
         await updateStatus(session.threadId, 'paused');
         logger.warn(
           {
-            error,
-            threadId: session.threadId,
+            ...toLogError(error),
+            ctxId: session.threadId,
             sandboxId: session.sandboxId,
           },
           '[sandbox-janitor] Failed to delete expired sandbox'
@@ -67,7 +68,7 @@ export function startSandboxJanitor(): void {
   timer = setInterval(() => {
     cleanup().catch((error) => {
       logger.error(
-        { error },
+        { ...toLogError(error) },
         '[sandbox-janitor] Unexpected error while running sweep'
       );
     });

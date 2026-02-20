@@ -1,7 +1,7 @@
 import type { App } from '@slack/bolt';
 import { env } from '~/env';
-import logger from './logger';
 import { toLogError } from '~/utils/error';
+import logger from './logger';
 
 const allowedUsers = new Set<string>();
 

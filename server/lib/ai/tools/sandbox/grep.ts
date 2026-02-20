@@ -1,6 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import {
   resolveCwd,
   type SandboxToolDeps,
@@ -29,10 +31,12 @@ export const grepFiles = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ pattern, cwd, description }) => {
       await setToolStatus(context, description);
+      const ctxId = getContextId(context);
 
       const baseDir = resolveCwd(cwd);
       logger.info(
         {
+          ctxId,
           input: { pattern, cwd: baseDir, description },
         },
         '[subagent] searching files'
@@ -66,6 +70,7 @@ export const grepFiles = ({ context, sandbox }: SandboxToolDeps) =>
 
         logger.info(
           {
+            ctxId,
             output,
           },
           '[subagent] grep files'
@@ -75,22 +80,23 @@ export const grepFiles = ({ context, sandbox }: SandboxToolDeps) =>
       } catch (error) {
         logger.warn(
           {
+            ctxId,
             output: {
               success: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: errorMessage(error),
             },
           },
           '[subagent] grep files'
         );
 
         logger.error(
-          { error, pattern, cwd: baseDir },
+          { ...toLogError(error), ctxId, pattern, cwd: baseDir },
           '[sandbox-tool] Grep search failed'
         );
 
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

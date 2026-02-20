@@ -1,6 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import { type SandboxToolDeps, setToolStatus } from './_shared';
 
 export const writeFile = ({ context, sandbox }: SandboxToolDeps) =>
@@ -18,8 +20,10 @@ export const writeFile = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ filePath, content, description }) => {
       await setToolStatus(context, description);
+      const ctxId = getContextId(context);
       logger.info(
         {
+          ctxId,
           input: {
             filePath,
             description,
@@ -40,6 +44,7 @@ export const writeFile = ({ context, sandbox }: SandboxToolDeps) =>
 
         logger.info(
           {
+            ctxId,
             output,
           },
           '[subagent] write file'
@@ -49,21 +54,22 @@ export const writeFile = ({ context, sandbox }: SandboxToolDeps) =>
       } catch (error) {
         logger.warn(
           {
+            ctxId,
             output: {
               success: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: errorMessage(error),
             },
           },
           '[subagent] write file'
         );
 
         logger.error(
-          { error, filePath },
+          { ...toLogError(error), ctxId, filePath },
           '[sandbox-tool] Failed to write file'
         );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

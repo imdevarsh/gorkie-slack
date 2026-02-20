@@ -7,13 +7,13 @@ import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { SlackMessageContext } from '~/types';
 import { buildChatContext, getContextId } from '~/utils/context';
+import { toLogError } from '~/utils/error';
 import { logReply } from '~/utils/log';
 import {
   checkMessageQuota,
   resetMessageCount,
 } from '~/utils/message-rate-limiter';
 import { shouldUse } from '~/utils/messages';
-import { toLogError } from '~/utils/error';
 import { getTrigger } from '~/utils/triggers';
 import { generateResponse } from './utils/respond';
 

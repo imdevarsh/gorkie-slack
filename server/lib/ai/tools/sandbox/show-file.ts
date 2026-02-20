@@ -2,6 +2,8 @@ import nodePath from 'node:path';
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import { type SandboxToolDeps, setToolStatus } from './_shared';
 
 export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
@@ -26,8 +28,10 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ filePath, filename, description }) => {
       await setToolStatus(context, description);
+      const ctxId = getContextId(context);
       logger.info(
         {
+          ctxId,
           input: { filePath, filename: filename ?? null, description },
         },
         '[subagent] uploading file'
@@ -66,6 +70,7 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
 
         logger.info(
           {
+            ctxId,
             output,
           },
           '[subagent] show file'
@@ -75,22 +80,23 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
       } catch (error) {
         logger.warn(
           {
+            ctxId,
             output: {
               success: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: errorMessage(error),
             },
           },
           '[subagent] show file'
         );
 
         logger.error(
-          { error, filePath },
+          { ...toLogError(error), ctxId, filePath },
           '[sandbox-tool] Failed to upload file to Slack'
         );
 
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

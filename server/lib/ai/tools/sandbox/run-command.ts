@@ -1,6 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import {
   resolveCwd,
   resolveTimeout,
@@ -34,6 +36,7 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ command, description, cwd, timeoutMs }) => {
       await setToolStatus(context, description);
+      const ctxId = getContextId(context);
 
       const startedAt = Date.now();
       const resolvedCwd = resolveCwd(cwd);
@@ -48,6 +51,7 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
 
       logger.info(
         {
+          ctxId,
           tool: 'bash',
           input: {},
         },
@@ -55,6 +59,7 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
       );
       logger.info(
         {
+          ctxId,
           tool: 'bash',
           status: 'in_progress',
           input,
@@ -75,6 +80,7 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
 
         logger.info(
           {
+            ctxId,
             tool: 'bash',
             status: 'completed',
             input,
@@ -120,6 +126,7 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
 
           logger.warn(
             {
+              ctxId,
               tool: 'bash',
               status: 'completed',
               input,
@@ -149,7 +156,8 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
 
         logger.error(
           {
-            error,
+            ...toLogError(error),
+            ctxId,
             tool: 'bash',
             cwd: resolvedCwd,
             timeoutMs: resolvedTimeout,
@@ -160,7 +168,7 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
 
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
           durationMs,
         };
       }

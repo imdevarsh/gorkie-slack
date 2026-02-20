@@ -1,6 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import {
   resolveCwd,
   type SandboxToolDeps,
@@ -32,10 +34,12 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ pattern, cwd, description }) => {
       await setToolStatus(context, description);
+      const ctxId = getContextId(context);
 
       const baseDir = resolveCwd(cwd);
       logger.info(
         {
+          ctxId,
           input: { pattern, cwd: baseDir, description },
         },
         '[subagent] finding files'
@@ -69,6 +73,7 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
 
         logger.info(
           {
+            ctxId,
             output,
           },
           '[subagent] glob files'
@@ -78,21 +83,22 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
       } catch (error) {
         logger.warn(
           {
+            ctxId,
             output: {
               success: false,
-              error: error instanceof Error ? error.message : String(error),
+              error: errorMessage(error),
             },
           },
           '[subagent] glob files'
         );
 
         logger.error(
-          { error, pattern, cwd: baseDir },
+          { ...toLogError(error), ctxId, pattern, cwd: baseDir },
           '[sandbox-tool] Glob failed'
         );
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

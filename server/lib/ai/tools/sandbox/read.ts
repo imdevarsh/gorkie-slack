@@ -2,6 +2,7 @@ import { FileType, NotFoundError } from '@e2b/code-interpreter';
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
+import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import { type SandboxToolDeps, setToolStatus, truncate } from './_shared';
 
@@ -26,8 +27,10 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
     }),
     execute: async ({ filePath, description }) => {
       await setToolStatus(context, description);
+      const ctxId = getContextId(context);
       logger.info(
         {
+          ctxId,
           input: { filePath, description },
         },
         '[subagent] reading file'
@@ -65,6 +68,7 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
 
         logger.info(
           {
+            ctxId,
             output,
           },
           '[subagent] read file'
@@ -74,6 +78,7 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
       } catch (error) {
         logger.warn(
           {
+            ctxId,
             output: {
               success: false,
               error: errorMessage(error),
@@ -90,7 +95,7 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
         }
 
         logger.error(
-          { ...toLogError(error), filePath },
+          { ...toLogError(error), ctxId, filePath },
           '[sandbox-tool] Failed to read path'
         );
 
