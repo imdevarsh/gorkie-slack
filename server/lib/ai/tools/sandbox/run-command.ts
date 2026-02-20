@@ -160,9 +160,7 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
             cwd: resolvedCwd,
             timeoutMs: resolvedTimeout,
             stdout,
-            stdoutTruncated: commandError.stdout.length > MAX_OUTPUT_CHARS,
             stderr,
-            stderrTruncated: commandError.stderr.length > MAX_OUTPUT_CHARS,
             durationMs,
           };
         }
