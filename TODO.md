@@ -18,10 +18,11 @@
 3. Manual Slack sandbox scenarios pass with sandbox reuse and display uploads.
 
 - Show tool call on prepareStep to reduce lag
-- When tool is complete (finishStep) update title to the past form
 - Articulate the bash tool inputs and outputs, e.g exit codes better
 
 - Also, for upload files round to mb/gb whatever
 - For prepareStep, always run tool call
 - Do NOT truncate the task text... 
-- Again Running Sandbox -> Ran Sandbox
+- Also, for web search show sources (new param in slack sdk)
+- For sending 4 replies said (showing only first reply)
+- if one thing has an error the whole task is marked as failed (fix it)
