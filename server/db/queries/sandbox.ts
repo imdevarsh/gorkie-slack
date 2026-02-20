@@ -72,7 +72,7 @@ export async function clearDestroyed(threadId: string): Promise<void> {
     .where(eq(sandboxSessions.threadId, threadId));
 }
 
-export function listPausedForDelete(
+export function listExpired(
   cutoff: Date,
   limit = 50
 ): Promise<Pick<SandboxSession, 'threadId' | 'sandboxId'>[]> {
@@ -92,9 +92,7 @@ export function listPausedForDelete(
     .limit(limit);
 }
 
-export async function claimPausedForDelete(
-  threadId: string
-): Promise<boolean> {
+export async function claimExpired(threadId: string): Promise<boolean> {
   const rows = await db
     .update(sandboxSessions)
     .set({

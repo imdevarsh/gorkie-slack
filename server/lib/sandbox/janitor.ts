@@ -1,9 +1,9 @@
 import { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 import {
-  claimPausedForDelete,
+  claimExpired,
   clearDestroyed,
-  listPausedForDelete,
+  listExpired,
   updateStatus,
 } from '~/db/queries/sandbox';
 import { env } from '~/env';
@@ -21,10 +21,10 @@ async function cleanup(): Promise<void> {
 
   try {
     const cutoff = new Date(Date.now() - config.autoDeleteAfterMs);
-    const candidates = await listPausedForDelete(cutoff);
+    const candidates = await listExpired(cutoff);
 
     for (const session of candidates) {
-      const claimed = await claimPausedForDelete(session.threadId);
+      const claimed = await claimExpired(session.threadId);
       if (!claimed) {
         continue;
       }
@@ -40,7 +40,7 @@ async function cleanup(): Promise<void> {
             sandboxId: session.sandboxId,
             cutoff,
           },
-          '[sandbox-janitor] Auto-deleted idle sandbox'
+          '[sandbox-janitor] Deleted expired sandbox'
         );
       } catch (error) {
         await updateStatus(session.threadId, 'paused');
@@ -50,7 +50,7 @@ async function cleanup(): Promise<void> {
             threadId: session.threadId,
             sandboxId: session.sandboxId,
           },
-          '[sandbox-janitor] Failed to auto-delete idle sandbox'
+          '[sandbox-janitor] Failed to delete expired sandbox'
         );
       }
     }
@@ -74,7 +74,5 @@ export function startSandboxJanitor(): void {
   }, config.janitorIntervalMs);
   timer.unref();
 
-  logger.info(
-    '[sandbox-janitor] Started'
-  );
+  logger.info('[sandbox-janitor] Started');
 }
