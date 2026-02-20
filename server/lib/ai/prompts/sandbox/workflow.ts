@@ -3,7 +3,7 @@ export const workflowPrompt = `\
 Follow these steps for every task:
 
 0. Recall: For follow-up requests, recover recent execution context before acting.
-  Read recent agent/turns/<message_ts>.json logs (latest 3-5) and extract:
+  Read recent agent/turns/<message_ts>.json logs (latest 3-5) (sort by date -> most recent are latest) and extract:
   method used, what worked, what failed, learnings, key parameters, and last successful output path.
   Reuse proven settings from the latest successful turn unless the user explicitly asks to change them.
 

@@ -57,21 +57,12 @@ function errorDetails(error: unknown): Record<string, unknown> {
   return { error: String(error) };
 }
 
-async function ensureRuntimeDirectories(sandbox: Sandbox): Promise<void> {
-  await Promise.all([
-    sandbox.files.makeDir(config.paths.workdir),
-    sandbox.files.makeDir(config.paths.attachments),
-    sandbox.files.makeDir(config.paths.output),
-    sandbox.files.makeDir(config.paths.turns),
-  ]);
-}
-
 async function createSandbox(
   context: SlackMessageContext,
   threadId: string
 ): Promise<ResolvedSandbox> {
   const template = getTemplate();
-  const createOpts = {
+  const options = {
     apiKey: env.E2B_API_KEY,
     timeoutMs: config.timeoutMs,
     autoPause: true,
@@ -84,9 +75,8 @@ async function createSandbox(
   };
 
   await buildTemplateIfMissing(template);
-  const sandbox = await Sandbox.betaCreate(template, createOpts);
+  const sandbox = await Sandbox.betaCreate(template, options);
 
-  await ensureRuntimeDirectories(sandbox);
   await sandbox.setTimeout(config.timeoutMs);
 
   await upsert({
@@ -135,7 +125,6 @@ export async function ensureSandbox(
     });
 
     await sandbox.setTimeout(config.timeoutMs);
-    await ensureRuntimeDirectories(sandbox);
     await updateStatus(threadId, 'active');
     await markActivity(threadId);
 
