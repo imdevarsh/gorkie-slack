@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
 export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
@@ -15,9 +16,10 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
         .describe('Optional short reason for leaving'),
     }),
     execute: async ({ reason }) => {
+      const ctxId = getContextId(context);
       const authorId = (context.event as { user?: string }).user;
       logger.info(
-        { reason, authorId, channel: context.event.channel },
+        { ctxId, reason, authorId, channel: context.event.channel },
         'Leaving channel'
       );
 
@@ -27,7 +29,7 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
         });
       } catch (error) {
         logger.error(
-          { ...toLogError(error), channel: context.event.channel },
+          { ...toLogError(error), ctxId, channel: context.event.channel },
           'Failed to leave channel'
         );
         return {

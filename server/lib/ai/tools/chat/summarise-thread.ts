@@ -6,6 +6,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { getConversationMessages } from '~/slack/conversations';
 import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
 export const summariseThread = ({
@@ -22,6 +23,7 @@ export const summariseThread = ({
         .describe('Optional instructions to provide to the summariser agent'),
     }),
     execute: async ({ instructions }) => {
+      const ctxId = getContextId(context);
       await setStatus(context, {
         status: 'is reading the thread',
         loading: true,
@@ -67,7 +69,7 @@ export const summariseThread = ({
         });
 
         logger.debug(
-          { channelId, threadTs, messageCount: messages.length },
+          { ctxId, channelId, threadTs, messageCount: messages.length },
           'Thread summarised successfully'
         );
 
@@ -78,7 +80,7 @@ export const summariseThread = ({
         };
       } catch (error) {
         logger.error(
-          { ...toLogError(error), channelId, threadTs },
+          { ...toLogError(error), ctxId, channelId, threadTs },
           'Failed to summarise thread'
         );
         return {

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
 const PLUS_REGEX = /\+/g;
@@ -52,6 +53,7 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
         .describe('Optional title/alt text for the diagram'),
     }),
     execute: async ({ code, title }) => {
+      const ctxId = getContextId(context);
       await setStatus(context, {
         status: 'is generating a diagram',
         loading: true,
@@ -62,7 +64,7 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
 
       if (!channelId) {
         logger.warn(
-          { title },
+          { ctxId, title },
           'Failed to create Mermaid diagram: missing channel'
         );
         return { success: false, error: 'Missing Slack channel' };
@@ -86,7 +88,10 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
           title: title ?? 'Mermaid Diagram',
         });
 
-        logger.info({ channel: channelId, title }, 'Uploaded Mermaid diagram');
+        logger.info(
+          { ctxId, channel: channelId, title },
+          'Uploaded Mermaid diagram'
+        );
 
         return {
           success: true,
@@ -94,7 +99,7 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { ...toLogError(error), channel: channelId },
+          { ...toLogError(error), ctxId, channel: channelId },
           'Failed to create Mermaid diagram'
         );
         return {

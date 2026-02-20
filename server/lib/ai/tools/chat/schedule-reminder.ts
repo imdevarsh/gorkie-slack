@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
 export const scheduleReminder = ({
@@ -30,6 +31,7 @@ export const scheduleReminder = ({
         ),
     }),
     execute: async ({ text, seconds }) => {
+      const ctxId = getContextId(context);
       await setStatus(context, {
         status: 'is scheduling a reminder',
         loading: true,
@@ -52,6 +54,7 @@ export const scheduleReminder = ({
 
         logger.info(
           {
+            ctxId,
             userId,
             text,
           },
@@ -64,7 +67,7 @@ export const scheduleReminder = ({
         };
       } catch (error) {
         logger.error(
-          { ...toLogError(error), userId },
+          { ...toLogError(error), ctxId, userId },
           'Failed to schedule reminder'
         );
         return {

@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import { getSlackUserName } from '~/utils/users';
 
@@ -12,7 +13,8 @@ interface SlackHistoryMessage {
 
 async function resolveTargetMessage(
   ctx: SlackMessageContext,
-  offset: number
+  offset: number,
+  ctxId: string
 ): Promise<SlackHistoryMessage | null> {
   const channelId = (ctx.event as { channel?: string }).channel;
   const messageTs = ctx.event.ts;
@@ -36,7 +38,7 @@ async function resolveTargetMessage(
   });
 
   if (!history.messages) {
-    logger.error({ res: history }, 'Error fetching history');
+    logger.error({ ctxId, res: history }, 'Error fetching history');
   }
 
   // TODO: Integrate shouldUse with this to prevent offset mismatches
@@ -87,6 +89,7 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
         .describe('Reply in a thread or post directly in the channel.'),
     }),
     execute: async ({ offset = 0, content, type }) => {
+      const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const messageTs = context.event.ts;
       const currentThread = (context.event as { thread_ts?: string }).thread_ts;
@@ -94,14 +97,14 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
 
       if (!(channelId && messageTs)) {
         logger.warn(
-          { channel: channelId, messageTs, type, offset },
+          { ctxId, channel: channelId, messageTs, type, offset },
           'Failed to send Slack reply: missing channel or timestamp'
         );
         return { success: false, error: 'Missing Slack channel or timestamp' };
       }
 
       try {
-        const target = await resolveTargetMessage(context, offset);
+        const target = await resolveTargetMessage(context, offset, ctxId);
         const threadTs =
           type === 'reply'
             ? resolveThreadTs(target, currentThread ?? messageTs)
@@ -121,6 +124,7 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
 
         logger.info(
           {
+            ctxId,
             channel: channelId,
             offset,
             type,
@@ -136,7 +140,7 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { ...toLogError(error), channel: channelId, type, offset },
+          { ...toLogError(error), ctxId, channel: channelId, type, offset },
           'Failed to send Slack reply'
         );
         return {

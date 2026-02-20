@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
 import { normalizeSlackUserId } from '~/utils/users';
 
@@ -16,6 +17,7 @@ export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
         .describe('The Slack user ID (e.g. U123) of the user.'),
     }),
     execute: async ({ userId }) => {
+      const ctxId = getContextId(context);
       await setStatus(context, {
         status: 'is fetching user info',
         loading: true,
@@ -52,7 +54,7 @@ export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
           },
         };
       } catch (error) {
-        logger.error({ ...toLogError(error) }, 'Error in getUserInfo');
+        logger.error({ ...toLogError(error), ctxId }, 'Error in getUserInfo');
         return {
           success: false,
           error: 'Failed to fetch Slack user info',

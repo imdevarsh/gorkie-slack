@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
 // TODO: Add offset or timestamp support so that the bot can react to previous messages?
@@ -16,12 +17,13 @@ export const react = ({ context }: { context: SlackMessageContext }) =>
         .describe('Emoji names to react with (unicode or custom names).'),
     }),
     execute: async ({ emojis }) => {
+      const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const messageTs = context.event.ts;
 
       if (!(channelId && messageTs)) {
         logger.warn(
-          { channel: channelId, messageTs, emojis },
+          { ctxId, channel: channelId, messageTs, emojis },
           'Failed to add Slack reactions: missing channel or message id'
         );
         return { success: false, error: 'Missing Slack channel or message id' };
@@ -37,7 +39,7 @@ export const react = ({ context }: { context: SlackMessageContext }) =>
         }
 
         logger.info(
-          { channel: channelId, messageTs, emojis },
+          { ctxId, channel: channelId, messageTs, emojis },
           'Added reactions'
         );
 
@@ -47,7 +49,13 @@ export const react = ({ context }: { context: SlackMessageContext }) =>
         };
       } catch (error) {
         logger.error(
-          { ...toLogError(error), channel: channelId, messageTs, emojis },
+          {
+            ...toLogError(error),
+            ctxId,
+            channel: channelId,
+            messageTs,
+            emojis,
+          },
           'Failed to add Slack reactions'
         );
         return {
