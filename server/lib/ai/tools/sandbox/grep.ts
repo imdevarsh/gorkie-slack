@@ -1,19 +1,19 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import {
   resolveCwd,
   type SandboxToolDeps,
-  setToolStatus,
   shellEscape,
   truncate,
 } from './_shared';
 
 const MAX_OUTPUT_CHARS = 20_000;
 
-export const grepFiles = ({ context, sandbox }: SandboxToolDeps) =>
+export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
     description: 'Search file contents with ripgrep (or grep fallback).',
     inputSchema: z.object({
@@ -30,8 +30,11 @@ export const grepFiles = ({ context, sandbox }: SandboxToolDeps) =>
         .describe('Status text in format: is <doing something>.'),
     }),
     execute: async ({ pattern, cwd, description }) => {
-      await setToolStatus(context, description);
       const ctxId = getContextId(context);
+      const task = await createTask(stream, {
+        title: description,
+        details: pattern,
+      });
 
       const baseDir = resolveCwd(cwd);
       logger.info(
@@ -76,6 +79,12 @@ export const grepFiles = ({ context, sandbox }: SandboxToolDeps) =>
           '[subagent] grep files'
         );
 
+        await finishTask(
+          stream,
+          task,
+          output.success ? 'complete' : 'error',
+          `${output.count} match(es)`
+        );
         return output;
       } catch (error) {
         logger.warn(
@@ -94,6 +103,7 @@ export const grepFiles = ({ context, sandbox }: SandboxToolDeps) =>
           '[sandbox-tool] Grep search failed'
         );
 
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

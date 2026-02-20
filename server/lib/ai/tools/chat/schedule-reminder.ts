@@ -1,15 +1,18 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
 export const scheduleReminder = ({
   context,
+  stream,
 }: {
   context: SlackMessageContext;
+  stream: Stream;
 }) =>
   tool({
     description:
@@ -45,6 +48,11 @@ export const scheduleReminder = ({
         };
       }
 
+      const task = await createTask(stream, {
+        title: 'Scheduling reminder',
+        details: `in ${seconds}s: ${text.slice(0, 60)}`,
+      });
+
       try {
         await context.client.chat.scheduleMessage({
           channel: userId,
@@ -60,7 +68,7 @@ export const scheduleReminder = ({
           },
           'Scheduled reminder'
         );
-
+        await finishTask(stream, task, 'complete', `Scheduled for ${userId}`);
         return {
           success: true,
           content: `Scheduled reminder for ${userId} successfully`,
@@ -70,6 +78,7 @@ export const scheduleReminder = ({
           { ...toLogError(error), ctxId, userId },
           'Failed to schedule reminder'
         );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

@@ -1,7 +1,9 @@
 import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
 import { setStatus } from '~/lib/ai/utils/status';
-import type { ChatRequestHints, SlackMessageContext } from '~/types';
+import { closeStream, initStream } from '~/lib/ai/utils/stream';
+import { completeUnderstandTask } from '~/lib/ai/utils/task';
+import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
@@ -10,6 +12,8 @@ export async function generateResponse(
   messages: ModelMessage[],
   requestHints: ChatRequestHints
 ) {
+  let stream: Stream | null = null;
+
   try {
     await setStatus(context, {
       status: 'is thinking',
@@ -26,6 +30,9 @@ export async function generateResponse(
         'is giving it a good think',
       ],
     });
+
+    stream = await initStream(context);
+    await completeUnderstandTask(stream);
 
     const userId = (context.event as { user?: string }).user;
     const messageText = (context.event as { text?: string }).text ?? '';
@@ -48,7 +55,12 @@ export async function generateResponse(
       currentMessageContent = replyPrompt;
     }
 
-    const agent = orchestratorAgent({ context, requestHints, files });
+    const agent = orchestratorAgent({
+      context,
+      requestHints,
+      files,
+      stream,
+    });
 
     const { toolCalls } = await agent.generate({
       messages: [
@@ -60,10 +72,14 @@ export async function generateResponse(
       ],
     });
 
+    await closeStream(stream);
     await setStatus(context, { status: '' });
 
     return { success: true, toolCalls };
   } catch (e) {
+    if (stream) {
+      await closeStream(stream);
+    }
     await setStatus(context, { status: '' });
     return {
       success: false,

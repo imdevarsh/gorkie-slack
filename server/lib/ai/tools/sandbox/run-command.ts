@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
@@ -7,14 +8,13 @@ import {
   resolveCwd,
   resolveTimeout,
   type SandboxToolDeps,
-  setToolStatus,
   truncate,
 } from './_shared';
 
 const MAX_OUTPUT_CHARS = 20_000;
 const MAX_COMMAND_CHARS = 500;
 
-export const bash = ({ context, sandbox }: SandboxToolDeps) =>
+export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
     description:
       'Run a shell command in the sandbox. Always set description in format: is <doing something>.',
@@ -35,8 +35,11 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
         .describe('Command timeout in milliseconds.'),
     }),
     execute: async ({ command, description, cwd, timeoutMs }) => {
-      await setToolStatus(context, description);
       const ctxId = getContextId(context);
+      const task = await createTask(stream, {
+        title: description,
+        details: truncate(command, MAX_COMMAND_CHARS),
+      });
 
       const startedAt = Date.now();
       const resolvedCwd = resolveCwd(cwd);
@@ -99,13 +102,24 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
           '[subagent] Tool update'
         );
 
-        return {
+        const output = {
           success: result.exitCode === 0,
           exitCode: result.exitCode,
           stdout,
           stderr,
           durationMs,
         };
+        const outputText =
+          result.exitCode === 0
+            ? `Exit 0${stdout ? `\n${truncate(stdout, 300)}` : ''}`
+            : `Exit ${result.exitCode}${stderr ? `\n${truncate(stderr, 300)}` : ''}`;
+        await finishTask(
+          stream,
+          task,
+          output.success ? 'complete' : 'error',
+          outputText
+        );
+        return output;
       } catch (error) {
         const durationMs = Date.now() - startedAt;
 
@@ -145,6 +159,8 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
             '[subagent] Tool update'
           );
 
+          const errText = `Exit ${commandError.exitCode}${commandError.stderr ? `\n${truncate(commandError.stderr, 300)}` : ''}`;
+          await finishTask(stream, task, 'error', errText);
           return {
             success: false,
             exitCode: commandError.exitCode,
@@ -166,6 +182,7 @@ export const bash = ({ context, sandbox }: SandboxToolDeps) =>
           '[sandbox-tool] Command failed unexpectedly'
         );
 
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

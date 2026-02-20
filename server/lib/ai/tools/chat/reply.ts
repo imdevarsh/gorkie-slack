@@ -1,7 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import { getSlackUserName } from '~/utils/users';
@@ -65,7 +66,13 @@ function resolveThreadTs(
   return undefined;
 }
 
-export const reply = ({ context }: { context: SlackMessageContext }) =>
+export const reply = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
   tool({
     description:
       'Send messages to the Slack channel. Use type "reply" to respond in a thread or "message" for the main channel.',
@@ -103,6 +110,11 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
         return { success: false, error: 'Missing Slack channel or timestamp' };
       }
 
+      const task = await createTask(stream, {
+        title: 'Sending reply',
+        details: content[0]?.slice(0, 100),
+      });
+
       try {
         const target = await resolveTargetMessage(context, offset, ctxId);
         const threadTs =
@@ -133,7 +145,12 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
           },
           'Sent Slack reply'
         );
-
+        await finishTask(
+          stream,
+          task,
+          'complete',
+          `Sent ${content.length} message(s)`
+        );
         return {
           success: true,
           content: 'Sent reply to Slack channel',
@@ -143,6 +160,7 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
           { ...toLogError(error), ctxId, channel: channelId, type, offset },
           'Failed to send Slack reply'
         );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

@@ -1,17 +1,17 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { sandboxAgent } from '~/lib/ai/agents/sandbox-agent';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
 import { buildSandboxContext } from '~/lib/sandbox/context';
 import { ensureSandbox, pauseSandbox } from '~/lib/sandbox/runtime';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
 
-function normalizeStatus(status: string): string {
+function _normalizeStatus(status: string): string {
   const trimmed = status.trim();
   const prefixed = trimmed.startsWith('is ') ? trimmed : `is ${trimmed}`;
   return prefixed.slice(0, 49);
@@ -20,9 +20,11 @@ function normalizeStatus(status: string): string {
 export const sandbox = ({
   context,
   files,
+  stream,
 }: {
   context: SlackMessageContext;
   files?: SlackFile[];
+  stream: Stream;
 }) =>
   tool({
     description: 'Delegate execution-heavy tasks to persistent sandbox agent.',
@@ -38,30 +40,20 @@ export const sandbox = ({
       const ctxId = getContextId(context);
       let sandboxId: string | null = null;
 
-      await setStatus(context, {
-        status: normalizeStatus('is delegating to sandbox'),
-        loading: true,
+      const taskId = await createTask(stream, {
+        title: 'Running sandbox',
+        details: task.slice(0, 120),
       });
 
       try {
         const runtime = await ensureSandbox(context);
         sandboxId = runtime.sandboxId;
 
-        await setStatus(context, {
-          status: normalizeStatus('is syncing attachments'),
-          loading: true,
-        });
-
         const attachments = await syncAttachments(
           runtime.sandbox,
           context,
           files
         );
-
-        await setStatus(context, {
-          status: normalizeStatus('is running sandbox steps'),
-          loading: true,
-        });
 
         const { messages, requestHints } = await buildSandboxContext(
           context,
@@ -72,6 +64,7 @@ export const sandbox = ({
           context,
           sandbox: runtime.sandbox,
           requestHints,
+          stream,
         });
         const result = await agent.generate({
           messages: [
@@ -94,7 +87,12 @@ export const sandbox = ({
           },
           '[sandbox] Sandbox run completed'
         );
-
+        await finishTask(
+          stream,
+          taskId,
+          'complete',
+          response.split('\n')[0]?.slice(0, 200) ?? 'Done'
+        );
         return {
           success: true,
           response,
@@ -111,7 +109,7 @@ export const sandbox = ({
           },
           '[sandbox] Sandbox run failed'
         );
-
+        await finishTask(stream, taskId, 'error', message.slice(0, 200));
         return {
           success: false,
           error: message,

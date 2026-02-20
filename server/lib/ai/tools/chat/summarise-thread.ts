@@ -3,16 +3,19 @@ import { z } from 'zod';
 import { summariseThreadPrompt } from '~/lib/ai/prompts/chat/tasks';
 import { provider } from '~/lib/ai/providers';
 import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getConversationMessages } from '~/slack/conversations';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
 export const summariseThread = ({
   context,
+  stream,
 }: {
   context: SlackMessageContext;
+  stream: Stream;
 }) =>
   tool({
     description: 'Returns a summary of the current Slack thread.',
@@ -46,6 +49,8 @@ export const summariseThread = ({
         };
       }
 
+      const task = await createTask(stream, { title: 'Summarising thread' });
+
       try {
         const messages = await getConversationMessages({
           client: context.client,
@@ -56,6 +61,7 @@ export const summariseThread = ({
         });
 
         if (messages.length === 0) {
+          await finishTask(stream, task, 'error', 'No messages found');
           return {
             success: false,
             error: 'No messages found in the thread',
@@ -72,7 +78,12 @@ export const summariseThread = ({
           { ctxId, channelId, threadTs, messageCount: messages.length },
           'Thread summarised successfully'
         );
-
+        await finishTask(
+          stream,
+          task,
+          'complete',
+          `${messages.length} messages summarised`
+        );
         return {
           success: true,
           summary: text,
@@ -83,6 +94,7 @@ export const summariseThread = ({
           { ...toLogError(error), ctxId, channelId, threadTs },
           'Failed to summarise thread'
         );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

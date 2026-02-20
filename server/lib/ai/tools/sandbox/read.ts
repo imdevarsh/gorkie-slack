@@ -1,15 +1,16 @@
 import { FileType, NotFoundError } from '@e2b/code-interpreter';
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-import { type SandboxToolDeps, setToolStatus, truncate } from './_shared';
+import { type SandboxToolDeps, truncate } from './_shared';
 
 const MAX_TEXT_CHARS = 40_000;
 const MAX_DIR_ENTRIES = 400;
 
-export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
+export const readFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
     description:
       'Read a file or directory in the sandbox and return structured content.',
@@ -26,8 +27,11 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
         .describe('Status text in format: is <doing something>.'),
     }),
     execute: async ({ filePath, description }) => {
-      await setToolStatus(context, description);
       const ctxId = getContextId(context);
+      const task = await createTask(stream, {
+        title: description,
+        details: filePath,
+      });
       logger.info(
         {
           ctxId,
@@ -47,6 +51,12 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
             type: entry.type,
           }));
 
+          await finishTask(
+            stream,
+            task,
+            'complete',
+            `${entries.length} entries`
+          );
           return {
             success: true,
             path: filePath,
@@ -74,6 +84,7 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
           '[subagent] read file'
         );
 
+        await finishTask(stream, task, 'complete', `${text.length} chars`);
         return output;
       } catch (error) {
         logger.warn(
@@ -88,6 +99,12 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
         );
 
         if (error instanceof NotFoundError) {
+          await finishTask(
+            stream,
+            task,
+            'error',
+            `Path not found: ${filePath}`
+          );
           return {
             success: false,
             error: `Path not found: ${filePath}`,
@@ -99,6 +116,7 @@ export const readFile = ({ context, sandbox }: SandboxToolDeps) =>
           '[sandbox-tool] Failed to read path'
         );
 
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

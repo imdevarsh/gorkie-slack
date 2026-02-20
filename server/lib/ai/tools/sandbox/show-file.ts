@@ -1,12 +1,13 @@
 import nodePath from 'node:path';
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-import { type SandboxToolDeps, setToolStatus } from './_shared';
+import type { SandboxToolDeps } from './_shared';
 
-export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
+export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
     description:
       'Upload a file from the sandbox directly to Slack thread. Use this for every user-visible artifact.',
@@ -27,8 +28,11 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
         .describe('Status text in format: is <doing something>.'),
     }),
     execute: async ({ filePath, filename, description }) => {
-      await setToolStatus(context, description);
       const ctxId = getContextId(context);
+      const task = await createTask(stream, {
+        title: description,
+        details: filePath,
+      });
       logger.info(
         {
           ctxId,
@@ -42,6 +46,7 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
         (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
 
       if (!channelId) {
+        await finishTask(stream, task, 'error', 'Missing Slack channel ID');
         return {
           success: false,
           error: 'Missing Slack channel ID',
@@ -76,6 +81,12 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
           '[subagent] show file'
         );
 
+        await finishTask(
+          stream,
+          task,
+          'complete',
+          `Uploaded ${output.filename} (${output.bytes} bytes)`
+        );
         return output;
       } catch (error) {
         logger.warn(
@@ -94,6 +105,7 @@ export const showFile = ({ context, sandbox }: SandboxToolDeps) =>
           '[sandbox-tool] Failed to upload file to Slack'
         );
 
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

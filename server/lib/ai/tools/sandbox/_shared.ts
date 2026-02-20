@@ -1,28 +1,12 @@
 import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
-import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
 
 export interface SandboxToolDeps {
   context: SlackMessageContext;
   sandbox: Sandbox;
-}
-
-export function normalizeStatus(status: string): string {
-  const trimmed = status.trim();
-  const prefixed = trimmed.startsWith('is ') ? trimmed : `is ${trimmed}`;
-  return prefixed.slice(0, 49);
-}
-
-export async function setToolStatus(
-  context: SlackMessageContext,
-  status: string
-): Promise<void> {
-  await setStatus(context, {
-    status: normalizeStatus(status),
-    loading: true,
-  });
+  stream: Stream;
 }
 
 export function truncate(text: string, max: number): string {

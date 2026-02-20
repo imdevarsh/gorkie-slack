@@ -1,19 +1,19 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import {
   resolveCwd,
   type SandboxToolDeps,
-  setToolStatus,
   shellEscape,
   truncate,
 } from './_shared';
 
 const MAX_OUTPUT_CHARS = 20_000;
 
-export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
+export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
     description: 'Find files matching a glob-like path pattern.',
     inputSchema: z.object({
@@ -33,8 +33,11 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
         .describe('Status text in format: is <doing something>.'),
     }),
     execute: async ({ pattern, cwd, description }) => {
-      await setToolStatus(context, description);
       const ctxId = getContextId(context);
+      const task = await createTask(stream, {
+        title: description,
+        details: pattern,
+      });
 
       const baseDir = resolveCwd(cwd);
       logger.info(
@@ -48,7 +51,7 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
         'bash -lc',
         shellEscape(
           `cd ${shellEscape(baseDir)} && ` +
-            `find . -path ${shellEscape(`./${pattern}`)} -print | sed 's#^./##'`
+          `find . -path ${shellEscape(`./${pattern}`)} -print | sed 's#^./##'`
         ),
       ].join(' ');
 
@@ -79,6 +82,12 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
           '[subagent] glob files'
         );
 
+        await finishTask(
+          stream,
+          task,
+          output.success ? 'complete' : 'error',
+          `${output.count} file(s) found`
+        );
         return output;
       } catch (error) {
         logger.warn(
@@ -96,6 +105,7 @@ export const globFiles = ({ context, sandbox }: SandboxToolDeps) =>
           { ...toLogError(error), ctxId, pattern, cwd: baseDir },
           '[sandbox-tool] Glob failed'
         );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

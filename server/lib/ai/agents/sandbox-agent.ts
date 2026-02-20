@@ -13,16 +13,18 @@ import {
   writeFile,
 } from '~/lib/ai/tools/sandbox';
 import logger from '~/lib/logger';
-import type { SandboxRequestHints, SlackMessageContext } from '~/types';
+import type { SandboxRequestHints, SlackMessageContext, Stream } from '~/types';
 
 export const sandboxAgent = ({
   context,
   sandbox,
   requestHints,
+  stream,
 }: {
   context: SlackMessageContext;
   sandbox: Sandbox;
   requestHints?: SandboxRequestHints;
+  stream: Stream;
 }) =>
   new ToolLoopAgent({
     model: provider.languageModel('agent-model'),
@@ -32,13 +34,13 @@ export const sandboxAgent = ({
       requestHints,
     }),
     tools: {
-      bash: bash({ context, sandbox }),
-      readFile: readFile({ context, sandbox }),
-      writeFile: writeFile({ context, sandbox }),
-      editFile: editFile({ context, sandbox }),
-      globFiles: globFiles({ context, sandbox }),
-      grepFiles: grepFiles({ context, sandbox }),
-      showFile: showFile({ context, sandbox }),
+      bash: bash({ context, sandbox, stream }),
+      readFile: readFile({ context, sandbox, stream }),
+      writeFile: writeFile({ context, sandbox, stream }),
+      editFile: editFile({ context, sandbox, stream }),
+      globFiles: globFiles({ context, sandbox, stream }),
+      grepFiles: grepFiles({ context, sandbox, stream }),
+      showFile: showFile({ context, sandbox, stream }),
     },
     prepareStep: async ({ stepNumber }) => {
       try {

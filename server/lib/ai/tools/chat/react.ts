@@ -1,12 +1,19 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
 // TODO: Add offset or timestamp support so that the bot can react to previous messages?
-export const react = ({ context }: { context: SlackMessageContext }) =>
+export const react = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
   tool({
     description:
       'Add emoji reactions to the current Slack message. Provide emoji names without surrounding colons.',
@@ -29,6 +36,11 @@ export const react = ({ context }: { context: SlackMessageContext }) =>
         return { success: false, error: 'Missing Slack channel or message id' };
       }
 
+      const task = await createTask(stream, {
+        title: 'Adding reaction',
+        details: emojis.join(', '),
+      });
+
       try {
         for (const emoji of emojis) {
           await context.client.reactions.add({
@@ -42,7 +54,12 @@ export const react = ({ context }: { context: SlackMessageContext }) =>
           { ctxId, channel: channelId, messageTs, emojis },
           'Added reactions'
         );
-
+        await finishTask(
+          stream,
+          task,
+          'complete',
+          `Added: ${emojis.join(', ')}`
+        );
         return {
           success: true,
           content: `Added reactions: ${emojis.join(', ')}`,
@@ -58,6 +75,7 @@ export const react = ({ context }: { context: SlackMessageContext }) =>
           },
           'Failed to add Slack reactions'
         );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
           error: errorMessage(error),

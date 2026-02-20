@@ -1,8 +1,9 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 
 interface AssistantThreadEvent {
@@ -17,7 +18,13 @@ interface SlackSearchResponse {
   };
 }
 
-export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
+export const searchSlack = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
   tool({
     description: 'Use this to search the Slack workspace for information',
     inputSchema: z.object({
@@ -37,6 +44,11 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
         };
       }
 
+      const task = await createTask(stream, {
+        title: 'Searching Slack',
+        details: query,
+      });
+
       const response = await fetch(
         'https://slack.com/api/assistant.search.context',
         {
@@ -53,6 +65,12 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
 
       if (!(res.ok && res.results?.messages)) {
         logger.error({ ctxId, res }, 'Failed to search');
+        await finishTask(
+          stream,
+          task,
+          'error',
+          `Search failed: ${res.error ?? 'unknown'}`
+        );
         return {
           success: false,
           error: `The search failed with the error ${res.error}.`,
@@ -63,7 +81,12 @@ export const searchSlack = ({ context }: { context: SlackMessageContext }) =>
         { ctxId, query, count: res.results.messages.length },
         'Search Slack complete'
       );
-
+      await finishTask(
+        stream,
+        task,
+        'complete',
+        `${(res.results?.messages ?? []).length} result(s)`
+      );
       return {
         messages: res.results.messages,
       };
