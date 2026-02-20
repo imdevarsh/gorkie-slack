@@ -39,7 +39,7 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
       const ctxId = getContextId(context);
       const task = await createTask(stream, {
         title: description,
-        details: truncate(command, MAX_COMMAND_CHARS),
+        details: `input:\n${truncate(command, MAX_COMMAND_CHARS)}`,
       });
 
       const startedAt = Date.now();
@@ -57,19 +57,10 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
         {
           ctxId,
           tool: 'bash',
-          input: {},
-        },
-        '[subagent] Tool started'
-      );
-      logger.info(
-        {
-          ctxId,
-          tool: 'bash',
           status: 'in_progress',
           input,
-          output: null,
         },
-        '[subagent] Tool update'
+        '[subagent] Tool started'
       );
 
       try {
@@ -112,8 +103,8 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
         };
         const outputText =
           result.exitCode === 0
-            ? `Exit 0${stdout ? `\n${truncate(stdout, 300)}` : ''}`
-            : `Exit ${result.exitCode}${stderr ? `\n${truncate(stderr, 300)}` : ''}`;
+            ? `${stdout ? `output:\n${truncate(stdout, 300)}` : 'output: <empty>'}\n\n**Exit code: 0**`
+            : `${stderr ? `error:\n${truncate(stderr, 300)}` : 'error: <empty>'}\n\n**Exit code: ${result.exitCode}**`;
         await finishTask(
           stream,
           task,
@@ -160,13 +151,18 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
             '[subagent] Tool update'
           );
 
-          const errText = `Exit ${commandError.exitCode}${commandError.stderr ? `\n${truncate(commandError.stderr, 300)}` : ''}`;
+          const errText = `Exit code: ${commandError.exitCode}\ncwd: ${resolvedCwd}\n${commandError.stderr ? `stderr:\n${truncate(commandError.stderr, 300)}` : 'stderr: <empty>'}`;
           await finishTask(stream, task, 'error', errText);
           return {
             success: false,
             exitCode: commandError.exitCode,
+            command: commandPreview,
+            cwd: resolvedCwd,
+            timeoutMs: resolvedTimeout,
             stdout,
+            stdoutTruncated: commandError.stdout.length > MAX_OUTPUT_CHARS,
             stderr,
+            stderrTruncated: commandError.stderr.length > MAX_OUTPUT_CHARS,
             durationMs,
           };
         }

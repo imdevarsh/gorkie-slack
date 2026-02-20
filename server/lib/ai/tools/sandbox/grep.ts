@@ -35,7 +35,7 @@ export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
       const ctxId = getContextId(context);
       const task = await createTask(stream, {
         title: description,
-        details: pattern,
+        details: `\`\`\`${pattern}\`\`\``,
       });
 
       const baseDir = resolveCwd(cwd);
