@@ -5,10 +5,24 @@ import { env } from '~/env';
 import { type PreviewAccess, waitForHealth } from './client';
 
 const SERVER_ARGS = `--no-token --host 0.0.0.0 --port ${config.runtime.agentPort}`;
+const SERVER_MATCH = `sandbox-agent server .*--port ${config.runtime.agentPort}`;
+
+async function killServer(sandbox: Sandbox): Promise<void> {
+  await sandbox.process
+    .executeCommand(
+      `pkill -f '${SERVER_MATCH}' || true`,
+      config.runtime.workdir,
+      {
+        HOME: config.runtime.workdir,
+        HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
+      }
+    )
+    .catch(() => null);
+}
 
 async function startServer(sandbox: Sandbox): Promise<void> {
   const result = await sandbox.process.executeCommand(
-    `nohup sandbox-agent server ${SERVER_ARGS} >/tmp/sandbox-agent.log 2>&1 &`,
+    `nohup env HOME=${config.runtime.workdir} sandbox-agent server ${SERVER_ARGS} >/tmp/sandbox-agent.log 2>&1 &`,
     config.runtime.workdir,
     {
       HOME: config.runtime.workdir,
@@ -52,8 +66,16 @@ export async function boot(
   const access = await getPreviewAccess(sandbox);
 
   if (!(await isHealthy(access))) {
-    await startServer(sandbox);
-    await waitForHealth(access, config.timeouts.healthMs);
+    await killServer(sandbox);
+
+    try {
+      await startServer(sandbox);
+      await waitForHealth(access, config.timeouts.healthMs);
+    } catch {
+      await killServer(sandbox);
+      await startServer(sandbox);
+      await waitForHealth(access, config.timeouts.healthMs);
+    }
   }
 
   const sdk = await connect(access);
