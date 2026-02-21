@@ -79,12 +79,7 @@ export const searchSlack = ({
           };
         }
 
-        await finishTask(
-          stream,
-          task,
-          'error',
-          `Search failed: ${error}`
-        );
+        await finishTask(stream, task, 'error', `Search failed: ${error}`);
         return {
           success: false,
           error: `The search failed with the error ${error}.`,
