@@ -1,4 +1,5 @@
 import { tool } from 'ai';
+import { sandbox as config } from '~/config';
 import { z } from 'zod';
 import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
@@ -10,8 +11,6 @@ import {
   shellEscape,
   truncate,
 } from './_shared';
-
-const MAX_OUTPUT_CHARS = 20_000;
 
 export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
@@ -49,11 +48,12 @@ export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
         },
         '[subagent] finding files'
       );
+      const safePattern = shellEscape(pattern);
       const command = [
         'bash -lc',
         shellEscape(
           `cd ${shellEscape(baseDir)} && ` +
-            `find . -path ${shellEscape(`./${pattern}`)} -print | sed 's#^./##'`
+          `fd --glob --strip-cwd-prefix --hidden --no-ignore ${safePattern} .`
         ),
       ].join(' ');
 
@@ -62,7 +62,7 @@ export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
           cwd: baseDir,
         });
 
-        const stdout = truncate(result.stdout, MAX_OUTPUT_CHARS);
+        const stdout = truncate(result.stdout, config.maxToolOutput);
         const matches = stdout
           .split('\n')
           .map((line) => line.trim())
@@ -72,8 +72,8 @@ export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
           success: result.exitCode === 0,
           matches,
           count: matches.length,
-          truncated: result.stdout.length > MAX_OUTPUT_CHARS,
-          stderr: truncate(result.stderr, MAX_OUTPUT_CHARS),
+          truncated: result.stdout.length > config.maxToolOutput,
+          stderr: truncate(result.stderr, config.maxToolOutput),
         };
 
         logger.info(

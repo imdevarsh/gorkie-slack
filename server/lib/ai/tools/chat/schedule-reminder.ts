@@ -1,4 +1,5 @@
 import { tool } from 'ai';
+import { formatDistanceToNow } from 'date-fns';
 import { z } from 'zod';
 import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
@@ -43,9 +44,14 @@ export const scheduleReminder = ({
         };
       }
 
+      const scheduledFor = new Date(Date.now() + seconds * 1000);
+      const relativeTime = formatDistanceToNow(scheduledFor, {
+        addSuffix: true,
+      });
+
       const task = await createTask(stream, {
         title: 'Scheduling reminder',
-        details: `in ${seconds}s: ${text.slice(0, 60)}`,
+        details: `${relativeTime}: ${text.slice(0, 60)}`,
       });
 
       try {

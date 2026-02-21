@@ -62,16 +62,32 @@ export const searchSlack = ({
       const res = (await response.json()) as SlackSearchResponse;
 
       if (!(res.ok && res.results?.messages)) {
+        const error = res.error ?? 'unknown';
+        const isMissingActionToken = error
+          .toLowerCase()
+          .includes('action_token');
+
         logger.error({ ctxId, res }, 'Failed to search');
+
+        if (isMissingActionToken) {
+          const pingMessage =
+            'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.';
+          await finishTask(stream, task, 'error', pingMessage);
+          return {
+            success: false,
+            error: pingMessage,
+          };
+        }
+
         await finishTask(
           stream,
           task,
           'error',
-          `Search failed: ${res.error ?? 'unknown'}`
+          `Search failed: ${error}`
         );
         return {
           success: false,
-          error: `The search failed with the error ${res.error}.`,
+          error: `The search failed with the error ${error}.`,
         };
       }
 
