@@ -28,9 +28,17 @@ export async function updateTask(
     });
   }
 
-  const resolvedTitle = title ?? stream.tasks.get(taskId);
+  const previous = stream.tasks.get(taskId);
+  const resolvedTitle = title ?? previous?.title;
   const normalizedStatus = status === 'error' ? 'complete' : status;
   const normalizedOutput = status === 'error' && output ? `_${output}_` : output;
+  const nextTask = {
+    title: resolvedTitle,
+    status: normalizedStatus,
+    details: details ?? previous?.details,
+    output: normalizedOutput ?? previous?.output,
+  };
+  stream.tasks.set(taskId, nextTask);
 
   chunks.push({
     type: 'task_update',
@@ -59,7 +67,11 @@ export async function createTask(
     status?: Extract<TaskChunk['status'], 'pending' | 'in_progress'>;
   }
 ): Promise<string> {
-  stream.tasks.set(taskId, title);
+  stream.tasks.set(taskId, {
+    title,
+    status: status ?? 'pending',
+    ...(details ? { details } : {}),
+  });
   await updateTask(stream, {
     taskId,
     title,

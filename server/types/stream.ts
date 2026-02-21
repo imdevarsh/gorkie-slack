@@ -9,11 +9,18 @@ export interface TaskChunk {
   output?: string;
 }
 
+export interface StreamTask {
+  title?: string;
+  status: TaskChunk['status'];
+  details?: string;
+  output?: string;
+}
+
 export interface Stream {
   channel: string;
   ts: string;
   client: WebClient;
-  tasks: Map<string, string>;
+  tasks: Map<string, StreamTask>;
   thought: boolean;
   noop?: true;
 }
