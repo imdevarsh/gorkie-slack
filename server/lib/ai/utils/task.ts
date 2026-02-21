@@ -20,32 +20,32 @@ export async function updateTask(
   const chunks: TaskChunk[] = [];
 
   const previous = stream.tasks.get(taskId);
-  const resolvedTitle = title ?? previous?.title;
-  const normalizedStatus = status === 'error' ? 'complete' : status;
-  const normalizedOutput =
-    status === 'error' && output ? `**[Oops! An error occurred]**\n ${output}` : output;
-  const nextTask = {
-    title: resolvedTitle,
-    status: normalizedStatus,
-    details: details ?? previous?.details,
-    output: normalizedOutput ?? previous?.output,
-  };
-  stream.tasks.set(taskId, nextTask);
 
-  chunks.push({
+  const chunk: TaskChunk = {
     type: 'task_update',
     id: taskId,
-    ...(resolvedTitle ? { title: resolvedTitle } : {}),
-    status: normalizedStatus,
+    status: status === 'error' ? 'complete' : status,
+    ...((title ?? previous?.title) ? { title: title ?? previous?.title } : {}),
     ...(details ? { details } : {}),
-    ...(normalizedOutput ? { output: normalizedOutput } : {}),
+    ...(output
+      ? { output: status === 'error' ? `**[Oops! An error occurred]**\n ${output}` : output }
+      : {}),
+  };
+
+  stream.tasks.set(taskId, {
+    title: chunk.title,
+    status: chunk.status,
+    details: chunk.details ?? previous?.details,
+    output: chunk.output ?? previous?.output,
   });
+
+  chunks.push(chunk);
 
   await safeAppend(stream, chunks);
   return taskId;
 }
 
-export async function createTask(
+export function createTask(
   stream: Stream,
   {
     taskId,
@@ -59,18 +59,12 @@ export async function createTask(
     status?: Extract<TaskChunk['status'], 'pending' | 'in_progress'>;
   }
 ): Promise<string> {
-  stream.tasks.set(taskId, {
-    title,
-    status: status ?? 'pending',
-    ...(details ? { details } : {}),
-  });
-  await updateTask(stream, {
+  return updateTask(stream, {
     taskId,
     title,
     details,
     status: status ?? 'pending',
   });
-  return taskId;
 }
 
 export async function finishTask(
