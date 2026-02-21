@@ -36,13 +36,10 @@ export const editFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         status: 'pending',
       });
     },
-    execute: async ({
-      filePath,
-      oldText,
-      newText,
-      replaceAll,
-      description,
-    }, { toolCallId }) => {
+    execute: async (
+      { filePath, oldText, newText, replaceAll, description },
+      { toolCallId }
+    ) => {
       const ctxId = getContextId(context);
       const task = await updateTask(stream, {
         taskId: toolCallId,

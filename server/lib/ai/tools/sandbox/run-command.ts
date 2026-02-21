@@ -42,7 +42,10 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
         status: 'pending',
       });
     },
-    execute: async ({ command, description, cwd, timeoutMs }, { toolCallId }) => {
+    execute: async (
+      { command, description, cwd, timeoutMs },
+      { toolCallId }
+    ) => {
       const ctxId = getContextId(context);
       const task = await updateTask(stream, {
         taskId: toolCallId,
@@ -112,7 +115,8 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
         };
         const content =
           result.exitCode === 0
-            ? stdout
+            ? // biome-ignore lint/style/noNestedTernary: This local mapping is concise and readable.
+              stdout
               ? `output:\n${truncate(stdout, 300)}`
               : ''
             : stderr
@@ -167,7 +171,7 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
             '[subagent] Tool update'
           );
 
-          const errText = `${commandError.stderr && `stderr:\n${truncate(commandError.stderr, 300)}\n\n*Exit code: ${commandError.exitCode}*` || 'stderr: <empty>'}`;
+          const errText = `${(commandError.stderr && `stderr:\n${truncate(commandError.stderr, 300)}\n\n*Exit code: ${commandError.exitCode}*`) || 'stderr: <empty>'}`;
           await finishTask(stream, task, 'error', errText);
           return {
             success: false,

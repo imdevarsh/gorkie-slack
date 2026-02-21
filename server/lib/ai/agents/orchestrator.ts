@@ -76,7 +76,7 @@ export const orchestratorAgent = ({
       return {};
     },
     async onStepFinish({ reasoningText }) {
-      const normalisedReasoning = String(reasoningText)
+      const normalizedReasoning = String(reasoningText)
         .trim()
         .split('\n')
         .filter(Boolean)
@@ -85,7 +85,7 @@ export const orchestratorAgent = ({
 
       const taskId = taskMap.get(context.event.event_ts);
       if (taskId) {
-        await finishTask(stream, taskId, 'complete', normalisedReasoning);
+        await finishTask(stream, taskId, 'complete', normalizedReasoning);
       } else {
         logger.warn(
           { eventTs: context.event.event_ts },

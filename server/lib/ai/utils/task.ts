@@ -22,7 +22,8 @@ export async function updateTask(
   const previous = stream.tasks.get(taskId);
   const resolvedTitle = title ?? previous?.title;
   const normalizedStatus = status === 'error' ? 'complete' : status;
-  const normalizedOutput = status === 'error' && output ? `_${output}_` : output;
+  const normalizedOutput =
+    status === 'error' && output ? `_${output}_` : output;
   const nextTask = {
     title: resolvedTitle,
     status: normalizedStatus,
