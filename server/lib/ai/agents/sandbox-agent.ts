@@ -1,25 +1,32 @@
+import type { Sandbox } from '@e2b/code-interpreter';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
-import { bash } from '~/lib/ai/tools/sandbox/bash';
-import { edit } from '~/lib/ai/tools/sandbox/edit';
-import { glob } from '~/lib/ai/tools/sandbox/glob';
-import { grep } from '~/lib/ai/tools/sandbox/grep';
-import { read } from '~/lib/ai/tools/sandbox/read';
-import { showFile } from '~/lib/ai/tools/sandbox/show-file';
-import { write } from '~/lib/ai/tools/sandbox/write';
-import { searchWeb } from '~/lib/ai/tools/shared/search-web';
-import { setStatus } from '~/lib/ai/utils/status';
-import type { SandboxRequestHints, SlackMessageContext } from '~/types';
-import { getUserInfo } from '../tools/shared/get-user-info';
+import {
+  bash,
+  editFile,
+  extendSandboxTimeout,
+  globFiles,
+  grepFiles,
+  readFile,
+  showFile,
+  writeFile,
+} from '~/lib/ai/tools/sandbox';
+import logger from '~/lib/logger';
+import type { SandboxRequestHints, SlackMessageContext, Stream } from '~/types';
 
-interface SandboxAgentOptions {
+export const sandboxAgent = ({
+  context,
+  sandbox,
+  requestHints,
+  stream,
+}: {
   context: SlackMessageContext;
+  sandbox: Sandbox;
   requestHints?: SandboxRequestHints;
-}
-
-export function sandboxAgent({ context, requestHints }: SandboxAgentOptions) {
-  return new ToolLoopAgent({
+  stream: Stream;
+}) =>
+  new ToolLoopAgent({
     model: provider.languageModel('agent-model'),
     instructions: systemPrompt({
       agent: 'sandbox',
@@ -27,38 +34,33 @@ export function sandboxAgent({ context, requestHints }: SandboxAgentOptions) {
       requestHints,
     }),
     tools: {
-      bash: bash({ context }),
-      glob: glob({ context }),
-      grep: grep({ context }),
-      showFile: showFile({ context }),
-      read: read({ context }),
-      write: write({ context }),
-      edit: edit({ context }),
-      searchWeb,
-      getUserInfo: getUserInfo({ context }),
+      bash: bash({ context, sandbox, stream }),
+      readFile: readFile({ context, sandbox, stream }),
+      writeFile: writeFile({ context, sandbox, stream }),
+      editFile: editFile({ context, sandbox, stream }),
+      globFiles: globFiles({ context, sandbox, stream }),
+      grepFiles: grepFiles({ context, sandbox, stream }),
+      showFile: showFile({ context, sandbox, stream }),
     },
-    prepareStep: async () => {
-      await setStatus(context, {
-        status: 'is thinking',
-        loading: [
-          'is pondering your question',
-          'is working on it',
-          'is putting thoughts together',
-          'is mulling this over',
-          'is figuring this out',
-          'is cooking up a response',
-          'is connecting the dots',
-          'is working through this',
-          'is piecing things together',
-          'is giving it a good think',
-        ],
-      });
+    prepareStep: async ({ stepNumber }) => {
+      try {
+        await extendSandboxTimeout(sandbox);
+      } catch (error) {
+        logger.warn(
+          {
+            error,
+            stepNumber,
+            sandboxId: sandbox.sandboxId,
+          },
+          '[subagent] Failed to extend sandbox timeout before step'
+        );
+      }
+
       return {};
     },
-    stopWhen: stepCountIs(30),
+    stopWhen: [stepCountIs(30)],
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'sandbox',
     },
   });
-}

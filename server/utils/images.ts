@@ -2,6 +2,7 @@ import type { UploadedFile } from '@slack/bolt';
 import type { ImagePart } from 'ai';
 import { env } from '~/env';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 
 // Supported image MIME types for vision models
 const SUPPORTED_IMAGE_TYPES = [
@@ -69,7 +70,10 @@ export async function fetchSlackImageAsBase64(
       mimeType,
     };
   } catch (error) {
-    logger.error({ error, fileId: file.id }, 'Error fetching Slack image');
+    logger.error(
+      { ...toLogError(error), fileId: file.id },
+      'Error fetching Slack image'
+    );
     return null;
   }
 }

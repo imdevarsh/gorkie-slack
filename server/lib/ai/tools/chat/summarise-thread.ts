@@ -2,15 +2,19 @@ import { generateText, tool } from 'ai';
 import { z } from 'zod';
 import { summariseThreadPrompt } from '~/lib/ai/prompts/chat/tasks';
 import { provider } from '~/lib/ai/providers';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getConversationMessages } from '~/slack/conversations';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 
 export const summariseThread = ({
   context,
+  stream,
 }: {
   context: SlackMessageContext;
+  stream: Stream;
 }) =>
   tool({
     description: 'Returns a summary of the current Slack thread.',
@@ -21,10 +25,7 @@ export const summariseThread = ({
         .describe('Optional instructions to provide to the summariser agent'),
     }),
     execute: async ({ instructions }) => {
-      await setStatus(context, {
-        status: 'is reading the thread',
-        loading: true,
-      });
+      const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
 
@@ -43,6 +44,8 @@ export const summariseThread = ({
         };
       }
 
+      const task = await createTask(stream, { title: 'Summarising thread' });
+
       try {
         const messages = await getConversationMessages({
           client: context.client,
@@ -53,6 +56,7 @@ export const summariseThread = ({
         });
 
         if (messages.length === 0) {
+          await finishTask(stream, task, 'error', 'No messages found');
           return {
             success: false,
             error: 'No messages found in the thread',
@@ -66,10 +70,15 @@ export const summariseThread = ({
         });
 
         logger.debug(
-          { channelId, threadTs, messageCount: messages.length },
+          { ctxId, channelId, threadTs, messageCount: messages.length },
           'Thread summarised successfully'
         );
-
+        await finishTask(
+          stream,
+          task,
+          'complete',
+          `${messages.length} messages summarised`
+        );
         return {
           success: true,
           summary: text,
@@ -77,12 +86,13 @@ export const summariseThread = ({
         };
       } catch (error) {
         logger.error(
-          { error, channelId, threadTs },
+          { ...toLogError(error), ctxId, channelId, threadTs },
           'Failed to summarise thread'
         );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

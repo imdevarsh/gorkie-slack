@@ -49,6 +49,12 @@ $ bun run dev
 $ bun run start
 ```
 
+### E2B template auto-build
+
+The app always uses an E2B template.
+It uses `gorkie-sandbox:latest` by default and builds it automatically if missing.
+The built template includes preinstalled `fd`/`ripgrep`/`imagemagick`/`ffmpeg`/`pip`/`pillow`.
+
 ## <a name="license">📝 License</a>
 
 This project is under the MIT license. See the [LICENSE](LICENSE) for details.

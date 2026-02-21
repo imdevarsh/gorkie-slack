@@ -1,66 +1,130 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { sandboxAgent } from '~/lib/ai/agents';
-import { setStatus } from '~/lib/ai/utils/status';
+import { sandboxAgent } from '~/lib/ai/agents/sandbox-agent';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import { buildSandboxContext, getSandbox } from '~/lib/sandbox';
 import { syncAttachments } from '~/lib/sandbox/attachments';
-import type { SlackMessageContext } from '~/types';
+import { buildSandboxContext } from '~/lib/sandbox/context';
+import { ensureSandbox, pauseSandbox } from '~/lib/sandbox/runtime';
+import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
+
+function _normalizeStatus(status: string): string {
+  const trimmed = status.trim();
+  const prefixed = trimmed.startsWith('is ') ? trimmed : `is ${trimmed}`;
+  return prefixed.slice(0, 49);
+}
 
 export const sandbox = ({
   context,
   files,
+  stream,
 }: {
   context: SlackMessageContext;
   files?: SlackFile[];
+  stream: Stream;
 }) =>
   tool({
-    description:
-      'Delegate a task to the sandbox agent for code execution, file processing, or data analysis.',
+    description: 'Delegate execution-heavy tasks to persistent sandbox agent.',
     inputSchema: z.object({
       task: z
         .string()
+        .min(1)
         .describe(
-          'A clear description of what to accomplish in the sandbox. Include file names, expected outputs, and any specific instructions.'
+          'Clear sandbox task with expected outputs and constraints. Mention exact filenames when possible.'
         ),
     }),
     execute: async ({ task }) => {
-      await setStatus(context, {
-        status: 'is delegating a task to the sandbox',
-        loading: true,
+      const ctxId = getContextId(context);
+      let sandboxId: string | null = null;
+
+      const taskId = await createTask(stream, {
+        title: 'Running sandbox',
+        details: task,
       });
 
-      const ctxId = getContextId(context);
-
       try {
-        const instance = await getSandbox(context);
-        await syncAttachments(instance, context, files);
+        const runtime = await ensureSandbox(context);
+        sandboxId = runtime.sandboxId;
 
-        const { messages, requestHints } = await buildSandboxContext(context);
-
-        const agent = sandboxAgent({ context, requestHints });
-        const result = await agent.generate({
-          messages: [...messages, { role: 'user', content: task }],
-        });
-
-        logger.info(
-          { steps: result.steps.length, ctxId },
-          '[subagent] Sandbox run completed'
+        const attachments = await syncAttachments(
+          runtime.sandbox,
+          context,
+          files
         );
 
+        const { messages, requestHints } = await buildSandboxContext(
+          context,
+          runtime.sandbox
+        );
+
+        const agent = sandboxAgent({
+          context,
+          sandbox: runtime.sandbox,
+          requestHints,
+          stream,
+        });
+        const result = await agent.generate({
+          messages: [
+            ...messages,
+            {
+              role: 'user',
+              content: task,
+            },
+          ],
+        });
+        const response = result.text;
+
+        logger.info(
+          {
+            ctxId,
+            sandboxId: runtime.sandboxId,
+            attachments: attachments.map((file) => file.path),
+            task,
+            response,
+          },
+          '[sandbox] Sandbox run completed'
+        );
+        await finishTask(
+          stream,
+          taskId,
+          'complete',
+          response.split('\n')[0]?.slice(0, 200) ?? 'Done'
+        );
         return {
           success: true,
-          summary: result.text || 'Task completed.',
-          steps: result.steps.length,
+          response,
         };
       } catch (error) {
-        logger.error({ error, ctxId }, '[subagent] Sandbox run failed');
+        const message = errorMessage(error);
+        logger.error(
+          {
+            ...toLogError(error),
+            ctxId,
+            sandboxId,
+            task,
+            message,
+          },
+          '[sandbox] Sandbox run failed'
+        );
+        await finishTask(stream, taskId, 'error', message.slice(0, 200));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: message,
         };
+      } finally {
+        await pauseSandbox(context).catch((error: unknown) => {
+          logger.warn(
+            {
+              ...toLogError(error),
+              ctxId,
+              sandboxId,
+            },
+            '[sandbox] Failed to pause sandbox after task'
+          );
+        });
       }
     },
   });

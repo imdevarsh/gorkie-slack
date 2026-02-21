@@ -1,80 +1,89 @@
-import type { Sandbox } from '@vercel/sandbox';
+import type { Sandbox } from '@e2b/code-interpreter';
 import sanitizeFilename from 'sanitize-filename';
-import { sandbox as sandboxConfig } from '~/config';
+import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
-import { sandboxPath } from './utils';
 
 export const ATTACHMENTS_DIR = 'attachments';
-const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
+const MAX_ATTACHMENT_BYTES = config.attachments.maxBytes;
+
+export interface SyncedAttachment {
+  id: string;
+  name: string;
+  path: string;
+  mimeType?: string;
+  size: number;
+}
 
 export async function syncAttachments(
   sandbox: Sandbox,
   context: SlackMessageContext,
   files?: SlackFile[]
-): Promise<void> {
+): Promise<SyncedAttachment[]> {
   if (!files?.length) {
-    return;
-  }
-
-  const messageTs = context.event.ts;
-  if (!messageTs) {
-    return;
+    return [];
   }
 
   const ctxId = getContextId(context);
-  const dir = sandboxPath(ATTACHMENTS_DIR);
+  await sandbox.files.makeDir(config.paths.attachments);
 
-  await sandbox.runCommand({ cmd: 'mkdir', args: ['-p', dir] });
+  const uploaded = await Promise.all(
+    files.map(async (file): Promise<SyncedAttachment | null> => {
+      const content = await downloadAttachment(file, ctxId);
+      if (!content) {
+        return null;
+      }
 
-  const results = await Promise.all(
-    files.map((file) => syncFile(sandbox, dir, file, ctxId))
+      const safeName =
+        sanitizeFilename(file.name ?? `attachment-${file.id ?? 'unknown'}`, {
+          replacement: '_',
+        }) || `attachment-${file.id ?? 'unknown'}`;
+
+      const path = `${config.paths.attachments}/${safeName}`;
+
+      try {
+        await sandbox.files.write(path, new Blob([content]));
+
+        return {
+          id: file.id ?? safeName,
+          name: safeName,
+          path,
+          mimeType: file.mimetype,
+          size: content.byteLength,
+        };
+      } catch (error) {
+        logger.warn(
+          {
+            error,
+            fileId: file.id,
+            fileName: file.name,
+            path,
+            ctxId,
+          },
+          '[sandbox] Failed to write attachment into sandbox'
+        );
+        return null;
+      }
+    })
   );
 
-  if (results.some((ok) => !ok)) {
-    logger.warn({ messageTs, ctxId }, '[sandbox] Attachment sync incomplete');
-    return;
-  }
+  const synced = uploaded.filter(
+    (item): item is SyncedAttachment => item !== null
+  );
 
   logger.info(
     {
-      count: files.length,
-      messageTs,
       ctxId,
+      syncedCount: synced.length,
+      requestedCount: files.length,
     },
-    '[sandbox] Attachments synced'
+    '[sandbox] Attachment sync completed'
   );
-}
 
-async function syncFile(
-  sandbox: Sandbox,
-  dir: string,
-  file: SlackFile,
-  ctxId: string
-): Promise<boolean> {
-  const content = await downloadAttachment(file, ctxId);
-  if (!content) {
-    return false;
-  }
-
-  const name = sanitizeFilename(file.name ?? 'attachment', {
-    replacement: '_',
-  });
-  const safeName = name || `file-${file.id ?? 'unknown'}`;
-
-  try {
-    await sandbox.writeFiles([{ path: `${dir}/${safeName}`, content }]);
-    return true;
-  } catch (error) {
-    logger.warn(
-      { error, fileId: file.id, name: file.name, ctxId },
-      '[sandbox] Failed to write attachment'
-    );
-    return false;
-  }
+  return synced;
 }
 
 async function downloadAttachment(
@@ -88,32 +97,50 @@ async function downloadAttachment(
 
   if (typeof file.size === 'number' && file.size > MAX_ATTACHMENT_BYTES) {
     logger.warn(
-      { fileId: file.id, name: file.name, size: file.size, ctxId },
-      '[sandbox] Attachment exceeds size limit'
+      {
+        ctxId,
+        fileId: file.id,
+        fileName: file.name,
+        size: file.size,
+      },
+      '[sandbox] Skipping oversized attachment'
     );
     return null;
   }
 
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${env.SLACK_BOT_TOKEN}` },
+    headers: {
+      Authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
+    },
   }).catch(() => null);
 
   if (!response?.ok) {
     logger.warn(
-      { fileId: file.id, name: file.name, status: response?.status, ctxId },
-      '[sandbox] Failed to download attachment'
+      {
+        ctxId,
+        fileId: file.id,
+        fileName: file.name,
+        status: response?.status,
+      },
+      '[sandbox] Failed to download attachment from Slack'
     );
     return null;
   }
 
-  const content = Buffer.from(await response.arrayBuffer());
-  if (content.byteLength > MAX_ATTACHMENT_BYTES) {
+  const data = Buffer.from(await response.arrayBuffer());
+
+  if (data.byteLength > MAX_ATTACHMENT_BYTES) {
     logger.warn(
-      { fileId: file.id, name: file.name, size: content.byteLength, ctxId },
-      '[sandbox] Attachment exceeds size limit'
+      {
+        ctxId,
+        fileId: file.id,
+        fileName: file.name,
+        size: data.byteLength,
+      },
+      '[sandbox] Downloaded attachment exceeds limit'
     );
     return null;
   }
 
-  return content;
+  return data;
 }

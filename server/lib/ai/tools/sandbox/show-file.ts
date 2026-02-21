@@ -1,93 +1,129 @@
 import nodePath from 'node:path';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import { getSandbox } from '~/lib/sandbox';
-import { sandboxPath } from '~/lib/sandbox/utils';
-import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
+import type { SandboxToolDeps } from './_shared';
 
-export const showFile = ({ context }: { context: SlackMessageContext }) =>
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 ** 2) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  if (bytes < 1024 ** 3) {
+    return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  }
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}
+
+export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
     description:
-      'Upload a file from the sandbox to Slack so the user can see or download it.',
+      'Upload a file from the sandbox directly to Slack thread. Use this for every user-visible artifact.',
     inputSchema: z.object({
-      path: z.string().describe('File path in sandbox'),
+      filePath: z
+        .string()
+        .min(1)
+        .describe('Absolute path of the file to upload from sandbox.'),
       filename: z
         .string()
         .optional()
-        .describe('Filename for the Slack upload (defaults to basename)'),
-      title: z
+        .describe('Optional upload filename. Defaults to basename(filePath).'),
+      description: z
         .string()
-        .optional()
-        .describe('Title or description for the file'),
+        .min(4)
+        .max(80)
+        .default('Uploading files')
+        .describe(
+          'Brief title for this operation, e.g. "Uploading chart.png", "Sharing report.pdf".'
+        ),
     }),
-    execute: async ({ path, filename, title }) => {
-      const channelId = (context.event as { channel?: string }).channel;
-      const threadTs = (context.event as { thread_ts?: string }).thread_ts;
-      const messageTs = context.event.ts;
+    execute: async ({ filePath, filename, description }) => {
       const ctxId = getContextId(context);
-      const resolvedPath = sandboxPath(path);
+      const task = await createTask(stream, {
+        title: description,
+        details: filePath,
+      });
+      logger.info(
+        {
+          ctxId,
+          input: { filePath, filename: filename ?? null, description },
+        },
+        '[subagent] uploading file'
+      );
+
+      const channelId = (context.event as { channel?: string }).channel;
+      const threadTs =
+        (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
 
       if (!channelId) {
-        logger.warn(
-          { path: resolvedPath, ctxId },
-          '[sandbox] File upload missing channel'
-        );
-        return { success: false, error: 'Missing Slack channel' };
+        await finishTask(stream, task, 'error', 'Missing Slack channel ID');
+        return {
+          success: false,
+          error: 'Missing Slack channel ID',
+        };
       }
 
       try {
-        const sandbox = await getSandbox(context);
-        await setStatus(context, {
-          status: 'is uploading a file',
-          loading: true,
-        });
-
-        const fileBuffer = await sandbox.readFileToBuffer({
-          path: resolvedPath,
-        });
-
-        if (!fileBuffer) {
-          logger.warn(
-            { path: resolvedPath, ctxId },
-            '[sandbox] File upload missing file'
-          );
-          return { success: false, error: `File not found: ${resolvedPath}` };
-        }
-
-        const uploadFilename = filename ?? (nodePath.basename(path) || 'file');
+        const bytes = await sandbox.files.read(filePath, { format: 'bytes' });
+        const uploadName =
+          filename?.trim() || nodePath.basename(filePath) || 'artifact';
 
         await context.client.files.uploadV2({
           channel_id: channelId,
-          thread_ts: threadTs ?? messageTs,
-          file: fileBuffer,
-          filename: uploadFilename,
-          title: title ?? uploadFilename,
+          thread_ts: threadTs,
+          file: Buffer.from(bytes),
+          filename: uploadName,
+          title: uploadName,
         });
+
+        const output = {
+          success: true,
+          filePath,
+          filename: uploadName,
+          bytes: bytes.byteLength,
+        };
 
         logger.info(
           {
-            path: resolvedPath,
-            size: fileBuffer.length,
             ctxId,
+            output,
           },
-          '[sandbox] File upload completed'
+          '[subagent] show file'
         );
 
-        return {
-          success: true,
-          message: `Uploaded ${uploadFilename} (${fileBuffer.length} bytes) to Slack`,
-        };
-      } catch (error) {
-        logger.error(
-          { error, path: resolvedPath, ctxId },
-          '[sandbox] File upload failed'
+        await finishTask(
+          stream,
+          task,
+          'complete',
+          `Uploaded ${output.filename} (${formatBytes(output.bytes)})`
         );
+        return output;
+      } catch (error) {
+        logger.warn(
+          {
+            ctxId,
+            output: {
+              success: false,
+              error: errorMessage(error),
+            },
+          },
+          '[subagent] show file'
+        );
+
+        logger.error(
+          { ...toLogError(error), ctxId, filePath },
+          '[sandbox-tool] Failed to upload file to Slack'
+        );
+
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

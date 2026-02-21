@@ -1,96 +1,127 @@
+import { FileType, NotFoundError } from '@e2b/code-interpreter';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import { getSandbox } from '~/lib/sandbox';
-import { sandboxPath } from '~/lib/sandbox/utils';
-import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
-export const read = ({ context }: { context: SlackMessageContext }) =>
+import { errorMessage, toLogError } from '~/utils/error';
+import { type SandboxToolDeps, truncate } from './_shared';
+
+const MAX_TEXT_CHARS = 40_000;
+const MAX_DIR_ENTRIES = 400;
+
+export const readFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
     description:
-      'Reads a file from the sandbox filesystem. You can access any file directly by using this tool.',
+      'Read a file or directory in the sandbox and return structured content.',
     inputSchema: z.object({
-      path: z.string().describe('File path in sandbox'),
-      offset: z
-        .number()
-        .int()
-        .min(0)
-        .default(0)
-        .describe('Line number to start reading from (0-based, default: 0)'),
-      limit: z
-        .number()
-        .int()
-        .min(1)
-        .max(2000)
-        .default(2000)
-        .describe('Maximum lines to return (default: 2000, max: 2000)'),
-      status: z
+      filePath: z
         .string()
-        .optional()
-        .describe('Status text formatted like "is xyz"'),
+        .min(1)
+        .describe('Absolute or relative path to read.'),
+      description: z
+        .string()
+        .min(4)
+        .max(80)
+        .default('Reading files')
+        .describe(
+          'Brief title for this operation, e.g. "Reading package.json", "Listing src directory".'
+        ),
     }),
-    execute: async ({ path, offset, limit, status }) => {
-      await setStatus(context, {
-        status: status ?? 'is reading file',
-        loading: true,
-      });
+    execute: async ({ filePath, description }) => {
       const ctxId = getContextId(context);
-      const resolvedPath = sandboxPath(path);
+      const task = await createTask(stream, {
+        title: description,
+        details: filePath,
+      });
+      logger.info(
+        {
+          ctxId,
+          input: { filePath, description },
+        },
+        '[subagent] reading file'
+      );
 
       try {
-        const sandbox = await getSandbox(context);
-        const fileBuffer = await sandbox.readFileToBuffer({
-          path: resolvedPath,
-        });
+        const info = await sandbox.files.getInfo(filePath);
 
-        if (!fileBuffer) {
-          logger.warn(
-            { path: resolvedPath, ctxId },
-            '[sandbox] Read missing file'
+        if (info.type === FileType.DIR) {
+          const entries = await sandbox.files.list(filePath, { depth: 1 });
+          const entryNames = entries.slice(0, MAX_DIR_ENTRIES).map((entry) => ({
+            name: entry.name,
+            path: entry.path,
+            type: entry.type,
+          }));
+
+          await finishTask(
+            stream,
+            task,
+            'complete',
+            `${entries.length} entries`
           );
-          return { success: false, error: `File not found: ${resolvedPath}` };
+          return {
+            success: true,
+            path: filePath,
+            type: 'directory',
+            entries: entryNames,
+            totalEntries: entries.length,
+            truncated: entries.length > MAX_DIR_ENTRIES,
+          };
         }
 
-        const lines = fileBuffer.toString('utf-8').split('\n');
-        const totalLines = lines.length;
-        const start = Math.max(0, offset);
-        const end = Math.min(totalLines, start + limit);
-        const numbered: string[] = [];
-
-        for (let i = start; i < end; i++) {
-          const line = lines[i] ?? '';
-          const truncated =
-            line.length > 2000 ? `${line.slice(0, 2000)}...` : line;
-          const lineNo = String(i + 1).padStart(6, ' ');
-          numbered.push(`${lineNo}\t${truncated}`);
-        }
-
-        const content = numbered.join('\n');
-
-        const linesReturned = Math.max(0, end - start);
-        logger.debug(
-          { path: resolvedPath, totalLines, linesReturned, ctxId },
-          '[sandbox] Read completed'
-        );
-
-        return {
+        const text = await sandbox.files.read(filePath);
+        const output = {
           success: true,
-          content,
-          path: resolvedPath,
-          totalLines,
-          offset: start,
-          linesReturned,
+          path: filePath,
+          type: 'file',
+          content: truncate(text, MAX_TEXT_CHARS),
+          truncated: text.length > MAX_TEXT_CHARS,
         };
-      } catch (error) {
-        logger.error(
-          { error, path: resolvedPath, ctxId },
-          '[sandbox] Read failed'
+
+        logger.info(
+          {
+            ctxId,
+            output,
+          },
+          '[subagent] read file'
         );
+
+        await finishTask(stream, task, 'complete', `${text.length} chars`);
+        return output;
+      } catch (error) {
+        logger.warn(
+          {
+            ctxId,
+            output: {
+              success: false,
+              error: errorMessage(error),
+            },
+          },
+          '[subagent] read file'
+        );
+
+        if (error instanceof NotFoundError) {
+          await finishTask(
+            stream,
+            task,
+            'error',
+            `Path not found: ${filePath}`
+          );
+          return {
+            success: false,
+            error: `Path not found: ${filePath}`,
+          };
+        }
+
+        logger.error(
+          { ...toLogError(error), ctxId, filePath },
+          '[sandbox-tool] Failed to read path'
+        );
+
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          path,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

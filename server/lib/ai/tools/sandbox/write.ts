@@ -1,48 +1,88 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import { getSandbox } from '~/lib/sandbox';
-import { sandboxPath } from '~/lib/sandbox/utils';
-import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
+import type { SandboxToolDeps } from './_shared';
 
-export const write = ({ context }: { context: SlackMessageContext }) =>
+export const writeFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
-    description: 'Write a file to the sandbox filesystem.',
+    description: 'Write text content to a file in the sandbox.',
     inputSchema: z.object({
-      path: z.string().describe('File path in sandbox'),
-      content: z.string().describe('File contents'),
-      status: z
+      filePath: z.string().min(1).describe('Path to write.'),
+      content: z.string().describe('UTF-8 text content to write to the file.'),
+      description: z
         .string()
-        .optional()
-        .describe('Status text formatted like "is xyz"'),
+        .min(4)
+        .max(80)
+        .default('Writing files')
+        .describe(
+          'Brief title for this operation, e.g. "Writing package.json", "Creating config file".'
+        ),
     }),
-    execute: async ({ path, content, status }) => {
-      await setStatus(context, {
-        status: status ?? 'is writing file',
-        loading: true,
-      });
+    execute: async ({ filePath, content, description }) => {
       const ctxId = getContextId(context);
+      const task = await createTask(stream, {
+        title: description,
+        details: filePath,
+      });
+      logger.info(
+        {
+          ctxId,
+          input: {
+            filePath,
+            description,
+            bytes: Buffer.byteLength(content, 'utf8'),
+          },
+        },
+        '[subagent] writing file'
+      );
 
       try {
-        const resolvedPath = sandboxPath(path);
-        const sandbox = await getSandbox(context);
-        await sandbox.writeFiles([
-          { path: resolvedPath, content: Buffer.from(content, 'utf-8') },
-        ]);
+        await sandbox.files.write(filePath, content);
+        const bytes = Buffer.byteLength(content, 'utf8');
+        const output = {
+          success: true,
+          path: filePath,
+          bytes,
+        };
 
-        logger.debug(
-          { path: resolvedPath, ctxId },
-          '[sandbox] Write completed'
+        logger.info(
+          {
+            ctxId,
+            output,
+          },
+          '[subagent] write file'
         );
 
-        return { success: true, path: resolvedPath };
+        await finishTask(
+          stream,
+          task,
+          'complete',
+          `${bytes} bytes written to ${filePath}`
+        );
+        return output;
       } catch (error) {
-        logger.error({ error, path, ctxId }, '[sandbox] Write failed');
+        logger.warn(
+          {
+            ctxId,
+            output: {
+              success: false,
+              error: errorMessage(error),
+            },
+          },
+          '[subagent] write file'
+        );
+
+        logger.error(
+          { ...toLogError(error), ctxId, filePath },
+          '[sandbox-tool] Failed to write file'
+        );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

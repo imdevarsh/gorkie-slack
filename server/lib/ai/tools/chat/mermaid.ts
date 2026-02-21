@@ -1,9 +1,11 @@
 import { tool } from 'ai';
 import { deflate } from 'pako';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 
 const PLUS_REGEX = /\+/g;
 const SLASH_REGEX = /\//g;
@@ -35,7 +37,13 @@ function getMermaidImageUrl(code: string) {
   return `https://mermaid.ink/img/pako:${base64}?type=png`;
 }
 
-export const mermaid = ({ context }: { context: SlackMessageContext }) =>
+export const mermaid = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
   tool({
     description:
       'Generate a Mermaid diagram and share it as an image in Slack. Use for visualizing workflows, architectures, sequences, or relationships.',
@@ -51,21 +59,23 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
         .describe('Optional title/alt text for the diagram'),
     }),
     execute: async ({ code, title }) => {
-      await setStatus(context, {
-        status: 'is generating a diagram',
-        loading: true,
-      });
+      const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
       const messageTs = context.event.ts;
 
       if (!channelId) {
         logger.warn(
-          { title },
+          { ctxId, title },
           'Failed to create Mermaid diagram: missing channel'
         );
         return { success: false, error: 'Missing Slack channel' };
       }
+
+      const task = await createTask(stream, {
+        title: 'Creating diagram',
+        details: title ?? code.split('\n')[0],
+      });
 
       try {
         const imageUrl = getMermaidImageUrl(code);
@@ -85,20 +95,24 @@ export const mermaid = ({ context }: { context: SlackMessageContext }) =>
           title: title ?? 'Mermaid Diagram',
         });
 
-        logger.info({ channel: channelId, title }, 'Uploaded Mermaid diagram');
-
+        logger.info(
+          { ctxId, channel: channelId, title },
+          'Uploaded Mermaid diagram'
+        );
+        await finishTask(stream, task, 'complete', 'Diagram uploaded');
         return {
           success: true,
           content: 'Mermaid diagram uploaded to Slack and sent',
         };
       } catch (error) {
         logger.error(
-          { error, channel: channelId },
+          { ...toLogError(error), ctxId, channel: channelId },
           'Failed to create Mermaid diagram'
         );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

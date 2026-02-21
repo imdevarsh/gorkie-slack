@@ -1,103 +1,116 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import { getSandbox } from '~/lib/sandbox';
-import { sandboxPath } from '~/lib/sandbox/utils';
-import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
+import {
+  resolveCwd,
+  type SandboxToolDeps,
+  shellEscape,
+  truncate,
+} from './_shared';
 
-const outputSchema = z.object({
-  path: z.string(),
-  count: z.number(),
-  truncated: z.boolean(),
-  output: z.string(),
-  matches: z.array(z.string()),
-});
+const MAX_OUTPUT_CHARS = 20_000;
 
-export const glob = ({ context }: { context: SlackMessageContext }) =>
+export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
-    description: 'Find files by glob pattern in the sandbox.',
+    description: 'Find files matching a glob-like path pattern.',
     inputSchema: z.object({
-      pattern: z.string().describe('Glob pattern to match (e.g. "**/*.ts")'),
-      path: z.string().default('.').describe('Directory path in sandbox'),
-      limit: z
-        .number()
-        .int()
+      pattern: z
+        .string()
         .min(1)
-        .max(500)
-        .default(100)
-        .describe('Max matches to return (default: 100, max: 500)'),
-      status: z
+        .describe('Glob-like pattern. Example: **/*.ts or output/*.png'),
+      cwd: z
         .string()
         .optional()
-        .describe('Status text formatted like "is xyz"'),
+        .describe('Directory to search from. Defaults to sandbox workdir.'),
+      description: z
+        .string()
+        .min(4)
+        .max(80)
+        .default('Finding files')
+        .describe(
+          'Brief title for this operation, e.g. "Finding TypeScript files", "Listing output files".'
+        ),
     }),
-    execute: async ({ pattern, path, limit, status }) => {
-      await setStatus(context, {
-        status: status ?? 'is finding files',
-        loading: true,
+    execute: async ({ pattern, cwd, description }) => {
+      const ctxId = getContextId(context);
+      const task = await createTask(stream, {
+        title: description,
+        details: `\`\`\`${pattern}\`\`\``,
       });
 
-      const ctxId = getContextId(context);
-      const resolvedPath = sandboxPath(path);
+      const baseDir = resolveCwd(cwd);
+      logger.info(
+        {
+          ctxId,
+          input: { pattern, cwd: baseDir, description },
+        },
+        '[subagent] finding files'
+      );
+      const command = [
+        'bash -lc',
+        shellEscape(
+          `cd ${shellEscape(baseDir)} && ` +
+            `find . -path ${shellEscape(`./${pattern}`)} -print | sed 's#^./##'`
+        ),
+      ].join(' ');
 
       try {
-        const sandbox = await getSandbox(context);
-        const payload = Buffer.from(
-          JSON.stringify({ pattern, path: resolvedPath, limit })
-        ).toString('base64');
-
-        const result = await sandbox.runCommand({
-          cmd: 'sh',
-          args: ['-c', 'PARAMS="$1" python3 agent/bin/glob.py', '--', payload],
+        const result = await sandbox.commands.run(command, {
+          cwd: baseDir,
         });
 
-        const stdout = await result.stdout();
-        const stderr = await result.stderr();
+        const stdout = truncate(result.stdout, MAX_OUTPUT_CHARS);
+        const matches = stdout
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
 
-        if (result.exitCode !== 0) {
-          logger.warn(
-            {
-              ctxId,
-              pattern,
-              path: resolvedPath,
-              limit,
-              exitCode: result.exitCode,
-              stderr: stderr.slice(0, 1000),
-              stdout: stdout.slice(0, 1000),
-            },
-            '[sandbox] Glob command failed'
-          );
-          return {
-            success: false,
-            error: stderr || `Failed to match pattern: ${pattern}`,
-          };
-        }
-
-        const data = outputSchema.parse(JSON.parse(stdout || '{}'));
-
-        logger.debug(
-          { ctxId, pattern, path: resolvedPath, count: data.count },
-          '[sandbox] Glob completed'
-        );
-
-        return {
-          success: true,
-          path: data.path,
-          count: data.count,
-          truncated: data.truncated,
-          output: data.output,
-          matches: data.matches,
+        const output = {
+          success: result.exitCode === 0,
+          matches,
+          count: matches.length,
+          truncated: result.stdout.length > MAX_OUTPUT_CHARS,
+          stderr: truncate(result.stderr, MAX_OUTPUT_CHARS),
         };
-      } catch (error) {
-        logger.error(
-          { ctxId, error, pattern, path: resolvedPath, limit },
-          '[sandbox] Glob failed'
+
+        logger.info(
+          {
+            ctxId,
+            output,
+          },
+          '[subagent] glob files'
         );
+
+        await finishTask(
+          stream,
+          task,
+          output.success ? 'complete' : 'error',
+          `${output.count} file(s) found`
+        );
+        return output;
+      } catch (error) {
+        logger.warn(
+          {
+            ctxId,
+            output: {
+              success: false,
+              error: errorMessage(error),
+            },
+          },
+          '[subagent] glob files'
+        );
+
+        logger.error(
+          { ...toLogError(error), ctxId, pattern, cwd: baseDir },
+          '[sandbox-tool] Glob failed'
+        );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

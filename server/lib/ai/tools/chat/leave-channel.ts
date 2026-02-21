@@ -1,9 +1,18 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 
-export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
+export const leaveChannel = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
   tool({
     description:
       'Leave the channel you are currently in. Use this carefully and only if the user asks. If the user asks you to leave a channel, you MUST run this tool.',
@@ -14,11 +23,14 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
         .describe('Optional short reason for leaving'),
     }),
     execute: async ({ reason }) => {
+      const ctxId = getContextId(context);
       const authorId = (context.event as { user?: string }).user;
       logger.info(
-        { reason, authorId, channel: context.event.channel },
+        { ctxId, reason, authorId, channel: context.event.channel },
         'Leaving channel'
       );
+
+      const task = await createTask(stream, { title: 'Leaving channel' });
 
       try {
         await context.client.conversations.leave({
@@ -26,15 +38,16 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
         });
       } catch (error) {
         logger.error(
-          { error, channel: context.event.channel },
+          { ...toLogError(error), ctxId, channel: context.event.channel },
           'Failed to leave channel'
         );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
-
+      await finishTask(stream, task, 'complete');
       return {
         success: true,
       };

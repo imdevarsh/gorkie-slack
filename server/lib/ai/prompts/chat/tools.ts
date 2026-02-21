@@ -73,7 +73,7 @@ The sandbox agent handles all the details (finding files, running commands, uplo
 - Provide a clear, specific task description with the complete user intent in one prompt.
 - Mention any relevant file names or paths from attachments
 - The sandbox agent will use showFile to upload results before returning
-- If the user asks to peforfm operations on a file, call sandbox first instead of replying with instructions.
+- If the user asks to perform operations on a file, call sandbox first instead of replying with instructions.
 </rules>
 </tool>
 

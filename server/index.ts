@@ -2,8 +2,9 @@ import { LangfuseSpanProcessor } from '@langfuse/otel';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import { cleanupSnapshots } from '~/lib/sandbox/snapshot';
+import { startSandboxJanitor } from '~/lib/sandbox/janitor';
 import { createSlackApp } from '~/slack/app';
+import { toLogError } from '~/utils/error';
 
 const sdk = new NodeSDK({
   spanProcessors: [new LangfuseSpanProcessor()],
@@ -12,6 +13,7 @@ const sdk = new NodeSDK({
 sdk.start();
 
 async function main() {
+  startSandboxJanitor();
   const { app, socketMode } = createSlackApp();
 
   if (socketMode) {
@@ -22,19 +24,10 @@ async function main() {
 
   await app.start(env.PORT);
   logger.info({ port: env.PORT }, 'Slack Bolt app listening for events');
-
-  setInterval(
-    () => {
-      cleanupSnapshots().catch((error: unknown) => {
-        logger.warn({ error }, 'Snapshot cleanup failed');
-      });
-    },
-    30 * 60 * 1000
-  );
 }
 
 main().catch(async (error) => {
-  logger.error({ error }, 'Failed to start Slack Bolt app');
+  logger.error({ ...toLogError(error) }, 'Failed to start Slack Bolt app');
   await sdk.shutdown();
   process.exitCode = 1;
 });

@@ -1,95 +1,121 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import { getSandbox } from '~/lib/sandbox';
-import { sandboxPath } from '~/lib/sandbox/utils';
-import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
+import type { SandboxToolDeps } from './_shared';
 
-export const edit = ({ context }: { context: SlackMessageContext }) =>
+export const editFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
-    description: 'Edit a file by exact string replacement.',
+    description:
+      'Edit a text file by replacing exact text. Use replaceAll for global edits.',
     inputSchema: z.object({
-      path: z.string().describe('File path in sandbox'),
-      oldString: z.string().describe('Exact string to replace'),
-      newString: z.string().describe('Replacement string'),
+      filePath: z.string().min(1).describe('Path to edit.'),
+      oldText: z.string().min(1).describe('Exact text to replace.'),
+      newText: z.string().describe('Replacement text.'),
       replaceAll: z
         .boolean()
         .default(false)
-        .describe('Replace all occurrences (default: false)'),
-      status: z
+        .describe(
+          'Replace all occurrences if true, only first occurrence if false.'
+        ),
+      description: z
         .string()
-        .optional()
-        .describe('Status text formatted like "is xyz"'),
+        .min(4)
+        .max(80)
+        .default('Editing files')
+        .describe(
+          'Brief title for this operation, e.g. "Editing main.ts", "Updating config".'
+        ),
     }),
-    execute: async ({ path, oldString, newString, replaceAll, status }) => {
-      await setStatus(context, {
-        status: status ?? 'is editing file',
-        loading: true,
-      });
+    execute: async ({
+      filePath,
+      oldText,
+      newText,
+      replaceAll,
+      description,
+    }) => {
       const ctxId = getContextId(context);
-      const resolvedPath = sandboxPath(path);
+      const task = await createTask(stream, {
+        title: description,
+        details: filePath,
+      });
+      logger.info(
+        {
+          ctxId,
+          input: {
+            filePath,
+            description,
+            replaceAll,
+            oldPreview: oldText.slice(0, 100),
+            newPreview: newText.slice(0, 100),
+          },
+        },
+        '[subagent] editing file'
+      );
 
       try {
-        const sandbox = await getSandbox(context);
-        const fileBuffer = await sandbox.readFileToBuffer({
-          path: resolvedPath,
-        });
+        const current = await sandbox.files.read(filePath);
 
-        if (!fileBuffer) {
-          logger.warn(
-            { path: resolvedPath, ctxId },
-            '[sandbox] Edit missing file'
-          );
-          return { success: false, error: `File not found: ${resolvedPath}` };
-        }
-
-        const data = fileBuffer.toString('utf-8');
-        const count = data.split(oldString).length - 1;
-
-        if (count === 0) {
-          logger.warn(
-            { path: resolvedPath, ctxId },
-            '[sandbox] Edit oldString not found'
-          );
-          return { success: false, error: 'oldString not found' };
-        }
-
-        if (count > 1 && !replaceAll) {
-          logger.warn(
-            { path: resolvedPath, count, ctxId },
-            '[sandbox] Edit requires replaceAll'
-          );
+        if (!current.includes(oldText)) {
+          await finishTask(stream, task, 'error', 'oldText not found in file');
           return {
             success: false,
-            error: 'oldString found multiple times and replaceAll is false',
+            error: 'oldText not found in file',
+            path: filePath,
           };
         }
 
-        const updated = replaceAll
-          ? data.replaceAll(oldString, newString)
-          : data.replace(oldString, newString);
+        const next = replaceAll
+          ? current.split(oldText).join(newText)
+          : current.replace(oldText, newText);
 
-        await sandbox.writeFiles([
-          { path: resolvedPath, content: Buffer.from(updated, 'utf-8') },
-        ]);
+        await sandbox.files.write(filePath, next);
 
-        const replaced = replaceAll ? count : 1;
-        logger.debug(
-          { path: resolvedPath, replaced, ctxId },
-          '[sandbox] Edit completed'
+        const occurrences = replaceAll ? current.split(oldText).length - 1 : 1;
+
+        const output = {
+          success: true,
+          path: filePath,
+          replacements: occurrences,
+        };
+
+        logger.info(
+          {
+            ctxId,
+            output,
+          },
+          '[subagent] edit file'
         );
 
-        return { success: true, path: resolvedPath, replaced };
+        await finishTask(
+          stream,
+          task,
+          'complete',
+          `${output.replacements} replacement(s) in ${filePath}`
+        );
+        return output;
       } catch (error) {
-        logger.error(
-          { error, path: resolvedPath, ctxId },
-          '[sandbox] Edit failed'
+        logger.warn(
+          {
+            ctxId,
+            output: {
+              success: false,
+              error: errorMessage(error),
+            },
+          },
+          '[subagent] edit file'
         );
+
+        logger.error(
+          { ...toLogError(error), ctxId, filePath },
+          '[sandbox-tool] Failed to edit file'
+        );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

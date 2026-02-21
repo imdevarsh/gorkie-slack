@@ -7,6 +7,7 @@ import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { SlackMessageContext } from '~/types';
 import { buildChatContext, getContextId } from '~/utils/context';
+import { toLogError } from '~/utils/error';
 import { logReply } from '~/utils/log';
 import {
   checkMessageQuota,
@@ -89,7 +90,7 @@ async function getAuthorName(
     );
   } catch (error) {
     logger.warn(
-      { error, userId, ctxId },
+      { ...toLogError(error), userId, ctxId },
       'Failed to fetch user info for logging'
     );
     return userId;
@@ -202,6 +203,9 @@ export async function execute(args: MessageEventArgs) {
   return getQueue(ctxId)
     .add(async () => handleMessage(args))
     .catch((error: unknown) => {
-      logger.error({ error, ctxId }, 'Failed to process queued message');
+      logger.error(
+        { ...toLogError(error), ctxId },
+        'Failed to process queued message'
+      );
     });
 }

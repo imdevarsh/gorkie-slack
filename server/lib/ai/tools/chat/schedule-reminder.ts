@@ -1,13 +1,17 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 
 export const scheduleReminder = ({
   context,
+  stream,
 }: {
   context: SlackMessageContext;
+  stream: Stream;
 }) =>
   tool({
     description:
@@ -29,10 +33,7 @@ export const scheduleReminder = ({
         ),
     }),
     execute: async ({ text, seconds }) => {
-      await setStatus(context, {
-        status: 'is scheduling a reminder',
-        loading: true,
-      });
+      const ctxId = getContextId(context);
       const userId = (context.event as { user?: string }).user;
 
       if (!userId) {
@@ -41,6 +42,11 @@ export const scheduleReminder = ({
           error: 'Something went wrong.',
         };
       }
+
+      const task = await createTask(stream, {
+        title: 'Scheduling reminder',
+        details: `in ${seconds}s: ${text.slice(0, 60)}`,
+      });
 
       try {
         await context.client.chat.scheduleMessage({
@@ -51,21 +57,26 @@ export const scheduleReminder = ({
 
         logger.info(
           {
+            ctxId,
             userId,
             text,
           },
           'Scheduled reminder'
         );
-
+        await finishTask(stream, task, 'complete', `Scheduled for ${userId}`);
         return {
           success: true,
           content: `Scheduled reminder for ${userId} successfully`,
         };
       } catch (error) {
-        logger.error({ error, userId }, 'Failed to schedule reminder');
+        logger.error(
+          { ...toLogError(error), ctxId, userId },
+          'Failed to schedule reminder'
+        );
+        await finishTask(stream, task, 'error', errorMessage(error));
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

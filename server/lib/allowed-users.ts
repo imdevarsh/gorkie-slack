@@ -1,5 +1,6 @@
 import type { App } from '@slack/bolt';
 import { env } from '~/env';
+import { toLogError } from '~/utils/error';
 import logger from './logger';
 
 const allowedUsers = new Set<string>();
@@ -39,7 +40,11 @@ export async function buildCache(app: App) {
       cursor,
     });
     if (!req.ok) {
-      throw logger.error({ error: req.error }, 'Error building opt-in cache');
+      logger.error(
+        { ...toLogError(req.error), channelId: env.OPT_IN_CHANNEL },
+        'Error building opt-in cache'
+      );
+      throw new Error('Failed to build opt-in cache');
     }
     cursor = req.response_metadata?.next_cursor;
     if (!req.members) {

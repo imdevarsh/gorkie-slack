@@ -1,5 +1,6 @@
 import type { WebClient } from '@slack/web-api';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 
 const userNameCache = new Map<string, string>();
 
@@ -26,7 +27,10 @@ export async function getSlackUserName(
     userNameCache.set(userId, name);
     return name;
   } catch (error) {
-    logger.warn({ error, userId }, 'Failed to fetch Slack user info');
+    logger.warn(
+      { ...toLogError(error), userId },
+      'Failed to fetch Slack user info'
+    );
     userNameCache.set(userId, userId);
     return userId;
   }
