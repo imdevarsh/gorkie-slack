@@ -24,6 +24,15 @@ const hackclub = (modelId: string) =>
     providerId: 'hackclub',
   });
 
+const onModelError = (context: {
+  current: { model: { provider: string; modelId: string } };
+}) => {
+  const { model } = context.current;
+  logger.error(
+    `error with model ${model.provider}/${model.modelId}, switching to next model`
+  );
+};
+
 const chatModel = createRetryable({
   model: hackclub('google/gemini-3-flash-preview'),
   retries: [
@@ -33,34 +42,24 @@ const chatModel = createRetryable({
     openrouter('google/gemini-2.5-flash'),
     openrouter('openai/gpt-5-mini'),
   ],
-  onError: (context) => {
-    const { model } = context.current;
-    logger.error(
-      `error with model ${model.provider}/${model.modelId}, switching to next model`,
-    );
-  },
+  onError: onModelError,
 });
 
 const summariserModel = createRetryable({
   model: hackclub('google/gemini-3-flash-preview'),
   retries: [
-    hackclub('google/gemini-3-flash-preview'),
     hackclub('google/gemini-2.5-flash'),
     hackclub('openai/gpt-5-mini'),
     openrouter('google/gemini-2.5-flash-lite-preview-09-2025'),
     openrouter('openai/gpt-5-nano'),
   ],
-  onError: (context) => {
-    const { model } = context.current;
-    logger.error(
-      `error with model ${model.provider}/${model.modelId}, switching to next model`,
-    );
-  },
+  onError: onModelError,
 });
 
 export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
     'summariser-model': summariserModel,
+    'agent-model': chatModel,
   },
 });

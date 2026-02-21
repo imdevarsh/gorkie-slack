@@ -12,18 +12,16 @@ export interface SlackApp {
 
 function registerApp(app: App) {
   buildCache(app);
-  Object.keys(events).forEach((key) => {
-    const event = events[key as keyof typeof events];
-
+  for (const event of events) {
     app.event(event.name, event.execute);
-  });
+  }
 }
 
 export function createSlackApp(): SlackApp {
   if (env.SLACK_SOCKET_MODE) {
     if (!env.SLACK_APP_TOKEN) {
       throw new Error(
-        'SLACK_APP_TOKEN is required when socket mode is enabled.',
+        'SLACK_APP_TOKEN is required when socket mode is enabled.'
       );
     }
 

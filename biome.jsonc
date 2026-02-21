@@ -1,13 +1,29 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "vcs": {
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/node_modules"]
+    "ignoreUnknown": true,
+    "includes": [
+      "!node_modules",
+      "!**/dist",
+      "!**/public",
+      "!.github",
+      "!.vercel",
+      "!bun.lock",
+      "!**/*.md",
+      "!**/*.mdx"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -29,7 +45,24 @@
       "correctness": {
         "noUnusedImports": "error"
       },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 47
+          }
+        }
+      },
+      "performance": {
+        "noBarrelFile": "off"
+      },
       "recommended": true
     }
-  }
+  },
+  "json": {
+    "parser": {
+      "allowComments": true
+    }
+  },
+  "extends": ["ultracite/biome/core"]
 }

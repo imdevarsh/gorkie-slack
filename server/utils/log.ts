@@ -9,7 +9,7 @@ export function logReply(
     error?: string;
     toolCalls?: Array<{ toolName?: string }>;
   },
-  reason?: string,
+  reason?: string
 ) {
   if (result.success) {
     const tools = result.toolCalls
@@ -20,12 +20,13 @@ export function logReply(
       : 'Completed tool execution';
 
     logger.info(
-      `[${ctxId}] -> ${author}${reason ? ` (${reason})` : ''}: ${summary}`,
+      { ctxId },
+      `-> ${author}${reason ? ` (${reason})` : ''}: ${summary}`
     );
   } else if (result.error) {
     logger.error(
-      { error: result.error },
-      `[${ctxId}] Failed reply to ${author}`,
+      { failure: result.error, ctxId },
+      `Failed to reply to ${author}`
     );
   }
 }

@@ -1,0 +1,36 @@
+import type { ChatRequestHints, SlackMessageContext } from '~/types';
+import { attachmentsPrompt } from './attachments';
+import { corePrompt } from './core';
+import { examplesPrompt } from './examples';
+import { personalityPrompt } from './personality';
+import { replyPrompt } from './tasks';
+import { toolsPrompt } from './tools';
+
+const getRequestPrompt = (hints: ChatRequestHints) => `\
+<context>
+The current date and time is ${hints.time}.
+You're in the ${hints.server} Slack workspace, inside the ${hints.channel} channel.
+You joined the server on ${new Date(hints.joined).toLocaleDateString()}.
+Your current status is ${hints.status} and your activity is ${hints.activity}.
+</context>`;
+
+export function chatPrompt({
+  requestHints,
+  context,
+}: {
+  requestHints: ChatRequestHints;
+  context: SlackMessageContext;
+}): string {
+  return [
+    corePrompt,
+    personalityPrompt,
+    examplesPrompt,
+    getRequestPrompt(requestHints),
+    toolsPrompt,
+    replyPrompt,
+    attachmentsPrompt(context),
+  ]
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}

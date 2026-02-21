@@ -2,6 +2,7 @@ import type { UploadedFile } from '@slack/bolt';
 import type { ImagePart } from 'ai';
 import { env } from '~/env';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 
 // Supported image MIME types for vision models
 const SUPPORTED_IMAGE_TYPES = [
@@ -37,7 +38,7 @@ function getMimeType(file: SlackFile): string {
  * Fetch image from Slack's private URL and convert to base64 data URL
  */
 export async function fetchSlackImageAsBase64(
-  file: SlackFile,
+  file: SlackFile
 ): Promise<{ data: string; mimeType: string } | null> {
   const url = file.url_private ?? file.url_private_download;
   if (!url) {
@@ -55,7 +56,7 @@ export async function fetchSlackImageAsBase64(
     if (!response.ok) {
       logger.error(
         { status: response.status, fileId: file.id },
-        'Failed to fetch Slack image',
+        'Failed to fetch Slack image'
       );
       return null;
     }
@@ -69,7 +70,10 @@ export async function fetchSlackImageAsBase64(
       mimeType,
     };
   } catch (error) {
-    logger.error({ error, fileId: file.id }, 'Error fetching Slack image');
+    logger.error(
+      { ...toLogError(error), fileId: file.id },
+      'Error fetching Slack image'
+    );
     return null;
   }
 }
@@ -78,7 +82,7 @@ export async function fetchSlackImageAsBase64(
  * Process files from a Slack message and return image parts in AI SDK format
  */
 export async function processSlackFiles(
-  files: SlackFile[] | undefined,
+  files: SlackFile[] | undefined
 ): Promise<ImagePart[]> {
   if (!files || files.length === 0) {
     return [];
@@ -100,7 +104,7 @@ export async function processSlackFiles(
         image: result.data,
         mediaType: result.mimeType,
       };
-    },
+    }
   );
 
   const results = await Promise.all(imagePromises);

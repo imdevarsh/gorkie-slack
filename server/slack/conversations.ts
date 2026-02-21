@@ -1,6 +1,7 @@
 import type { WebClient } from '@slack/web-api';
 import type { ModelMessage, UserContent } from 'ai';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { shouldUse } from '~/utils/messages';
 
@@ -56,8 +57,12 @@ export async function getConversationMessages({
 
     const filteredMessages = latest
       ? messages.filter((message) => {
-          if (!message.ts) return false;
-          if (!shouldUse(message.text || '')) return false;
+          if (!message.ts) {
+            return false;
+          }
+          if (!shouldUse(message.text || '')) {
+            return false;
+          }
           const messageTs = Number(message.ts);
           const latestTs = Number(latest);
           return inclusive ? messageTs <= latestTs : messageTs < latestTs;
@@ -83,10 +88,13 @@ export async function getConversationMessages({
             userId;
           userNameCache.set(userId, name);
         } catch (error) {
-          logger.warn({ error, userId }, 'Failed to fetch Slack user info');
+          logger.warn(
+            { ...toLogError(error), userId },
+            'Failed to fetch Slack user info'
+          );
           userNameCache.set(userId, userId);
         }
-      }),
+      })
     );
 
     const mentionRegex = botUserId ? new RegExp(`<@${botUserId}>`, 'gi') : null;
@@ -146,14 +154,14 @@ export async function getConversationMessages({
           role: 'user' as const,
           content: formattedText,
         };
-      }),
+      })
     );
 
     return modelMessages;
   } catch (error) {
     logger.error(
-      { error, channel, threadTs },
-      'Failed to fetch conversation history',
+      { ...toLogError(error), channel, threadTs },
+      'Failed to fetch conversation history'
     );
     return [];
   }

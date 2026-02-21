@@ -32,13 +32,20 @@ targets.push({
   level: logLevel,
 });
 
-if (!isProd) {
+if (isProd) {
+  targets.push({
+    target: 'pino/file',
+    options: { destination: 1 },
+    level: logLevel,
+  });
+} else {
   targets.push({
     target: 'pino-pretty',
     options: {
       colorize: true,
       translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
-      ignore: 'pid,hostname',
+      ignore: 'pid,hostname,ctxId',
+      messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
     },
     level: logLevel,
   });
@@ -48,9 +55,17 @@ const transport = targets.length > 0 ? createTransport({ targets }) : undefined;
 
 const logger = transport
   ? pino(
-      { level: logLevel, timestamp: pino.stdTimeFunctions.isoTime },
-      transport,
+      {
+        level: logLevel,
+        timestamp: pino.stdTimeFunctions.isoTime,
+        serializers: { err: pino.stdSerializers.err },
+      },
+      transport
     )
-  : pino({ level: logLevel, timestamp: pino.stdTimeFunctions.isoTime });
+  : pino({
+      level: logLevel,
+      timestamp: pino.stdTimeFunctions.isoTime,
+      serializers: { err: pino.stdSerializers.err },
+    });
 
 export default logger;
