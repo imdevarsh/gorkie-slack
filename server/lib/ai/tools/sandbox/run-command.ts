@@ -1,6 +1,6 @@
 import { tool } from 'ai';
-import { sandbox as config } from '~/config';
 import { z } from 'zod';
+import { sandbox as config } from '~/config';
 import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
@@ -127,14 +127,8 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
             stdout: string;
             stderr: string;
           };
-          const stdout = truncate(
-            commandError.stdout,
-            config.maxToolOutput
-          );
-          const stderr = truncate(
-            commandError.stderr,
-            config.maxToolOutput
-          );
+          const stdout = truncate(commandError.stdout, config.maxToolOutput);
+          const stderr = truncate(commandError.stderr, config.maxToolOutput);
 
           logger.warn(
             {

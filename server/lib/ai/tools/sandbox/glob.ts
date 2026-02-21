@@ -1,6 +1,6 @@
 import { tool } from 'ai';
-import { sandbox as config } from '~/config';
 import { z } from 'zod';
+import { sandbox as config } from '~/config';
 import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
@@ -53,7 +53,7 @@ export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
         'bash -lc',
         shellEscape(
           `cd ${shellEscape(baseDir)} && ` +
-          `fd --glob --strip-cwd-prefix --hidden --no-ignore ${safePattern} .`
+            `fd --glob --strip-cwd-prefix --hidden --no-ignore ${safePattern} .`
         ),
       ].join(' ');
 
