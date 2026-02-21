@@ -1,0 +1,54 @@
+# E2B
+
+> Source: `docs/deploy/e2b.mdx`
+> Canonical URL: https://sandboxagent.dev/docs/deploy/e2b
+> Description: Deploy Sandbox Agent inside an E2B sandbox.
+
+---
+## Prerequisites
+
+- `E2B_API_KEY`
+- `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`
+
+## TypeScript example
+
+```typescript
+import { Sandbox } from "@e2b/code-interpreter";
+import { SandboxAgent } from "sandbox-agent";
+
+const envs: Record<string, string> = {};
+if (process.env.ANTHROPIC_API_KEY) envs.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+if (process.env.OPENAI_API_KEY) envs.OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+const sandbox = await Sandbox.create({ allowInternetAccess: true, envs });
+
+await sandbox.commands.run(
+  "curl -fsSL https://releases.rivet.dev/sandbox-agent/0.2.x/install.sh | sh"
+);
+
+await sandbox.commands.run("sandbox-agent install-agent claude");
+await sandbox.commands.run("sandbox-agent install-agent codex");
+
+await sandbox.commands.run(
+  "sandbox-agent server --no-token --host 0.0.0.0 --port 3000",
+  { background: true }
+);
+
+const baseUrl = `https://${sandbox.getHost(3000)}`;
+const sdk = await SandboxAgent.connect({ baseUrl });
+
+const session = await sdk.createSession({ agent: "claude" });
+const off = session.onEvent((event) => {
+  console.log(event.sender, event.payload);
+});
+
+await session.prompt([{ type: "text", text: "Summarize this repository" }]);
+off();
+
+await sandbox.kill();
+```
+
+## Faster cold starts
+
+For faster startup, create a custom E2B template with Sandbox Agent and target agents pre-installed.
+See [E2B Custom Templates](https://e2b.dev/docs/sandbox-template).

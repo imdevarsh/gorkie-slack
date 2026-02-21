@@ -6,7 +6,7 @@ import { ratelimit, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { SlackMessageContext } from '~/types';
-import { buildChatContext } from '~/utils/context';
+import { buildChatContext, getContextId } from '~/utils/context';
 import { logReply } from '~/utils/log';
 import {
   checkMessageQuota,
@@ -20,38 +20,44 @@ export const name = 'message';
 
 type MessageEventArgs = SlackEventMiddlewareArgs<'message'> & AllMiddlewareArgs;
 
+function hasSupportedSubtype(args: MessageEventArgs): boolean {
+  const subtype = args.event.subtype;
+  return !subtype || subtype === 'thread_broadcast' || subtype === 'file_share';
+}
+
 async function canReply(ctxId: string): Promise<boolean> {
   const { success } = await ratelimit(redisKeys.channelCount(ctxId));
   if (!success) {
-    logger.info(`[${ctxId}] Rate limit hit. Skipping reply.`);
+    logger.info({ ctxId }, 'Rate limit hit. Skipping reply.');
   }
   return success;
 }
 
 async function onSuccess(_context: SlackMessageContext) {
-  // await saveChatMemory(context, 5);
+  // todo: add operations here
 }
 
 function isProcessableMessage(
-  args: MessageEventArgs,
+  args: MessageEventArgs
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
+  const userId = (event as { user?: string }).user;
 
-  // has to be done again for type things
-  if (
-    event.subtype &&
-    event.subtype !== 'thread_broadcast' &&
-    event.subtype !== 'file_share'
-  )
-    return null;
-
-  if ('bot_id' in event && event.bot_id) return null;
-
-  if (context.botUserId && event.user === context.botUserId) {
+  if (!hasSupportedSubtype(args)) {
     return null;
   }
 
-  if (!('text' in event)) return null;
+  if ('bot_id' in event && event.bot_id) {
+    return null;
+  }
+
+  if (context.botUserId && userId === context.botUserId) {
+    return null;
+  }
+
+  if (!('text' in event)) {
+    return null;
+  }
 
   return {
     event: event as SlackMessageContext['event'],
@@ -65,9 +71,14 @@ function isProcessableMessage(
   } satisfies SlackMessageContext;
 }
 
-async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
+async function getAuthorName(
+  ctx: SlackMessageContext,
+  ctxId: string
+): Promise<string> {
   const userId = (ctx.event as { user?: string }).user;
-  if (!userId) return 'unknown';
+  if (!userId) {
+    return 'unknown';
+  }
   try {
     const info = await ctx.client.users.info({ user: userId });
     return (
@@ -77,53 +88,59 @@ async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
       userId
     );
   } catch (error) {
-    logger.warn({ error, userId }, 'Failed to fetch user info for logging');
+    logger.warn(
+      { error, userId, ctxId },
+      'Failed to fetch user info for logging'
+    );
     return userId;
   }
 }
 
-function getContextId(ctx: SlackMessageContext): string {
-  const channel = ctx.event.channel ?? 'unknown-channel';
-  const channelType = ctx.event.channel_type;
-  const userId = (ctx.event as { user?: string }).user;
-  const threadTs = (ctx.event as { thread_ts?: string }).thread_ts;
-
-  if (channelType === 'im' && userId) {
-    return `dm:${userId}`;
-  }
-  if (threadTs) {
-    return `${channel}:${threadTs}`;
-  }
-  return channel;
-}
-
 async function handleMessage(args: MessageEventArgs) {
-  if (
-    args.event.subtype &&
-    args.event.subtype !== 'thread_broadcast' &&
-    args.event.subtype !== 'file_share'
-  )
+  if (!hasSupportedSubtype(args)) {
     return;
-
-  if (!shouldUse(args.event.text || '')) return;
+  }
 
   const messageContext = isProcessableMessage(args);
-  if (!messageContext) return;
+  if (!messageContext) {
+    return;
+  }
+
+  const event = messageContext.event as {
+    channel?: string;
+    text?: string;
+    thread_ts?: string;
+    ts: string;
+    user?: string;
+  };
+  const userId = event.user;
+  const messageText = event.text ?? '';
+  if (!userId) {
+    return;
+  }
+
+  if (!shouldUse(messageText)) {
+    return;
+  }
 
   const ctxId = getContextId(messageContext);
   const trigger = await getTrigger(messageContext, messageContext.botUserId);
 
-  const authorName = await getAuthorName(messageContext);
-  const content = (messageContext.event as { text?: string }).text ?? '';
+  const authorName = await getAuthorName(messageContext, ctxId);
+  const content = messageText;
 
-  const { messages, hints } = await buildChatContext(messageContext);
+  const { messages, requestHints } = await buildChatContext(messageContext);
 
   if (trigger.type) {
-    if (!isUserAllowed(args.event.user)) {
+    if (!isUserAllowed(userId)) {
+      if (!event.channel) {
+        return;
+      }
+
       await args.client.chat.postMessage({
-        channel: args.event.channel,
-        thread_ts: args.event.thread_ts || args.event.ts,
-        markdown_text: `Hey there <@${args.event.user}>! For security and privacy reasons, you must be in <#${env.OPT_IN_CHANNEL}> to talk to me. When you're ready, ping me again and we can talk!`,
+        channel: event.channel,
+        thread_ts: event.thread_ts ?? event.ts,
+        markdown_text: `Hey there <@${userId}>! For security and privacy reasons, you must be in <#${env.OPT_IN_CHANNEL}> to talk to me. When you're ready, ping me again and we can talk!`,
       });
       return;
     }
@@ -132,12 +149,17 @@ async function handleMessage(args: MessageEventArgs) {
 
     logger.info(
       {
+        ctxId,
         message: `${authorName}: ${content}`,
       },
-      `[${ctxId}] Triggered by ${trigger.type}`,
+      `Triggered by ${trigger.type}`
     );
 
-    const result = await generateResponse(messageContext, messages, hints);
+    const result = await generateResponse(
+      messageContext,
+      messages,
+      requestHints
+    );
 
     logReply(ctxId, authorName, result, 'trigger');
 
@@ -147,31 +169,39 @@ async function handleMessage(args: MessageEventArgs) {
     return;
   }
 
-  if (!isUserAllowed(args.event.user)) return;
+  if (!isUserAllowed(userId)) {
+    return;
+  }
 
   const { count: idleCount, hasQuota } = await checkMessageQuota(ctxId);
 
   if (!hasQuota) {
     logger.debug(
-      `[${ctxId}] Quota exhausted (${idleCount}/${messageThreshold})`,
+      { ctxId },
+      `Quota exhausted (${idleCount}/${messageThreshold})`
     );
     return;
   }
 }
 
 export async function execute(args: MessageEventArgs) {
-  if (
-    args.event.subtype &&
-    args.event.subtype !== 'thread_broadcast' &&
-    args.event.subtype !== 'file_share'
-  )
+  if (!hasSupportedSubtype(args)) {
     return;
+  }
 
   const messageContext = isProcessableMessage(args);
-  if (!messageContext) return;
+  if (!messageContext) {
+    return;
+  }
 
   const ctxId = getContextId(messageContext);
-  if (!(await canReply(ctxId))) return;
+  if (!(await canReply(ctxId))) {
+    return;
+  }
 
-  return await getQueue(ctxId).add(async () => handleMessage(args));
+  return getQueue(ctxId)
+    .add(async () => handleMessage(args))
+    .catch((error: unknown) => {
+      logger.error({ error, ctxId }, 'Failed to process queued message');
+    });
 }

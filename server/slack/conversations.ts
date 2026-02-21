@@ -56,8 +56,12 @@ export async function getConversationMessages({
 
     const filteredMessages = latest
       ? messages.filter((message) => {
-          if (!message.ts) return false;
-          if (!shouldUse(message.text || '')) return false;
+          if (!message.ts) {
+            return false;
+          }
+          if (!shouldUse(message.text || '')) {
+            return false;
+          }
           const messageTs = Number(message.ts);
           const latestTs = Number(latest);
           return inclusive ? messageTs <= latestTs : messageTs < latestTs;
@@ -86,7 +90,7 @@ export async function getConversationMessages({
           logger.warn({ error, userId }, 'Failed to fetch Slack user info');
           userNameCache.set(userId, userId);
         }
-      }),
+      })
     );
 
     const mentionRegex = botUserId ? new RegExp(`<@${botUserId}>`, 'gi') : null;
@@ -146,14 +150,14 @@ export async function getConversationMessages({
           role: 'user' as const,
           content: formattedText,
         };
-      }),
+      })
     );
 
     return modelMessages;
   } catch (error) {
     logger.error(
       { error, channel, threadTs },
-      'Failed to fetch conversation history',
+      'Failed to fetch conversation history'
     );
     return [];
   }
