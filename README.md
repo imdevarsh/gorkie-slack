@@ -33,7 +33,7 @@ From your command line:
 
 ```bash
 # Clone this repository
-$ git clone https://github.com/webdev03/gorkie-slack.git
+$ git clone https://github.com/imdevarsh/gorkie-slack.git
 
 # Install dependencies
 $ bun install
