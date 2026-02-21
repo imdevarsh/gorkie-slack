@@ -1,7 +1,6 @@
 import { tool } from 'ai';
 import { deflate } from 'pako';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
 import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
