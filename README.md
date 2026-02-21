@@ -17,6 +17,7 @@ This project was developed with the following technologies:
 
 - [Vercel AI SDK][ai-sdk]
 - [Exa][exa]
+- [E2B][e2b]
 - [Mermaid][mermaid]
 - [Redis][redis]
 - [Slack Bolt SDK][slack-bolt]
@@ -67,6 +68,7 @@ This project is under the MIT license. See the [LICENSE](LICENSE) for details.
 [ai-sdk]: https://ai-sdk.dev/
 [bun]: https://bun.sh/
 [exa]: https://exa.ai/
+[e2b]: https://e2b.dev/
 [mermaid]: https://mermaid.js.org/
 [pinecone]: https://www.pinecone.io/
 [redis]: https://redis.io/
