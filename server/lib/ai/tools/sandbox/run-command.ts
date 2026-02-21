@@ -1,4 +1,5 @@
 import { tool } from 'ai';
+import { sandbox as config } from '~/config';
 import { z } from 'zod';
 import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
@@ -11,7 +12,6 @@ import {
   truncate,
 } from './_shared';
 
-const MAX_OUTPUT_CHARS = 20_000;
 const MAX_COMMAND_CHARS = 500;
 
 export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
@@ -70,8 +70,8 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
         });
 
         const durationMs = Date.now() - startedAt;
-        const stdout = truncate(result.stdout, MAX_OUTPUT_CHARS);
-        const stderr = truncate(result.stderr, MAX_OUTPUT_CHARS);
+        const stdout = truncate(result.stdout, config.maxToolOutput);
+        const stderr = truncate(result.stderr, config.maxToolOutput);
 
         logger.info(
           {
@@ -85,7 +85,7 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
                 exit: result.exitCode,
                 durationMs,
                 output: stdout,
-                truncated: result.stdout.length > MAX_OUTPUT_CHARS,
+                truncated: result.stdout.length > config.maxToolOutput,
               },
               output: stdout,
               stderr,
@@ -127,8 +127,14 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
             stdout: string;
             stderr: string;
           };
-          const stdout = truncate(commandError.stdout, MAX_OUTPUT_CHARS);
-          const stderr = truncate(commandError.stderr, MAX_OUTPUT_CHARS);
+          const stdout = truncate(
+            commandError.stdout,
+            config.maxToolOutput
+          );
+          const stderr = truncate(
+            commandError.stderr,
+            config.maxToolOutput
+          );
 
           logger.warn(
             {
@@ -142,7 +148,7 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
                   exit: commandError.exitCode,
                   durationMs,
                   output: stdout,
-                  truncated: commandError.stdout.length > MAX_OUTPUT_CHARS,
+                  truncated: commandError.stdout.length > config.maxToolOutput,
                 },
                 output: stdout,
                 stderr,

@@ -1,4 +1,5 @@
 import { tool } from 'ai';
+import { sandbox as config } from '~/config';
 import { z } from 'zod';
 import { createTask, finishTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
@@ -11,11 +12,9 @@ import {
   truncate,
 } from './_shared';
 
-const MAX_OUTPUT_CHARS = 20_000;
-
 export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
   tool({
-    description: 'Search file contents with ripgrep (or grep fallback).',
+    description: 'Search file contents with ripgrep.',
     inputSchema: z.object({
       pattern: z.string().min(1).describe('Regex pattern to search for.'),
       cwd: z
@@ -50,7 +49,7 @@ export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
       const command = [
         'bash -lc',
         shellEscape(
-          `cd ${shellEscape(baseDir)} && if command -v rg >/dev/null 2>&1; then rg --line-number --no-heading --color never ${safePattern} .; else grep -R -n --binary-files=without-match -E ${safePattern} .; fi`
+          `cd ${shellEscape(baseDir)} && rg --line-number --no-heading --color never ${safePattern} .`
         ),
       ].join(' ');
 
@@ -59,7 +58,7 @@ export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
           cwd: baseDir,
         });
 
-        const stdout = truncate(result.stdout, MAX_OUTPUT_CHARS);
+        const stdout = truncate(result.stdout, config.maxToolOutput);
         const matches = stdout
           .split('\n')
           .map((line) => line.trim())
@@ -69,8 +68,8 @@ export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
           success: result.exitCode === 0 || matches.length > 0,
           count: matches.length,
           output: stdout,
-          truncated: result.stdout.length > MAX_OUTPUT_CHARS,
-          stderr: truncate(result.stderr, MAX_OUTPUT_CHARS),
+          truncated: result.stdout.length > config.maxToolOutput,
+          stderr: truncate(result.stderr, config.maxToolOutput),
         };
 
         logger.info(
