@@ -9,16 +9,6 @@ export async function createTask(
   stream.tasks.set(taskId, title);
   const chunks: TaskChunk[] = [];
 
-  if (!stream.thought) {
-    stream.thought = true;
-    chunks.push({
-      type: 'task_update',
-      id: 'thinking',
-      title: 'Thought',
-      status: 'complete',
-    });
-  }
-
   chunks.push({
     type: 'task_update',
     id: taskId,

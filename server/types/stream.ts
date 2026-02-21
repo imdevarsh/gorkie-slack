@@ -14,6 +14,5 @@ export interface Stream {
   ts: string;
   client: WebClient;
   tasks: Map<string, string>;
-  thought: boolean;
   noop?: true;
 }

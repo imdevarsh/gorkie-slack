@@ -22,7 +22,6 @@ export async function initStream(
       ts: '',
       client: context.client,
       tasks: new Map(),
-      thought: false,
       noop: true,
     };
   }
@@ -53,7 +52,6 @@ export async function initStream(
       ts: '',
       client: context.client,
       tasks: new Map(),
-      thought: false,
       noop: true,
     };
   }
@@ -63,18 +61,8 @@ export async function initStream(
     ts,
     client: context.client,
     tasks: new Map(),
-    thought: false,
   };
 
-  await safeAppend(stream, [
-    {
-      type: 'task_update',
-      id: 'thinking',
-      title: 'Thinking',
-      details: 'Figuring out the next steps...',
-      status: 'in_progress',
-    },
-  ]);
   await setStatus(context, { status: '' });
 
   return stream;
