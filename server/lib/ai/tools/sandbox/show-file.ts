@@ -1,7 +1,7 @@
 import nodePath from 'node:path';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
@@ -42,11 +42,20 @@ export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           'Brief title for this operation, e.g. "Uploading chart.png", "Sharing report.pdf".'
         ),
     }),
-    execute: async ({ filePath, filename, description }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Uploading files',
+        status: 'pending',
+      });
+    },
+    execute: async ({ filePath, filename, description }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: description,
         details: filePath,
+        status: 'in_progress',
       });
       logger.info(
         {

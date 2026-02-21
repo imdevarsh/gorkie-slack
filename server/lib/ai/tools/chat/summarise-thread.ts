@@ -2,7 +2,7 @@ import { generateText, tool } from 'ai';
 import { z } from 'zod';
 import { summariseThreadPrompt } from '~/lib/ai/prompts/chat/tasks';
 import { provider } from '~/lib/ai/providers';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getConversationMessages } from '~/slack/conversations';
 import type { SlackMessageContext, Stream } from '~/types';
@@ -24,7 +24,14 @@ export const summariseThread = ({
         .optional()
         .describe('Optional instructions to provide to the summariser agent'),
     }),
-    execute: async ({ instructions }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Summarising thread',
+        status: 'pending',
+      });
+    },
+    execute: async ({ instructions }, { toolCallId }) => {
       const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
@@ -44,7 +51,12 @@ export const summariseThread = ({
         };
       }
 
-      const task = await createTask(stream, { title: 'Summarising thread' });
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
+        title: 'Summarising thread',
+        details: instructions ?? undefined,
+        status: 'in_progress',
+      });
 
       try {
         const messages = await getConversationMessages({

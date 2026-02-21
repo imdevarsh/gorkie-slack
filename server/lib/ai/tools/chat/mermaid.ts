@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { deflate } from 'pako';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -58,7 +58,14 @@ export const mermaid = ({
         .optional()
         .describe('Optional title/alt text for the diagram'),
     }),
-    execute: async ({ code, title }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Creating diagram',
+        status: 'pending',
+      });
+    },
+    execute: async ({ code, title }, { toolCallId }) => {
       const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const threadTs = (context.event as { thread_ts?: string }).thread_ts;
@@ -72,9 +79,11 @@ export const mermaid = ({
         return { success: false, error: 'Missing Slack channel' };
       }
 
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: 'Creating diagram',
         details: title ?? code.split('\n')[0],
+        status: 'in_progress',
       });
 
       try {

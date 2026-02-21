@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { formatDistanceToNow } from 'date-fns';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -33,7 +33,14 @@ export const scheduleReminder = ({
           120 * 24 * 60 * 60
         ),
     }),
-    execute: async ({ text, seconds }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Scheduling reminder',
+        status: 'pending',
+      });
+    },
+    execute: async ({ text, seconds }, { toolCallId }) => {
       const ctxId = getContextId(context);
       const userId = (context.event as { user?: string }).user;
 
@@ -49,9 +56,11 @@ export const scheduleReminder = ({
         addSuffix: true,
       });
 
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: 'Scheduling reminder',
         details: `${relativeTime}: ${text.slice(0, 60)}`,
+        status: 'in_progress',
       });
 
       try {

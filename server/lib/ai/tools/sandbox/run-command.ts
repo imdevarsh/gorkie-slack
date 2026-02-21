@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { sandbox as config } from '~/config';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
@@ -35,11 +35,20 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
         .optional()
         .describe('Command timeout in milliseconds.'),
     }),
-    execute: async ({ command, description, cwd, timeoutMs }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Running command',
+        status: 'pending',
+      });
+    },
+    execute: async ({ command, description, cwd, timeoutMs }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: description,
         details: `input:\n${truncate(command, MAX_COMMAND_CHARS)}`,
+        status: 'in_progress',
       });
 
       const startedAt = Date.now();

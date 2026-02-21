@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
@@ -29,17 +29,26 @@ export const editFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           'Brief title for this operation, e.g. "Editing main.ts", "Updating config".'
         ),
     }),
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Editing files',
+        status: 'pending',
+      });
+    },
     execute: async ({
       filePath,
       oldText,
       newText,
       replaceAll,
       description,
-    }) => {
+    }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: description,
         details: filePath,
+        status: 'in_progress',
       });
       logger.info(
         {

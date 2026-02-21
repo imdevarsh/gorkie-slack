@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -23,7 +23,14 @@ export const react = ({
         .nonempty()
         .describe('Emoji names to react with (unicode or custom names).'),
     }),
-    execute: async ({ emojis }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Adding reaction',
+        status: 'pending',
+      });
+    },
+    execute: async ({ emojis }, { toolCallId }) => {
       const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const messageTs = context.event.ts;
@@ -36,9 +43,11 @@ export const react = ({
         return { success: false, error: 'Missing Slack channel or message id' };
       }
 
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: 'Adding reaction',
         details: emojis.join(', '),
+        status: 'in_progress',
       });
 
       try {

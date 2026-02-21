@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { toLogError } from '~/utils/error';
@@ -17,10 +17,19 @@ export const getWeather = ({
       latitude: z.number(),
       longitude: z.number(),
     }),
-    execute: async ({ latitude, longitude }) => {
-      const task = await createTask(stream, {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Getting weather',
+        status: 'pending',
+      });
+    },
+    execute: async ({ latitude, longitude }, { toolCallId }) => {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: 'Getting weather',
         details: `${latitude}, ${longitude}`,
+        status: 'in_progress',
       });
       try {
         const response = await fetch(

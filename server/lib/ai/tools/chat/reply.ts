@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -95,7 +95,14 @@ export const reply = ({
         .default('reply')
         .describe('Reply in a thread or post directly in the channel.'),
     }),
-    execute: async ({ offset = 0, content, type }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Sending reply',
+        status: 'pending',
+      });
+    },
+    execute: async ({ offset = 0, content, type }, { toolCallId }) => {
       const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const messageTs = context.event.ts;
@@ -110,9 +117,11 @@ export const reply = ({
         return { success: false, error: 'Missing Slack channel or timestamp' };
       }
 
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: 'Sending reply',
         details: content[0],
+        status: 'in_progress',
       });
 
       try {

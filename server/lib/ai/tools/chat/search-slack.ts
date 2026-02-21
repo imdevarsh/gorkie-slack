@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -29,7 +29,14 @@ export const searchSlack = ({
     inputSchema: z.object({
       query: z.string(),
     }),
-    execute: async ({ query }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Searching Slack',
+        status: 'pending',
+      });
+    },
+    execute: async ({ query }, { toolCallId }) => {
       const ctxId = getContextId(context);
       const action_token = (context.event as AssistantThreadEvent)
         .assistant_thread?.action_token;
@@ -42,9 +49,11 @@ export const searchSlack = ({
         };
       }
 
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: 'Searching Slack',
         details: query,
+        status: 'in_progress',
       });
 
       const response = await fetch(

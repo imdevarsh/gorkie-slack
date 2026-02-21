@@ -1,5 +1,5 @@
 import { webSearch } from '@exalabs/ai-sdk';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import type { SlackMessageContext, Stream } from '~/types';
 
 const baseSearchWeb = webSearch({ numResults: 10, type: 'auto' });
@@ -11,13 +11,23 @@ export const searchWeb = ({
   stream: Stream;
 }) => ({
   ...baseSearchWeb,
+  onInputStart: async ({ toolCallId }: { toolCallId: string }) => {
+    await createTask(stream, {
+      taskId: toolCallId,
+      title: 'Searching the web',
+      status: 'pending',
+    });
+  },
   execute: baseSearchWeb.execute
     ? async (
         ...args: Parameters<NonNullable<typeof baseSearchWeb.execute>>
       ) => {
-        const task = await createTask(stream, {
+        const [, { toolCallId }] = args;
+        const task = await updateTask(stream, {
+          taskId: toolCallId,
           title: 'Searching the web',
           details: args[0]?.query,
+          status: 'in_progress',
         });
         try {
           const result = await (

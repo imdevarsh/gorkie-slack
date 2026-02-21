@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -21,11 +21,20 @@ export const skip = ({
         .optional()
         .describe('Optional short reason for skipping'),
     }),
-    execute: async ({ reason }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Skipping',
+        status: 'pending',
+      });
+    },
+    execute: async ({ reason }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const task = await createTask(stream, {
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
         title: 'Skipping',
         details: reason ?? undefined,
+        status: 'in_progress',
       });
 
       if (reason) {

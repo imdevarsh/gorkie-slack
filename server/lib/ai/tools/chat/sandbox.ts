@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { sandboxAgent } from '~/lib/ai/agents/sandbox-agent';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
 import { buildSandboxContext } from '~/lib/sandbox/context';
@@ -36,13 +36,22 @@ export const sandbox = ({
           'Clear sandbox task with expected outputs and constraints. Mention exact filenames when possible.'
         ),
     }),
-    execute: async ({ task }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Running sandbox',
+        status: 'pending',
+      });
+    },
+    execute: async ({ task }, { toolCallId }) => {
       const ctxId = getContextId(context);
       let sandboxId: string | null = null;
 
-      const taskId = await createTask(stream, {
+      const taskId = await updateTask(stream, {
+        taskId: toolCallId,
         title: 'Running sandbox',
         details: task,
+        status: 'in_progress',
       });
 
       try {

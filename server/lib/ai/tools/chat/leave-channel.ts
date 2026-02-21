@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { createTask, finishTask } from '~/lib/ai/utils/task';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
@@ -22,7 +22,14 @@ export const leaveChannel = ({
         .optional()
         .describe('Optional short reason for leaving'),
     }),
-    execute: async ({ reason }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Leaving channel',
+        status: 'pending',
+      });
+    },
+    execute: async ({ reason }, { toolCallId }) => {
       const ctxId = getContextId(context);
       const authorId = (context.event as { user?: string }).user;
       logger.info(
@@ -30,7 +37,12 @@ export const leaveChannel = ({
         'Leaving channel'
       );
 
-      const task = await createTask(stream, { title: 'Leaving channel' });
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
+        title: 'Leaving channel',
+        details: reason,
+        status: 'in_progress',
+      });
 
       try {
         await context.client.conversations.leave({
