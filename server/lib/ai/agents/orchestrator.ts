@@ -75,8 +75,8 @@ export const orchestratorAgent = ({
       taskMap.set(context.event.event_ts, task);
       return {};
     },
-    async onStepFinish(aa) {
-      const normalisedReasoning = String(aa.reasoningText)
+    async onStepFinish({ reasoningText }) {
+      const normalisedReasoning = String(reasoningText)
         .trim()
         .split('\n')
         .filter(Boolean)

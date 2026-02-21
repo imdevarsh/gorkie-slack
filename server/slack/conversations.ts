@@ -38,8 +38,14 @@ export async function getConversationMessages({
   try {
     try {
       // required to be able to view messages
-      await client.conversations.join({
-        channel,
+      // using fetch to avoid warnings in logs
+      await fetch('https://slack.com/api/conversations.join', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${client.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ channel }),
       });
     } catch {
       // this is fine - the channel may be private
