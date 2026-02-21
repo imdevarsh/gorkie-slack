@@ -23,11 +23,6 @@ function hasSupportedSubtype(args: MessageEventArgs): boolean {
 // biome-ignore lint/suspicious/useAwait: await is not needed here, this code is for the future
 async function canReply(_ctxId: string): Promise<boolean> {
   return true;
-  /* const { success } = await ratelimit(redisKeys.channelCount(ctxId));
-  if (!success) {
-    logger.info({ ctxId }, 'Rate limit hit. Skipping reply.');
-  }
-  return success; */
 }
 
 async function onSuccess(_context: SlackMessageContext) {
@@ -169,16 +164,6 @@ async function handleMessage(args: MessageEventArgs) {
   if (!isUserAllowed(userId)) {
     return;
   }
-
-  /* const { count: idleCount, hasQuota } = await checkMessageQuota(ctxId);
-
-  if (!hasQuota) {
-    logger.debug(
-      { ctxId },
-      `Quota exhausted (${idleCount}/${messageThreshold})`
-    );
-    return;
-  } */
 }
 
 export async function execute(args: MessageEventArgs) {
