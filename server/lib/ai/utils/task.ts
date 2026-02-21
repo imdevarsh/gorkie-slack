@@ -23,7 +23,7 @@ export async function updateTask(
   const resolvedTitle = title ?? previous?.title;
   const normalizedStatus = status === 'error' ? 'complete' : status;
   const normalizedOutput =
-    status === 'error' && output ? `**[Oops! An Error Occured]**\n ${output}` : output;
+    status === 'error' && output ? `**[Oops! An error occurred]**\n ${output}` : output;
   const nextTask = {
     title: resolvedTitle,
     status: normalizedStatus,
