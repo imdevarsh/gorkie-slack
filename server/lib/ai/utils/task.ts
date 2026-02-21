@@ -38,13 +38,16 @@ export async function finishTask(
   output?: string
 ): Promise<void> {
   const title = stream.tasks.get(taskId);
+  const formattedOutput =
+    status === 'error' && output ? `_${output}_` : output;
+
   await safeAppend(stream, [
     {
       type: 'task_update',
       id: taskId,
       ...(title ? { title } : {}),
-      status,
-      ...(output ? { output } : {}),
+      status: status !== 'error' ? status : 'complete',
+      ...(formattedOutput ? { output: formattedOutput } : {}),
     },
   ]);
 }

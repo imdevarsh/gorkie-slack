@@ -101,10 +101,17 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
           stderr,
           durationMs,
         };
-        const outputText =
+        const content =
           result.exitCode === 0
-            ? `${stdout ? `output:\n${truncate(stdout, 300)}` : 'output: <empty>'}\n\n*Exit code: 0*`
-            : `${stderr ? `error:\n${truncate(stderr, 300)}` : 'error: <empty>'}\n\n*Exit code: ${result.exitCode}*`;
+            ? stdout
+              ? `output:\n${truncate(stdout, 300)}`
+              : ''
+            : stderr
+              ? `error:\n${truncate(stderr, 300)}`
+              : '';
+        const outputText = [content, `*Exit code: ${result.exitCode}*`]
+          .filter((section) => section.length > 0)
+          .join('\n\n');
         await finishTask(
           stream,
           task,
@@ -157,7 +164,7 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
             '[subagent] Tool update'
           );
 
-          const errText = `${commandError.stderr ? `stderr:\n${truncate(commandError.stderr, 300)}\n\n*Exit code: ${commandError.exitCode}*` : 'stderr: <empty>'}`;
+          const errText = `${commandError.stderr && `stderr:\n${truncate(commandError.stderr, 300)}\n\n*Exit code: ${commandError.exitCode}*` || 'stderr: <empty>'}`;
           await finishTask(stream, task, 'error', errText);
           return {
             success: false,
