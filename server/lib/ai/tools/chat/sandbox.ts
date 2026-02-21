@@ -33,6 +33,14 @@ function errorMessage(error: unknown): string {
   return String(error);
 }
 
+function resourceLinkToText(link: PromptResourceLink): string {
+  const parts = [`File: ${link.name}`, `URI: ${link.uri}`];
+  if (link.mimeType) {
+    parts.push(`Type: ${link.mimeType}`);
+  }
+  return parts.join(', ');
+}
+
 export const sandbox = ({
   context,
   files,
@@ -73,17 +81,14 @@ export const sandbox = ({
           loading: true,
         });
 
-        const prompt = [
-          {
-            type: 'text' as const,
-            text: `${task}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`,
-          },
-          ...resourceLinks,
-        ] satisfies Array<{ type: 'text'; text: string } | PromptResourceLink>;
+        const fileRefs = resourceLinks.map(resourceLinkToText).join('\n');
+        const promptText = fileRefs
+          ? `${task}\n\nAvailable files:\n${fileRefs}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`
+          : `${task}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
 
         const stream: unknown[] = [];
         const unsubscribe = subscribeEvents({
-          session: runtime.session,
+          client: runtime.client,
           runtime,
           context,
           ctxId,
@@ -91,7 +96,7 @@ export const sandbox = ({
         });
 
         try {
-          await runtime.session.prompt([...prompt]);
+          await runtime.client.sendPrompt(promptText);
         } finally {
           unsubscribe();
         }
@@ -121,10 +126,10 @@ export const sandbox = ({
         };
       } finally {
         if (runtime) {
-          await runtime.sdk.dispose().catch((error: unknown) => {
+          await runtime.client.disconnect().catch((error: unknown) => {
             logger.debug(
               { error, ctxId },
-              '[subagent] Failed to dispose sandbox SDK client'
+              '[subagent] Failed to disconnect Pi client'
             );
           });
         }

@@ -1,9 +1,4 @@
 import { Daytona, type Sandbox } from '@daytonaio/sdk';
-import {
-  buildInspectorUrl,
-  type SandboxAgent,
-  type Session,
-} from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import {
   clearDestroyed,
@@ -13,14 +8,13 @@ import {
   updateStatus,
   upsert,
 } from '~/db/queries/sandbox';
-import { env } from '~/env';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { configureAgent } from './config';
-import { boot, createSession, ensureSession } from './runtime';
+import { boot, type PiRpcClient } from './runtime';
 import { createSnapshot, SANDBOX_SNAPSHOT } from './snapshot';
 
 const daytona = new Daytona({
@@ -30,42 +24,12 @@ const daytona = new Daytona({
 });
 
 export interface ResolvedSandboxSession {
-  sdk: SandboxAgent;
+  client: PiRpcClient;
   sandbox: Sandbox;
-  session: Session;
   sessionId: string;
-  baseUrl: string;
 }
 
 class SandboxNotFoundError extends Error {}
-
-function logInspectorUrl(params: {
-  baseUrl: string;
-  previewToken: string | null;
-  sessionId: string;
-  threadId: string;
-}): void {
-  if (env.NODE_ENV !== 'development') {
-    return;
-  }
-
-  const { baseUrl, previewToken, sessionId, threadId } = params;
-  const inspectorUrl = buildInspectorUrl({
-    baseUrl,
-    ...(previewToken
-      ? {
-          headers: {
-            'x-daytona-preview-token': previewToken,
-          },
-        }
-      : {}),
-  });
-
-  logger.info(
-    { threadId, sessionId, inspectorUrl },
-    '[sandbox] Inspector UI (dev)'
-  );
-}
 
 function isNotFoundError(error: unknown): boolean {
   if (!(error instanceof Error)) {
@@ -118,23 +82,12 @@ async function createSandbox(
     await configureAgent(sandbox, prompt);
 
     await setStatus(context, { status: 'is starting agent', loading: true });
-    const { sdk, access } = await boot(sandbox);
-    const session = await createSession(sdk);
-    logger.info(
-      { session: JSON.stringify(session) },
-      'Created sandbox session'
-    );
-    logInspectorUrl({
-      baseUrl: access.baseUrl,
-      previewToken: access.previewToken,
-      sessionId: session.id,
-      threadId,
-    });
+    const client = await boot(sandbox);
 
     await upsert({
       threadId,
       sandboxId: sandbox.id,
-      sessionId: session.id,
+      sessionId: sandbox.id,
       status: 'active',
     });
 
@@ -143,13 +96,7 @@ async function createSandbox(
       '[sandbox] Created sandbox session'
     );
 
-    return {
-      sdk,
-      sandbox,
-      session,
-      sessionId: session.id,
-      baseUrl: access.baseUrl,
-    };
+    return { client, sandbox, sessionId: sandbox.id };
   } catch (error) {
     await sandbox.stop().catch((stopError: unknown) => {
       logger.warn(
@@ -223,29 +170,16 @@ export async function resolveSession(
       return createSandbox(context, threadId);
     }
 
-    const { sdk, access } = await boot(sandbox);
-    const session = await ensureSession(sdk, existing.sessionId);
-    logInspectorUrl({
-      baseUrl: access.baseUrl,
-      previewToken: access.previewToken,
-      sessionId: session.id,
-      threadId,
-    });
+    const client = await boot(sandbox);
 
     await updateRuntime(threadId, {
       sandboxId: sandbox.id,
-      sessionId: session.id,
+      sessionId: sandbox.id,
       status: 'active',
     });
     await markActivity(threadId);
 
-    return {
-      sdk,
-      sandbox,
-      session,
-      sessionId: session.id,
-      baseUrl: access.baseUrl,
-    };
+    return { client, sandbox, sessionId: sandbox.id };
   } catch (error) {
     await updateStatus(threadId, 'error');
     throw error;
