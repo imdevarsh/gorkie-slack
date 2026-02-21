@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises';
 import type { Sandbox } from '@daytonaio/sdk';
-import { sandbox as sandboxConfig } from '~/config';
 
 export interface SandboxBootstrapFile {
   path: string;
@@ -15,7 +14,7 @@ export async function buildConfig(prompt: string): Promise<{
   paths: string[];
   files: SandboxBootstrapFile[];
 }> {
-  const piDir = `${sandboxConfig.runtime.workdir}/.pi`;
+  const piDir = '/root/.pi';
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
 

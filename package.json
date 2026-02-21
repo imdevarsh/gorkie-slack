@@ -29,6 +29,7 @@
     "@neondatabase/serverless": "^1.0.2",
     "@openrouter/ai-sdk-provider": "^2.0.0",
     "@opentelemetry/sdk-node": "^0.211.0",
+    "@sandbox-agent/persist-postgres": "0.2.x",
     "@slack/bolt": "^4.6.0",
     "@slack/types": "^2.19.0",
     "@t3-oss/env-core": "^0.13.10",

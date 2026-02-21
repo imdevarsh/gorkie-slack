@@ -119,7 +119,11 @@ async function createSandbox(
 
     await setStatus(context, { status: 'is starting agent', loading: true });
     const { sdk, access } = await boot(sandbox);
-    const session = await createSession(sdk, threadId);
+    const session = await createSession(sdk);
+    logger.info(
+      { session: JSON.stringify(session) },
+      'Created sandbox session'
+    );
     logInspectorUrl({
       baseUrl: access.baseUrl,
       previewToken: access.previewToken,

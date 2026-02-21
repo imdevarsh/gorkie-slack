@@ -2,7 +2,9 @@ import type { Sandbox } from '@daytonaio/sdk';
 import { SandboxAgent, type Session } from 'sandbox-agent';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
+import logger from '../logger';
 import { type PreviewAccess, waitForHealth } from './client';
+import { sessionPersist } from './persist';
 
 const SERVER_ARGS = `--no-token --host 0.0.0.0 --port ${config.runtime.agentPort}`;
 const SERVER_MATCH = `sandbox-agent server .*--port ${config.runtime.agentPort}`;
@@ -13,7 +15,6 @@ async function killServer(sandbox: Sandbox): Promise<void> {
       `pkill -f '${SERVER_MATCH}' || true`,
       config.runtime.workdir,
       {
-        HOME: config.runtime.workdir,
         HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
       }
     )
@@ -22,10 +23,9 @@ async function killServer(sandbox: Sandbox): Promise<void> {
 
 async function startServer(sandbox: Sandbox): Promise<void> {
   const result = await sandbox.process.executeCommand(
-    `nohup env HOME=${config.runtime.workdir} sandbox-agent server ${SERVER_ARGS} >/tmp/sandbox-agent.log 2>&1 &`,
+    `nohup env sandbox-agent server ${SERVER_ARGS} >/tmp/sandbox-agent.log 2>&1 &`,
     config.runtime.workdir,
     {
-      HOME: config.runtime.workdir,
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
     },
     0
@@ -86,6 +86,7 @@ export async function boot(
 export function connect(access: PreviewAccess): Promise<SandboxAgent> {
   return SandboxAgent.connect({
     baseUrl: access.baseUrl,
+    persist: sessionPersist,
     ...(access.previewToken
       ? {
           headers: {
@@ -100,20 +101,18 @@ export async function ensureSession(
   sdk: SandboxAgent,
   sessionId: string
 ): Promise<Session> {
-  const resumed = await sdk.resumeSession(sessionId).catch(() => null);
+  const resumed = await sdk.resumeSession(sessionId).catch((error: unknown) => {
+    logger.error({ sessionId, err: error }, 'Failed to resume session');
+  });
   if (resumed) {
     return resumed;
   }
 
-  return createSession(sdk, sessionId);
+  return createSession(sdk);
 }
 
-export function createSession(
-  sdk: SandboxAgent,
-  sessionId: string
-): Promise<Session> {
+export function createSession(sdk: SandboxAgent): Promise<Session> {
   return sdk.createSession({
-    id: sessionId,
     agent: 'pi',
     sessionInit: {
       cwd: config.runtime.workdir,
