@@ -4,7 +4,12 @@ import type {
   ChatStopStreamArguments,
 } from '@slack/web-api';
 import logger from '~/lib/logger';
-import type { SlackMessageContext, Stream, TaskChunk } from '~/types';
+import type {
+  PlanChunk,
+  SlackMessageContext,
+  Stream,
+  TaskChunk,
+} from '~/types';
 import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
 import { setStatus } from './status';
@@ -88,9 +93,16 @@ export async function closeStream(stream: Stream): Promise<void> {
   }
 }
 
+export async function setPlanTitle(
+  stream: Stream,
+  title: string
+): Promise<void> {
+  await safeAppend(stream, [{ type: 'plan_update', title }]);
+}
+
 export async function safeAppend(
   stream: Stream,
-  chunks: TaskChunk[]
+  chunks: (TaskChunk | PlanChunk)[]
 ): Promise<void> {
   if (stream.noop) {
     return;

@@ -9,6 +9,11 @@ export interface TaskChunk {
   output?: string;
 }
 
+export interface PlanChunk {
+  type: 'plan_update';
+  title: string;
+}
+
 export interface StreamTask {
   title?: string;
   status: TaskChunk['status'];

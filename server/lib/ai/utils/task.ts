@@ -28,7 +28,12 @@ export async function updateTask(
     ...((title ?? previous?.title) ? { title: title ?? previous?.title } : {}),
     ...(details ? { details } : {}),
     ...(output
-      ? { output: status === 'error' ? `**[Oops! An error occurred]**\n ${output}` : output }
+      ? {
+          output:
+            status === 'error'
+              ? `**[Oops! An error occurred]**\n ${output}`
+              : output,
+        }
       : {}),
   };
 
