@@ -85,7 +85,8 @@ export const orchestratorAgent = ({
 
       const taskId = taskMap.get(context.event.event_ts);
       if (taskId) {
-        await finishTask(stream, taskId, 'complete', normalizedReasoning ?? 'No reasoning provided');
+        const reasoningSummary = normalizedReasoning || 'No reasoning provided';
+        await finishTask(stream, taskId, 'complete', reasoningSummary);
       } else {
         logger.warn(
           { eventTs: context.event.event_ts },
