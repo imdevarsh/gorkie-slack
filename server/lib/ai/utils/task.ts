@@ -1,14 +1,23 @@
 import { safeAppend } from '~/lib/ai/utils/stream';
 import type { Stream, TaskChunk } from '~/types';
 
-export async function createTask(
+export async function updateTask(
   stream: Stream,
-  { title, details }: { title: string; details?: string }
+  {
+    taskId,
+    title,
+    status,
+    details,
+    output,
+  }: {
+    taskId: string;
+    title?: string;
+    status: TaskChunk['status'];
+    details?: string;
+    output?: string;
+  }
 ): Promise<string> {
-  const taskId = crypto.randomUUID();
-  stream.tasks.set(taskId, title);
   const chunks: TaskChunk[] = [];
-
   if (!stream.thought) {
     stream.thought = true;
     chunks.push({
@@ -19,15 +28,44 @@ export async function createTask(
     });
   }
 
+  const resolvedTitle = title ?? stream.tasks.get(taskId);
+  const normalizedStatus = status === 'error' ? 'complete' : status;
+  const normalizedOutput = status === 'error' && output ? `_${output}_` : output;
+
   chunks.push({
     type: 'task_update',
     id: taskId,
-    title,
-    status: 'in_progress',
+    ...(resolvedTitle ? { title: resolvedTitle } : {}),
+    status: normalizedStatus,
     ...(details ? { details } : {}),
+    ...(normalizedOutput ? { output: normalizedOutput } : {}),
   });
 
   await safeAppend(stream, chunks);
+  return taskId;
+}
+
+export async function createTask(
+  stream: Stream,
+  {
+    taskId,
+    title,
+    details,
+    status,
+  }: {
+    taskId: string;
+    title: string;
+    details?: string;
+    status?: Extract<TaskChunk['status'], 'pending' | 'in_progress'>;
+  }
+): Promise<string> {
+  stream.tasks.set(taskId, title);
+  await updateTask(stream, {
+    taskId,
+    title,
+    details,
+    status: status ?? 'pending',
+  });
   return taskId;
 }
 
@@ -37,17 +75,5 @@ export async function finishTask(
   status: 'complete' | 'error',
   output?: string
 ): Promise<void> {
-  const title = stream.tasks.get(taskId);
-  const formattedOutput =
-    status === 'error' && output ? `_${output}_` : output;
-
-  await safeAppend(stream, [
-    {
-      type: 'task_update',
-      id: taskId,
-      ...(title ? { title } : {}),
-      status: status !== 'error' ? status : 'complete',
-      ...(formattedOutput ? { output: formattedOutput } : {}),
-    },
-  ]);
+  await updateTask(stream, { taskId, status, output });
 }
