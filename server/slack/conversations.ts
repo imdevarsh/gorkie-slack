@@ -36,6 +36,15 @@ export async function getConversationMessages({
   inclusive = false,
 }: ConversationOptions): Promise<ModelMessage[]> {
   try {
+    try {
+      // required to be able to view messages
+      await client.conversations.join({
+        channel,
+      });
+    } catch {
+      // this is fine - the channel may be private
+    }
+
     const response = threadTs
       ? await client.conversations.replies({
           channel,

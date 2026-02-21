@@ -17,12 +17,20 @@ export const summariseThread = ({
   stream: Stream;
 }) =>
   tool({
-    description: 'Returns a summary of the current Slack thread.',
+    description: 'Returns a summary of a Slack thread.',
     inputSchema: z.object({
       instructions: z
         .string()
         .optional()
         .describe('Optional instructions to provide to the summariser agent'),
+      channelId: z
+        .string()
+        .default(context.event.channel)
+        .describe('Channel ID containing the thread to summarise.'),
+      threadTs: ('thread_ts' in context.event && context.event.thread_ts
+        ? z.string().default(context.event.thread_ts)
+        : z.string()
+      ).describe('Timestamp of thread to summarise.'),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
@@ -31,10 +39,8 @@ export const summariseThread = ({
         status: 'pending',
       });
     },
-    execute: async ({ instructions }, { toolCallId }) => {
+    execute: async ({ instructions, channelId, threadTs }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const channelId = (context.event as { channel?: string }).channel;
-      const threadTs = (context.event as { thread_ts?: string }).thread_ts;
 
       if (!channelId) {
         return {

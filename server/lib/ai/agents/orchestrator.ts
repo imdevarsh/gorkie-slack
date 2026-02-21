@@ -14,8 +14,12 @@ import { skip } from '~/lib/ai/tools/chat/skip';
 import { summariseThread } from '~/lib/ai/tools/chat/summarise-thread';
 import { searchWeb } from '~/lib/ai/tools/shared/search-web';
 import { successToolCall } from '~/lib/ai/utils';
+import logger from '~/lib/logger';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
 import type { SlackFile } from '~/utils/images';
+import { createTask, finishTask } from '../utils/task';
+
+const taskMap = new Map<string, string>();
 
 export const orchestratorAgent = ({
   context,
@@ -61,6 +65,34 @@ export const orchestratorAgent = ({
       successToolCall('reply'),
       successToolCall('skip'),
     ],
+    async prepareStep() {
+      const taskId = crypto.randomUUID();
+      const task = await createTask(stream, {
+        taskId,
+        title: 'Thinking',
+        status: 'in_progress',
+      });
+      taskMap.set(context.event.event_ts, task);
+      return {};
+    },
+    async onStepFinish(aa) {
+      const normalisedReasoning = String(aa.reasoningText)
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .filter((x) => x !== '[REDACTED]')
+        .join('\n');
+
+      const taskId = taskMap.get(context.event.event_ts);
+      if (taskId) {
+        await finishTask(stream, taskId, 'complete', normalisedReasoning);
+      } else {
+        logger.warn(
+          { eventTs: context.event.event_ts },
+          'No taskId found in taskMap'
+        );
+      }
+    },
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'orchestrator',

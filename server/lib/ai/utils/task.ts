@@ -18,15 +18,6 @@ export async function updateTask(
   }
 ): Promise<string> {
   const chunks: TaskChunk[] = [];
-  if (!stream.thought) {
-    stream.thought = true;
-    chunks.push({
-      type: 'task_update',
-      id: 'thinking',
-      title: 'Thought',
-      status: 'complete',
-    });
-  }
 
   const previous = stream.tasks.get(taskId);
   const resolvedTitle = title ?? previous?.title;

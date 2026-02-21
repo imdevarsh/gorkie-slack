@@ -66,15 +66,6 @@ export async function initStream(
     thought: false,
   };
 
-  await safeAppend(stream, [
-    {
-      type: 'task_update',
-      id: 'thinking',
-      title: 'Thinking',
-      details: 'Figuring out the next steps...',
-      status: 'in_progress',
-    },
-  ]);
   await setStatus(context, { status: '' });
 
   return stream;
