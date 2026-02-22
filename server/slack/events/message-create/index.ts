@@ -1,17 +1,12 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from '@slack/bolt';
-import { messageThreshold } from '~/config';
 import { env } from '~/env';
 import { isUserAllowed } from '~/lib/allowed-users';
-import { ratelimit, redisKeys } from '~/lib/kv';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { SlackMessageContext } from '~/types';
 import { buildChatContext, getContextId } from '~/utils/context';
+import { toLogError } from '~/utils/error';
 import { logReply } from '~/utils/log';
-import {
-  checkMessageQuota,
-  resetMessageCount,
-} from '~/utils/message-rate-limiter';
 import { shouldUse } from '~/utils/messages';
 import { getTrigger } from '~/utils/triggers';
 import { generateResponse } from './utils/respond';
@@ -25,12 +20,9 @@ function hasSupportedSubtype(args: MessageEventArgs): boolean {
   return !subtype || subtype === 'thread_broadcast' || subtype === 'file_share';
 }
 
-async function canReply(ctxId: string): Promise<boolean> {
-  const { success } = await ratelimit(redisKeys.channelCount(ctxId));
-  if (!success) {
-    logger.info({ ctxId }, 'Rate limit hit. Skipping reply.');
-  }
-  return success;
+// biome-ignore lint/suspicious/useAwait: await is not needed here, this code is for the future
+async function canReply(_ctxId: string): Promise<boolean> {
+  return true;
 }
 
 async function onSuccess(_context: SlackMessageContext) {
@@ -89,7 +81,7 @@ async function getAuthorName(
     );
   } catch (error) {
     logger.warn(
-      { error, userId, ctxId },
+      { ...toLogError(error), userId, ctxId },
       'Failed to fetch user info for logging'
     );
     return userId;
@@ -145,7 +137,7 @@ async function handleMessage(args: MessageEventArgs) {
       return;
     }
 
-    await resetMessageCount(ctxId);
+    // await resetMessageCount(ctxId);
 
     logger.info(
       {
@@ -172,16 +164,6 @@ async function handleMessage(args: MessageEventArgs) {
   if (!isUserAllowed(userId)) {
     return;
   }
-
-  const { count: idleCount, hasQuota } = await checkMessageQuota(ctxId);
-
-  if (!hasQuota) {
-    logger.debug(
-      { ctxId },
-      `Quota exhausted (${idleCount}/${messageThreshold})`
-    );
-    return;
-  }
 }
 
 export async function execute(args: MessageEventArgs) {
@@ -202,6 +184,9 @@ export async function execute(args: MessageEventArgs) {
   return getQueue(ctxId)
     .add(async () => handleMessage(args))
     .catch((error: unknown) => {
-      logger.error({ error, ctxId }, 'Failed to process queued message');
+      logger.error(
+        { ...toLogError(error), ctxId },
+        'Failed to process queued message'
+      );
     });
 }

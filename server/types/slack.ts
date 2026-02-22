@@ -4,8 +4,8 @@ import type { WebClient } from '@slack/web-api';
 export type SlackMessageEvent = SlackEventMiddlewareArgs<'message'>['event'];
 
 export interface SlackMessageContext {
-  event: SlackMessageEvent;
-  client: WebClient;
   botUserId?: string;
+  client: WebClient;
+  event: SlackMessageEvent;
   teamId?: string;
 }

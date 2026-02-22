@@ -1,9 +1,18 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 
-export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
+export const leaveChannel = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
   tool({
     description:
       'Leave the channel you are currently in. Use this carefully and only if the user asks. If the user asks you to leave a channel, you MUST run this tool.',
@@ -13,12 +22,27 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
         .optional()
         .describe('Optional short reason for leaving'),
     }),
-    execute: async ({ reason }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Leaving channel',
+        status: 'pending',
+      });
+    },
+    execute: async ({ reason }, { toolCallId }) => {
+      const ctxId = getContextId(context);
       const authorId = (context.event as { user?: string }).user;
       logger.info(
-        { reason, authorId, channel: context.event.channel },
+        { ctxId, reason, authorId, channel: context.event.channel },
         'Leaving channel'
       );
+
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
+        title: 'Leaving channel',
+        details: reason,
+        status: 'in_progress',
+      });
 
       try {
         await context.client.conversations.leave({
@@ -26,15 +50,20 @@ export const leaveChannel = ({ context }: { context: SlackMessageContext }) =>
         });
       } catch (error) {
         logger.error(
-          { error, channel: context.event.channel },
+          { ...toLogError(error), ctxId, channel: context.event.channel },
           'Failed to leave channel'
         );
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
-
+      await finishTask(stream, { status: 'complete', taskId: task });
       return {
         success: true,
       };

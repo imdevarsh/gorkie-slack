@@ -2,31 +2,45 @@ import { generateText, tool } from 'ai';
 import { z } from 'zod';
 import { summariseThreadPrompt } from '~/lib/ai/prompts/chat/tasks';
 import { provider } from '~/lib/ai/providers';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { getConversationMessages } from '~/slack/conversations';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 
 export const summariseThread = ({
   context,
+  stream,
 }: {
   context: SlackMessageContext;
+  stream: Stream;
 }) =>
   tool({
-    description: 'Returns a summary of the current Slack thread.',
+    description: 'Returns a summary of a Slack thread.',
     inputSchema: z.object({
       instructions: z
         .string()
         .optional()
         .describe('Optional instructions to provide to the summariser agent'),
+      channelId: z
+        .string()
+        .default(context.event.channel)
+        .describe('Channel ID containing the thread to summarise.'),
+      threadTs: ('thread_ts' in context.event && context.event.thread_ts
+        ? z.string().default(context.event.thread_ts)
+        : z.string()
+      ).describe('Timestamp of thread to summarise.'),
     }),
-    execute: async ({ instructions }) => {
-      await setStatus(context, {
-        status: 'is reading the thread',
-        loading: true,
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Summarising thread',
+        status: 'pending',
       });
-      const channelId = (context.event as { channel?: string }).channel;
-      const threadTs = (context.event as { thread_ts?: string }).thread_ts;
+    },
+    execute: async ({ instructions, channelId, threadTs }, { toolCallId }) => {
+      const ctxId = getContextId(context);
 
       if (!channelId) {
         return {
@@ -43,6 +57,13 @@ export const summariseThread = ({
         };
       }
 
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
+        title: 'Summarising thread',
+        details: instructions ?? undefined,
+        status: 'in_progress',
+      });
+
       try {
         const messages = await getConversationMessages({
           client: context.client,
@@ -53,6 +74,11 @@ export const summariseThread = ({
         });
 
         if (messages.length === 0) {
+          await finishTask(stream, {
+            status: 'error',
+            taskId: task,
+            output: 'No messages found',
+          });
           return {
             success: false,
             error: 'No messages found in the thread',
@@ -66,10 +92,14 @@ export const summariseThread = ({
         });
 
         logger.debug(
-          { channelId, threadTs, messageCount: messages.length },
+          { ctxId, channelId, threadTs, messageCount: messages.length },
           'Thread summarised successfully'
         );
-
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `${messages.length} messages summarised`,
+        });
         return {
           success: true,
           summary: text,
@@ -77,12 +107,17 @@ export const summariseThread = ({
         };
       } catch (error) {
         logger.error(
-          { error, channelId, threadTs },
+          { ...toLogError(error), ctxId, channelId, threadTs },
           'Failed to summarise thread'
         );
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

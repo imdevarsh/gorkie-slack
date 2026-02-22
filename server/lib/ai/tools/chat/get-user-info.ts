@@ -1,11 +1,19 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { setStatus } from '~/lib/ai/utils/status';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
+import { toLogError } from '~/utils/error';
 import { normalizeSlackUserId } from '~/utils/users';
 
-export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
+export const getUserInfo = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
   tool({
     description: 'Get details about a Slack user by ID.',
     inputSchema: z.object({
@@ -14,11 +22,22 @@ export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
         .min(1)
         .describe('The Slack user ID (e.g. U123) of the user.'),
     }),
-    execute: async ({ userId }) => {
-      await setStatus(context, {
-        status: 'is fetching user info',
-        loading: true,
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Looking up user info',
+        status: 'pending',
       });
+    },
+    execute: async ({ userId }, { toolCallId }) => {
+      const ctxId = getContextId(context);
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
+        title: 'Looking up user info',
+        details: userId,
+        status: 'in_progress',
+      });
+
       try {
         const targetId = normalizeSlackUserId(userId);
 
@@ -27,12 +46,13 @@ export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
           : null;
 
         if (!user) {
+          await finishTask(stream, { status: 'error', taskId: task });
           return {
             success: false,
             error: 'User not found. Use their Slack ID.',
           };
         }
-
+        await finishTask(stream, { status: 'complete', taskId: task });
         return {
           success: true,
           data: {
@@ -51,7 +71,8 @@ export const getUserInfo = ({ context }: { context: SlackMessageContext }) =>
           },
         };
       } catch (error) {
-        logger.error({ error }, 'Error in getUserInfo');
+        logger.error({ ...toLogError(error), ctxId }, 'Error in getUserInfo');
+        await finishTask(stream, { status: 'error', taskId: task });
         return {
           success: false,
           error: 'Failed to fetch Slack user info',

@@ -1,13 +1,13 @@
 interface BaseHints {
-  time: string;
-  server: string;
   channel: string;
+  server: string;
+  time: string;
 }
 
 export interface ChatRequestHints extends BaseHints {
+  activity: string;
   joined: number;
   status: string;
-  activity: string;
 }
 
 export interface SandboxRequestHints extends BaseHints {}

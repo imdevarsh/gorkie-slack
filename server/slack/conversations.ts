@@ -1,27 +1,28 @@
 import type { WebClient } from '@slack/web-api';
 import type { ModelMessage, UserContent } from 'ai';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { shouldUse } from '~/utils/messages';
 
 interface ConversationOptions {
-  client: WebClient;
-  channel: string;
-  threadTs?: string;
   botUserId?: string;
-  limit?: number;
-  latest?: string;
-  oldest?: string;
+  channel: string;
+  client: WebClient;
   inclusive?: boolean;
+  latest?: string;
+  limit?: number;
+  oldest?: string;
+  threadTs?: string;
 }
 
 interface SlackMessage {
-  text?: string;
-  user?: string;
   bot_id?: string;
-  subtype?: string;
-  ts?: string;
   files?: SlackFile[];
+  subtype?: string;
+  text?: string;
+  ts?: string;
+  user?: string;
 }
 
 export async function getConversationMessages({
@@ -35,6 +36,21 @@ export async function getConversationMessages({
   inclusive = false,
 }: ConversationOptions): Promise<ModelMessage[]> {
   try {
+    try {
+      // required to be able to view messages
+      // using fetch to avoid warnings in logs
+      await fetch('https://slack.com/api/conversations.join', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${client.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ channel }),
+      });
+    } catch {
+      // this is fine - the channel may be private
+    }
+
     const response = threadTs
       ? await client.conversations.replies({
           channel,
@@ -87,7 +103,10 @@ export async function getConversationMessages({
             userId;
           userNameCache.set(userId, name);
         } catch (error) {
-          logger.warn({ error, userId }, 'Failed to fetch Slack user info');
+          logger.warn(
+            { ...toLogError(error), userId },
+            'Failed to fetch Slack user info'
+          );
           userNameCache.set(userId, userId);
         }
       })
@@ -156,7 +175,7 @@ export async function getConversationMessages({
     return modelMessages;
   } catch (error) {
     logger.error(
-      { error, channel, threadTs },
+      { ...toLogError(error), channel, threadTs },
       'Failed to fetch conversation history'
     );
     return [];

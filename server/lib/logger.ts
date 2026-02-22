@@ -55,9 +55,17 @@ const transport = targets.length > 0 ? createTransport({ targets }) : undefined;
 
 const logger = transport
   ? pino(
-      { level: logLevel, timestamp: pino.stdTimeFunctions.isoTime },
+      {
+        level: logLevel,
+        timestamp: pino.stdTimeFunctions.isoTime,
+        serializers: { err: pino.stdSerializers.err },
+      },
       transport
     )
-  : pino({ level: logLevel, timestamp: pino.stdTimeFunctions.isoTime });
+  : pino({
+      level: logLevel,
+      timestamp: pino.stdTimeFunctions.isoTime,
+      serializers: { err: pino.stdSerializers.err },
+    });
 
 export default logger;

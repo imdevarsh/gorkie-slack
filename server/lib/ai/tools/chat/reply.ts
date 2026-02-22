@@ -1,17 +1,21 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import { getSlackUserName } from '~/utils/users';
 
 interface SlackHistoryMessage {
-  ts?: string;
   thread_ts?: string;
+  ts?: string;
 }
 
 async function resolveTargetMessage(
   ctx: SlackMessageContext,
-  offset: number
+  offset: number,
+  ctxId: string
 ): Promise<SlackHistoryMessage | null> {
   const channelId = (ctx.event as { channel?: string }).channel;
   const messageTs = ctx.event.ts;
@@ -35,7 +39,7 @@ async function resolveTargetMessage(
   });
 
   if (!history.messages) {
-    logger.error({ res: history }, 'Error fetching history');
+    logger.error({ ctxId, res: history }, 'Error fetching history');
   }
 
   // TODO: Integrate shouldUse with this to prevent offset mismatches
@@ -62,7 +66,13 @@ function resolveThreadTs(
   return undefined;
 }
 
-export const reply = ({ context }: { context: SlackMessageContext }) =>
+export const reply = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
   tool({
     description:
       'Send messages to the Slack channel. Use type "reply" to respond in a thread or "message" for the main channel.',
@@ -85,7 +95,15 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
         .default('reply')
         .describe('Reply in a thread or post directly in the channel.'),
     }),
-    execute: async ({ offset = 0, content, type }) => {
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Sending reply',
+        status: 'pending',
+      });
+    },
+    execute: async ({ offset = 0, content, type }, { toolCallId }) => {
+      const ctxId = getContextId(context);
       const channelId = (context.event as { channel?: string }).channel;
       const messageTs = context.event.ts;
       const currentThread = (context.event as { thread_ts?: string }).thread_ts;
@@ -93,14 +111,21 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
 
       if (!(channelId && messageTs)) {
         logger.warn(
-          { channel: channelId, messageTs, type, offset },
+          { ctxId, channel: channelId, messageTs, type, offset },
           'Failed to send Slack reply: missing channel or timestamp'
         );
         return { success: false, error: 'Missing Slack channel or timestamp' };
       }
 
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
+        title: 'Sending reply',
+        details: content[0],
+        status: 'in_progress',
+      });
+
       try {
-        const target = await resolveTargetMessage(context, offset);
+        const target = await resolveTargetMessage(context, offset, ctxId);
         const threadTs =
           type === 'reply'
             ? resolveThreadTs(target, currentThread ?? messageTs)
@@ -120,6 +145,7 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
 
         logger.info(
           {
+            ctxId,
             channel: channelId,
             offset,
             type,
@@ -128,19 +154,28 @@ export const reply = ({ context }: { context: SlackMessageContext }) =>
           },
           'Sent Slack reply'
         );
-
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `Sent ${content.length} message(s)`,
+        });
         return {
           success: true,
           content: 'Sent reply to Slack channel',
         };
       } catch (error) {
         logger.error(
-          { error, channel: channelId, type, offset },
+          { ...toLogError(error), ctxId, channel: channelId, type, offset },
           'Failed to send Slack reply'
         );
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       }
     },

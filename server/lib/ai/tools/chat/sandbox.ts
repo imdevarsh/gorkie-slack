@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import {
@@ -8,30 +9,10 @@ import {
 } from '~/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
-import type { SlackMessageContext } from '~/types';
+import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  if (typeof error === 'object' && error !== null) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === 'string' && message.length > 0) {
-      return message;
-    }
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
-  return String(error);
-}
 
 function resourceLinkToText(link: PromptResourceLink): string {
   const parts = [`File: ${link.name}`, `URI: ${link.uri}`];
@@ -44,9 +25,11 @@ function resourceLinkToText(link: PromptResourceLink): string {
 export const sandbox = ({
   context,
   files,
+  stream,
 }: {
   context: SlackMessageContext;
   files?: SlackFile[];
+  stream: Stream;
 }) =>
   tool({
     description:
@@ -58,17 +41,30 @@ export const sandbox = ({
           'A clear description of what to accomplish in the sandbox. Include file names, expected outputs, and any specific instructions.'
         ),
     }),
-    execute: async ({ task }) => {
-      await setStatus(context, {
-        status: 'is delegating a task to the sandbox',
-        loading: true,
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: 'Running sandbox',
+        status: 'pending',
       });
-
+    },
+    execute: async ({ task }, { toolCallId }) => {
       const ctxId = getContextId(context);
-
       let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
 
+      const taskId = await updateTask(stream, {
+        taskId: toolCallId,
+        title: 'Running sandbox',
+        details: task,
+        status: 'in_progress',
+      });
+
       try {
+        await setStatus(context, {
+          status: 'is delegating a task to the sandbox',
+          loading: true,
+        });
+
         runtime = await resolveSession(context);
         const resourceLinks = await syncAttachments(
           runtime.sandbox,
@@ -86,13 +82,13 @@ export const sandbox = ({
           ? `${task}\n\nAvailable files:\n${fileRefs}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`
           : `${task}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
 
-        const stream: unknown[] = [];
+        const eventStream: unknown[] = [];
         const unsubscribe = subscribeEvents({
           client: runtime.client,
           runtime,
           context,
           ctxId,
-          stream,
+          stream: eventStream,
         });
 
         try {
@@ -103,9 +99,24 @@ export const sandbox = ({
           unsubscribe();
         }
 
-        const response = getResponse(stream);
+        const response = getResponse(eventStream) ?? 'Done';
 
-        logger.info({ ctxId, response }, '[subagent] Sandbox run completed');
+        logger.info(
+          {
+            ctxId,
+            sandboxId: runtime.sandbox.id,
+            attachments: resourceLinks.map((file) => file.uri),
+            task,
+            response,
+          },
+          '[sandbox] Sandbox run completed'
+        );
+
+        await finishTask(stream, {
+          status: 'complete',
+          taskId,
+          output: response.split('\n')[0]?.slice(0, 200) ?? 'Done',
+        });
 
         return {
           success: true,
@@ -113,24 +124,32 @@ export const sandbox = ({
         };
       } catch (error) {
         const message = errorMessage(error);
+
         logger.error(
           {
-            error,
-            errorMessage: message,
-            errorName: error instanceof Error ? error.name : undefined,
+            ...toLogError(error),
             ctxId,
+            task,
+            message,
           },
-          '[subagent] Sandbox run failed'
+          '[sandbox] Sandbox run failed'
         );
+
+        await finishTask(stream, {
+          status: 'error',
+          taskId,
+          output: message.slice(0, 200),
+        });
+
         return {
           success: false,
           error: message,
         };
       } finally {
         if (runtime) {
-          await runtime.client.disconnect().catch((error: unknown) => {
+          await runtime.client.disconnect().catch((disconnectError: unknown) => {
             logger.debug(
-              { error, ctxId },
+              { ...toLogError(disconnectError), ctxId },
               '[subagent] Failed to disconnect Pi client'
             );
           });

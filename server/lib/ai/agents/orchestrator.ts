@@ -14,17 +14,23 @@ import { searchWeb } from '~/lib/ai/tools/chat/search-web';
 import { skip } from '~/lib/ai/tools/chat/skip';
 import { summariseThread } from '~/lib/ai/tools/chat/summarise-thread';
 import { successToolCall } from '~/lib/ai/utils';
-import type { ChatRequestHints, SlackMessageContext } from '~/types';
+import logger from '~/lib/logger';
+import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
 import type { SlackFile } from '~/utils/images';
+import { createTask, finishTask } from '../utils/task';
+
+const taskMap = new Map<string, string>();
 
 export const orchestratorAgent = ({
   context,
   requestHints,
   files,
+  stream,
 }: {
   context: SlackMessageContext;
   requestHints: ChatRequestHints;
   files?: SlackFile[];
+  stream: Stream;
 }) =>
   new ToolLoopAgent({
     model: provider.languageModel('chat-model'),
@@ -40,18 +46,18 @@ export const orchestratorAgent = ({
     },
     toolChoice: 'required',
     tools: {
-      getWeather,
-      searchWeb,
-      searchSlack: searchSlack({ context }),
-      getUserInfo: getUserInfo({ context }),
-      leaveChannel: leaveChannel({ context }),
-      scheduleReminder: scheduleReminder({ context }),
-      summariseThread: summariseThread({ context }),
-      sandbox: sandbox({ context, files }),
-      mermaid: mermaid({ context }),
-      react: react({ context }),
-      reply: reply({ context }),
-      skip: skip({ context }),
+      getWeather: getWeather({ context, stream }),
+      searchWeb: searchWeb({ context, stream }),
+      searchSlack: searchSlack({ context, stream }),
+      getUserInfo: getUserInfo({ context, stream }),
+      leaveChannel: leaveChannel({ context, stream }),
+      scheduleReminder: scheduleReminder({ context, stream }),
+      summariseThread: summariseThread({ context, stream }),
+      sandbox: sandbox({ context, files, stream }),
+      mermaid: mermaid({ context, stream }),
+      react: react({ context, stream }),
+      reply: reply({ context, stream }),
+      skip: skip({ context, stream }),
     },
     stopWhen: [
       stepCountIs(25),
@@ -59,6 +65,39 @@ export const orchestratorAgent = ({
       successToolCall('reply'),
       successToolCall('skip'),
     ],
+    async prepareStep() {
+      const taskId = crypto.randomUUID();
+      const task = await createTask(stream, {
+        taskId,
+        title: 'Thinking',
+        status: 'in_progress',
+      });
+      taskMap.set(context.event.event_ts, task);
+      return {};
+    },
+    async onStepFinish({ reasoningText }) {
+      const normalizedReasoning = String(reasoningText)
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .filter((x) => x !== '[REDACTED]')
+        .join('\n');
+
+      const taskId = taskMap.get(context.event.event_ts);
+      if (taskId) {
+        const reasoningSummary = normalizedReasoning || 'No reasoning provided';
+        await finishTask(stream, {
+          status: 'complete',
+          taskId,
+          output: reasoningSummary,
+        });
+      } else {
+        logger.warn(
+          { eventTs: context.event.event_ts },
+          'No taskId found in taskMap'
+        );
+      }
+    },
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'orchestrator',

@@ -17,6 +17,7 @@ This project was developed with the following technologies:
 
 - [Vercel AI SDK][ai-sdk]
 - [Exa][exa]
+- [E2B][e2b]
 - [Mermaid][mermaid]
 - [Redis][redis]
 - [Slack Bolt SDK][slack-bolt]
@@ -32,7 +33,7 @@ From your command line:
 
 ```bash
 # Clone this repository
-$ git clone https://github.com/webdev03/gorkie-slack.git
+$ git clone https://github.com/imdevarsh/gorkie-slack.git
 
 # Install dependencies
 $ bun install
@@ -49,6 +50,12 @@ $ bun run dev
 $ bun run start
 ```
 
+### E2B template auto-build
+
+The app always uses an E2B template.
+It uses `gorkie-sandbox:latest` by default and builds it automatically if missing.
+The built template includes preinstalled `fd`/`ripgrep`/`imagemagick`/`ffmpeg`/`pip`/`pillow`.
+
 ## <a name="license">📝 License</a>
 
 This project is under the MIT license. See the [LICENSE](LICENSE) for details.
@@ -61,6 +68,7 @@ This project is under the MIT license. See the [LICENSE](LICENSE) for details.
 [ai-sdk]: https://ai-sdk.dev/
 [bun]: https://bun.sh/
 [exa]: https://exa.ai/
+[e2b]: https://e2b.dev/
 [mermaid]: https://mermaid.js.org/
 [pinecone]: https://www.pinecone.io/
 [redis]: https://redis.io/
