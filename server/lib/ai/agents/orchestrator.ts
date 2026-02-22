@@ -70,7 +70,7 @@ export const orchestratorAgent = ({
       const task = await createTask(stream, {
         taskId,
         title: 'Thinking',
-        status: 'pending',
+        status: 'in_progress',
       });
       taskMap.set(context.event.event_ts, task);
       return {};
