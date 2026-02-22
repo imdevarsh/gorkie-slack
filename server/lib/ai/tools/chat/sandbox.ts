@@ -1,7 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
-import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import {
   type PromptResourceLink,
@@ -9,6 +8,7 @@ import {
 } from '~/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
+import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
@@ -51,6 +51,7 @@ export const sandbox = ({
     execute: async ({ task }, { toolCallId }) => {
       const ctxId = getContextId(context);
       let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
+      const toolTaskByCallId = new Map<string, string>();
 
       const taskId = await updateTask(stream, {
         taskId: toolCallId,
@@ -60,22 +61,12 @@ export const sandbox = ({
       });
 
       try {
-        await setStatus(context, {
-          status: 'is delegating a task to the sandbox',
-          loading: true,
-        });
-
         runtime = await resolveSession(context);
         const resourceLinks = await syncAttachments(
           runtime.sandbox,
           context,
           files
         );
-
-        await setStatus(context, {
-          status: 'is working in the sandbox',
-          loading: true,
-        });
 
         const fileRefs = resourceLinks.map(resourceLinkToText).join('\n');
         const promptText = fileRefs
@@ -89,6 +80,41 @@ export const sandbox = ({
           context,
           ctxId,
           stream: eventStream,
+          onToolStart: async ({ toolName, toolCallId, args, status }) => {
+            const toolTask = getToolTaskStart({
+              toolName,
+              args,
+              status,
+            });
+            const toolTaskId = `${taskId}:${toolCallId}`;
+            toolTaskByCallId.set(toolCallId, toolTaskId);
+
+            await createTask(stream, {
+              taskId: toolTaskId,
+              title: toolTask.title,
+              details: toolTask.details,
+              status: 'in_progress',
+            });
+          },
+          onToolEnd: async ({ toolName, toolCallId, isError, result }) => {
+            const toolTaskId = toolTaskByCallId.get(toolCallId);
+            if (!toolTaskId) {
+              return;
+            }
+            toolTaskByCallId.delete(toolCallId);
+
+            const toolResult = getToolTaskEnd({
+              toolName,
+              result,
+              isError,
+            });
+
+            await finishTask(stream, {
+              status: isError ? 'error' : 'complete',
+              taskId: toolTaskId,
+              output: toolResult.output,
+            });
+          },
         });
 
         try {

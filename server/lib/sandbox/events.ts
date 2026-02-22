@@ -1,4 +1,3 @@
-import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { showFileInputSchema } from '~/lib/validators/sandbox';
 import type { SlackMessageContext } from '~/types';
@@ -39,41 +38,44 @@ export function subscribeEvents(params: {
   context: SlackMessageContext;
   ctxId: string;
   stream: unknown[];
+  onToolStart?: (input: {
+    args: unknown;
+    status?: string;
+    toolCallId: string;
+    toolName: string;
+  }) => void | Promise<void>;
+  onToolEnd?: (input: {
+    isError: boolean;
+    result: unknown;
+    toolCallId: string;
+    toolName: string;
+  }) => void | Promise<void>;
 }): () => void {
-  const { client, runtime, context, ctxId, stream } = params;
-  let lastStatus: string | null = null;
+  const { client, runtime, context, ctxId, stream, onToolStart, onToolEnd } =
+    params;
 
   return client.onEvent((event) => {
     try {
       stream.push(event);
 
       if (event.type === 'tool_execution_start') {
-        const { toolName, args } = event as Extract<
+        const { toolName, args, toolCallId } = event as Extract<
           AgentEvent,
           { type: 'tool_execution_start' }
         >;
         logger.info({ ctxId, tool: toolName, args }, '[subagent] Tool started');
 
         const rawStatus = args?.status;
-        if (typeof rawStatus === 'string' && rawStatus.trim().length > 0) {
-          const nextStatus = rawStatus.trim().slice(0, 49);
-          if (nextStatus !== lastStatus) {
-            lastStatus = nextStatus;
-            setStatus(context, { status: nextStatus, loading: true }).catch(
-              (error: unknown) => {
-                logger.debug(
-                  { error, ctxId },
-                  '[subagent] Status update skipped'
-                );
-              }
-            );
-          }
-        }
+        const status =
+          typeof rawStatus === 'string' && rawStatus.trim().length > 0
+            ? rawStatus.trim().slice(0, 49)
+            : undefined;
+        void onToolStart?.({ toolName, toolCallId, args, status });
         return;
       }
 
       if (event.type === 'tool_execution_end') {
-        const { toolName, result, isError } = event as Extract<
+        const { toolName, result, isError, toolCallId } = event as Extract<
           AgentEvent,
           { type: 'tool_execution_end' }
         >;
@@ -81,6 +83,7 @@ export function subscribeEvents(params: {
           { ctxId, tool: toolName, isError, result },
           '[subagent] Tool completed'
         );
+        void onToolEnd?.({ toolName, toolCallId, isError, result });
 
         if (toolName === 'showFile') {
           handleShowFileTool({ result, runtime, context, ctxId });
