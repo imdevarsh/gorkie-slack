@@ -2,7 +2,8 @@ import { setStatus } from '~/lib/ai/utils/status';
 import logger from '~/lib/logger';
 import { showFileInputSchema } from '~/lib/validators/sandbox';
 import type { SlackMessageContext } from '~/types';
-import type { PiEvent, PiRpcClient } from './runtime';
+import type { AgentEvent } from '~/types/sandbox/rpc';
+import type { PiRpcClient } from './rpc';
 import type { ResolvedSandboxSession } from './session';
 import { showFile } from './show-file';
 
@@ -48,7 +49,7 @@ export function subscribeEvents(params: {
 
       if (event.type === 'tool_execution_start') {
         const { toolName, args } = event as Extract<
-          PiEvent,
+          AgentEvent,
           { type: 'tool_execution_start' }
         >;
         logger.info({ ctxId, tool: toolName, args }, '[subagent] Tool started');
@@ -73,7 +74,7 @@ export function subscribeEvents(params: {
 
       if (event.type === 'tool_execution_end') {
         const { toolName, result, isError } = event as Extract<
-          PiEvent,
+          AgentEvent,
           { type: 'tool_execution_end' }
         >;
         logger[isError ? 'warn' : 'info'](
@@ -98,12 +99,12 @@ export function getResponse(stream: unknown[]): string | undefined {
   const chunks: string[] = [];
 
   for (const item of stream) {
-    const event = item as PiEvent;
+    const event = item as AgentEvent;
     if (event.type !== 'message_update') {
       continue;
     }
 
-    const msgEvent = (event as Extract<PiEvent, { type: 'message_update' }>)
+    const msgEvent = (event as Extract<AgentEvent, { type: 'message_update' }>)
       .assistantMessageEvent;
     if (msgEvent.type === 'text_delta' && typeof msgEvent.delta === 'string') {
       chunks.push(msgEvent.delta);

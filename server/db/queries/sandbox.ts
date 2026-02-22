@@ -55,9 +55,7 @@ export async function updateStatus(
 export async function markActivity(threadId: string): Promise<void> {
   await db
     .update(sandboxSessions)
-    .set({
-      updatedAt: new Date(),
-    })
+    .set({ updatedAt: new Date() })
     .where(eq(sandboxSessions.threadId, threadId));
 }
 

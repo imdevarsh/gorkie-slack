@@ -14,7 +14,7 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { configureAgent } from './config';
-import { boot, type PiRpcClient } from './runtime';
+import { boot, type PiRpcClient } from './rpc';
 import { createSnapshot, SANDBOX_SNAPSHOT } from './snapshot';
 
 const daytona = new Daytona({
@@ -26,7 +26,6 @@ const daytona = new Daytona({
 export interface ResolvedSandboxSession {
   client: PiRpcClient;
   sandbox: Sandbox;
-  sessionId: string;
 }
 
 class SandboxNotFoundError extends Error {}
@@ -35,12 +34,10 @@ function isNotFoundError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
   }
-
   const message = error.message.toLowerCase();
   if (message.includes('not found') || message.includes('404')) {
     return true;
   }
-
   const status = (error as { status?: number; statusCode?: number }).status;
   const statusCode = (error as { status?: number; statusCode?: number })
     .statusCode;
@@ -83,20 +80,21 @@ async function createSandbox(
 
     await setStatus(context, { status: 'is starting agent', loading: true });
     const client = await boot(sandbox);
+    const state = await client.getState();
 
     await upsert({
       threadId,
       sandboxId: sandbox.id,
-      sessionId: sandbox.id,
+      sessionId: state.sessionId,
       status: 'active',
     });
 
     logger.info(
-      { threadId, sandboxId: sandbox.id },
+      { threadId, sandboxId: sandbox.id, sessionId: state.sessionId },
       '[sandbox] Created sandbox session'
     );
 
-    return { client, sandbox, sessionId: sandbox.id };
+    return { client, sandbox };
   } catch (error) {
     await sandbox.stop().catch((stopError: unknown) => {
       logger.warn(
@@ -147,7 +145,6 @@ export async function resolveSession(
   context: SlackMessageContext
 ): Promise<ResolvedSandboxSession> {
   const threadId = getContextId(context);
-
   const existing = await getByThread(threadId);
 
   if (!existing) {
@@ -166,20 +163,27 @@ export async function resolveSession(
       }
       throw error;
     });
+
     if (!sandbox) {
       return createSandbox(context, threadId);
     }
 
-    const client = await boot(sandbox);
+    const client = await boot(sandbox, existing.sessionId);
+    const state = await client.getState();
+
+    logger.info(
+      { threadId, sessionId: existing.sessionId },
+      '[sandbox] Resumed pi session'
+    );
 
     await updateRuntime(threadId, {
       sandboxId: sandbox.id,
-      sessionId: sandbox.id,
+      sessionId: state.sessionId,
       status: 'active',
     });
     await markActivity(threadId);
 
-    return { client, sandbox, sessionId: sandbox.id };
+    return { client, sandbox };
   } catch (error) {
     await updateStatus(threadId, 'error');
     throw error;

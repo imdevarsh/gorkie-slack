@@ -96,7 +96,9 @@ export const sandbox = ({
         });
 
         try {
-          await runtime.client.sendPrompt(promptText);
+          const idlePromise = runtime.client.waitForIdle();
+          await runtime.client.prompt(promptText);
+          await idlePromise;
         } finally {
           unsubscribe();
         }
