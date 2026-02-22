@@ -10,8 +10,8 @@ export const sandbox = {
     healthMs: 60_000,
   },
   rpc: {
-    operationTimeoutMs: 60_000,
-    startupTimeoutMs: 20_000,
+    operationTimeoutMs: 6 * 60_000,
+    startupTimeoutMs: 30_000,
   },
   toolOutput: {
     detailsMaxChars: 180,
