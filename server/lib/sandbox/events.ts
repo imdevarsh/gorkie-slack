@@ -2,6 +2,7 @@ import logger from '~/lib/logger';
 import { showFileInputSchema } from '~/lib/validators/sandbox';
 import type { SlackMessageContext } from '~/types';
 import type { AgentEvent } from '~/types/sandbox/rpc';
+import { nonEmptyTrimString } from '~/utils/text';
 import type { PiRpcClient } from './rpc';
 import type { ResolvedSandboxSession } from './session';
 import { showFile } from './show-file';
@@ -65,11 +66,7 @@ export function subscribeEvents(params: {
         >;
         logger.info({ ctxId, tool: toolName, args }, '[subagent] Tool started');
 
-        const rawStatus = args?.status;
-        const status =
-          typeof rawStatus === 'string' && rawStatus.trim().length > 0
-            ? rawStatus.trim().slice(0, 49)
-            : undefined;
+        const status = nonEmptyTrimString(args?.status)?.slice(0, 49);
         void onToolStart?.({ toolName, toolCallId, args, status });
         return;
       }

@@ -173,7 +173,7 @@ export async function resolveSession(
 
     logger.info(
       { threadId, sessionId: existing.sessionId },
-      '[sandbox] Resumed pi session'
+      '[sandbox] Resumed session'
     );
 
     await updateRuntime(threadId, {
@@ -188,21 +188,4 @@ export async function resolveSession(
     await updateStatus(threadId, 'error');
     throw error;
   }
-}
-
-export async function stopSandbox(context: SlackMessageContext): Promise<void> {
-  const threadId = getContextId(context);
-  const existing = await getByThread(threadId);
-  if (existing) {
-    const sandbox = await daytona.get(existing.sandboxId).catch(() => null);
-    if (sandbox?.state === 'started') {
-      await sandbox.stop().catch((error: unknown) => {
-        logger.warn(
-          { error, threadId, sandboxId: existing.sandboxId },
-          '[sandbox] Failed to stop sandbox'
-        );
-      });
-    }
-  }
-  await updateStatus(threadId, 'paused');
 }

@@ -1,3 +1,5 @@
+import { clampNormalizedText, nonEmptyTrimString } from '~/utils/text';
+
 interface ToolStartInput {
   args: unknown;
   status?: string;
@@ -5,6 +7,7 @@ interface ToolStartInput {
 }
 
 interface ToolEndInput {
+  args?: unknown;
   isError: boolean;
   result: unknown;
   toolName: string;
@@ -22,14 +25,6 @@ interface ToolTaskEnd {
 const MAX_DETAILS_LENGTH = 180;
 const MAX_OUTPUT_LENGTH = 260;
 
-function clampText(text: string, maxLength: number): string {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-  return `${normalized.slice(0, maxLength - 1)}...`;
-}
-
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -38,25 +33,37 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function asString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim().length > 0
-    ? value.trim()
-    : undefined;
+  return nonEmptyTrimString(value);
+}
+
+function getArg(args: unknown, key: string, fallback: string): string {
+  return asString(asRecord(args)?.[key]) ?? fallback;
+}
+
+function formatToolDetails(base: string, status?: string): string {
+  if (!status) {
+    return base;
+  }
+  return clampNormalizedText(`${status}: ${base}`, MAX_DETAILS_LENGTH);
+}
+
+function resolveTitle(toolName: string, status?: string): string {
+  return status ? clampNormalizedText(status, 60) : toolName;
 }
 
 function extractTextResult(result: unknown): string | undefined {
-  const record = asRecord(result);
-  const content = record?.content;
+  const content = asRecord(result)?.content;
   if (!Array.isArray(content)) {
     return undefined;
   }
 
   const chunks: string[] = [];
   for (const item of content) {
-    const contentPart = asRecord(item);
-    if (contentPart?.type !== 'text') {
+    const part = asRecord(item);
+    if (part?.type !== 'text') {
       continue;
     }
-    const text = asString(contentPart.text);
+    const text = asString(part.text);
     if (text) {
       chunks.push(text);
     }
@@ -66,139 +73,79 @@ function extractTextResult(result: unknown): string | undefined {
   return joined.length > 0 ? joined : undefined;
 }
 
-function withStatusDetails(base: string, status?: string): string {
-  if (!status) {
-    return base;
-  }
-  return clampText(`${status}: ${base}`, MAX_DETAILS_LENGTH);
-}
-
-function resolveTitle(toolName: string, status?: string): string {
-  return status ? clampText(status, 60) : toolName;
-}
-
-function handleBashTool(input: ToolStartInput): ToolTaskStart {
-  const command = asString(asRecord(input.args)?.command) ?? 'running command';
-  return {
-    title: resolveTitle('bash', input.status),
-    details: withStatusDetails(`$ ${command}`, input.status),
-  };
-}
-
-function handleReadTool(input: ToolStartInput): ToolTaskStart {
-  const path = asString(asRecord(input.args)?.path) ?? 'file';
-  return {
-    title: resolveTitle('read', input.status),
-    details: withStatusDetails(`Reading ${path}`, input.status),
-  };
-}
-
-function handleWriteTool(input: ToolStartInput): ToolTaskStart {
-  const path = asString(asRecord(input.args)?.path) ?? 'file';
-  return {
-    title: resolveTitle('write', input.status),
-    details: withStatusDetails(`Writing ${path}`, input.status),
-  };
-}
-
-function handleEditTool(input: ToolStartInput): ToolTaskStart {
-  const path = asString(asRecord(input.args)?.path) ?? 'file';
-  return {
-    title: resolveTitle('edit', input.status),
-    details: withStatusDetails(`Editing ${path}`, input.status),
-  };
-}
-
-function handleGrepTool(input: ToolStartInput): ToolTaskStart {
-  const args = asRecord(input.args);
-  const pattern = asString(args?.pattern) ?? '<pattern>';
-  const path = asString(args?.path) ?? '.';
-  return {
-    title: resolveTitle('grep', input.status),
-    details: withStatusDetails(`Searching "${pattern}" in ${path}`, input.status),
-  };
-}
-
-function handleFindTool(input: ToolStartInput): ToolTaskStart {
-  const args = asRecord(input.args);
-  const pattern = asString(args?.pattern) ?? '<pattern>';
-  const path = asString(args?.path) ?? '.';
-  return {
-    title: resolveTitle('find', input.status),
-    details: withStatusDetails(`Finding "${pattern}" in ${path}`, input.status),
-  };
-}
-
-function handleLsTool(input: ToolStartInput): ToolTaskStart {
-  const path = asString(asRecord(input.args)?.path) ?? '.';
-  return {
-    title: resolveTitle('ls', input.status),
-    details: withStatusDetails(`Listing ${path}`, input.status),
-  };
-}
-
-function handleShowFileTool(input: ToolStartInput): ToolTaskStart {
-  const path = asString(asRecord(input.args)?.path) ?? 'file';
-  return {
-    title: resolveTitle('showFile', input.status),
-    details: withStatusDetails(`Uploading ${path}`, input.status),
-  };
-}
-
-function defaultToolStart(input: ToolStartInput): ToolTaskStart {
-  return {
-    title: resolveTitle(input.toolName, input.status),
-    details: withStatusDetails(`Running ${input.toolName}`, input.status),
-  };
-}
-
-function defaultToolEnd(input: ToolEndInput): ToolTaskEnd {
-  const text = extractTextResult(input.result);
-  if (text) {
-    return { output: clampText(text, MAX_OUTPUT_LENGTH) };
-  }
-  return {
-    output: input.isError ? 'Tool failed' : 'Tool completed',
-  };
-}
-
-function handleShowFileEnd(input: ToolEndInput): ToolTaskEnd {
-  const details = asRecord(input.result)?.details;
-  const path = asString(asRecord(details)?.path);
-  if (path) {
-    return {
-      output: clampText(`Uploaded ${path}`, MAX_OUTPUT_LENGTH),
-    };
-  }
-  return defaultToolEnd(input);
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export function getToolTaskStart(input: ToolStartInput): ToolTaskStart {
-  switch (input.toolName) {
-    case 'bash':
-      return handleBashTool(input);
-    case 'read':
-      return handleReadTool(input);
-    case 'write':
-      return handleWriteTool(input);
-    case 'edit':
-      return handleEditTool(input);
-    case 'grep':
-      return handleGrepTool(input);
-    case 'find':
-      return handleFindTool(input);
-    case 'ls':
-      return handleLsTool(input);
-    case 'showFile':
-      return handleShowFileTool(input);
-    default:
-      return defaultToolStart(input);
-  }
+  const { toolName, args, status } = input;
+
+  const details = (() => {
+    switch (toolName) {
+      case 'bash':
+        return formatToolDetails(
+          `$ ${getArg(args, 'command', 'running command')}`,
+          status
+        );
+      case 'read':
+        return formatToolDetails(`Reading ${getArg(args, 'path', 'file')}`, status);
+      case 'write':
+        return formatToolDetails(`Writing ${getArg(args, 'path', 'file')}`, status);
+      case 'edit':
+        return formatToolDetails(`Editing ${getArg(args, 'path', 'file')}`, status);
+      case 'grep': {
+        const argObj = asRecord(args);
+        const pattern = asString(argObj?.pattern) ?? '<pattern>';
+        const path = asString(argObj?.path) ?? '.';
+        return formatToolDetails(`Searching "${pattern}" in ${path}`, status);
+      }
+      case 'find': {
+        const argObj = asRecord(args);
+        const pattern = asString(argObj?.pattern) ?? '<pattern>';
+        const path = asString(argObj?.path) ?? '.';
+        return formatToolDetails(`Finding "${pattern}" in ${path}`, status);
+      }
+      case 'ls':
+        return formatToolDetails(`Listing ${getArg(args, 'path', '.')}`, status);
+      case 'showFile':
+        return formatToolDetails(`Uploading ${getArg(args, 'path', 'file')}`, status);
+      default:
+        return formatToolDetails(`Running ${toolName}`, status);
+    }
+  })();
+
+  return {
+    title: resolveTitle(toolName, status),
+    details,
+  };
 }
 
 export function getToolTaskEnd(input: ToolEndInput): ToolTaskEnd {
-  if (input.toolName === 'showFile') {
-    return handleShowFileEnd(input);
+  const { toolName, args, result, isError } = input;
+
+  if (toolName === 'bash') {
+    const command = getArg(args, 'command', '(unknown command)');
+    const rawOutput = extractTextResult(result) ?? '(no output)';
+    const dedupedOutput = rawOutput
+      .replace(new RegExp(`^bash\\$\\s*${escapeRegExp(command)}\\s*\\n?`), '')
+      .trim();
+    return { output: dedupedOutput.length > 0 ? dedupedOutput : '(no output)' };
   }
-  return defaultToolEnd(input);
+
+  if (toolName === 'showFile') {
+    const details = asRecord(result)?.details;
+    const path = asString(asRecord(details)?.path);
+    if (path) {
+      return {
+        output: clampNormalizedText(`Uploaded ${path}`, MAX_OUTPUT_LENGTH),
+      };
+    }
+  }
+
+  const text = extractTextResult(result);
+  if (text) {
+    return { output: clampNormalizedText(text, MAX_OUTPUT_LENGTH) };
+  }
+
+  return { output: isError ? 'Tool failed' : 'Tool completed' };
 }

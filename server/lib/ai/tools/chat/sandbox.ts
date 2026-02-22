@@ -14,6 +14,11 @@ import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
 
+interface ToolRunState {
+  args: unknown;
+  taskId: string;
+}
+
 function resourceLinkToText(link: PromptResourceLink): string {
   const parts = [`File: ${link.name}`, `URI: ${link.uri}`];
   if (link.mimeType) {
@@ -51,7 +56,7 @@ export const sandbox = ({
     execute: async ({ task }, { toolCallId }) => {
       const ctxId = getContextId(context);
       let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
-      const toolTaskByCallId = new Map<string, string>();
+      const toolRuns = new Map<string, ToolRunState>();
 
       const taskId = await updateTask(stream, {
         taskId: toolCallId,
@@ -87,7 +92,10 @@ export const sandbox = ({
               status,
             });
             const toolTaskId = `${taskId}:${toolCallId}`;
-            toolTaskByCallId.set(toolCallId, toolTaskId);
+            toolRuns.set(toolCallId, {
+              taskId: toolTaskId,
+              args,
+            });
 
             await createTask(stream, {
               taskId: toolTaskId,
@@ -97,30 +105,32 @@ export const sandbox = ({
             });
           },
           onToolEnd: async ({ toolName, toolCallId, isError, result }) => {
-            const toolTaskId = toolTaskByCallId.get(toolCallId);
-            if (!toolTaskId) {
+            const toolRun = toolRuns.get(toolCallId);
+            if (!toolRun) {
               return;
             }
-            toolTaskByCallId.delete(toolCallId);
+            toolRuns.delete(toolCallId);
 
             const toolResult = getToolTaskEnd({
               toolName,
+              args: toolRun.args,
               result,
               isError,
             });
 
             await finishTask(stream, {
               status: isError ? 'error' : 'complete',
-              taskId: toolTaskId,
+              taskId: toolRun.taskId,
               output: toolResult.output,
             });
           },
         });
 
         try {
-          const idlePromise = runtime.client.waitForIdle();
+          // Start waiting before prompting so we don't miss a fast `agent_end` event.
+          const idle = runtime.client.waitForIdle();
           await runtime.client.prompt(promptText);
-          await idlePromise;
+          await idle;
         } finally {
           unsubscribe();
         }
