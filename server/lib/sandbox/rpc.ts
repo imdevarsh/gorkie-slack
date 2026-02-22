@@ -1,4 +1,5 @@
 import type { PtyHandle, Sandbox } from '@daytonaio/sdk';
+import type { ImageContent } from '@mariozechner/pi-ai';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
@@ -8,6 +9,7 @@ import type {
   CompactionResult,
   PendingRequest,
   RpcCommand,
+  RpcSlashCommand,
   RpcCommandBody,
   RpcEventListener,
   RpcResponse,
@@ -80,16 +82,23 @@ export class PiRpcClient {
     };
   }
 
-  async prompt(message: string): Promise<void> {
-    await this.send({ type: 'prompt', message });
+  async prompt(
+    message: string,
+    images?: ImageContent[]
+  ): Promise<void> {
+    await this.send({
+      type: 'prompt',
+      message,
+      images,
+    });
   }
 
-  async steer(message: string): Promise<void> {
-    await this.send({ type: 'steer', message });
+  async steer(message: string, images?: ImageContent[]): Promise<void> {
+    await this.send({ type: 'steer', message, images });
   }
 
-  async followUp(message: string): Promise<void> {
-    await this.send({ type: 'follow_up', message });
+  async followUp(message: string, images?: ImageContent[]): Promise<void> {
+    await this.send({ type: 'follow_up', message, images });
   }
 
   async abort(): Promise<void> {
@@ -114,8 +123,20 @@ export class PiRpcClient {
     return this.getData(res);
   }
 
+  async getAvailableModels(): Promise<{
+    models: { provider: string; id: string; contextWindow?: number }[];
+  }> {
+    const res = await this.send({ type: 'get_available_models' });
+    return this.getData(res);
+  }
+
   async setThinkingLevel(level: ThinkingLevel): Promise<void> {
     await this.send({ type: 'set_thinking_level', level });
+  }
+
+  async cycleThinkingLevel(): Promise<{ level: ThinkingLevel } | null> {
+    const res = await this.send({ type: 'cycle_thinking_level' });
+    return this.getData(res);
   }
 
   async setSteeringMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
@@ -157,6 +178,16 @@ export class PiRpcClient {
     return this.getData(res);
   }
 
+  async getSessionStats(): Promise<unknown> {
+    const res = await this.send({ type: 'get_session_stats' });
+    return this.getData(res);
+  }
+
+  async exportHtml(outputPath?: string): Promise<{ path: string }> {
+    const res = await this.send({ type: 'export_html', outputPath });
+    return this.getData(res);
+  }
+
   async getLastAssistantText(): Promise<string | null> {
     const res = await this.send({ type: 'get_last_assistant_text' });
     return this.getData<{ text: string | null }>(res).text;
@@ -165,6 +196,11 @@ export class PiRpcClient {
   async getMessages(): Promise<AgentMessage[]> {
     const res = await this.send({ type: 'get_messages' });
     return this.getData<{ messages: AgentMessage[] }>(res).messages;
+  }
+
+  async getCommands(): Promise<RpcSlashCommand[]> {
+    const res = await this.send({ type: 'get_commands' });
+    return this.getData<{ commands: RpcSlashCommand[] }>(res).commands;
   }
 
   async setSessionName(name: string): Promise<void> {
@@ -236,10 +272,11 @@ export class PiRpcClient {
 
   async promptAndWait(
     message: string,
+    images?: ImageContent[],
     timeout = AGENT_EVENT_TIMEOUT_MS
   ): Promise<AgentEvent[]> {
     const eventsPromise = this.collectEvents(timeout);
-    await this.prompt(message);
+    await this.prompt(message, images);
     return eventsPromise;
   }
 
