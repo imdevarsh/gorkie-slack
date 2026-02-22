@@ -17,6 +17,8 @@ import type {
 
 const RPC_RESPONSE_TIMEOUT_MS = 30_000;
 const AGENT_EVENT_TIMEOUT_MS = 60_000;
+const STARTUP_READY_TIMEOUT_MS = 20_000;
+const STARTUP_RETRY_DELAY_MS = 200;
 
 export class PiRpcClient {
   private buffer = '';
@@ -169,6 +171,33 @@ export class PiRpcClient {
     await this.send({ type: 'set_session_name', name });
   }
 
+  async waitUntilReady(timeoutMs = STARTUP_READY_TIMEOUT_MS): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    let lastError: Error | null = null;
+
+    while (Date.now() < deadline) {
+      const remaining = deadline - Date.now();
+      const requestTimeoutMs = Math.min(2000, remaining);
+
+      try {
+        await this.send({ type: 'get_state' }, requestTimeoutMs);
+        return;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (Date.now() >= deadline) {
+          break;
+        }
+        await new Promise((resolve) =>
+          setTimeout(resolve, STARTUP_RETRY_DELAY_MS)
+        );
+      }
+    }
+
+    throw new Error(
+      `[pi-rpc] Timed out waiting for Pi RPC startup (${timeoutMs}ms): ${lastError?.message ?? 'unknown error'}`
+    );
+  }
+
   waitForIdle(timeout = AGENT_EVENT_TIMEOUT_MS): Promise<void> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -222,7 +251,10 @@ export class PiRpcClient {
     await this.pty.disconnect().catch(() => null);
   }
 
-  private send(payload: RpcCommandBody): Promise<RpcResponse> {
+  private send(
+    payload: RpcCommandBody,
+    timeoutMs = RPC_RESPONSE_TIMEOUT_MS
+  ): Promise<RpcResponse> {
     const id = `req_${++this.requestId}`;
     const command = { ...payload, id } as RpcCommand;
 
@@ -231,10 +263,10 @@ export class PiRpcClient {
         this.pending.delete(id);
         reject(
           new Error(
-            `[pi-rpc] Timeout waiting for response to "${payload.type}" (${RPC_RESPONSE_TIMEOUT_MS}ms)`
+            `[pi-rpc] Timeout waiting for response to "${payload.type}" (${timeoutMs}ms)`
           )
         );
-      }, RPC_RESPONSE_TIMEOUT_MS);
+      }, timeoutMs);
 
       this.pending.set(id, {
         resolve: (res) => {
@@ -301,6 +333,7 @@ export async function boot(
     ? `pi --mode rpc --session ${sessionId}`
     : 'pi --mode rpc';
   await pty.sendInput(`${command}\n`);
+  await client.waitUntilReady();
 
   logger.info({ ptySessionId, sessionId }, '[pi-rpc] Pi process started');
   return client;
