@@ -36,7 +36,7 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
         Type.Object({
           status: Type.String({
             description:
-              "Required brief operation status in present-progressive form, e.g. 'is fetching data', 'is reading files'.",
+              "Required brief operation status in present-progressive form, e.g. 'fetching data', 'reading files'.",
           }),
         }),
       ]),
@@ -60,7 +60,7 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
       ),
       status: Type.String({
         description:
-          "Required brief operation status in present-progressive form, e.g. 'is uploading file'.",
+          "Required brief operation status in present-progressive form, e.g. 'uploading file'.",
       }),
     }),
     execute(_toolCallId, { path, title }) {
