@@ -81,14 +81,22 @@ export const searchSlack = ({
         if (isMissingActionToken) {
           const pingMessage =
             'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.';
-          await finishTask(stream, task, 'error', pingMessage);
+          await finishTask(stream, {
+            status: 'error',
+            taskId: task,
+            output: pingMessage,
+          });
           return {
             success: false,
             error: pingMessage,
           };
         }
 
-        await finishTask(stream, task, 'error', `Search failed: ${error}`);
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: `Search failed: ${error}`,
+        });
         return {
           success: false,
           error: `The search failed with the error ${error}.`,
@@ -99,12 +107,11 @@ export const searchSlack = ({
         { ctxId, query, count: res.results.messages.length },
         'Search Slack complete'
       );
-      await finishTask(
-        stream,
-        task,
-        'complete',
-        `${(res.results?.messages ?? []).length} result(s)`
-      );
+      await finishTask(stream, {
+        status: 'complete',
+        taskId: task,
+        output: `${(res.results?.messages ?? []).length} result(s)`,
+      });
       return {
         messages: res.results.messages,
       };

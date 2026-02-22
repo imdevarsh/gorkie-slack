@@ -89,12 +89,11 @@ export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[subagent] grep files'
         );
 
-        await finishTask(
-          stream,
-          task,
-          output.success ? 'complete' : 'error',
-          `${output.count} match(es)`
-        );
+        await finishTask(stream, {
+          status: output.success ? 'complete' : 'error',
+          taskId: task,
+          output: `${output.count} match(es)`,
+        });
         return output;
       } catch (error) {
         logger.warn(
@@ -113,7 +112,11 @@ export const grepFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[sandbox-tool] Grep search failed'
         );
 
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

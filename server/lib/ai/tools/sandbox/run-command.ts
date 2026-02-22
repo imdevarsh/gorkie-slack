@@ -1,3 +1,4 @@
+import { CommandExitError, type CommandResult } from '@e2b/code-interpreter';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { sandbox as config } from '~/config';
@@ -75,134 +76,92 @@ export const bash = ({ context, sandbox, stream }: SandboxToolDeps) =>
         '[subagent] Tool started'
       );
 
+      const handle = await sandbox.commands.run(command, {
+        background: true,
+        cwd: resolvedCwd,
+        timeoutMs: resolvedTimeout,
+      });
+
+      let result: CommandResult;
       try {
-        const result = await sandbox.commands.run(command, {
-          cwd: resolvedCwd,
-          timeoutMs: resolvedTimeout,
-        });
-
-        const durationMs = Date.now() - startedAt;
-        const stdout = truncate(result.stdout, config.maxToolOutput);
-        const stderr = truncate(result.stderr, config.maxToolOutput);
-
-        logger.info(
-          {
-            ctxId,
-            tool: 'bash',
-            status: 'completed',
-            input,
-            output: {
-              metadata: {
-                description,
-                exit: result.exitCode,
-                durationMs,
-                output: stdout,
-                truncated: result.stdout.length > config.maxToolOutput,
-              },
-              output: stdout,
-              stderr,
-            },
-          },
-          '[subagent] Tool update'
-        );
-
-        const output = {
-          success: result.exitCode === 0,
-          exitCode: result.exitCode,
-          stdout,
-          stderr,
-          durationMs,
-        };
-        const content =
-          result.exitCode === 0
-            ? // biome-ignore lint/style/noNestedTernary: This local mapping is concise and readable.
-              stdout
-              ? `output:\n${truncate(stdout, 300)}`
-              : ''
-            : stderr
-              ? `error:\n${truncate(stderr, 300)}`
-              : '';
-        const outputText = [content, `*Exit code: ${result.exitCode}*`]
-          .filter((section) => section.length > 0)
-          .join('\n\n');
-        await finishTask(
-          stream,
-          task,
-          output.success ? 'complete' : 'error',
-          outputText
-        );
-        return output;
+        result = await handle.wait();
       } catch (error) {
-        const durationMs = Date.now() - startedAt;
-
-        if (
-          typeof error === 'object' &&
-          error !== null &&
-          'exitCode' in error &&
-          'stdout' in error &&
-          'stderr' in error
-        ) {
-          const commandError = error as {
-            exitCode: number;
-            stdout: string;
-            stderr: string;
-          };
-          const stdout = truncate(commandError.stdout, config.maxToolOutput);
-          const stderr = truncate(commandError.stderr, config.maxToolOutput);
-
-          logger.warn(
+        if (!(error instanceof CommandExitError)) {
+          const durationMs = Date.now() - startedAt;
+          logger.error(
             {
+              ...toLogError(error),
               ctxId,
               tool: 'bash',
-              status: 'completed',
-              input,
-              output: {
-                metadata: {
-                  description,
-                  exit: commandError.exitCode,
-                  durationMs,
-                  output: stdout,
-                  truncated: commandError.stdout.length > config.maxToolOutput,
-                },
-                output: stdout,
-                stderr,
-              },
+              cwd: resolvedCwd,
+              timeoutMs: resolvedTimeout,
+              durationMs,
             },
-            '[subagent] Tool update'
+            '[sandbox-tool] Command failed unexpectedly'
           );
-
-          const errText = `${(commandError.stderr && `stderr:\n${truncate(commandError.stderr, 300)}\n\n*Exit code: ${commandError.exitCode}*`) || 'stderr: <empty>'}`;
-          await finishTask(stream, task, 'error', errText);
+          await finishTask(stream, {
+            status: 'error',
+            taskId: task,
+            output: errorMessage(error),
+          });
           return {
             success: false,
-            exitCode: commandError.exitCode,
-            command: commandPreview,
-            cwd: resolvedCwd,
-            timeoutMs: resolvedTimeout,
-            stdout,
-            stderr,
+            error: errorMessage(error),
             durationMs,
           };
         }
-
-        logger.error(
-          {
-            ...toLogError(error),
-            ctxId,
-            tool: 'bash',
-            cwd: resolvedCwd,
-            timeoutMs: resolvedTimeout,
-            durationMs,
-          },
-          '[sandbox-tool] Command failed unexpectedly'
-        );
-
-        await finishTask(stream, task, 'error', errorMessage(error));
-        return {
-          success: false,
-          error: errorMessage(error),
-          durationMs,
-        };
+        result = error;
       }
+
+      const durationMs = Date.now() - startedAt;
+      const stdout = truncate(result.stdout, config.maxToolOutput);
+      const stderr = truncate(result.stderr, config.maxToolOutput);
+
+      logger.info(
+        {
+          ctxId,
+          tool: 'bash',
+          status: 'completed',
+          input,
+          output: {
+            metadata: {
+              description,
+              exit: result.exitCode,
+              durationMs,
+              output: stdout,
+              truncated: result.stdout.length > config.maxToolOutput,
+            },
+            output: stdout,
+            stderr,
+          },
+        },
+        '[subagent] Tool update'
+      );
+
+      const output = {
+        success: result.exitCode === 0,
+        exitCode: result.exitCode,
+        stdout,
+        stderr,
+        durationMs,
+      };
+      const content =
+        result.exitCode === 0
+          ? // biome-ignore lint/style/noNestedTernary: This local mapping is concise and readable.
+            stdout
+            ? `output:\n${truncate(stdout, 300)}`
+            : ''
+          : stderr
+            ? `error:\n${truncate(stderr, 300)}`
+            : '';
+      const outputText = [content, `*Exit code: ${result.exitCode}*`]
+        .filter((section) => section.length > 0)
+        .join('\n\n');
+      await finishTask(stream, {
+        status: output.success ? 'complete' : 'error',
+        taskId: task,
+        output: outputText,
+      });
+      return output;
     },
   });

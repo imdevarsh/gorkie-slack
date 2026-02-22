@@ -65,12 +65,11 @@ export const writeFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[subagent] write file'
         );
 
-        await finishTask(
-          stream,
-          task,
-          'complete',
-          `${bytes} bytes written to ${filePath}`
-        );
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `${bytes} bytes written to ${filePath}`,
+        });
         return output;
       } catch (error) {
         logger.warn(
@@ -88,7 +87,11 @@ export const writeFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           { ...toLogError(error), ctxId, filePath },
           '[sandbox-tool] Failed to write file'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

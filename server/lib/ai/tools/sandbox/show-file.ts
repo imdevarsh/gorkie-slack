@@ -70,7 +70,11 @@ export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
 
       if (!channelId) {
-        await finishTask(stream, task, 'error', 'Missing Slack channel ID');
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: 'Missing Slack channel ID',
+        });
         return {
           success: false,
           error: 'Missing Slack channel ID',
@@ -105,12 +109,11 @@ export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[subagent] show file'
         );
 
-        await finishTask(
-          stream,
-          task,
-          'complete',
-          `Uploaded ${output.filename} (${formatBytes(output.bytes)})`
-        );
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `Uploaded ${output.filename} (${formatBytes(output.bytes)})`,
+        });
         return output;
       } catch (error) {
         logger.warn(
@@ -129,7 +132,11 @@ export const showFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[sandbox-tool] Failed to upload file to Slack'
         );
 
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

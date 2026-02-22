@@ -65,7 +65,11 @@ export const editFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         const current = await sandbox.files.read(filePath);
 
         if (!current.includes(oldText)) {
-          await finishTask(stream, task, 'error', 'oldText not found in file');
+          await finishTask(stream, {
+            status: 'error',
+            taskId: task,
+            output: 'oldText not found in file',
+          });
           return {
             success: false,
             error: 'oldText not found in file',
@@ -95,12 +99,11 @@ export const editFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[subagent] edit file'
         );
 
-        await finishTask(
-          stream,
-          task,
-          'complete',
-          `${output.replacements} replacement(s) in ${filePath}`
-        );
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `${output.replacements} replacement(s) in ${filePath}`,
+        });
         return output;
       } catch (error) {
         logger.warn(
@@ -118,7 +121,11 @@ export const editFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           { ...toLogError(error), ctxId, filePath },
           '[sandbox-tool] Failed to edit file'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

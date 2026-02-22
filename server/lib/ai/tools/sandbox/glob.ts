@@ -93,12 +93,11 @@ export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[subagent] glob files'
         );
 
-        await finishTask(
-          stream,
-          task,
-          output.success ? 'complete' : 'error',
-          `${output.count} file(s) found`
-        );
+        await finishTask(stream, {
+          status: output.success ? 'complete' : 'error',
+          taskId: task,
+          output: `${output.count} file(s) found`,
+        });
         return output;
       } catch (error) {
         logger.warn(
@@ -116,7 +115,11 @@ export const globFiles = ({ context, sandbox, stream }: SandboxToolDeps) =>
           { ...toLogError(error), ctxId, pattern, cwd: baseDir },
           '[sandbox-tool] Glob failed'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

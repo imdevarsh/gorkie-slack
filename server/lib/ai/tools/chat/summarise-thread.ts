@@ -74,7 +74,11 @@ export const summariseThread = ({
         });
 
         if (messages.length === 0) {
-          await finishTask(stream, task, 'error', 'No messages found');
+          await finishTask(stream, {
+            status: 'error',
+            taskId: task,
+            output: 'No messages found',
+          });
           return {
             success: false,
             error: 'No messages found in the thread',
@@ -91,12 +95,11 @@ export const summariseThread = ({
           { ctxId, channelId, threadTs, messageCount: messages.length },
           'Thread summarised successfully'
         );
-        await finishTask(
-          stream,
-          task,
-          'complete',
-          `${messages.length} messages summarised`
-        );
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `${messages.length} messages summarised`,
+        });
         return {
           success: true,
           summary: text,
@@ -107,7 +110,11 @@ export const summariseThread = ({
           { ...toLogError(error), ctxId, channelId, threadTs },
           'Failed to summarise thread'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

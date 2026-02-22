@@ -108,7 +108,11 @@ export const mermaid = ({
           { ctxId, channel: channelId, title },
           'Uploaded Mermaid diagram'
         );
-        await finishTask(stream, task, 'complete', 'Diagram uploaded');
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: 'Diagram uploaded',
+        });
         return {
           success: true,
           content: 'Mermaid diagram uploaded to Slack and sent',
@@ -118,7 +122,11 @@ export const mermaid = ({
           { ...toLogError(error), ctxId, channel: channelId },
           'Failed to create Mermaid diagram'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

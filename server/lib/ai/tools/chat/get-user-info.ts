@@ -46,13 +46,13 @@ export const getUserInfo = ({
           : null;
 
         if (!user) {
-          await finishTask(stream, task, 'error');
+          await finishTask(stream, { status: 'error', taskId: task });
           return {
             success: false,
             error: 'User not found. Use their Slack ID.',
           };
         }
-        await finishTask(stream, task, 'complete');
+        await finishTask(stream, { status: 'complete', taskId: task });
         return {
           success: true,
           data: {
@@ -72,7 +72,7 @@ export const getUserInfo = ({
         };
       } catch (error) {
         logger.error({ ...toLogError(error), ctxId }, 'Error in getUserInfo');
-        await finishTask(stream, task, 'error');
+        await finishTask(stream, { status: 'error', taskId: task });
         return {
           success: false,
           error: 'Failed to fetch Slack user info',

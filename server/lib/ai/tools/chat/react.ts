@@ -63,12 +63,11 @@ export const react = ({
           { ctxId, channel: channelId, messageTs, emojis },
           'Added reactions'
         );
-        await finishTask(
-          stream,
-          task,
-          'complete',
-          `Added: ${emojis.join(', ')}`
-        );
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `Added: ${emojis.join(', ')}`,
+        });
         return {
           success: true,
           content: `Added reactions: ${emojis.join(', ')}`,
@@ -84,7 +83,11 @@ export const react = ({
           },
           'Failed to add Slack reactions'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

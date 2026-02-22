@@ -96,12 +96,11 @@ export const sandbox = ({
           },
           '[sandbox] Sandbox run completed'
         );
-        await finishTask(
-          stream,
+        await finishTask(stream, {
+          status: 'complete',
           taskId,
-          'complete',
-          response.split('\n')[0]?.slice(0, 200) ?? 'Done'
-        );
+          output: response.split('\n')[0]?.slice(0, 200) ?? 'Done',
+        });
         return {
           success: true,
           response,
@@ -118,7 +117,11 @@ export const sandbox = ({
           },
           '[sandbox] Sandbox run failed'
         );
-        await finishTask(stream, taskId, 'error', message.slice(0, 200));
+        await finishTask(stream, {
+          status: 'error',
+          taskId,
+          output: message.slice(0, 200),
+        });
         return {
           success: false,
           error: message,

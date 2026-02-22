@@ -48,7 +48,7 @@ export const skip = ({
           'Skipping reply'
         );
       }
-      await finishTask(stream, task, 'complete');
+      await finishTask(stream, { status: 'complete', taskId: task });
       return {
         success: true,
       };

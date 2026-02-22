@@ -62,12 +62,11 @@ export const readFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
             type: entry.type,
           }));
 
-          await finishTask(
-            stream,
-            task,
-            'complete',
-            `${entries.length} entries`
-          );
+          await finishTask(stream, {
+            status: 'complete',
+            taskId: task,
+            output: `${entries.length} entries`,
+          });
           return {
             success: true,
             path: filePath,
@@ -95,7 +94,11 @@ export const readFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[subagent] read file'
         );
 
-        await finishTask(stream, task, 'complete', `${text.length} chars`);
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `${text.length} chars`,
+        });
         return output;
       } catch (error) {
         logger.warn(
@@ -110,12 +113,11 @@ export const readFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
         );
 
         if (error instanceof NotFoundError) {
-          await finishTask(
-            stream,
-            task,
-            'error',
-            `Path not found: ${filePath}`
-          );
+          await finishTask(stream, {
+            status: 'error',
+            taskId: task,
+            output: `Path not found: ${filePath}`,
+          });
           return {
             success: false,
             error: `Path not found: ${filePath}`,
@@ -127,7 +129,11 @@ export const readFile = ({ context, sandbox, stream }: SandboxToolDeps) =>
           '[sandbox-tool] Failed to read path'
         );
 
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

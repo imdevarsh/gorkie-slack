@@ -78,7 +78,11 @@ export const scheduleReminder = ({
           },
           'Scheduled reminder'
         );
-        await finishTask(stream, task, 'complete', `Scheduled for ${userId}`);
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `Scheduled for ${userId}`,
+        });
         return {
           success: true,
           content: `Scheduled reminder for ${userId} successfully`,
@@ -88,7 +92,11 @@ export const scheduleReminder = ({
           { ...toLogError(error), ctxId, userId },
           'Failed to schedule reminder'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),

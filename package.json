@@ -22,7 +22,6 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.26",
     "@e2b/code-interpreter": "^2.3.3",
-    "@exalabs/ai-sdk": "^1.0.5",
     "@langfuse/otel": "^4.5.1",
     "@langfuse/tracing": "^4.5.1",
     "@neondatabase/serverless": "^1.0.2",
@@ -37,6 +36,7 @@
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.1",
     "e2b": "^2.8.3",
+    "exa-js": "^2.4.0",
     "p-queue": "^9.1.0",
     "pako": "^2.1.0",
     "pino": "^10.2.1",

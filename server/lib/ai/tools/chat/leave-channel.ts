@@ -53,13 +53,17 @@ export const leaveChannel = ({
           { ...toLogError(error), ctxId, channel: context.event.channel },
           'Failed to leave channel'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),
         };
       }
-      await finishTask(stream, task, 'complete');
+      await finishTask(stream, { status: 'complete', taskId: task });
       return {
         success: true,
       };

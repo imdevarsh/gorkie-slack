@@ -43,11 +43,15 @@ export const getWeather = ({
         }
 
         const weatherData: unknown = await response.json();
-        await finishTask(stream, task, 'complete');
+        await finishTask(stream, { status: 'complete', taskId: task });
         return weatherData;
       } catch (error) {
         logger.error({ ...toLogError(error) }, 'Error in getWeather');
-        await finishTask(stream, task, 'error', 'Failed to fetch weather');
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: 'Failed to fetch weather',
+        });
         return {
           success: false,
           error: 'Failed to fetch weather',

@@ -154,12 +154,11 @@ export const reply = ({
           },
           'Sent Slack reply'
         );
-        await finishTask(
-          stream,
-          task,
-          'complete',
-          `Sent ${content.length} message(s)`
-        );
+        await finishTask(stream, {
+          status: 'complete',
+          taskId: task,
+          output: `Sent ${content.length} message(s)`,
+        });
         return {
           success: true,
           content: 'Sent reply to Slack channel',
@@ -169,7 +168,11 @@ export const reply = ({
           { ...toLogError(error), ctxId, channel: channelId, type, offset },
           'Failed to send Slack reply'
         );
-        await finishTask(stream, task, 'error', errorMessage(error));
+        await finishTask(stream, {
+          status: 'error',
+          taskId: task,
+          output: errorMessage(error),
+        });
         return {
           success: false,
           error: errorMessage(error),
