@@ -48,11 +48,6 @@ async function createSandbox(
   context: SlackMessageContext,
   threadId: string
 ): Promise<ResolvedSandboxSession> {
-  await setStatus(context, {
-    status: 'is provisioning a sandbox',
-    loading: true,
-  });
-
   const hasSnapshot = await daytona.snapshot
     .get(SANDBOX_SNAPSHOT)
     .then(() => true)
@@ -78,7 +73,6 @@ async function createSandbox(
     const prompt = systemPrompt({ agent: 'sandbox', context });
     await configureAgent(sandbox, prompt);
 
-    await setStatus(context, { status: 'is starting agent', loading: true });
     const client = await boot(sandbox);
     const state = await client.getState();
 

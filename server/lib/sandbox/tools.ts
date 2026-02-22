@@ -1,4 +1,5 @@
 import { clampNormalizedText, nonEmptyTrimString } from '~/utils/text';
+import { sandbox as config } from '~/config';
 
 interface ToolStartInput {
   args: unknown;
@@ -22,9 +23,6 @@ interface ToolTaskEnd {
   output: string;
 }
 
-const MAX_DETAILS_LENGTH = 180;
-const MAX_OUTPUT_LENGTH = 260;
-
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -44,11 +42,16 @@ function formatToolDetails(base: string, status?: string): string {
   if (!status) {
     return base;
   }
-  return clampNormalizedText(`${status}: ${base}`, MAX_DETAILS_LENGTH);
+  return clampNormalizedText(
+    `${status}: ${base}`,
+    config.toolOutput.detailsMaxChars
+  );
 }
 
 function resolveTitle(toolName: string, status?: string): string {
-  return status ? clampNormalizedText(status, 60) : toolName;
+  return status
+    ? clampNormalizedText(status, config.toolOutput.titleMaxChars)
+    : toolName;
 }
 
 function extractTextResult(result: unknown): string | undefined {
@@ -137,14 +140,19 @@ export function getToolTaskEnd(input: ToolEndInput): ToolTaskEnd {
     const path = asString(asRecord(details)?.path);
     if (path) {
       return {
-        output: clampNormalizedText(`Uploaded ${path}`, MAX_OUTPUT_LENGTH),
+        output: clampNormalizedText(
+          `Uploaded ${path}`,
+          config.toolOutput.outputMaxChars
+        ),
       };
     }
   }
 
   const text = extractTextResult(result);
   if (text) {
-    return { output: clampNormalizedText(text, MAX_OUTPUT_LENGTH) };
+    return {
+      output: clampNormalizedText(text, config.toolOutput.outputMaxChars),
+    };
   }
 
   return { output: isError ? 'Tool failed' : 'Tool completed' };

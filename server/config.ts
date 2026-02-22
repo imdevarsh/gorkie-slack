@@ -9,6 +9,15 @@ export const sandbox = {
     deleteMinutes: 2 * 24 * 60,
     healthMs: 60_000,
   },
+  rpc: {
+    operationTimeoutMs: 60_000,
+    startupTimeoutMs: 20_000,
+  },
+  toolOutput: {
+    detailsMaxChars: 180,
+    titleMaxChars: 60,
+    outputMaxChars: 260,
+  },
   runtime: {
     agentPort: 3000,
     workdir: '/home/daytona',

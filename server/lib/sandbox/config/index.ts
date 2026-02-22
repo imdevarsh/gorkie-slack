@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import type { Sandbox } from '@daytonaio/sdk';
+import { sandbox as config } from '~/config';
 
 export interface SandboxBootstrapFile {
   path: string;
@@ -14,7 +15,7 @@ export async function buildConfig(prompt: string): Promise<{
   paths: string[];
   files: SandboxBootstrapFile[];
 }> {
-  const piDir = '/home/daytona/.pi';
+  const piDir = `${config.runtime.workdir}/.pi`;
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
 
@@ -33,7 +34,7 @@ export async function buildConfig(prompt: string): Promise<{
       { path: `${agentDir}/models.json`, content: models },
       { path: `${agentDir}/auth.json`, content: auth },
       { path: `${extensionsDir}/tools.ts`, content: toolsExtension },
-    ],
+    ],  
   };
 }
 
