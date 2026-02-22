@@ -1,4 +1,6 @@
-import type { Process, Sandbox } from '@daytonaio/sdk';
+import type { PtyHandle, Sandbox } from '@daytonaio/sdk';
+import { sandbox as config } from '~/config';
+import { env } from '~/env';
 import logger from '~/lib/logger';
 import type {
   AgentEvent,
@@ -13,19 +15,18 @@ import type {
   ThinkingLevel,
 } from '~/types/sandbox/rpc';
 
+const RPC_RESPONSE_TIMEOUT_MS = 30_000;
+const AGENT_EVENT_TIMEOUT_MS = 60_000;
+
 export class PiRpcClient {
   private buffer = '';
   private readonly listeners = new Set<RpcEventListener>();
   private readonly pending = new Map<string, PendingRequest>();
   private requestId = 0;
-  private readonly proc: Process;
-  private readonly sessionId: string;
-  private readonly cmdId: string;
+  private readonly pty: PtyHandle;
 
-  constructor(proc: Process, sessionId: string, cmdId: string) {
-    this.proc = proc;
-    this.sessionId = sessionId;
-    this.cmdId = cmdId;
+  constructor(pty: PtyHandle) {
+    this.pty = pty;
   }
 
   handleStdout(chunk: string): void {
@@ -168,7 +169,7 @@ export class PiRpcClient {
     await this.send({ type: 'set_session_name', name });
   }
 
-  waitForIdle(timeout = 60_000): Promise<void> {
+  waitForIdle(timeout = AGENT_EVENT_TIMEOUT_MS): Promise<void> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         off();
@@ -186,7 +187,7 @@ export class PiRpcClient {
     });
   }
 
-  collectEvents(timeout = 60_000): Promise<AgentEvent[]> {
+  collectEvents(timeout = AGENT_EVENT_TIMEOUT_MS): Promise<AgentEvent[]> {
     return new Promise((resolve, reject) => {
       const events: AgentEvent[] = [];
       const timer = setTimeout(() => {
@@ -206,7 +207,7 @@ export class PiRpcClient {
 
   async promptAndWait(
     message: string,
-    timeout = 60_000
+    timeout = AGENT_EVENT_TIMEOUT_MS
   ): Promise<AgentEvent[]> {
     const eventsPromise = this.collectEvents(timeout);
     await this.prompt(message);
@@ -214,7 +215,11 @@ export class PiRpcClient {
   }
 
   async disconnect(): Promise<void> {
-    await this.proc.deleteSession(this.sessionId).catch(() => null);
+    this.rejectPending(
+      new Error('[pi-rpc] Client disconnected before response was received')
+    );
+    await this.pty.kill().catch(() => null);
+    await this.pty.disconnect().catch(() => null);
   }
 
   private send(payload: RpcCommandBody): Promise<RpcResponse> {
@@ -226,10 +231,10 @@ export class PiRpcClient {
         this.pending.delete(id);
         reject(
           new Error(
-            `[pi-rpc] Timeout waiting for response to "${payload.type}" (30s)`
+            `[pi-rpc] Timeout waiting for response to "${payload.type}" (${RPC_RESPONSE_TIMEOUT_MS}ms)`
           )
         );
-      }, 30_000);
+      }, RPC_RESPONSE_TIMEOUT_MS);
 
       this.pending.set(id, {
         resolve: (res) => {
@@ -242,18 +247,21 @@ export class PiRpcClient {
         },
       });
 
-      this.proc
-        .sendSessionCommandInput(
-          this.sessionId,
-          this.cmdId,
-          `${JSON.stringify(command)}\n`
-        )
+      this.pty
+        .sendInput(`${JSON.stringify(command)}\n`)
         .catch((err: unknown) => {
           this.pending.delete(id);
           clearTimeout(timer);
           reject(err instanceof Error ? err : new Error(String(err)));
         });
     });
+  }
+
+  private rejectPending(error: Error): void {
+    for (const [id, request] of this.pending.entries()) {
+      this.pending.delete(id);
+      request.reject(error);
+    }
   }
 
   private getData<T = unknown>(response: RpcResponse): T {
@@ -266,37 +274,34 @@ export class PiRpcClient {
 
 export async function boot(
   sandbox: Sandbox,
-  piSessionId?: string
+  sessionId?: string
 ): Promise<PiRpcClient> {
-  const sessionId = `pi-${Date.now()}`;
-  await sandbox.process.createSession(sessionId);
+  const ptySessionId = `pi-${Date.now()}`;
+  const decoder = new TextDecoder();
+  let client: PiRpcClient | null = null;
 
-  const command = piSessionId
-    ? `pi --mode rpc --session ${piSessionId}`
+  const pty = await sandbox.process.createPty({
+    id: ptySessionId,
+    cwd: config.runtime.workdir,
+    envs: {
+      HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
+    },
+    onData: (data) => {
+      if (!client) {
+        return;
+      }
+      client.handleStdout(decoder.decode(data, { stream: true }));
+    },
+  });
+
+  await pty.waitForConnection();
+  client = new PiRpcClient(pty);
+
+  const command = sessionId
+    ? `pi --mode rpc --session ${sessionId}`
     : 'pi --mode rpc';
+  await pty.sendInput(`${command}\n`);
 
-  const result = await sandbox.process.executeSessionCommand(
-    sessionId,
-    { command, runAsync: true },
-    0
-  );
-
-  const client = new PiRpcClient(sandbox.process, sessionId, result.cmdId);
-
-  sandbox.process
-    .getSessionCommandLogs(
-      sessionId,
-      result.cmdId,
-      (chunk) => client.handleStdout(chunk),
-      () => {}
-    )
-    .catch((err: unknown) =>
-      logger.warn({ err, sessionId }, '[pi-rpc] Stdout stream ended')
-    );
-
-  logger.info(
-    { sessionId, cmdId: result.cmdId },
-    '[pi-rpc] Pi process started'
-  );
+  logger.info({ ptySessionId, sessionId }, '[pi-rpc] Pi process started');
   return client;
 }
