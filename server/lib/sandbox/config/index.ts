@@ -14,7 +14,7 @@ export async function buildConfig(prompt: string): Promise<{
   paths: string[];
   files: SandboxBootstrapFile[];
 }> {
-  const piDir = '/root/.pi';
+  const piDir = '/home/daytona/.pi';
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
 
