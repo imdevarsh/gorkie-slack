@@ -12,7 +12,7 @@ function createImage() {
       'apt-get install -y nodejs',
       'pip cache purge',
       'npm install -g @mariozechner/pi-coding-agent',
-      'npm install -g agent-browser && agent-browser install && npx --yes skills add vercel-labs/agent-browser',
+      'npm install -g agent-browser && agent-browser install --with-deps && npx --yes skills add vercel-labs/agent-browser',
       'mkdir -p /home/daytona/output /home/daytona/attachments'
     )
     .workdir('/home/daytona');
