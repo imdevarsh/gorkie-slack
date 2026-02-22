@@ -1,39 +1,39 @@
 import type { WebClient } from '@slack/web-api';
 
 export interface TaskSource {
-  type: 'url';
   text: string;
+  type: 'url';
   url: string;
 }
 
 export interface TaskChunk {
-  type: 'task_update';
-  id: string;
-  title?: string;
-  status: 'in_progress' | 'complete' | 'error' | 'pending';
   details?: string;
+  id: string;
   output?: string;
   sources?: TaskSource[];
+  status: 'in_progress' | 'complete' | 'error' | 'pending';
+  title?: string;
+  type: 'task_update';
 }
 
 export interface PlanChunk {
-  type: 'plan_update';
   title: string;
+  type: 'plan_update';
 }
 
 export interface StreamTask {
-  title?: string;
-  status: TaskChunk['status'];
   details?: string;
   output?: string;
   sources?: TaskSource[];
+  status: TaskChunk['status'];
+  title?: string;
 }
 
 export interface Stream {
   channel: string;
-  ts: string;
   client: WebClient;
+  noop?: true;
   tasks: Map<string, StreamTask>;
   thought: boolean;
-  noop?: true;
+  ts: string;
 }

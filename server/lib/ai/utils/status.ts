@@ -3,8 +3,8 @@ import type { SlackMessageContext } from '~/types';
 type LoadingOption = boolean | string[];
 
 interface SetStatusParams {
-  status: string;
   loading?: LoadingOption;
+  status: string;
 }
 
 export function setStatus(

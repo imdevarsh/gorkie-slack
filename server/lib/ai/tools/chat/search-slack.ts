@@ -10,8 +10,8 @@ interface AssistantThreadEvent {
 }
 
 interface SlackSearchResponse {
-  ok: boolean;
   error?: string;
+  ok: boolean;
   results?: {
     messages: unknown[];
   };

@@ -12,9 +12,9 @@ const MAX_ATTACHMENT_BYTES = config.attachments.maxBytes;
 
 export interface SyncedAttachment {
   id: string;
+  mimeType?: string;
   name: string;
   path: string;
-  mimeType?: string;
   size: number;
 }
 

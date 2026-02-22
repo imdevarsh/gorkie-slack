@@ -2,10 +2,10 @@ import { safeAppend } from '~/lib/ai/utils/stream';
 import type { Stream, TaskChunk } from '~/types';
 
 interface FinishTaskInput {
-  taskId: string;
-  status: 'complete' | 'error';
   output?: string;
   sources?: TaskChunk['sources'];
+  status: 'complete' | 'error';
+  taskId: string;
 }
 
 export async function updateTask(

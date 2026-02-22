@@ -6,23 +6,23 @@ import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { shouldUse } from '~/utils/messages';
 
 interface ConversationOptions {
-  client: WebClient;
-  channel: string;
-  threadTs?: string;
   botUserId?: string;
-  limit?: number;
-  latest?: string;
-  oldest?: string;
+  channel: string;
+  client: WebClient;
   inclusive?: boolean;
+  latest?: string;
+  limit?: number;
+  oldest?: string;
+  threadTs?: string;
 }
 
 interface SlackMessage {
-  text?: string;
-  user?: string;
   bot_id?: string;
-  subtype?: string;
-  ts?: string;
   files?: SlackFile[];
+  subtype?: string;
+  text?: string;
+  ts?: string;
+  user?: string;
 }
 
 export async function getConversationMessages({
