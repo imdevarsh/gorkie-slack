@@ -1,5 +1,5 @@
-import { clampNormalizedText, nonEmptyTrimString } from '~/utils/text';
 import { sandbox as config } from '~/config';
+import { clampNormalizedText, nonEmptyTrimString } from '~/utils/text';
 
 interface ToolStartInput {
   args: unknown;
@@ -39,13 +39,35 @@ function getArg(args: unknown, key: string, fallback: string): string {
 }
 
 function formatToolDetails(base: string, status?: string): string {
-  return clampNormalizedText(base, config.toolOutput.detailsMaxChars);
+  const prefixed = status ? `${status} - ${base}` : base;
+  return clampNormalizedText(prefixed, config.toolOutput.detailsMaxChars);
 }
 
-function resolveTitle(toolName: string, status?: string): string {
-  return status
-    ? clampNormalizedText(status, config.toolOutput.titleMaxChars)
-    : toolName;
+function resolveTitle(toolName: string): string {
+  const label = (() => {
+    switch (toolName) {
+      case 'bash':
+        return 'Run command';
+      case 'read':
+        return 'Read file';
+      case 'write':
+        return 'Write file';
+      case 'edit':
+        return 'Edit file';
+      case 'grep':
+        return 'Search text';
+      case 'find':
+        return 'Find files';
+      case 'ls':
+        return 'List files';
+      case 'showFile':
+        return 'Upload file';
+      default:
+        return toolName;
+    }
+  })();
+
+  return clampNormalizedText(label, config.toolOutput.titleMaxChars);
 }
 
 function extractTextResult(result: unknown): string | undefined {
@@ -85,11 +107,20 @@ export function getToolTaskStart(input: ToolStartInput): ToolTaskStart {
           status
         );
       case 'read':
-        return formatToolDetails(`Reading ${getArg(args, 'path', 'file')}`, status);
+        return formatToolDetails(
+          `Reading ${getArg(args, 'path', 'file')}`,
+          status
+        );
       case 'write':
-        return formatToolDetails(`Writing ${getArg(args, 'path', 'file')}`, status);
+        return formatToolDetails(
+          `Writing ${getArg(args, 'path', 'file')}`,
+          status
+        );
       case 'edit':
-        return formatToolDetails(`Editing ${getArg(args, 'path', 'file')}`, status);
+        return formatToolDetails(
+          `Editing ${getArg(args, 'path', 'file')}`,
+          status
+        );
       case 'grep': {
         const argObj = asRecord(args);
         const pattern = asString(argObj?.pattern) ?? '<pattern>';
@@ -103,16 +134,22 @@ export function getToolTaskStart(input: ToolStartInput): ToolTaskStart {
         return formatToolDetails(`Finding "${pattern}" in ${path}`, status);
       }
       case 'ls':
-        return formatToolDetails(`Listing ${getArg(args, 'path', '.')}`, status);
+        return formatToolDetails(
+          `Listing ${getArg(args, 'path', '.')}`,
+          status
+        );
       case 'showFile':
-        return formatToolDetails(`Uploading ${getArg(args, 'path', 'file')}`, status);
+        return formatToolDetails(
+          `Uploading ${getArg(args, 'path', 'file')}`,
+          status
+        );
       default:
         return formatToolDetails(`Running ${toolName}`, status);
     }
   })();
 
   return {
-    title: resolveTitle(toolName, status),
+    title: resolveTitle(toolName),
     details,
   };
 }
@@ -126,7 +163,12 @@ export function getToolTaskEnd(input: ToolEndInput): ToolTaskEnd {
     const dedupedOutput = rawOutput
       .replace(new RegExp(`^bash\\$\\s*${escapeRegExp(command)}\\s*\\n?`), '')
       .trim();
-    return { output: dedupedOutput.length > 0 ? dedupedOutput : '(no output)' };
+    return {
+      output: clampNormalizedText(
+        dedupedOutput.length > 0 ? dedupedOutput : '(no output)',
+        config.toolOutput.outputMaxChars
+      ),
+    };
   }
 
   if (toolName === 'showFile') {
