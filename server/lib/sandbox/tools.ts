@@ -39,13 +39,7 @@ function getArg(args: unknown, key: string, fallback: string): string {
 }
 
 function formatToolDetails(base: string, status?: string): string {
-  if (!status) {
-    return base;
-  }
-  return clampNormalizedText(
-    `${status}: ${base}`,
-    config.toolOutput.detailsMaxChars
-  );
+  return clampNormalizedText(base, config.toolOutput.detailsMaxChars);
 }
 
 function resolveTitle(toolName: string, status?: string): string {
@@ -87,7 +81,7 @@ export function getToolTaskStart(input: ToolStartInput): ToolTaskStart {
     switch (toolName) {
       case 'bash':
         return formatToolDetails(
-          `$ ${getArg(args, 'command', 'running command')}`,
+          getArg(args, 'command', 'running command'),
           status
         );
       case 'read':
