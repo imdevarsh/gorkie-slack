@@ -300,6 +300,9 @@ export class PiRpcClient {
     if (!response.success) {
       throw new Error(response.error);
     }
+    if (!('data' in response)) {
+      return undefined as T;
+    }
     return response.data as T;
   }
 }
