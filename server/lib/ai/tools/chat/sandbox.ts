@@ -2,10 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import {
-  type PromptResourceLink,
-  syncAttachments,
-} from '~/lib/sandbox/attachments';
+import { syncAttachments } from '~/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
@@ -17,14 +14,6 @@ import type { SlackFile } from '~/utils/images';
 interface ToolRunState {
   args: unknown;
   taskId: string;
-}
-
-function resourceLinkToText(link: PromptResourceLink): string {
-  const parts = [`File: ${link.name}`, `URI: ${link.uri}`];
-  if (link.mimeType) {
-    parts.push(`Type: ${link.mimeType}`);
-  }
-  return parts.join(', ');
 }
 
 export const sandbox = ({
@@ -73,9 +62,10 @@ export const sandbox = ({
           files
         );
 
-        const fileRefs = resourceLinks.map(resourceLinkToText).join('\n');
-        const promptText = fileRefs
-          ? `${task}\n\nAvailable files:\n${fileRefs}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`
+        const hasFiles = resourceLinks.length > 0;
+        const filesJson = JSON.stringify(resourceLinks, null, 2);
+        const promptText = hasFiles
+          ? `${task}\n\n<files>\n${filesJson}\n</files>\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`
           : `${task}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
 
         const eventStream: unknown[] = [];
