@@ -125,7 +125,11 @@ export const sandbox = ({
           unsubscribe();
         }
 
-        const response = getResponse(eventStream) ?? 'Done';
+        const streamResponse = getResponse(eventStream);
+        const lastAssistantMessage = await runtime.client
+          .getLastAssistantText()
+          .catch(() => null);
+        const response = lastAssistantMessage?.trim() || streamResponse || 'Done';
 
         logger.info(
           {
@@ -141,7 +145,7 @@ export const sandbox = ({
         await finishTask(stream, {
           status: 'complete',
           taskId,
-          output: response.split('\n')[0]?.slice(0, 200) ?? 'Done',
+          output: response,
         });
 
         return {
