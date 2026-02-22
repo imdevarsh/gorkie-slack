@@ -26,3 +26,6 @@
           Error: [pi-rpc] Timeout waiting for agent_end (60000ms)
               at <anonymous> (/workspaces/gorkie-slack/server/lib/sandbox/rpc.ts:264:15)
     }
+- Add clearer error messages, parse errors properly from pi
+- Add model retry support
+- Preconfigure playwright MCP (npm install -g agent-browser )
