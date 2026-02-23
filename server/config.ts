@@ -10,8 +10,8 @@ export const sandbox = {
     healthMs: 60_000,
   },
   rpc: {
-    operationTimeoutMs: 6 * 60_000,
-    startupTimeoutMs: 30_000,
+    commandTimeoutMs: 30_000,
+    startupTimeoutMs: 2 * 60 * 1000,
   },
   toolOutput: {
     detailsMaxChars: 180,
@@ -29,5 +29,6 @@ export const sandbox = {
     apiKey: env.DAYTONA_API_KEY,
     apiUrl: env.DAYTONA_API_URL,
     target: env.DAYTONA_TARGET,
+    startTimeoutSeconds: 5 * 60, // Max wait for sandbox to start / unarchive
   },
 };

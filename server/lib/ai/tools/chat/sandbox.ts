@@ -75,6 +75,14 @@ export const sandbox = ({
           context,
           ctxId,
           stream: eventStream,
+          onRetry: async ({ attempt, maxAttempts, delayMs }) => {
+            const seconds = Math.round(delayMs / 1000);
+            await updateTask(stream, {
+              taskId,
+              status: 'in_progress',
+              details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
+            });
+          },
           onToolStart: async ({ toolName, toolCallId, args, status }) => {
             const toolTask = getToolTaskStart({
               toolName,
@@ -129,7 +137,8 @@ export const sandbox = ({
         const lastAssistantMessage = await runtime.client
           .getLastAssistantText()
           .catch(() => null);
-        const response = lastAssistantMessage?.trim() || streamResponse || 'Done';
+        const response =
+          lastAssistantMessage?.trim() || streamResponse || 'Done';
 
         logger.info(
           {
@@ -174,15 +183,18 @@ export const sandbox = ({
         return {
           success: false,
           error: message,
+          task,
         };
       } finally {
         if (runtime) {
-          await runtime.client.disconnect().catch((disconnectError: unknown) => {
-            logger.debug(
-              { ...toLogError(disconnectError), ctxId },
-              '[subagent] Failed to disconnect Pi client'
-            );
-          });
+          await runtime.client
+            .disconnect()
+            .catch((disconnectError: unknown) => {
+              logger.debug(
+                { ...toLogError(disconnectError), ctxId },
+                '[subagent] Failed to disconnect Pi client'
+              );
+            });
         }
       }
     },

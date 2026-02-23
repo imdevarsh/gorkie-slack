@@ -30,15 +30,6 @@ type ModelInfo = Extract<
   { command: 'get_available_models'; success: true }
 >['data']['models'][number];
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function startupRetryDelayMs(): number {
-  // Keep retries frequent, scaled from startup timeout instead of another knob.
-  return Math.max(100, Math.min(500, Math.floor(config.rpc.startupTimeoutMs / 100)));
-}
-
 export class PiRpcClient {
   private buffer = '';
   private readonly listeners = new Set<RpcEventListener>();
@@ -99,15 +90,8 @@ export class PiRpcClient {
     };
   }
 
-  async prompt(
-    message: string,
-    images?: ImageContent[]
-  ): Promise<void> {
-    await this.send({
-      type: 'prompt',
-      message,
-      images,
-    });
+  async prompt(message: string, images?: ImageContent[]): Promise<void> {
+    await this.send({ type: 'prompt', message, images });
   }
 
   async steer(message: string, images?: ImageContent[]): Promise<void> {
@@ -217,75 +201,67 @@ export class PiRpcClient {
     await this.send({ type: 'set_session_name', name });
   }
 
-  async waitUntilReady(timeoutMs = config.rpc.startupTimeoutMs): Promise<void> {
-    const deadline = Date.now() + timeoutMs;
-    let lastError: Error | null = null;
+  async waitUntilReady(): Promise<void> {
+    const deadline = Date.now() + config.rpc.startupTimeoutMs;
+    const attemptMs = 5000;
+    const retryDelayMs = 500;
+    let attempt = 0;
+    let lastError: Error | undefined;
 
     while (Date.now() < deadline) {
-      const remaining = deadline - Date.now();
-      const requestTimeoutMs = Math.min(2000, remaining);
-
+      attempt++;
       try {
-        await this.send({ type: 'get_state' }, requestTimeoutMs);
-        return;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        if (Date.now() >= deadline) {
-          break;
+        await this.send(
+          { type: 'get_state' },
+          Math.min(attemptMs, deadline - Date.now())
+        );
+        if (attempt > 1) {
+          logger.info({ attempt }, '[pi-rpc] Pi ready after retries');
         }
-        await sleep(startupRetryDelayMs());
+        return;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        await new Promise<void>((resolve) => setTimeout(resolve, retryDelayMs));
       }
     }
 
-    throw new Error(
-      `[pi-rpc] Timed out waiting for Pi RPC startup (${timeoutMs}ms): ${lastError?.message ?? 'unknown error'}`
+    throw (
+      lastError ??
+      new Error(
+        `[pi-rpc] Startup timed out after ${config.rpc.startupTimeoutMs}ms`
+      )
     );
   }
 
-  private waitForAgentEnd(
-    timeout: number,
-    collectEvents: boolean
-  ): Promise<AgentEvent[] | void> {
-    return new Promise((resolve, reject) => {
-      const events: AgentEvent[] = [];
+  waitForIdle(): Promise<void> {
+    return new Promise((resolve) => {
       const off = this.onEvent((event) => {
-        if (collectEvents) {
-          events.push(event);
-        }
         if (event.type === 'agent_end') {
-          clearTimeout(timer);
           off();
-          resolve(collectEvents ? events : undefined);
+          resolve();
         }
       });
-
-      const timer = setTimeout(() => {
-        off();
-        reject(
-          new Error(
-            collectEvents
-              ? `[pi-rpc] Timeout collecting events (${timeout}ms)`
-              : `[pi-rpc] Timeout waiting for agent_end (${timeout}ms)`
-          )
-        );
-      }, timeout);
     });
   }
 
-  waitForIdle(timeout = config.rpc.operationTimeoutMs): Promise<void> {
-    return this.waitForAgentEnd(timeout, false) as Promise<void>;
-  }
-
-  collectEvents(timeout = config.rpc.operationTimeoutMs): Promise<AgentEvent[]> {
-    return this.waitForAgentEnd(timeout, true) as Promise<AgentEvent[]>;
+  collectEvents(): Promise<AgentEvent[]> {
+    return new Promise((resolve) => {
+      const events: AgentEvent[] = [];
+      const off = this.onEvent((event) => {
+        events.push(event);
+        if (event.type === 'agent_end') {
+          off();
+          resolve(events);
+        }
+      });
+    });
   }
 
   async promptAndWait(
     message: string,
-    images?: ImageContent[],
-    timeout = config.rpc.operationTimeoutMs
+    images?: ImageContent[]
   ): Promise<AgentEvent[]> {
-    const eventsPromise = this.collectEvents(timeout);
+    const eventsPromise = this.collectEvents();
     await this.prompt(message, images);
     return eventsPromise;
   }
@@ -300,7 +276,7 @@ export class PiRpcClient {
 
   private send(
     payload: RpcCommandBody,
-    timeoutMs = config.rpc.operationTimeoutMs
+    timeoutMs = config.rpc.commandTimeoutMs
   ): Promise<RpcResponse> {
     const id = `req_${++this.requestId}`;
     const command = { ...payload, id } as RpcCommand;

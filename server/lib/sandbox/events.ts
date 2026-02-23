@@ -1,3 +1,4 @@
+import type { AgentSessionEvent } from '@mariozechner/pi-coding-agent';
 import logger from '~/lib/logger';
 import { showFileInputSchema } from '~/lib/validators/sandbox';
 import type { SlackMessageContext } from '~/types';
@@ -51,13 +52,39 @@ export function subscribeEvents(params: {
     toolCallId: string;
     toolName: string;
   }) => void | Promise<void>;
+  onRetry?: (input: {
+    attempt: number;
+    maxAttempts: number;
+    delayMs: number;
+    errorMessage: string;
+  }) => void | Promise<void>;
 }): () => void {
-  const { client, runtime, context, ctxId, stream, onToolStart, onToolEnd } =
-    params;
+  const {
+    client,
+    runtime,
+    context,
+    ctxId,
+    stream,
+    onToolStart,
+    onToolEnd,
+    onRetry,
+  } = params;
 
   return client.onEvent((event) => {
     try {
       stream.push(event);
+
+      const sessionEvent = event as AgentSessionEvent;
+
+      if (sessionEvent.type === 'auto_retry_start') {
+        const { attempt, maxAttempts, delayMs, errorMessage } = sessionEvent;
+        logger.warn(
+          { ctxId, attempt, maxAttempts, delayMs, errorMessage },
+          '[subagent] Auto-retry started'
+        );
+        onRetry?.({ attempt, maxAttempts, delayMs, errorMessage });
+        return;
+      }
 
       if (event.type === 'tool_execution_start') {
         const { toolName, args, toolCallId } = event as Extract<
@@ -67,7 +94,7 @@ export function subscribeEvents(params: {
         logger.info({ ctxId, tool: toolName, args }, '[subagent] Tool started');
 
         const status = nonEmptyTrimString(args?.status)?.slice(0, 49);
-        void onToolStart?.({ toolName, toolCallId, args, status });
+        onToolStart?.({ toolName, toolCallId, args, status });
         return;
       }
 
@@ -80,7 +107,7 @@ export function subscribeEvents(params: {
           { ctxId, tool: toolName, isError, result },
           '[subagent] Tool completed'
         );
-        void onToolEnd?.({ toolName, toolCallId, isError, result });
+        onToolEnd?.({ toolName, toolCallId, isError, result });
 
         if (toolName === 'showFile') {
           handleShowFileTool({ result, runtime, context, ctxId });

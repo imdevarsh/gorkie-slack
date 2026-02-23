@@ -34,7 +34,7 @@ export async function buildConfig(prompt: string): Promise<{
       { path: `${agentDir}/models.json`, content: models },
       { path: `${agentDir}/auth.json`, content: auth },
       { path: `${extensionsDir}/tools.ts`, content: toolsExtension },
-    ],  
+    ],
   };
 }
 
