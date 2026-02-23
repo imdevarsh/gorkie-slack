@@ -1,14 +1,9 @@
-import { env } from '~/env';
-
 export const messageThreshold = 10;
 
 export const sandbox = {
-  timeouts: {
-    stopMinutes: 5,
-    archiveMinutes: 60,
-    deleteMinutes: 2 * 24 * 60,
-    healthMs: 60_000,
-  },
+  timeoutMs: 10 * 60 * 1000,
+  autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
+  janitorIntervalMs: 60 * 1000,
   rpc: {
     commandTimeoutMs: 30_000,
     startupTimeoutMs: 2 * 60 * 1000,
@@ -19,16 +14,9 @@ export const sandbox = {
     outputMaxChars: 260,
   },
   runtime: {
-    agentPort: 3000,
-    workdir: '/home/daytona',
+    workdir: '/home/user',
   },
   attachments: {
     maxBytes: 1_000_000_000,
-  },
-  daytona: {
-    apiKey: env.DAYTONA_API_KEY,
-    apiUrl: env.DAYTONA_API_URL,
-    target: env.DAYTONA_TARGET,
-    startTimeoutSeconds: 5 * 60, // Max wait for sandbox to start / unarchive
   },
 };

@@ -1,4 +1,4 @@
-import type { PtyHandle, PtyResult, Sandbox } from '@daytonaio/sdk';
+import type { Sandbox } from '@e2b/code-interpreter';
 import type { ImageContent } from '@mariozechner/pi-ai';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
@@ -30,6 +30,16 @@ type ModelInfo = Extract<
   { command: 'get_available_models'; success: true }
 >['data']['models'][number];
 
+// Minimal interface for what PiRpcClient needs from a PTY handle.
+// Implemented in boot() using the e2b Pty API.
+interface PtyLike {
+  disconnect(): Promise<void>;
+  kill(): Promise<unknown>;
+  sendInput(data: string): Promise<void>;
+}
+
+const ANSI_RE = /\x1b(?:[@-Z\\-_]|\[[0-9;?]*[ -/]*[@-~])/g;
+
 export class PiRpcClient {
   private buffer = '';
   private exited = false;
@@ -38,17 +48,18 @@ export class PiRpcClient {
   private readonly listeners = new Set<RpcEventListener>();
   private readonly pending = new Map<string, PendingRequest>();
   private requestId = 0;
-  private readonly pty: PtyHandle;
+  private readonly pty: PtyLike;
 
-  constructor(pty: PtyHandle) {
+  constructor(pty: PtyLike) {
     this.pty = pty;
     this.exitPromise = new Promise<never>((_, reject) => {
       this.rejectExit = reject;
     });
+    // Suppress unhandled rejection — consumers race against this promise
     this.exitPromise.catch(() => null);
   }
 
-  handleProcessExit(result: PtyResult): void {
+  handleProcessExit(result: { exitCode?: number; error?: string }): void {
     if (this.exited) {
       return;
     }
@@ -69,7 +80,7 @@ export class PiRpcClient {
   }
 
   handleStdout(chunk: string): void {
-    this.buffer += chunk.replace(/\r/g, '');
+    this.buffer += chunk.replace(/\r/g, '').replace(ANSI_RE, '');
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() ?? '';
 
@@ -296,6 +307,8 @@ export class PiRpcClient {
   }
 
   async disconnect(): Promise<void> {
+    // Mark as exited before killing so the pty.wait() callback doesn't fire
+    // the "exited unexpectedly" warning for this intentional shutdown.
     this.exited = true;
     this.rejectPending(
       new Error('[pi-rpc] Client disconnected before response was received')
@@ -367,40 +380,53 @@ export async function boot(
   sandbox: Sandbox,
   sessionId?: string
 ): Promise<PiRpcClient> {
-  const ptySessionId = `pi-${Date.now()}`;
   const decoder = new TextDecoder();
   let client: PiRpcClient | null = null;
+  const encoder = new TextEncoder();
 
-  const pty = await sandbox.process.createPty({
-    id: ptySessionId,
+  const terminal = await sandbox.pty.create({
+    cols: 220,
+    rows: 24,
     cwd: config.runtime.workdir,
     envs: {
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
       HOME: config.runtime.workdir,
+      TERM: 'dumb', 
     },
+    timeoutMs: 0, // no timeout — Pi runs for the lifetime of the session
     onData: (data) => {
-      if (!client) {
-        return;
-      }
-      client.handleStdout(decoder.decode(data, { stream: true }));
+      client?.handleStdout(decoder.decode(data, { stream: true }));
     },
   });
 
-  await pty.waitForConnection();
+  const pty: PtyLike = {
+    sendInput: (data) =>
+      sandbox.pty.sendInput(terminal.pid, encoder.encode(data)),
+    kill: () => terminal.kill(),
+    disconnect: () => terminal.disconnect(),
+  };
+
   client = new PiRpcClient(pty);
 
+  // Detect Pi process death and propagate it to any waiting promises.
   const piClient = client;
-  pty
+  terminal
     .wait()
-    .catch(() => null)
-    .then((result) => piClient.handleProcessExit(result ?? {}));
+    .then((result) => piClient.handleProcessExit(result))
+    .catch((err: unknown) => {
+      const exitCode = (err as { exitCode?: number }).exitCode;
+      piClient.handleProcessExit({ exitCode });
+    });
 
-  const command = sessionId
+  // Disable PTY echo so our JSON commands are not mirrored back to stdout,
+  // then launch Pi in RPC mode. Using `exec` replaces the shell process so
+  // terminal noise stops once Pi takes over.
+  const piCmd = sessionId
     ? `pi --mode rpc --session ${sessionId}`
     : 'pi --mode rpc';
-  await pty.sendInput(`${command}\n`);
+  await pty.sendInput(`stty -echo; exec ${piCmd}\n`);
   await client.waitUntilReady();
 
-  logger.info({ ptySessionId, sessionId }, '[pi-rpc] Pi process started');
+  logger.info({ sessionId }, '[pi-rpc] Pi process started');
   return client;
 }

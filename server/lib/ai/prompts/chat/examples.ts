@@ -103,7 +103,7 @@ export const examplesPrompt = `\
 <title>Public web form with agent-browser</title>
 <user>Fill and submit this public event form: https://example.com/event-signup. Use name "Jordan Lee", email "jordan@example.com", company "Acme Labs", role "Engineer", and notes "Interested in AI automation workshop". Then share proof it was submitted.</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Use the agent-browser skill to open https://example.com/event-signup, fill the form fields with: name Jordan Lee, email jordan@example.com, company Acme Labs, role Engineer, and notes Interested in AI automation workshop. Submit the form, capture the confirmation page as /home/daytona/output/event-signup-confirmation.png, and upload it with showFile. Include a brief summary of what was submitted and the confirmation text." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Use the agent-browser skill to open https://example.com/event-signup, fill the form fields with: name Jordan Lee, email jordan@example.com, company Acme Labs, role Engineer, and notes Interested in AI automation workshop. Submit the form, capture the confirmation page as /home/user/output/event-signup-confirmation.png, and upload it with showFile. Include a brief summary of what was submitted and the confirmation text." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done. I submitted the public form and uploaded a confirmation screenshot."] }</input></tool>
 </workflow>
 </example>

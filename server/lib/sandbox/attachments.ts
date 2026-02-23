@@ -1,4 +1,4 @@
-import type { Sandbox } from '@daytonaio/sdk';
+import type { Sandbox } from '@e2b/code-interpreter';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
@@ -12,10 +12,10 @@ const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 
 export interface PromptResourceLink {
-  type: 'resource_link';
-  name: string;
-  uri: string;
   mimeType?: string;
+  name: string;
+  type: 'resource_link';
+  uri: string;
 }
 
 export async function syncAttachments(
@@ -34,7 +34,7 @@ export async function syncAttachments(
 
   const ctxId = getContextId(context);
 
-  await sandbox.fs.createFolder(ATTACHMENTS_ABS_DIR, '755').catch(() => {
+  await sandbox.files.makeDir(ATTACHMENTS_ABS_DIR).catch(() => {
     // Directory may already exist.
   });
 
@@ -80,7 +80,7 @@ async function syncFile(
   const uri = new URL(`file://${path}`).toString();
 
   try {
-    await sandbox.fs.uploadFile(content, path);
+    await sandbox.files.write(path, content);
     return {
       type: 'resource_link',
       name: safeName,

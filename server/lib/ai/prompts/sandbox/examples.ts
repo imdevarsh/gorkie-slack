@@ -5,11 +5,11 @@ export const examplesPrompt = `\
 <description>Fresh task with a new upload, no prior sandbox state.</description>
 <task>Convert the uploaded image to black and white</task>
 <steps>
-1. glob({ "pattern": "**/*.png", "path": "/home/vercel-sandbox/attachments", "status": "Finding uploaded png" })
-   → /home/vercel-sandbox/attachments/photo.png
-2. bash({ "command": "sudo dnf install -y ImageMagick", "status": "Installing ImageMagick" })
-3. bash({ "command": "mv /home/vercel-sandbox/attachments/photo.png /home/vercel-sandbox/attachments/cat-original.png && convert /home/vercel-sandbox/attachments/cat-original.png -colorspace Gray /home/vercel-sandbox/output/cat.png", "status": "Converting to grayscale" })
-4. showFile({ "path": "/home/vercel-sandbox/output/cat.png", "title": "Black and white", "status": "Uploading result image" })
+1. glob({ "pattern": "**/*.png", "path": "/home/user/attachments", "status": "Finding uploaded png" })
+   → /home/user/attachments/photo.png
+2. bash({ "command": "sudo apt-get install -y imagemagick", "status": "Installing ImageMagick" })
+3. bash({ "command": "mv /home/user/attachments/photo.png /home/user/attachments/cat-original.png && convert /home/user/attachments/cat-original.png -colorspace Gray /home/user/output/cat.png", "status": "Converting to grayscale" })
+4. showFile({ "path": "/home/user/output/cat.png", "title": "Black and white", "status": "Uploading result image" })
 Summary: "Renamed the source as cat-original.png, generated cat.png, and uploaded the result."
 </steps>
 <note>ALWAYS write output to output/. Rename files immediately to semantic names (cat, cat-original style).</note>
@@ -25,25 +25,23 @@ Assistant: Done! Converted photo.png to grayscale.
 </context>
 <task>Now invert it</task>
 <steps>
-1. bash({ "command": "convert /home/vercel-sandbox/output/cat.png -negate /home/vercel-sandbox/output/cat-inverted.png", "status": "Inverting image colors" })
-2. showFile({ "path": "/home/vercel-sandbox/output/cat-inverted.png", "title": "Inverted", "status": "Uploading inverted image" })
+1. bash({ "command": "convert /home/user/output/cat.png -negate /home/user/output/cat-inverted.png", "status": "Inverting image colors" })
+2. showFile({ "path": "/home/user/output/cat-inverted.png", "title": "Inverted", "status": "Uploading inverted image" })
 Summary: "Inverted the black and white image and uploaded."
 </steps>
 <note>The agent used the file listing to find the previous output directly, no glob needed. Keep semantic names in output/.</note>
 </example>
 
 <example>
-<description>File from an earlier message, found via sandbox_files context.</description>
-<context>
-</context>
-<task>Process that image I uploaded earlier</task>
+<description>Browser automation with agent-browser.</description>
+<task>Take a screenshot of https://example.com</task>
 <steps>
-1. bash({ "command": "sudo dnf install -y ImageMagick", "status": "Installing ImageMagick" })
-2. bash({ "command": "mv /home/vercel-sandbox/attachments/diagram.png /home/vercel-sandbox/attachments/diagram-original.png && convert /home/vercel-sandbox/attachments/diagram-original.png -negate /home/vercel-sandbox/output/diagram.png", "status": "Negating diagram colors" })
-3. showFile({ "path": "/home/vercel-sandbox/output/diagram.png", "title": "Inverted diagram", "status": "Uploading diagram output" })
-Summary: "Found your diagram from an earlier message, inverted the colors, and uploaded."
+1. bash({ "command": "agent-browser open https://example.com", "status": "Opening example.com" })
+2. bash({ "command": "agent-browser screenshot /home/user/output/example.png", "status": "Capturing screenshot" })
+3. showFile({ "path": "/home/user/output/example.png", "title": "example.com", "status": "Uploading screenshot" })
+Summary: "Opened example.com and captured a screenshot."
 </steps>
-<note>Read the file path from sandbox_files instead of globbing. Write outputs to output/ and rename to semantic names.</note>
+<note>Use agent-browser for all web navigation. The commands are: open <url>, click <selector>, type <selector> <text>, screenshot <path>, fill <selector> <text>.</note>
 </example>
 
 <example>

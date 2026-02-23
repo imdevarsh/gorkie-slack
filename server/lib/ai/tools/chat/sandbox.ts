@@ -143,7 +143,7 @@ export const sandbox = ({
         logger.info(
           {
             ctxId,
-            sandboxId: runtime.sandbox.id,
+            sandboxId: runtime.sandbox.sandboxId,
             attachments: resourceLinks.map((file) => file.uri),
             task,
             response,
