@@ -23,12 +23,12 @@ export const sandbox = ({
 }) =>
   tool({
     description:
-      'Delegate a task to the sandbox runtime for code execution, file processing, or data analysis.',
+      'Delegate a task to the sandbox runtime for code execution, file processing, or data analysis. The sandbox maintains persistent state across calls in this conversation, files, installed packages, written code, and previous results are all preserved. Reference prior work directly without re-explaining it.',
     inputSchema: z.object({
       task: z
         .string()
         .describe(
-          'A clear description of what to accomplish in the sandbox. Include file names, expected outputs, and any specific instructions.'
+          'A clear description of what to accomplish. The sandbox remembers all previous work in this thread, files, code, and context from earlier runs are available. Reference them directly.'
         ),
     }),
     onInputStart: async ({ toolCallId }) => {
@@ -108,11 +108,21 @@ export const sandbox = ({
           },
         });
 
+        const keepAlive = setInterval(
+          () => {
+            enqueue(() =>
+              updateTask(stream, { taskId, status: 'in_progress' })
+            );
+          },
+          3 * 60 * 1000
+        );
+
         try {
           const idle = runtime.client.waitForIdle();
           await runtime.client.prompt(prompt);
           await idle;
         } finally {
+          clearInterval(keepAlive);
           unsubscribe();
         }
 

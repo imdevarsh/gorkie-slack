@@ -97,7 +97,7 @@ async function resumeSandbox(
   const client = await boot(sandbox, sessionId);
 
   const state = await client.getState();
-  logger.info(
+  logger.debug(
     { threadId, sessionId: state.sessionId },
     '[sandbox] Resumed session'
   );

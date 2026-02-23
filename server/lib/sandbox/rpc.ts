@@ -410,6 +410,6 @@ export async function boot(
   await pty.sendInput(`stty -echo; exec ${piCmd}\n`);
   await client.waitUntilReady();
 
-  logger.info({ ptySessionId, sessionId }, '[pi-rpc] Pi process started');
+  logger.debug({ ptySessionId, sessionId }, '[pi-rpc] Pi process started');
   return client;
 }

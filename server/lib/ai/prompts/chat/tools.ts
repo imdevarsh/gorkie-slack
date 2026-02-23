@@ -58,7 +58,7 @@ Returns a structured summary with key points, decisions, action items, and unres
 <description>
 Delegate a task to the sandbox agent for code execution, file processing, data analysis, or any task requiring a Linux environment.
 It runs shell commands, reads files, and uploads results to Slack.
-It has persistant session history, so it can access files and tasks from earlier messages in the thread.
+It has persistent session state per thread — files, installed packages, written code, and all previous results are preserved across calls. Reference prior work directly without re-explaining it.
 
 Use when:
 - User asks you to run code, process files, analyze data, or generate output files

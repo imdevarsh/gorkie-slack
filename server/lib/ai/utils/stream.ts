@@ -87,10 +87,12 @@ export async function closeStream(stream: Stream): Promise<void> {
       ts: stream.ts,
     } as unknown as ChatStopStreamArguments);
   } catch (error) {
-    logger.warn(
-      { ...toLogError(error), channel: stream.channel },
-      'Failed to close stream'
-    );
+    if (!isStreamExpired(error)) {
+      logger.warn(
+        { ...toLogError(error), channel: stream.channel },
+        'Failed to close stream'
+      );
+    }
   }
 }
 
@@ -115,9 +117,20 @@ export async function safeAppend(
       chunks,
     } as unknown as ChatAppendStreamArguments);
   } catch (error) {
+    if (isStreamExpired(error)) {
+      stream.noop = true;
+      return;
+    }
     logger.warn(
       { ...toLogError(error), channel: stream.channel },
       'Failed to append to stream'
     );
   }
+}
+
+function isStreamExpired(error: unknown): boolean {
+  return (
+    (error as { data?: { error?: string } })?.data?.error ===
+    'message_not_in_streaming_state'
+  );
 }
