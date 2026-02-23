@@ -25,6 +25,6 @@ export type RpcCommandBody = DistributiveOmit<RpcCommand, 'id'>;
 export type RpcEventListener = (event: AgentEvent) => void;
 
 export interface PendingRequest {
-  resolve: (response: RpcResponse) => void;
   reject: (error: Error) => void;
+  resolve: (response: RpcResponse) => void;
 }

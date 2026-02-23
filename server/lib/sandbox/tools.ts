@@ -25,7 +25,7 @@ function asString(value: unknown): string | undefined {
 }
 
 function getArg(args: unknown, key: string, fallback: string): string {
-  return asString(asRecord(args)?.[key]) ?? fallback;
+  return nonEmptyTrimString(asRecord(args)?.[key]) ?? fallback;
 }
 
 function resolveTitle(toolName: string): string {
@@ -80,7 +80,7 @@ function extractTextResult(result: unknown): string | undefined {
 function resolveDetails(toolName: string, args: unknown): string {
   switch (toolName) {
     case 'bash':
-      return getArg(args, 'command', 'running command');
+      return `input:\n\n${getArg(args, 'command', 'running command')}`;
     case 'read':
       return `Reading ${getArg(args, 'path', 'file')}`;
     case 'write':
@@ -111,14 +111,10 @@ function resolveDetails(toolName: string, args: unknown): string {
 export function getToolTaskStart(input: ToolStartInput) {
   const { toolName, args, status } = input;
 
-  if (status) {
-    return {
-      title: clampNormalizedText(status, config.toolOutput.titleMaxChars),
-    };
-  }
-
   return {
-    title: resolveTitle(toolName),
+    title: status
+      ? clampNormalizedText(status, config.toolOutput.titleMaxChars)
+      : resolveTitle(toolName),
     details: clampNormalizedText(
       resolveDetails(toolName, args),
       config.toolOutput.detailsMaxChars
@@ -128,13 +124,6 @@ export function getToolTaskStart(input: ToolStartInput) {
 
 export function getToolTaskEnd(input: ToolEndInput) {
   const { toolName, result, isError } = input;
-
-  if (toolName === 'bash') {
-    const rawOutput = extractTextResult(result) ?? '(no output)';
-    return {
-      output: clampNormalizedText(rawOutput, config.toolOutput.outputMaxChars),
-    };
-  }
 
   if (toolName === 'showFile') {
     const details = asRecord(result)?.details;
@@ -149,6 +138,15 @@ export function getToolTaskEnd(input: ToolEndInput) {
     }
   }
 
+  if (toolName === 'bash') {
+    const text = extractTextResult(result);
+    return {
+      output: text
+        ? `output:\n${clampNormalizedText(text, config.toolOutput.outputMaxChars)}`
+        : 'output:\ncommand failed',
+    };
+  }
+
   const text = extractTextResult(result);
   if (text) {
     return {
@@ -156,5 +154,5 @@ export function getToolTaskEnd(input: ToolEndInput) {
     };
   }
 
-  return { output: isError ? 'Tool failed' : 'Tool completed' };
+  return {};
 }

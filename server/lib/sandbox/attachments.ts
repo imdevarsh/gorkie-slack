@@ -12,10 +12,10 @@ const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 
 export interface PromptResourceLink {
-  type: 'resource_link';
-  name: string;
-  uri: string;
   mimeType?: string;
+  name: string;
+  type: 'resource_link';
+  uri: string;
 }
 
 export async function syncAttachments(

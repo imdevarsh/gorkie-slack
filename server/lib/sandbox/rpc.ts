@@ -69,7 +69,11 @@ export class PiRpcClient {
   }
 
   handleStdout(chunk: string): void {
-    this.buffer += chunk.replace(/\r/g, '');
+    // Strip \r (ONLCR) and ANSI/VT100 escape sequences that the PTY injects.
+    // eslint-disable-next-line no-control-regex
+    this.buffer += chunk
+      .replace(/\r/g, '')
+      .replace(/\x1b(?:[@-Z\\-_]|\[[0-9;?]*[ -/]*[@-~])/g, '');
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() ?? '';
 
@@ -373,10 +377,13 @@ export async function boot(
 
   const pty = await sandbox.process.createPty({
     id: ptySessionId,
+    cols: 220, // wide enough that long JSON frames are never line-wrapped
+    rows: 24,
     cwd: config.runtime.workdir,
     envs: {
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
       HOME: config.runtime.workdir,
+      TERM: 'dumb', // suppress colour/control sequences from shell and readline
     },
     onData: (data) => {
       if (!client) {
@@ -395,10 +402,12 @@ export async function boot(
     .catch(() => null)
     .then((result) => piClient.handleProcessExit(result ?? {}));
 
-  const command = sessionId
+  // Disable PTY echo so our JSON commands are not mirrored back to stdout,
+  // then exec Pi directly so the shell exits and takes its prompt with it.
+  const piCmd = sessionId
     ? `pi --mode rpc --session ${sessionId}`
     : 'pi --mode rpc';
-  await pty.sendInput(`${command}\n`);
+  await pty.sendInput(`stty -echo; exec ${piCmd}\n`);
   await client.waitUntilReady();
 
   logger.info({ ptySessionId, sessionId }, '[pi-rpc] Pi process started');

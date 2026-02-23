@@ -3,8 +3,8 @@ import type { Sandbox } from '@daytonaio/sdk';
 import { sandbox as config } from '~/config';
 
 export interface SandboxBootstrapFile {
-  path: string;
   content: string;
+  path: string;
 }
 
 function readTemplate(path: string): Promise<string> {

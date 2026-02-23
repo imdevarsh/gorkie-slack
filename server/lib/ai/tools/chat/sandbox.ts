@@ -12,7 +12,6 @@ import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
 
 interface ToolRunState {
-  args: unknown;
   taskId: string;
 }
 
@@ -47,6 +46,11 @@ export const sandbox = ({
       let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
       const toolRuns = new Map<string, ToolRunState>();
 
+      let tail: Promise<void> = Promise.resolve();
+      const enqueue = (fn: () => Promise<void>): void => {
+        tail = tail.then(() => fn()).catch(() => {});
+      };
+
       const taskId = await updateTask(stream, {
         taskId: toolCallId,
         title: 'Running sandbox',
@@ -75,57 +79,47 @@ export const sandbox = ({
           context,
           ctxId,
           stream: eventStream,
-          onRetry: async ({ attempt, maxAttempts, delayMs }) => {
+          onRetry: ({ attempt, maxAttempts, delayMs }) => {
             const seconds = Math.round(delayMs / 1000);
-            await updateTask(stream, {
-              taskId,
-              status: 'in_progress',
-              details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
-            });
+            enqueue(() =>
+              updateTask(stream, {
+                taskId,
+                status: 'in_progress',
+                details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
+              }).then(() => undefined)
+            );
           },
-          onToolStart: async ({ toolName, toolCallId, args, status }) => {
-            const toolTask = getToolTaskStart({
-              toolName,
-              args,
-              status,
-            });
+          onToolStart: ({ toolName, toolCallId, args, status }) => {
+            const toolTask = getToolTaskStart({ toolName, args, status });
             const toolTaskId = `${taskId}:${toolCallId}`;
-            toolRuns.set(toolCallId, {
-              taskId: toolTaskId,
-              args,
-            });
-
-            await createTask(stream, {
-              taskId: toolTaskId,
-              title: toolTask.title,
-              details: toolTask.details,
-              status: 'in_progress',
-            });
+            toolRuns.set(toolCallId, { taskId: toolTaskId });
+            enqueue(() =>
+              createTask(stream, {
+                taskId: toolTaskId,
+                title: toolTask.title,
+                details: toolTask.details,
+                status: 'in_progress',
+              }).then(() => undefined)
+            );
           },
-          onToolEnd: async ({ toolName, toolCallId, isError, result }) => {
+          onToolEnd: ({ toolName, toolCallId, isError, result }) => {
             const toolRun = toolRuns.get(toolCallId);
             if (!toolRun) {
               return;
             }
             toolRuns.delete(toolCallId);
-
-            const toolResult = getToolTaskEnd({
-              toolName,
-              args: toolRun.args,
-              result,
-              isError,
-            });
-
-            await finishTask(stream, {
-              status: isError ? 'error' : 'complete',
-              taskId: toolRun.taskId,
-              output: toolResult.output,
-            });
+            const toolResult = getToolTaskEnd({ toolName, result, isError });
+            enqueue(() =>
+              finishTask(stream, {
+                status: isError ? 'error' : 'complete',
+                taskId: toolRun.taskId,
+                output: toolResult.output,
+              })
+            );
           },
         });
 
         try {
-          // Start waiting before prompting so we don't miss a fast `agent_end` event.
           const idle = runtime.client.waitForIdle();
           await runtime.client.prompt(promptText);
           await idle;
