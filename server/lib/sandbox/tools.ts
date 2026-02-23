@@ -8,7 +8,6 @@ interface ToolStartInput {
 }
 
 interface ToolEndInput {
-  args?: unknown;
   isError: boolean;
   result: unknown;
   toolName: string;
@@ -27,11 +26,6 @@ function asString(value: unknown): string | undefined {
 
 function getArg(args: unknown, key: string, fallback: string): string {
   return asString(asRecord(args)?.[key]) ?? fallback;
-}
-
-function formatToolDetails(base: string, status?: string): string {
-  const prefixed = status ? `${status} - ${base}` : base;
-  return clampNormalizedText(prefixed, config.toolOutput.detailsMaxChars);
 }
 
 function resolveTitle(toolName: string): string {
@@ -83,61 +77,52 @@ function extractTextResult(result: unknown): string | undefined {
   return joined.length > 0 ? joined : undefined;
 }
 
+function resolveDetails(toolName: string, args: unknown): string {
+  switch (toolName) {
+    case 'bash':
+      return getArg(args, 'command', 'running command');
+    case 'read':
+      return `Reading ${getArg(args, 'path', 'file')}`;
+    case 'write':
+      return `Writing ${getArg(args, 'path', 'file')}`;
+    case 'edit':
+      return `Editing ${getArg(args, 'path', 'file')}`;
+    case 'grep': {
+      const argObj = asRecord(args);
+      const pattern = asString(argObj?.pattern) ?? '<pattern>';
+      const path = asString(argObj?.path) ?? '.';
+      return `Searching "${pattern}" in ${path}`;
+    }
+    case 'find': {
+      const argObj = asRecord(args);
+      const pattern = asString(argObj?.pattern) ?? '<pattern>';
+      const path = asString(argObj?.path) ?? '.';
+      return `Finding "${pattern}" in ${path}`;
+    }
+    case 'ls':
+      return `Listing ${getArg(args, 'path', '.')}`;
+    case 'showFile':
+      return `Uploading ${getArg(args, 'path', 'file')}`;
+    default:
+      return `Running ${toolName}`;
+  }
+}
+
 export function getToolTaskStart(input: ToolStartInput) {
   const { toolName, args, status } = input;
 
-  const details = (() => {
-    switch (toolName) {
-      case 'bash':
-        return formatToolDetails(
-          getArg(args, 'command', 'running command'),
-          status
-        );
-      case 'read':
-        return formatToolDetails(
-          `Reading ${getArg(args, 'path', 'file')}`,
-          status
-        );
-      case 'write':
-        return formatToolDetails(
-          `Writing ${getArg(args, 'path', 'file')}`,
-          status
-        );
-      case 'edit':
-        return formatToolDetails(
-          `Editing ${getArg(args, 'path', 'file')}`,
-          status
-        );
-      case 'grep': {
-        const argObj = asRecord(args);
-        const pattern = asString(argObj?.pattern) ?? '<pattern>';
-        const path = asString(argObj?.path) ?? '.';
-        return formatToolDetails(`Searching "${pattern}" in ${path}`, status);
-      }
-      case 'find': {
-        const argObj = asRecord(args);
-        const pattern = asString(argObj?.pattern) ?? '<pattern>';
-        const path = asString(argObj?.path) ?? '.';
-        return formatToolDetails(`Finding "${pattern}" in ${path}`, status);
-      }
-      case 'ls':
-        return formatToolDetails(
-          `Listing ${getArg(args, 'path', '.')}`,
-          status
-        );
-      case 'showFile':
-        return formatToolDetails(
-          `Uploading ${getArg(args, 'path', 'file')}`,
-          status
-        );
-      default:
-        return formatToolDetails(`Running ${toolName}`, status);
-    }
-  })();
+  if (status) {
+    return {
+      title: clampNormalizedText(status, config.toolOutput.titleMaxChars),
+    };
+  }
 
   return {
     title: resolveTitle(toolName),
-    details,
+    details: clampNormalizedText(
+      resolveDetails(toolName, args),
+      config.toolOutput.detailsMaxChars
+    ),
   };
 }
 

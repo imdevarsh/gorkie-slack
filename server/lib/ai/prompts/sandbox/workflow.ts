@@ -17,7 +17,7 @@ Follow these steps for every task:
   Prefer renaming input once in attachments/<name>-original.<ext> before processing.
   Immediately rename generic filenames to semantic names aligned with user intent.
   The final render command MUST include every required input path discovered in step 1.
-  EVERY tool call MUST include a required status field using "is <verb> ..." phrasing.
+  EVERY tool call MUST include a required status field as a plain present-participle phrase, e.g. "Installing ffmpeg", "Rendering video", "Converting image".
   Tip: Keep status under 40 chars, otherwise Slack rejects it.
 
 4. Upload: Call showFile for the finished result.

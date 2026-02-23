@@ -80,6 +80,7 @@ export async function closeStream(stream: Stream): Promise<void> {
   if (stream.noop) {
     return;
   }
+  stream.noop = true;
   try {
     await stream.client.chat.stopStream({
       channel: stream.channel,
