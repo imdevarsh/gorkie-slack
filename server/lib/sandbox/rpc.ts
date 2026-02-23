@@ -15,6 +15,7 @@ import type {
   RpcSessionState,
   ThinkingLevel,
 } from '~/types/sandbox/rpc';
+import { errorMessage } from '~/utils/error';
 
 type BashResult = Extract<
   RpcResponse,
@@ -344,7 +345,10 @@ export class PiRpcClient {
 
   private getData<T = unknown>(response: RpcResponse): T {
     if (!response.success) {
-      throw new Error(response.error);
+      const message = errorMessage(response.error);
+      throw new Error(
+        `[pi-rpc] Command "${response.command}" failed: ${message}`
+      );
     }
     if (!('data' in response)) {
       return undefined as T;
