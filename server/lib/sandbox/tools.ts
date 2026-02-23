@@ -14,15 +14,6 @@ interface ToolEndInput {
   toolName: string;
 }
 
-interface ToolTaskStart {
-  details: string;
-  title: string;
-}
-
-interface ToolTaskEnd {
-  output: string;
-}
-
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -92,11 +83,7 @@ function extractTextResult(result: unknown): string | undefined {
   return joined.length > 0 ? joined : undefined;
 }
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-export function getToolTaskStart(input: ToolStartInput): ToolTaskStart {
+export function getToolTaskStart(input: ToolStartInput) {
   const { toolName, args, status } = input;
 
   const details = (() => {
@@ -154,20 +141,13 @@ export function getToolTaskStart(input: ToolStartInput): ToolTaskStart {
   };
 }
 
-export function getToolTaskEnd(input: ToolEndInput): ToolTaskEnd {
-  const { toolName, args, result, isError } = input;
+export function getToolTaskEnd(input: ToolEndInput) {
+  const { toolName, result, isError } = input;
 
   if (toolName === 'bash') {
-    const command = getArg(args, 'command', '(unknown command)');
     const rawOutput = extractTextResult(result) ?? '(no output)';
-    const dedupedOutput = rawOutput
-      .replace(new RegExp(`^bash\\$\\s*${escapeRegExp(command)}\\s*\\n?`), '')
-      .trim();
     return {
-      output: clampNormalizedText(
-        dedupedOutput.length > 0 ? dedupedOutput : '(no output)',
-        config.toolOutput.outputMaxChars
-      ),
+      output: clampNormalizedText(rawOutput, config.toolOutput.outputMaxChars),
     };
   }
 
