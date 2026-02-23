@@ -1,4 +1,5 @@
 import { tool } from 'ai';
+import PQueue from 'p-queue';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
@@ -45,11 +46,7 @@ export const sandbox = ({
       const ctxId = getContextId(context);
       let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
       const toolRuns = new Map<string, ToolRunState>();
-
-      let tail: Promise<void> = Promise.resolve();
-      const enqueue = (fn: () => Promise<void>): void => {
-        tail = tail.then(() => fn()).catch(() => {});
-      };
+      const queue = new PQueue({ concurrency: 1 });
 
       const taskId = await updateTask(stream, {
         taskId: toolCallId,
@@ -81,25 +78,25 @@ export const sandbox = ({
           stream: eventStream,
           onRetry: ({ attempt, maxAttempts, delayMs }) => {
             const seconds = Math.round(delayMs / 1000);
-            enqueue(() =>
+            void queue.add(() =>
               updateTask(stream, {
                 taskId,
                 status: 'in_progress',
                 details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
-              }).then(() => undefined)
+              })
             );
           },
           onToolStart: ({ toolName, toolCallId, args, status }) => {
             const toolTask = getToolTaskStart({ toolName, args, status });
             const toolTaskId = `${taskId}:${toolCallId}`;
             toolRuns.set(toolCallId, { taskId: toolTaskId });
-            enqueue(() =>
+            void queue.add(() =>
               createTask(stream, {
                 taskId: toolTaskId,
                 title: toolTask.title,
                 details: toolTask.details,
                 status: 'in_progress',
-              }).then(() => undefined)
+              })
             );
           },
           onToolEnd: ({ toolName, toolCallId, isError, result }) => {
@@ -109,7 +106,7 @@ export const sandbox = ({
             }
             toolRuns.delete(toolCallId);
             const toolResult = getToolTaskEnd({ toolName, result, isError });
-            enqueue(() =>
+            void queue.add(() =>
               finishTask(stream, {
                 status: isError ? 'error' : 'complete',
                 taskId: toolRun.taskId,
@@ -126,6 +123,8 @@ export const sandbox = ({
         } finally {
           unsubscribe();
         }
+
+        await queue.onIdle();
 
         const streamResponse = getResponse(eventStream);
         const lastAssistantMessage = await runtime.client
