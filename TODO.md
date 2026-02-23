@@ -29,3 +29,4 @@
 - Add clearer error messages, parse errors properly from pi
 - Add model retry support
 - Preconfigure playwright MCP (npm install -g agent-browser )
+- Handle timeouts and retries per task command vs per global agent
