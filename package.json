@@ -29,6 +29,7 @@
     "@neondatabase/serverless": "^1.0.2",
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "@opentelemetry/sdk-node": "^0.212.0",
+    "@sinclair/typebox": "^0.34.48",
     "@slack/bolt": "^4.6.0",
     "@slack/types": "^2.20.0",
     "@t3-oss/env-core": "^0.13.10",

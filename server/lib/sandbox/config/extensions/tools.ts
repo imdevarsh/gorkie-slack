@@ -1,4 +1,3 @@
-// @ts-nocheck
 import fs from 'node:fs';
 import nodePath from 'node:path';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
@@ -12,6 +11,8 @@ import {
   createWriteTool,
 } from '@mariozechner/pi-coding-agent';
 import { Type } from '@sinclair/typebox';
+
+const DEFAULT_BASH_TIMEOUT_SECONDS = 2 * 60;
 
 const tools = [
   { id: 'read', tool: createReadTool },
@@ -28,11 +29,26 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
 
   for (const { id, tool } of tools) {
     const builtIn = tool(cwd);
+    const parameters =
+      id === 'bash'
+        ? Type.Intersect([
+            Type.Omit(builtIn.parameters, ['timeout']),
+            Type.Object({
+              timeout: Type.Optional(
+                Type.Number({
+                  description: 'Timeout in seconds (defaults to 120 seconds).',
+                  default: DEFAULT_BASH_TIMEOUT_SECONDS,
+                })
+              ),
+            }),
+          ])
+        : builtIn.parameters;
+
     pi.registerTool({
       ...builtIn,
       name: id,
       parameters: Type.Intersect([
-        builtIn.parameters,
+        parameters,
         Type.Object({
           status: Type.String({
             description:
