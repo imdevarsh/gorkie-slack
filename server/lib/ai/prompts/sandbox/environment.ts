@@ -25,6 +25,9 @@ Always install before first use:
   Python packages: pip3 install <package>
   Node packages:   npm install -g <package>
 
+Binary path:
+  For browser automation, use /usr/bin/agent-browser (not /usr/local/bin/agent-browser).
+
 Common installs:
   sudo apt-get update && sudo apt-get install -y imagemagick poppler-utils tesseract-ocr ffmpeg
   pip3 install pandas matplotlib pillow requests

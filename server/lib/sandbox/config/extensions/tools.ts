@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import nodePath from 'node:path';
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type {
+  AgentToolResult,
+  AgentToolUpdateCallback,
+  ExtensionAPI,
+} from '@mariozechner/pi-coding-agent';
 import {
   createBashTool,
   createEditTool,
@@ -9,82 +13,135 @@ import {
   createLsTool,
   createReadTool,
   createWriteTool,
-  type ToolDefinition,
 } from '@mariozechner/pi-coding-agent';
 import { type Static, type TSchema, Type } from '@sinclair/typebox';
 
 const DEFAULT_BASH_TIMEOUT_SECONDS = 2 * 60;
-const statusParameter = Type.Object({
-  status: Type.String({
-    description:
+
+const statusSchema = Type.Object({
+  status: Type.Optional(
+    Type.String({
+      description:
       "Required brief operation status in present-progressive form, e.g. 'fetching data', 'reading files'.",
-  }),
+    })
+  ),
 });
 
-function withStatus<TParams extends TSchema>(params: TParams) {
-  return Type.Intersect([params, statusParameter]);
-}
+const withStatus = <T extends TSchema>(schema: T) =>
+  Type.Intersect([schema, statusSchema]);
 
-function registerBuiltInTool<TParams extends TSchema, TDetails>(
-  pi: ExtensionAPI,
-  id: string,
-  tool: ToolDefinition<TParams, TDetails>,
-  paramsOverride?: TSchema
-): void {
-  const baseParameters = paramsOverride ?? tool.parameters;
-  const parameters = withStatus(baseParameters);
-
-  const definition: ToolDefinition<typeof parameters, TDetails> = {
-    ...tool,
-    name: id,
-    parameters,
-    execute: (toolCallId, params, signal, onUpdate, ctx) => {
-      const { status: _status, ...args } = params as Static<
-        typeof parameters
-      > & { status: string };
-      return tool.execute(
-        toolCallId,
-        args as Static<TParams>,
-        signal,
-        onUpdate,
-        ctx
-      );
-    },
+function passthrough<TParams extends TSchema, TDetails>(
+  tool: {
+    parameters: TParams;
+    execute: (
+      toolCallId: string,
+      params: Static<TParams>,
+      signal?: AbortSignal,
+      onUpdate?: AgentToolUpdateCallback<TDetails>
+    ) => Promise<AgentToolResult<TDetails>>;
+  },
+  normalize?: (params: Static<TParams>) => Static<TParams>
+) {
+  return (
+    toolCallId: string,
+    params: unknown,
+    signal?: AbortSignal,
+    onUpdate?: AgentToolUpdateCallback<TDetails>
+  ) => {
+    const parsed = params as Static<TParams>;
+    const normalized = normalize ? normalize(parsed) : parsed;
+    return tool.execute(toolCallId, normalized, signal, onUpdate);
   };
-
-  pi.registerTool(definition);
 }
 
-export default function registerToolsExtension(pi: ExtensionAPI) {
+export default function registerToolsExtension(pi: ExtensionAPI): void {
   const cwd = process.cwd();
 
-  registerBuiltInTool(pi, 'read', createReadTool(cwd));
-  registerBuiltInTool(pi, 'edit', createEditTool(cwd));
-  registerBuiltInTool(pi, 'write', createWriteTool(cwd));
-  registerBuiltInTool(pi, 'find', createFindTool(cwd));
-  registerBuiltInTool(pi, 'grep', createGrepTool(cwd));
-  registerBuiltInTool(pi, 'ls', createLsTool(cwd));
+  const read = createReadTool(cwd);
+  const readParams = withStatus(read.parameters);
+  pi.registerTool({
+    ...read,
+    name: 'read',
+    parameters: readParams,
+    execute: passthrough(read),
+  });
+
+  const edit = createEditTool(cwd);
+  const editParams = withStatus(edit.parameters);
+  pi.registerTool({
+    ...edit,
+    name: 'edit',
+    parameters: editParams,
+    execute: passthrough(edit),
+  });
+
+  const write = createWriteTool(cwd);
+  const writeParams = withStatus(write.parameters);
+  pi.registerTool({
+    ...write,
+    name: 'write',
+    parameters: writeParams,
+    execute: passthrough(write),
+  });
+
+  const find = createFindTool(cwd);
+  const findParams = withStatus(find.parameters);
+  pi.registerTool({
+    ...find,
+    name: 'find',
+    parameters: findParams,
+    execute: passthrough(find),
+  });
+
+  const grep = createGrepTool(cwd);
+  const grepParams = withStatus(grep.parameters);
+  pi.registerTool({
+    ...grep,
+    name: 'grep',
+    parameters: grepParams,
+    execute: passthrough(grep),
+  });
+
+  const ls = createLsTool(cwd);
+  const lsParams = withStatus(ls.parameters);
+  pi.registerTool({
+    ...ls,
+    name: 'ls',
+    parameters: lsParams,
+    execute: passthrough(ls),
+  });
 
   const bash = createBashTool(cwd);
-  const bashParameters = Type.Intersect([
-    Type.Omit(bash.parameters, ['timeout']),
-    Type.Object({
-      timeout: Type.Optional(
-        Type.Number({
-          description: 'Timeout in seconds (defaults to 120 seconds).',
-          default: DEFAULT_BASH_TIMEOUT_SECONDS,
-        })
-      ),
-    }),
-  ]);
-  registerBuiltInTool(pi, 'bash', bash, bashParameters);
-
+  const bashParams = withStatus(
+    Type.Intersect([
+      Type.Omit(bash.parameters, ['timeout']),
+      Type.Object({
+        timeout: Type.Optional(
+          Type.Number({
+            description: 'Timeout in seconds (defaults to 120 seconds).',
+            default: DEFAULT_BASH_TIMEOUT_SECONDS,
+          })
+        ),
+      }),
+    ])
+  );
   pi.registerTool({
-    name: 'showFile',
-    label: 'showFile',
-    description:
-      'Signal the host to upload a sandbox file to Slack once it is ready.',
-    parameters: Type.Object({
+    ...bash,
+    name: 'bash',
+    parameters: bashParams,
+    execute: passthrough(bash, (rawArgs) => ({
+      ...rawArgs,
+      timeout:
+        typeof rawArgs.timeout === 'number' &&
+        Number.isFinite(rawArgs.timeout) &&
+        rawArgs.timeout > 0
+          ? rawArgs.timeout
+          : DEFAULT_BASH_TIMEOUT_SECONDS,
+    })),
+  });
+
+  const showFileParams = withStatus(
+    Type.Object({
       path: Type.String({
         description:
           'Absolute path to the file in sandbox, e.g. /home/daytona/output/result.png',
@@ -94,12 +151,18 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
           description: 'Optional title to display in Slack',
         })
       ),
-      status: Type.String({
-        description:
-          "Required brief operation status in present-progressive form, e.g. 'uploading file'.",
-      }),
-    }),
-    execute(_toolCallId, { path, title }) {
+    })
+  );
+
+  pi.registerTool({
+    name: 'showFile',
+    label: 'showFile',
+    description:
+      'Signal the host to upload a sandbox file to Slack once it is ready.',
+    parameters: showFileParams,
+    execute: (_toolCallId, params) => {
+      const { path, title } = params as Static<typeof showFileParams>;
+
       if (!nodePath.isAbsolute(path)) {
         throw new Error('showFile.path must be absolute');
       }

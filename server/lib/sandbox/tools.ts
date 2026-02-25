@@ -1,5 +1,9 @@
 import { sandbox as config } from '~/config';
-import { clampNormalizedText, nonEmptyTrimString } from '~/utils/text';
+import {
+  clampNormalizedText,
+  nonEmptyTrimString,
+  sanitizeDisplayText,
+} from '~/utils/text';
 
 interface ToolStartInput {
   args: unknown;
@@ -21,7 +25,11 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function asString(value: unknown): string | undefined {
-  return nonEmptyTrimString(value);
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  return nonEmptyTrimString(sanitizeDisplayText(value));
 }
 
 function getArg(args: unknown, key: string, fallback: string): string {
@@ -123,7 +131,7 @@ export function getToolTaskStart(input: ToolStartInput) {
 }
 
 export function getToolTaskEnd(input: ToolEndInput) {
-  const { toolName, result, isError } = input;
+  const { toolName, result } = input;
 
   if (toolName === 'showFile') {
     const details = asRecord(result)?.details;
