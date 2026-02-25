@@ -21,6 +21,7 @@ export const sandbox = {
   runtime: {
     agentPort: 3000,
     workdir: '/home/daytona',
+    executionTimeoutMs: 20 * 60 * 1000,
   },
   attachments: {
     maxBytes: 1_000_000_000,

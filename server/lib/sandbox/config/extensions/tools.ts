@@ -9,55 +9,75 @@ import {
   createLsTool,
   createReadTool,
   createWriteTool,
+  type ToolDefinition,
 } from '@mariozechner/pi-coding-agent';
-import { Type } from '@sinclair/typebox';
+import { type Static, type TSchema, Type } from '@sinclair/typebox';
 
 const DEFAULT_BASH_TIMEOUT_SECONDS = 2 * 60;
+const statusParameter = Type.Object({
+  status: Type.String({
+    description:
+      "Required brief operation status in present-progressive form, e.g. 'fetching data', 'reading files'.",
+  }),
+});
 
-const tools = [
-  { id: 'read', tool: createReadTool },
-  { id: 'bash', tool: createBashTool },
-  { id: 'edit', tool: createEditTool },
-  { id: 'write', tool: createWriteTool },
-  { id: 'find', tool: createFindTool },
-  { id: 'grep', tool: createGrepTool },
-  { id: 'ls', tool: createLsTool },
-] as const;
+function withStatus<TParams extends TSchema>(params: TParams) {
+  return Type.Intersect([params, statusParameter]);
+}
+
+function registerBuiltInTool<TParams extends TSchema, TDetails>(
+  pi: ExtensionAPI,
+  id: string,
+  tool: ToolDefinition<TParams, TDetails>,
+  paramsOverride?: TSchema
+): void {
+  const baseParameters = paramsOverride ?? tool.parameters;
+  const parameters = withStatus(baseParameters);
+
+  const definition: ToolDefinition<typeof parameters, TDetails> = {
+    ...tool,
+    name: id,
+    parameters,
+    execute: (toolCallId, params, signal, onUpdate, ctx) => {
+      const { status: _status, ...args } = params as Static<
+        typeof parameters
+      > & { status: string };
+      return tool.execute(
+        toolCallId,
+        args as Static<TParams>,
+        signal,
+        onUpdate,
+        ctx
+      );
+    },
+  };
+
+  pi.registerTool(definition);
+}
 
 export default function registerToolsExtension(pi: ExtensionAPI) {
   const cwd = process.cwd();
 
-  for (const { id, tool } of tools) {
-    const builtIn = tool(cwd);
-    const parameters =
-      id === 'bash'
-        ? Type.Intersect([
-            Type.Omit(builtIn.parameters, ['timeout']),
-            Type.Object({
-              timeout: Type.Optional(
-                Type.Number({
-                  description: 'Timeout in seconds (defaults to 120 seconds).',
-                  default: DEFAULT_BASH_TIMEOUT_SECONDS,
-                })
-              ),
-            }),
-          ])
-        : builtIn.parameters;
+  registerBuiltInTool(pi, 'read', createReadTool(cwd));
+  registerBuiltInTool(pi, 'edit', createEditTool(cwd));
+  registerBuiltInTool(pi, 'write', createWriteTool(cwd));
+  registerBuiltInTool(pi, 'find', createFindTool(cwd));
+  registerBuiltInTool(pi, 'grep', createGrepTool(cwd));
+  registerBuiltInTool(pi, 'ls', createLsTool(cwd));
 
-    pi.registerTool({
-      ...builtIn,
-      name: id,
-      parameters: Type.Intersect([
-        parameters,
-        Type.Object({
-          status: Type.String({
-            description:
-              "Required brief operation status in present-progressive form, e.g. 'fetching data', 'reading files'.",
-          }),
-        }),
-      ]),
-    });
-  }
+  const bash = createBashTool(cwd);
+  const bashParameters = Type.Intersect([
+    Type.Omit(bash.parameters, ['timeout']),
+    Type.Object({
+      timeout: Type.Optional(
+        Type.Number({
+          description: 'Timeout in seconds (defaults to 120 seconds).',
+          default: DEFAULT_BASH_TIMEOUT_SECONDS,
+        })
+      ),
+    }),
+  ]);
+  registerBuiltInTool(pi, 'bash', bash, bashParameters);
 
   pi.registerTool({
     name: 'showFile',
@@ -93,7 +113,7 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
         throw new Error(`Path is not a file: ${path}`);
       }
 
-      return {
+      return Promise.resolve({
         content: [
           {
             type: 'text' as const,
@@ -104,7 +124,7 @@ export default function registerToolsExtension(pi: ExtensionAPI) {
           path,
           title: title ?? null,
         },
-      };
+      });
     },
   });
 }

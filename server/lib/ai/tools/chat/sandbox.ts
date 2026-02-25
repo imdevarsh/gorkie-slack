@@ -11,6 +11,7 @@ import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
+import { sandbox as config } from '~/config';
 
 export const sandbox = ({
   context,
@@ -117,11 +118,23 @@ export const sandbox = ({
           3 * 60 * 1000
         );
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('[sandbox] Execution timed out')),
+            config.runtime.executionTimeoutMs
+          );
+        });
+
         try {
           const idle = runtime.client.waitForIdle();
           await runtime.client.prompt(prompt);
-          await idle;
+          await Promise.race([idle, timeoutPromise]);
+        } catch (error) {
+          await runtime.client.abort().catch(() => null);
+          throw error;
         } finally {
+          clearTimeout(timeoutId);
           clearInterval(keepAlive);
           unsubscribe();
         }
