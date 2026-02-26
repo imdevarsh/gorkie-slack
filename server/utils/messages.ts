@@ -8,24 +8,21 @@ export function getMessageText(message: ModelMessage): string {
   }
 
   if (Array.isArray(content)) {
-    return (
-      content
-        .map((part) => {
-          if (typeof part === 'string') {
-            return part;
+    return content
+      .map((part) => {
+        if (typeof part === 'string') {
+          return part;
+        }
+        if (typeof part === 'object' && part) {
+          const maybeText = (part as { text?: unknown }).text;
+          if (typeof maybeText === 'string') {
+            return maybeText;
           }
-          if (typeof part === 'object' && part) {
-            const maybeText = (part as { text?: unknown }).text;
-            if (typeof maybeText === 'string') {
-              return maybeText;
-            }
-          }
-          return '';
-        })
-        // TODO: @channel protection
-        .filter(Boolean)
-        .join('\n')
-    );
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
   }
 
   if (typeof content === 'object' && content) {
@@ -49,9 +46,6 @@ export function buildHistorySnippet(
     .join('\n');
 }
 
-export function shouldUse(message: string) {
-  if (message.startsWith('##')) {
-    return false;
-  }
-  return true;
+export function isUsableMessage(message: string): boolean {
+  return !message.startsWith('##');
 }

@@ -18,16 +18,10 @@ import {
 
 export const name = 'message';
 
-async function handleMessage(args: MessageEventArgs) {
-  if (!hasSupportedSubtype(args)) {
-    return;
-  }
-
-  const messageContext = toMessageContext(args);
-  if (!messageContext) {
-    return;
-  }
-
+async function handleMessage(
+  args: MessageEventArgs,
+  messageContext: NonNullable<ReturnType<typeof toMessageContext>>
+) {
   const event = toMessageEventView(messageContext);
   if (!shouldHandleMessage(event)) {
     return;
@@ -91,7 +85,7 @@ export async function execute(args: MessageEventArgs): Promise<void> {
 
   const ctxId = getContextId(messageContext);
   await getQueue(ctxId)
-    .add(async () => handleMessage(args))
+    .add(async () => handleMessage(args, messageContext))
     .catch((error: unknown) => {
       logger.error(
         { ...toLogError(error), ctxId },

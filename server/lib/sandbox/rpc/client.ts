@@ -6,6 +6,7 @@ import type {
   AgentSessionEvent,
   CompactionResult,
   PendingRequest,
+  PtyLike,
   RpcCommand,
   RpcCommandBody,
   RpcEventListener,
@@ -28,12 +29,6 @@ type ModelInfo = Extract<
   RpcResponse,
   { command: 'get_available_models'; success: true }
 >['data']['models'][number];
-
-export interface PtyLike {
-  disconnect(): Promise<void>;
-  kill(): Promise<unknown>;
-  sendInput(data: string): Promise<void>;
-}
 
 export class PiRpcClient {
   private buffer = '';

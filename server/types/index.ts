@@ -10,6 +10,8 @@ export * from './sandbox/tools';
 export * from './slack/app';
 export * from './slack/conversation';
 export * from './slack/events';
+export * from './slack/file';
 export * from './slack/tooling';
+export * from './slack/trigger';
 export * from './slack';
 export * from './stream';

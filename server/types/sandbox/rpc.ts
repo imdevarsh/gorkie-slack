@@ -30,3 +30,9 @@ export interface PendingRequest {
   reject: (error: Error) => void;
   resolve: (response: RpcResponse) => void;
 }
+
+export interface PtyLike {
+  disconnect: () => Promise<void>;
+  kill: () => Promise<unknown>;
+  sendInput: (data: string) => Promise<void>;
+}

@@ -1,7 +1,9 @@
-import type { SlackMessageContext, SlackMessageEvent } from '~/types';
+import type {
+  SlackMessageContext,
+  SlackMessageEvent,
+  TriggerType,
+} from '~/types';
 import { primeSlackUserName } from '~/utils/users';
-
-export type TriggerType = 'ping' | 'dm' | 'thread' | null;
 
 function isPlainMessage(
   event: SlackMessageEvent

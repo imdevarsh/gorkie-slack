@@ -3,7 +3,7 @@ import logger from '~/lib/logger';
 import type { ConversationOptions, SlackConversationMessage } from '~/types';
 import { toLogError } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
-import { shouldUse } from '~/utils/messages';
+import { isUsableMessage } from '~/utils/messages';
 
 async function joinChannel(clientToken: string | undefined, channel: string) {
   if (!clientToken) {
@@ -68,7 +68,7 @@ function filterMessages(
     if (!message.ts) {
       return false;
     }
-    if (!shouldUse(message.text || '')) {
+    if (!isUsableMessage(message.text || '')) {
       return false;
     }
     const messageTs = Number(message.ts);

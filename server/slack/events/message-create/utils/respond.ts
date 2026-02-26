@@ -2,8 +2,13 @@ import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
 import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream } from '~/lib/ai/utils/stream';
-import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
-import { processSlackFiles, type SlackFile } from '~/utils/images';
+import type {
+  ChatRequestHints,
+  SlackFile,
+  SlackMessageContext,
+  Stream,
+} from '~/types';
+import { processSlackFiles } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
 export async function generateResponse(

@@ -1,5 +1,5 @@
 import type { WebClient } from '@slack/web-api';
-import type { SlackFile } from '~/utils/images';
+import type { SlackFile } from './file';
 
 export interface ConversationOptions {
   botUserId?: string;

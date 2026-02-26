@@ -6,7 +6,7 @@ import type {
   SlackMessageContext,
 } from '~/types';
 import { toLogError } from '~/utils/error';
-import { shouldUse } from '~/utils/messages';
+import { isUsableMessage } from '~/utils/messages';
 
 export function hasSupportedSubtype(args: MessageEventArgs): boolean {
   const subtype = args.event.subtype;
@@ -57,7 +57,7 @@ export function shouldHandleMessage(
   event: MessageEventView
 ): event is MessageEventView & { user: string } {
   const messageText = event.text ?? '';
-  return Boolean(event.user) && shouldUse(messageText);
+  return Boolean(event.user) && isUsableMessage(messageText);
 }
 
 export function canUseBot(userId: string): boolean {

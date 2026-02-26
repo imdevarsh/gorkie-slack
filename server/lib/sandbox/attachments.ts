@@ -3,9 +3,12 @@ import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import type { PromptResourceLink, SlackMessageContext } from '~/types';
+import type {
+  PromptResourceLink,
+  SlackFile,
+  SlackMessageContext,
+} from '~/types';
 import { getContextId } from '~/utils/context';
-import type { SlackFile } from '~/utils/images';
 
 export const ATTACHMENTS_DIR = 'attachments';
 const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}`;

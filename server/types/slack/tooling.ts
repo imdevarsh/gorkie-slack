@@ -1,4 +1,4 @@
-import type { SlackFile } from '~/utils/images';
+import type { SlackFile } from './file';
 
 export interface AssistantThreadEvent {
   assistant_thread?: { action_token?: string };
