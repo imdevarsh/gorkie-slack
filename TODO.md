@@ -12,8 +12,6 @@
 - add a path function to join paths rather than ${config.runtime.workdir}/xyz
 - remove unused unwanted db fields
 - Use typed ACP event schemas instead of manual casting in events.ts
-- Fix updateStatus to not clear historical timestamps
-- Delete unused getSandbox() and reconnectSandbox() exports
 - Status update logic is half broken; fix that and cleanup RPC code, support custom MCP integrations
 - extend / bump timeouts tus: "is creating assets and rendering video"
 - Sandbox run timeout captured in logs; move full payload to issue/runbook with redacted identifiers.

@@ -11,5 +11,3 @@ export interface ChatRequestHints extends BaseHints {
 }
 
 export interface SandboxRequestHints extends BaseHints {}
-
-export type RequestHints = ChatRequestHints | SandboxRequestHints;

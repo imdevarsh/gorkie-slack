@@ -1,9 +1,9 @@
-import type { AgentSessionEvent } from '@mariozechner/pi-coding-agent';
 import logger from '~/lib/logger';
 import { showFileInputSchema } from '~/lib/validators/sandbox';
 import type { SlackMessageContext } from '~/types';
-import type { AgentEvent } from '~/types/sandbox/rpc';
 import { trimmed } from '~/utils/text';
+import type { AgentSessionEvent } from '~/types/sandbox/rpc';
+import type { RetryEvent, ToolEndEvent, ToolStartEvent } from '~/types/sandbox/events';
 import type { PiRpcClient } from './rpc';
 import type { ResolvedSandboxSession } from './session';
 import { showFile } from './show-file';
@@ -33,37 +33,24 @@ function handleShowFileTool(params: {
   );
 }
 
-export function subscribeEvents(params: {
+export interface SubscribeEventsParams {
   client: PiRpcClient;
-  runtime: ResolvedSandboxSession;
   context: SlackMessageContext;
   ctxId: string;
-  stream: unknown[];
-  onToolStart?: (input: {
-    args: unknown;
-    status?: string;
-    toolCallId: string;
-    toolName: string;
-  }) => void | Promise<void>;
-  onToolEnd?: (input: {
-    isError: boolean;
-    result: unknown;
-    toolCallId: string;
-    toolName: string;
-  }) => void | Promise<void>;
-  onRetry?: (input: {
-    attempt: number;
-    maxAttempts: number;
-    delayMs: number;
-    errorMessage: string;
-  }) => void | Promise<void>;
-}): () => void {
+  events: AgentSessionEvent[];
+  onRetry?: (event: RetryEvent) => void | Promise<void>;
+  onToolEnd?: (event: ToolEndEvent) => void | Promise<void>;
+  onToolStart?: (event: ToolStartEvent) => void | Promise<void>;
+  runtime: ResolvedSandboxSession;
+}
+
+export function subscribeEvents(params: SubscribeEventsParams): () => void {
   const {
     client,
     runtime,
     context,
     ctxId,
-    stream,
+    events,
     onToolStart,
     onToolEnd,
     onRetry,
@@ -71,12 +58,10 @@ export function subscribeEvents(params: {
 
   return client.onEvent((event) => {
     try {
-      stream.push(event);
+      events.push(event);
 
-      const sessionEvent = event as AgentSessionEvent;
-
-      if (sessionEvent.type === 'auto_retry_start') {
-        const { attempt, maxAttempts, delayMs, errorMessage } = sessionEvent;
+      if (event.type === 'auto_retry_start') {
+        const { attempt, maxAttempts, delayMs, errorMessage } = event;
         logger.warn(
           { ctxId, attempt, maxAttempts, delayMs, errorMessage },
           '[subagent] Auto-retry started'
@@ -86,10 +71,7 @@ export function subscribeEvents(params: {
       }
 
       if (event.type === 'tool_execution_start') {
-        const { toolName, args, toolCallId } = event as Extract<
-          AgentEvent,
-          { type: 'tool_execution_start' }
-        >;
+        const { toolName, args, toolCallId } = event;
         logger.info({ ctxId, tool: toolName, args }, '[subagent] Tool started');
 
         const status = trimmed(args?.status)?.slice(0, 49);
@@ -98,10 +80,7 @@ export function subscribeEvents(params: {
       }
 
       if (event.type === 'tool_execution_end') {
-        const { toolName, result, isError, toolCallId } = event as Extract<
-          AgentEvent,
-          { type: 'tool_execution_end' }
-        >;
+        const { toolName, result, isError, toolCallId } = event;
         logger[isError ? 'warn' : 'info'](
           { ctxId, tool: toolName, isError, result },
           '[subagent] Tool completed'
@@ -121,19 +100,19 @@ export function subscribeEvents(params: {
   });
 }
 
-export function getResponse(stream: unknown[]): string | undefined {
+export function getResponse(events: AgentSessionEvent[]): string | undefined {
   const chunks: string[] = [];
 
-  for (const item of stream) {
-    const event = item as AgentEvent;
+  for (const event of events) {
     if (event.type !== 'message_update') {
       continue;
     }
-
-    const msgEvent = (event as Extract<AgentEvent, { type: 'message_update' }>)
-      .assistantMessageEvent;
-    if (msgEvent.type === 'text_delta' && typeof msgEvent.delta === 'string') {
-      chunks.push(msgEvent.delta);
+    const { assistantMessageEvent } = event;
+    if (
+      assistantMessageEvent.type === 'text_delta' &&
+      typeof assistantMessageEvent.delta === 'string'
+    ) {
+      chunks.push(assistantMessageEvent.delta);
     }
   }
 

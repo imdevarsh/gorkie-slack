@@ -1,4 +1,4 @@
-import type { AgentEvent } from '@mariozechner/pi-agent-core';
+import type { AgentSessionEvent } from '@mariozechner/pi-coding-agent';
 import type {
   RpcCommand,
   RpcResponse,
@@ -9,12 +9,14 @@ export type {
   AgentMessage,
   ThinkingLevel,
 } from '@mariozechner/pi-agent-core';
-export type { CompactionResult } from '@mariozechner/pi-coding-agent';
+export type {
+  AgentSessionEvent,
+  CompactionResult,
+} from '@mariozechner/pi-coding-agent';
 export type {
   RpcCommand,
   RpcResponse,
   RpcSessionState,
-  RpcSlashCommand,
 } from '@mariozechner/pi-coding-agent/rpc';
 
 type DistributiveOmit<T, K extends keyof T> = T extends unknown
@@ -22,7 +24,7 @@ type DistributiveOmit<T, K extends keyof T> = T extends unknown
   : never;
 export type RpcCommandBody = DistributiveOmit<RpcCommand, 'id'>;
 
-export type RpcEventListener = (event: AgentEvent) => void;
+export type RpcEventListener = (event: AgentSessionEvent) => void;
 
 export interface PendingRequest {
   reject: (error: Error) => void;
