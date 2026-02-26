@@ -151,7 +151,7 @@ async function handleMessage(args: MessageEventArgs) {
   }
 }
 
-export function execute(args: MessageEventArgs) {
+export async function execute(args: MessageEventArgs): Promise<void> {
   if (!hasSupportedSubtype(args)) {
     return;
   }
@@ -162,7 +162,7 @@ export function execute(args: MessageEventArgs) {
   }
 
   const ctxId = getContextId(messageContext);
-  return getQueue(ctxId)
+  await getQueue(ctxId)
     .add(async () => handleMessage(args))
     .catch((error: unknown) => {
       logger.error(

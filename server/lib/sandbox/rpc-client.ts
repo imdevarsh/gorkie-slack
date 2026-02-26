@@ -2,7 +2,7 @@ import type { ImageContent } from '@mariozechner/pi-ai';
 import { sandbox as config } from '~/config';
 import logger from '~/lib/logger';
 import type {
-  AgentEvent,
+  AgentSessionEvent,
   AgentMessage,
   CompactionResult,
   PendingRequest,
@@ -95,11 +95,11 @@ export class PiRpcClient {
         }
         continue;
       }
-      this.emit(parsed as AgentEvent);
+      this.emit(parsed as AgentSessionEvent);
     }
   }
 
-  private emit(event: AgentEvent): void {
+  private emit(event: AgentSessionEvent): void {
     for (const listener of this.listeners) {
       try {
         listener(event);
@@ -271,10 +271,10 @@ export class PiRpcClient {
     return Promise.race([idlePromise, this.exitPromise]).finally(() => off());
   }
 
-  collectEvents(): Promise<AgentEvent[]> {
+  collectEvents(): Promise<AgentSessionEvent[]> {
     let off = () => {};
-    const collectPromise = new Promise<AgentEvent[]>((resolve) => {
-      const events: AgentEvent[] = [];
+    const collectPromise = new Promise<AgentSessionEvent[]>((resolve) => {
+      const events: AgentSessionEvent[] = [];
       off = this.onEvent((event) => {
         events.push(event);
         if (event.type === 'agent_end') {
@@ -290,7 +290,7 @@ export class PiRpcClient {
   async promptAndWait(
     message: string,
     images?: ImageContent[]
-  ): Promise<AgentEvent[]> {
+  ): Promise<AgentSessionEvent[]> {
     const eventsPromise = this.collectEvents();
     await this.prompt(message, images);
     return eventsPromise;
