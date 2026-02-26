@@ -46,15 +46,15 @@ Project is complete only when all are true:
 
 ## 3. Branch and Safety Setup
 
-- [ ] Create working branch from latest `main`:
-  - [ ] `git fetch origin`
-  - [ ] `git checkout main`
-  - [ ] `git pull origin main`
-  - [ ] `git checkout -b refactor/one-shot-readability`
-- [ ] Save baseline:
-  - [ ] `bun run typecheck` baseline
-  - [ ] `bun run check` baseline
-  - [ ] `git status` clean before refactor
+- [x] Create working branch from latest `main`:
+  - [x] `git fetch origin`
+  - [x] `git checkout main`
+  - [x] `git pull origin main`
+  - [x] `git checkout -b refactor/one-shot-readability`
+- [x] Save baseline:
+  - [x] `bun run typecheck` baseline
+  - [x] `bun run check` baseline
+  - [x] `git status` clean before refactor
 - [ ] Capture baseline behavior logs for:
   - [ ] normal ping reply
   - [ ] sandbox task with showFile
@@ -191,7 +191,7 @@ Reduce orchestration complexity while preserving tool behavior.
 ### 6.3 AI SDK Usage Cleanup
 
 - [x] Prefer AI SDK hooks for step lifecycle over ad-hoc state handling.
-- [ ] Eliminate wrapper code that duplicates AI SDK internal behavior.
+- [x] Eliminate wrapper code that duplicates AI SDK internal behavior.
 - [x] Keep telemetry hooks clear and documented.
 
 ### 6.4 Validation
@@ -313,7 +313,7 @@ Dependency mapping by domain:
 
 Run in order:
 
-- [ ] Boot app in socket mode.
+- [x] Boot app in socket mode.
 - [ ] Mention bot with simple greeting.
 - [ ] Run sandbox text command.
 - [ ] Run sandbox file command + showFile.
@@ -346,36 +346,42 @@ Run in order:
 
 ## 15. Final Release Checklist
 
-- [ ] Branch rebased on latest `main`
+- [x] Branch rebased on latest `main`
 - [x] `bun run typecheck` green
 - [x] `bun run check` green
 - [ ] smoke tests complete
 - [x] docs updated
 - [x] dependency audit complete
-- [ ] PR summary includes:
-  - [ ] architecture delta
-  - [ ] removed complexity points
-  - [ ] behavior parity notes
-  - [ ] known tradeoffs
+- [x] PR summary includes:
+  - [x] architecture delta
+  - [x] removed complexity points
+  - [x] behavior parity notes
+  - [x] known tradeoffs
+
+PR summary:
+- Architecture delta: sandbox execution orchestration moved into `sandbox-runner.ts`; Slack ingress flow split into context helpers; canonical type ownership consolidated in `server/types/**`.
+- Removed complexity points: duplicated timeout handling collapsed into shared utility usage; duplicate type aliases removed; mixed sandbox tool logic extracted from tool declaration.
+- Behavior parity notes: runtime remains E2B-only; session resume/pause retained; execution timeout guard (`Promise.race`) retained; showFile now surfaces explicit thread errors on missing/upload failure.
+- Known tradeoffs: full end-to-end mention/sandbox smoke cannot be fully automated from bot token alone (requires user-origin Slack events).
 
 ---
 
 ## 16. Work Tracking Board (Mark Progress Inline)
 
 ### Phase A: Foundation
-- [ ] A1 branch setup
+- [x] A1 branch setup
 - [x] A2 baseline checks
 - [ ] A3 baseline behavior capture
 
 ### Phase B: Types
-- [ ] B1 inventory
+- [x] B1 inventory
 - [x] B2 canonicalization
 - [x] B3 migration complete
 
 ### Phase C: Sandbox
-- [ ] C1 lifecycle cleanup
+- [x] C1 lifecycle cleanup
 - [x] C2 timeout policy
-- [ ] C3 showFile reliability
+- [x] C3 showFile reliability
 - [x] C4 RPC cleanup
 
 ### Phase D: AI + Slack
@@ -383,11 +389,11 @@ Run in order:
 - [x] D2 slack ingress cleanup
 
 ### Phase E: Config + Deps + Lint
-- [ ] E1 config/env cleanup
+- [x] E1 config/env cleanup
 - [x] E2 dependency cleanup
 - [x] E3 biome policy update
 
 ### Phase F: Docs + Release
-- [ ] F1 docs complete
+- [x] F1 docs complete
 - [ ] F2 smoke complete
 - [ ] F3 final PR ready
