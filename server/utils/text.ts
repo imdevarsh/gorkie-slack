@@ -1,29 +1,14 @@
 import stripAnsi from 'strip-ansi';
 
+// C0/C1 control characters, excluding HT (0x09) and LF (0x0a)
+const CONTROL_CHARS_RE = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g;
+
 export function stripTerminalArtifacts(text: string): string {
   return stripAnsi(text).replace(/\r/g, '');
 }
 
 export function sanitizeDisplayText(text: string): string {
-  const withoutAnsi = stripTerminalArtifacts(text);
-  let output = '';
-
-  for (const char of withoutAnsi) {
-    const code = char.charCodeAt(0);
-    const isControl =
-      code === 0x0d ||
-      code <= 0x08 ||
-      code === 0x0b ||
-      code === 0x0c ||
-      (code >= 0x0e && code <= 0x1f) ||
-      (code >= 0x7f && code <= 0x9f);
-    if (isControl) {
-      continue;
-    }
-    output += char;
-  }
-
-  return output;
+  return stripTerminalArtifacts(text).replace(CONTROL_CHARS_RE, '');
 }
 
 export function clampNormalizedText(text: string, maxLength: number): string {

@@ -4,8 +4,8 @@ import logger from '~/lib/logger';
 
 export const daytona = new Daytona({
   apiKey: config.daytona.apiKey,
-  ...(config.daytona.apiUrl ? { apiUrl: config.daytona.apiUrl } : {}),
-  ...(config.daytona.target ? { target: config.daytona.target } : {}),
+  apiUrl: config.daytona.apiUrl,
+  target: config.daytona.target,
 });
 
 export class SandboxNotFoundError extends Error {}
@@ -14,15 +14,12 @@ export function isNotFoundError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
   }
-  const message = error.message.toLowerCase();
-  if (message.includes('not found') || message.includes('404')) {
+  const { status, statusCode } = error as { status?: number; statusCode?: number };
+  if (status === 404 || statusCode === 404) {
     return true;
   }
-  const { status, statusCode } = error as {
-    status?: number;
-    statusCode?: number;
-  };
-  return status === 404 || statusCode === 404;
+  const msg = error.message.toLowerCase();
+  return msg.includes('not found') || msg.includes('404');
 }
 
 export async function bringOnline(
@@ -44,12 +41,12 @@ export async function bringOnline(
   if (state === 'error') {
     if (!sandbox.recoverable) {
       throw new SandboxNotFoundError(
-        `Sandbox ${sandbox.id} is in unrecoverable error: ${sandbox.errorReason ?? 'unknown'}`
+        `Sandbox ${sandbox.id} is unrecoverable: ${sandbox.errorReason ?? 'unknown'}`
       );
     }
     logger.warn(
       { sandboxId: sandbox.id, errorReason: sandbox.errorReason, threadId },
-      '[sandbox] Recovering from error state'
+      '[sandbox] Recovering sandbox from error state'
     );
     await sandbox.recover(config.daytona.startTimeoutSeconds);
     return;

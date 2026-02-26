@@ -9,6 +9,7 @@ import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
 import type { SlackMessageContext, Stream } from '~/types';
+import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
@@ -66,13 +67,13 @@ export const sandbox = ({
 
         const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
 
-        const eventStream: unknown[] = [];
+        const eventStream: AgentSessionEvent[] = [];
         const unsubscribe = subscribeEvents({
           client: runtime.client,
           runtime,
           context,
           ctxId,
-          stream: eventStream,
+          events: eventStream,
           onRetry: ({ attempt, maxAttempts, delayMs }) => {
             const seconds = Math.round(delayMs / 1000);
             enqueue(() =>
@@ -122,23 +123,14 @@ export const sandbox = ({
           3 * 60 * 1000
         );
 
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(
-            () => reject(new Error('[sandbox] Execution timed out')),
-            config.runtime.executionTimeoutMs
-          );
-        });
-
         try {
-          const idle = runtime.client.waitForIdle();
+          const idle = runtime.client.waitForIdle(config.runtime.executionTimeoutMs);
           await runtime.client.prompt(prompt);
-          await Promise.race([idle, timeoutPromise]);
+          await idle;
         } catch (error) {
           await runtime.client.abort().catch(() => null);
           throw error;
         } finally {
-          clearTimeout(timeoutId);
           clearInterval(keepAlive);
           unsubscribe();
         }

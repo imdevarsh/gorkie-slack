@@ -16,8 +16,6 @@ import {
 } from '@mariozechner/pi-coding-agent';
 import { type Static, type TSchema, Type } from '@sinclair/typebox';
 
-const DEFAULT_BASH_TIMEOUT_SECONDS = 2 * 60;
-
 const statusSchema = Type.Object({
   status: Type.Optional(
     Type.String({
@@ -119,7 +117,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
         timeout: Type.Optional(
           Type.Number({
             description: 'Timeout in seconds (defaults to 120 seconds).',
-            default: DEFAULT_BASH_TIMEOUT_SECONDS,
+            default: 120,
           })
         ),
       }),
@@ -136,7 +134,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
         Number.isFinite(rawArgs.timeout) &&
         rawArgs.timeout > 0
           ? rawArgs.timeout
-          : DEFAULT_BASH_TIMEOUT_SECONDS,
+          : 120,
     })),
   });
 
