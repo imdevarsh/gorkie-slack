@@ -1,7 +1,11 @@
 import stripAnsi from 'strip-ansi';
 
+export function stripTerminalArtifacts(text: string): string {
+  return stripAnsi(text).replace(/\r/g, '');
+}
+
 export function sanitizeDisplayText(text: string): string {
-  const withoutAnsi = stripAnsi(text);
+  const withoutAnsi = stripTerminalArtifacts(text);
   let output = '';
 
   for (const char of withoutAnsi) {

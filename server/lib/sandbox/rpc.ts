@@ -1,6 +1,5 @@
 import type { PtyHandle, PtyResult, Sandbox } from '@daytonaio/sdk';
 import type { ImageContent } from '@mariozechner/pi-ai';
-import stripAnsi from 'strip-ansi';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
@@ -17,6 +16,7 @@ import type {
   ThinkingLevel,
 } from '~/types/sandbox/rpc';
 import { errorMessage } from '~/utils/error';
+import { stripTerminalArtifacts } from '~/utils/text';
 
 type BashResult = Extract<
   RpcResponse,
@@ -71,7 +71,7 @@ export class PiRpcClient {
 
   handleStdout(chunk: string): void {
     // Strip \r (ONLCR) and ANSI/VT100 escape sequences that the PTY injects.
-    this.buffer += stripAnsi(chunk.replace(/\r/g, ''));
+    this.buffer += stripTerminalArtifacts(chunk);
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() ?? '';
 
