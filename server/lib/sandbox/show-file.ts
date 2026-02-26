@@ -1,6 +1,7 @@
 import nodePath from 'node:path';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
+import { toLogError } from '~/utils/error';
 import type { ResolvedSandboxSession } from './session';
 
 export interface ShowFileInput {
@@ -51,7 +52,7 @@ export async function showFile(params: {
     );
   } catch (error) {
     logger.warn(
-      { error, path: input.path, ctxId },
+      { ...toLogError(error), path: input.path, ctxId },
       '[subagent] showFile: failed to upload to Slack'
     );
   }

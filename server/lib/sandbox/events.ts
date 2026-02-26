@@ -1,9 +1,13 @@
 import logger from '~/lib/logger';
 import { showFileInputSchema } from '~/lib/validators/sandbox';
 import type { SlackMessageContext } from '~/types';
-import { trimmed } from '~/utils/text';
+import type {
+  RetryEvent,
+  ToolEndEvent,
+  ToolStartEvent,
+} from '~/types/sandbox/events';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
-import type { RetryEvent, ToolEndEvent, ToolStartEvent } from '~/types/sandbox/events';
+import { trimmed } from '~/utils/text';
 import type { PiRpcClient } from './rpc';
 import type { ResolvedSandboxSession } from './session';
 import { showFile } from './show-file';

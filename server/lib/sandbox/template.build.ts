@@ -3,7 +3,7 @@ import { env } from '~/env';
 import logger from '~/lib/logger';
 
 const buildPromises = new Map<string, Promise<string>>();
-const DEFAULT_TEMPLATE = 'gorkie-sandbox:latest';
+const DEFAULT_TEMPLATE = 'gorkie-sandbox-v2:latest';
 
 async function buildTemplate(name: string): Promise<string> {
   const build = await Template.build(

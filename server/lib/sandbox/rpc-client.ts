@@ -2,8 +2,8 @@ import type { ImageContent } from '@mariozechner/pi-ai';
 import { sandbox as config } from '~/config';
 import logger from '~/lib/logger';
 import type {
-  AgentSessionEvent,
   AgentMessage,
+  AgentSessionEvent,
   CompactionResult,
   PendingRequest,
   RpcCommand,
@@ -54,6 +54,10 @@ export class PiRpcClient {
   }
 
   handleProcessExit(result: { exitCode?: number; error?: string }): void {
+    if (this.exited) {
+      return;
+    }
+
     const detail = result.error ?? `exit code ${result.exitCode ?? 'unknown'}`;
     const error = new Error(
       `[pi-rpc] Pi process exited unexpectedly (${detail})`

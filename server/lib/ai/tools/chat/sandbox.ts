@@ -1,7 +1,6 @@
 import { tool } from 'ai';
 import PQueue from 'p-queue';
 import { z } from 'zod';
-import { sandbox as config } from '~/config';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';

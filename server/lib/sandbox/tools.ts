@@ -90,7 +90,10 @@ export function getToolTaskEnd(input: ToolEndInput) {
     const path = asString(asRecord(details)?.path);
     if (path) {
       return {
-        output: clampText(`Uploaded ${path}`, config.toolOutput.outputMaxChars),
+        output: clampText(
+          `Queued upload ${path}`,
+          config.toolOutput.outputMaxChars
+        ),
       };
     }
   }
