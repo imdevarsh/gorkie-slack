@@ -5,7 +5,23 @@ import type {
   ShowFileInput,
   SlackMessageContext,
 } from '~/types';
-import { toLogError } from '~/utils/error';
+import { errorMessage, toLogError } from '~/utils/error';
+
+async function postThreadError(
+  context: SlackMessageContext,
+  channelId: string,
+  threadTs: string | undefined,
+  messageTs: string | undefined,
+  text: string
+): Promise<void> {
+  await context.client.chat
+    .postMessage({
+      channel: channelId,
+      thread_ts: threadTs ?? messageTs,
+      text,
+    })
+    .catch(() => null);
+}
 
 export async function showFile(params: {
   input: ShowFileInput;
@@ -31,6 +47,13 @@ export async function showFile(params: {
       { path: input.path, ctxId },
       '[subagent] showFile: file not found in sandbox'
     );
+    await postThreadError(
+      context,
+      channelId,
+      threadTs,
+      messageTs,
+      `showFile failed: could not find \`${input.path}\` in sandbox.`
+    );
     return;
   }
 
@@ -49,9 +72,17 @@ export async function showFile(params: {
       '[subagent] showFile: uploaded to Slack'
     );
   } catch (error) {
+    const cause = errorMessage(error).slice(0, 140);
     logger.warn(
       { ...toLogError(error), path: input.path, ctxId },
       '[subagent] showFile: failed to upload to Slack'
+    );
+    await postThreadError(
+      context,
+      channelId,
+      threadTs,
+      messageTs,
+      `showFile failed while uploading \`${filename}\`: ${cause}`
     );
   }
 }

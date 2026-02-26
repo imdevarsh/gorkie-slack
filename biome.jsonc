@@ -3,6 +3,8 @@
   "assist": {
     "actions": {
       "source": {
+        // Import reordering churned large refactors and obscured logical grouping;
+        // keep manual import ordering stable during readability-focused cleanup.
         "organizeImports": "off"
       }
     }
@@ -46,12 +48,16 @@
         "noUnusedImports": "error"
       },
       "complexity": {
+        // Temporarily relaxed: several orchestrator/runtime paths exceed this threshold
+        // while being split into smaller modules incrementally.
         "noExcessiveCognitiveComplexity": "off"
       },
       "performance": {
+        // Project uses a single explicit barrel in server/types for canonical type exports.
         "noBarrelFile": "off"
       },
       "suspicious": {
+        // Needed for deliberate no-op guards/catch blocks around non-critical cleanup paths.
         "noEmptyBlockStatements": "off"
       },
       "recommended": true
