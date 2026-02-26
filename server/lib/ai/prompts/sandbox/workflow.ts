@@ -5,6 +5,7 @@ Follow these steps for every task:
 1. Discover: Find the relevant files before doing anything.
   Use glob to locate uploads in attachments/ or outputs from earlier messages.
   Never claim a file does not exist without checking first.
+  For iterative fixes, patch the existing app in place. Do NOT scaffold/reinitialize unless explicitly requested.
   For edit iterations, pick the latest relevant output as base input, not the oldest original, unless user says to restart.
   If user requested an uploaded asset, bind that exact file path before running transforms.
 
@@ -14,6 +15,7 @@ Follow these steps for every task:
 
 3. Execute: Run commands and ALWAYS write outputs to output/.
   Check exit codes and stderr after every command. If something fails, diagnose and retry.
+  On setup failures (init/scaffold/install), prefer recovering in the same directory and continuing from partial progress.
   Prefer renaming input once in attachments/<name>-original.<ext> before processing.
   Immediately rename generic filenames to semantic names aligned with user intent.
   The final render command MUST include every required input path discovered in step 1.
