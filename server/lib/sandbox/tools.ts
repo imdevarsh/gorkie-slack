@@ -6,7 +6,7 @@ import {
   extractErrorResult,
   extractTextResult,
   getArg,
-} from './tools-parse';
+} from './parser';
 
 interface ToolStartInput {
   args: unknown;
