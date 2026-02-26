@@ -1,18 +1,35 @@
+import { env } from '~/env';
+
 export const messageThreshold = 10;
 
 export const sandbox = {
-  timeoutMs: 10 * 60 * 1000,
-  commandTimeoutMs: 120_000,
-  maxToolOutput: 20_000,
-  autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
-  janitorIntervalMs: 60 * 1000,
-  paths: {
-    workdir: '/home/user',
-    attachments: '/home/user/attachments',
-    output: '/home/user/output',
-    turns: '/home/user/agent/turns',
+  timeouts: {
+    stopMinutes: 5,
+    archiveMinutes: 60,
+    deleteMinutes: 2 * 24 * 60,
+    healthMs: 60_000,
+  },
+  rpc: {
+    commandTimeoutMs: 30_000,
+    startupTimeoutMs: 2 * 60 * 1000,
+  },
+  toolOutput: {
+    detailsMaxChars: 180,
+    titleMaxChars: 60,
+    outputMaxChars: 260,
+  },
+  runtime: {
+    agentPort: 3000,
+    workdir: '/home/daytona',
+    executionTimeoutMs: 20 * 60 * 1000,
   },
   attachments: {
     maxBytes: 1_000_000_000,
+  },
+  daytona: {
+    apiKey: env.DAYTONA_API_KEY,
+    apiUrl: env.DAYTONA_API_URL,
+    target: env.DAYTONA_TARGET,
+    startTimeoutSeconds: 5 * 60, // Max wait for sandbox to start / unarchive
   },
 };

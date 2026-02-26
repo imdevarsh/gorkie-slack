@@ -1,21 +1,17 @@
 import { tool } from 'ai';
+import PQueue from 'p-queue';
 import { z } from 'zod';
-import { sandboxAgent } from '~/lib/ai/agents/sandbox-agent';
+import { sandbox as config } from '~/config';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
-import { buildSandboxContext } from '~/lib/sandbox/context';
-import { ensureSandbox, pauseSandbox } from '~/lib/sandbox/runtime';
+import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
+import { resolveSession } from '~/lib/sandbox/session';
+import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
-
-function _normalizeStatus(status: string): string {
-  const trimmed = status.trim();
-  const prefixed = trimmed.startsWith('is ') ? trimmed : `is ${trimmed}`;
-  return prefixed.slice(0, 49);
-}
 
 export const sandbox = ({
   context,
@@ -27,13 +23,13 @@ export const sandbox = ({
   stream: Stream;
 }) =>
   tool({
-    description: 'Delegate execution-heavy tasks to persistent sandbox agent.',
+    description:
+      'Delegate a task to the sandbox runtime for code execution, file processing, or data analysis. The sandbox maintains persistent state across calls in this conversation, files, installed packages, written code, and previous results are all preserved. Reference prior work directly without re-explaining it.',
     inputSchema: z.object({
       task: z
         .string()
-        .min(1)
         .describe(
-          'Clear sandbox task with expected outputs and constraints. Mention exact filenames when possible.'
+          'A clear description of what to accomplish. The sandbox remembers all previous work in this thread, files, code, and context from earlier runs are available. Reference them directly.'
         ),
     }),
     onInputStart: async ({ toolCallId }) => {
@@ -45,7 +41,17 @@ export const sandbox = ({
     },
     execute: async ({ task }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      let sandboxId: string | null = null;
+      let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
+      const tasks = new Map<string, string>();
+      const queue = new PQueue({ concurrency: 1 });
+      const enqueue = (fn: () => Promise<unknown>) => {
+        queue.add(fn).catch((error: unknown) => {
+          logger.warn(
+            { ...toLogError(error), ctxId },
+            '[sandbox] Failed queued task update'
+          );
+        });
+      };
 
       const taskId = await updateTask(stream, {
         taskId: toolCallId,
@@ -55,88 +61,139 @@ export const sandbox = ({
       });
 
       try {
-        const runtime = await ensureSandbox(context);
-        sandboxId = runtime.sandboxId;
+        runtime = await resolveSession(context);
+        const uploads = await syncAttachments(runtime.sandbox, context, files);
 
-        const attachments = await syncAttachments(
-          runtime.sandbox,
+        const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
+
+        const eventStream: unknown[] = [];
+        const unsubscribe = subscribeEvents({
+          client: runtime.client,
+          runtime,
           context,
-          files
+          ctxId,
+          stream: eventStream,
+          onRetry: ({ attempt, maxAttempts, delayMs }) => {
+            const seconds = Math.round(delayMs / 1000);
+            enqueue(() =>
+              updateTask(stream, {
+                taskId,
+                status: 'in_progress',
+                details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
+              })
+            );
+          },
+          onToolStart: ({ toolName, toolCallId, args, status }) => {
+            const toolTask = getToolTaskStart({ toolName, args, status });
+            const id = `${taskId}:${toolCallId}`;
+            tasks.set(toolCallId, id);
+            enqueue(() =>
+              createTask(stream, {
+                taskId: id,
+                title: toolTask.title,
+                details: toolTask.details,
+                status: 'in_progress',
+              })
+            );
+          },
+          onToolEnd: ({ toolName, toolCallId, isError, result }) => {
+            const id = tasks.get(toolCallId);
+            if (!id) {
+              return;
+            }
+            tasks.delete(toolCallId);
+            const { output } = getToolTaskEnd({ toolName, result, isError });
+            enqueue(() =>
+              finishTask(stream, {
+                status: isError ? 'error' : 'complete',
+                taskId: id,
+                output,
+              })
+            );
+          },
+        });
+
+        const keepAlive = setInterval(
+          () => {
+            enqueue(() =>
+              updateTask(stream, { taskId, status: 'in_progress' })
+            );
+          },
+          3 * 60 * 1000
         );
 
-        const { messages, requestHints } = await buildSandboxContext(
-          context,
-          runtime.sandbox
-        );
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('[sandbox] Execution timed out')),
+            config.runtime.executionTimeoutMs
+          );
+        });
 
-        const agent = sandboxAgent({
-          context,
-          sandbox: runtime.sandbox,
-          requestHints,
-          stream,
-        });
-        const result = await agent.generate({
-          messages: [
-            ...messages,
-            {
-              role: 'user',
-              content: task,
-            },
-          ],
-        });
-        const response = result.text;
+        try {
+          const idle = runtime.client.waitForIdle();
+          await runtime.client.prompt(prompt);
+          await Promise.race([idle, timeoutPromise]);
+        } catch (error) {
+          await runtime.client.abort().catch(() => null);
+          throw error;
+        } finally {
+          clearTimeout(timeoutId);
+          clearInterval(keepAlive);
+          unsubscribe();
+        }
+
+        await queue.onIdle();
+
+        const response =
+          (
+            await runtime.client.getLastAssistantText().catch(() => null)
+          )?.trim() ||
+          getResponse(eventStream) ||
+          'Done';
 
         logger.info(
           {
             ctxId,
-            sandboxId: runtime.sandboxId,
-            attachments: attachments.map((file) => file.path),
+            sandboxId: runtime.sandbox.id,
+            attachments: uploads.map((f) => f.uri),
             task,
             response,
           },
           '[sandbox] Sandbox run completed'
         );
+
         await finishTask(stream, {
           status: 'complete',
           taskId,
-          output: response.split('\n')[0]?.slice(0, 200) ?? 'Done',
+          output: response,
         });
-        return {
-          success: true,
-          response,
-        };
+
+        return { success: true, response };
       } catch (error) {
         const message = errorMessage(error);
+
         logger.error(
-          {
-            ...toLogError(error),
-            ctxId,
-            sandboxId,
-            task,
-            message,
-          },
+          { ...toLogError(error), ctxId, task, message },
           '[sandbox] Sandbox run failed'
         );
+
         await finishTask(stream, {
           status: 'error',
           taskId,
           output: message.slice(0, 200),
         });
-        return {
-          success: false,
-          error: message,
-        };
+
+        return { success: false, error: message, task };
       } finally {
-        await pauseSandbox(context).catch((error: unknown) => {
-          logger.warn(
-            {
-              ...toLogError(error),
-              ctxId,
-              sandboxId,
-            },
-            '[sandbox] Failed to pause sandbox after task'
-          );
-        });
+        if (runtime) {
+          await runtime.client.disconnect().catch((e: unknown) => {
+            logger.debug(
+              { ...toLogError(e), ctxId },
+              '[subagent] Failed to disconnect Pi client'
+            );
+          });
+        }
       }
     },
   });

@@ -1,0 +1,11 @@
+{
+  "defaultProvider": "openrouter",
+  "defaultModel": "google/gemini-3-flash-preview",
+  "retry": {
+    "enabled": true,
+    "maxRetries": 4,
+    "baseDelayMs": 2000,
+    "maxDelayMs": 60000
+  },
+  "enabledModels": ["google/gemini-3-flash-preview", "openai/gpt-5-mini"]
+}

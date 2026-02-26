@@ -3,6 +3,11 @@ import { z } from 'zod';
 
 export const env = createEnv({
   extends: [],
+  shared: {
+    NODE_ENV: z
+      .enum(['development', 'production', 'test'])
+      .default('development'),
+  },
   server: {
     // Slack
     SLACK_BOT_TOKEN: z.string().min(1),
@@ -29,8 +34,10 @@ export const env = createEnv({
       .default('info'),
     // Exa
     EXA_API_KEY: z.string().min(1),
-    // E2B
-    E2B_API_KEY: z.string().min(1),
+    // Daytona
+    DAYTONA_API_KEY: z.string().min(1),
+    DAYTONA_API_URL: z.url().optional(),
+    DAYTONA_TARGET: z.string().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

@@ -32,7 +32,10 @@
     "rootDir": "server",
     "baseUrl": ".",
     "paths": {
-      "~/*": ["server/*"]
+      "~/*": ["server/*"],
+      "@mariozechner/pi-coding-agent/rpc": [
+        "node_modules/@mariozechner/pi-coding-agent/dist/modes/rpc/rpc-types.d.ts"
+      ]
     }
   },
   "include": ["server/**/*.ts"],

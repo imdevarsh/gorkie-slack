@@ -10,8 +10,6 @@ export interface ChatRequestHints extends BaseHints {
   status: string;
 }
 
-export interface SandboxRequestHints extends BaseHints {
-  existingFiles?: string | null;
-}
+export interface SandboxRequestHints extends BaseHints {}
 
 export type RequestHints = ChatRequestHints | SandboxRequestHints;

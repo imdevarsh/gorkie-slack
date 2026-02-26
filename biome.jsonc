@@ -56,6 +56,9 @@
       "performance": {
         "noBarrelFile": "off"
       },
+      "suspicious": {
+        "noEmptyBlockStatements": "off"
+      },
       "recommended": true
     }
   },

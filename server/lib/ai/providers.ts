@@ -60,6 +60,5 @@ export const provider = customProvider({
   languageModels: {
     'chat-model': chatModel,
     'summariser-model': summariserModel,
-    'agent-model': chatModel,
   },
 });

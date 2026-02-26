@@ -2,9 +2,7 @@ import { LangfuseSpanProcessor } from '@langfuse/otel';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import { startSandboxJanitor } from '~/lib/sandbox/janitor';
 import { createSlackApp } from '~/slack/app';
-import { toLogError } from '~/utils/error';
 
 const sdk = new NodeSDK({
   spanProcessors: [new LangfuseSpanProcessor()],
@@ -12,8 +10,26 @@ const sdk = new NodeSDK({
 
 sdk.start();
 
+process.on('unhandledRejection', (reason) => {
+  logger.error({ error: reason }, 'Unhandled promise rejection');
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error({ error }, 'Uncaught exception');
+  void sdk
+    .shutdown()
+    .catch((shutdownError: unknown) => {
+      logger.error(
+        { error: shutdownError },
+        'Failed to shutdown telemetry after uncaught exception'
+      );
+    })
+    .finally(() => {
+      process.exit(1);
+    });
+});
+
 async function main() {
-  startSandboxJanitor();
   const { app, socketMode } = createSlackApp();
 
   if (socketMode) {
@@ -27,7 +43,7 @@ async function main() {
 }
 
 main().catch(async (error) => {
-  logger.error({ ...toLogError(error) }, 'Failed to start Slack Bolt app');
+  logger.error({ error }, 'Failed to start Slack Bolt app');
   await sdk.shutdown();
   process.exitCode = 1;
 });

@@ -4,8 +4,8 @@ export const sandboxSessions = pgTable(
   'sandbox_sessions',
   {
     threadId: text('thread_id').primaryKey(),
-    channelId: text('channel_id').notNull(),
     sandboxId: text('sandbox_id').notNull(),
+    sessionId: text('session_id').notNull(),
     status: text('status').notNull().default('creating'),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),
@@ -15,7 +15,8 @@ export const sandboxSessions = pgTable(
       .defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (table) => ({
     statusIdx: index('sandbox_sessions_status_idx').on(table.status),

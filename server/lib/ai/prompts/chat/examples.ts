@@ -30,20 +30,21 @@ export const examplesPrompt = `\
 </example>
 
 <example>
-<title>Quick calculation</title>
-<user>What's 44 * 44?</user>
-<workflow>
-<tool><name>sandbox</name><input>{ "task": "Calculate 44 * 44 and return the result" }</input></tool>
-<tool><name>reply</name><input>{ "content": ["44 * 44 = 1936"] }</input></tool>
-</workflow>
-</example>
-
-<example>
 <title>Image processing with attachment</title>
 <user>[uploads photo.png] Invert this to black and white</user>
 <workflow>
 <tool><name>sandbox</name><input>{ "task": "Find the uploaded 'photo.png' in attachments/ and invert it to black and white using ImageMagick. Save result and upload to Slack with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done! I inverted your image to black and white."] }</input></tool>
+</workflow>
+<user>Nice, now make it a bit more blue</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Apply a slightly stronger blue tint to the latest output image from this session, then upload the new result with showFile." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done, I updated the tint and uploaded the new version."] }</input></tool>
+</workflow>
+<user>Great, crop it square and keep the same style</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Use the latest image output from this session, crop it to a centered square, preserve the current style, then upload with showFile." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done, I cropped the latest version to square and uploaded it."] }</input></tool>
 </workflow>
 </example>
 
@@ -54,14 +55,10 @@ export const examplesPrompt = `\
 <tool><name>sandbox</name><input>{ "task": "Find the uploaded 'data.csv' in attachments/ and analyze it with pandas. Install python3 and pandas if needed. Print summary statistics." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the analysis of your CSV: ..."] }</input></tool>
 </workflow>
-</example>
-
-<example>
-<title>File from earlier message</title>
-<user>[no attachment in this message] Can you analyze that file I uploaded earlier?</user>
+<user>now show me top 10 rows by revenue</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "List files in attachments/ to find previously uploaded files, then analyze the data." }</input></tool>
-<tool><name>reply</name><input>{ "content": ["Found your file from earlier! Here's what I see: ..."] }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Use the same CSV from this session and produce the top 10 rows by revenue. Save output to output/ and upload with showFile." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done, I generated and uploaded the top-10-by-revenue output."] }</input></tool>
 </workflow>
 </example>
 
@@ -78,8 +75,13 @@ export const examplesPrompt = `\
 <title>Data export from sandbox</title>
 <user>Generate a report of that data as CSV</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Generate a CSV report from the data. Save result and upload to Slack with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Use the data from the current sandbox session and generate a CSV report. Save to output/ and upload with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Here's the CSV report."] }</input></tool>
+</workflow>
+<user>Nice, now export only rows where amount > 100</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Use the current session dataset/report, filter rows where amount > 100, write a new CSV to output/, and upload with showFile." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done, I filtered the data and uploaded the new CSV."] }</input></tool>
 </workflow>
 </example>
 
@@ -89,6 +91,20 @@ export const examplesPrompt = `\
 <workflow>
 <tool><name>sandbox</name><input>{ "task": "Download the video from https://www.youtube.com/watch?v=dQw4w9WgXcQ into output/ as MP4. Rename to a semantic filename, then upload it with showFile. If needed, install yt-dlp and ffmpeg. If download requires auth or fails, include the exact error in the summary." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done. I downloaded the video and uploaded the MP4 file in this thread."] }</input></tool>
+</workflow>
+<user>Trim that to the first 20 seconds</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Use the latest downloaded video from this session, trim to the first 20 seconds, save to output/, and upload with showFile." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done, I trimmed the video and uploaded the 20-second clip."] }</input></tool>
+</workflow>
+</example>
+
+<example>
+<title>Public web form with agent-browser</title>
+<user>Fill and submit this public event form: https://example.com/event-signup. Use name "Jordan Lee", email "jordan@example.com", company "Acme Labs", role "Engineer", and notes "Interested in AI automation workshop". Then share proof it was submitted.</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Use the agent-browser skill to open https://example.com/event-signup, fill the form fields with: name Jordan Lee, email jordan@example.com, company Acme Labs, role Engineer, and notes Interested in AI automation workshop. Submit the form, capture the confirmation page as output/event-signup-confirmation.png, and upload it with showFile. Include a brief summary of what was submitted and the confirmation text." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done. I submitted the public form and uploaded a confirmation screenshot."] }</input></tool>
 </workflow>
 </example>
 

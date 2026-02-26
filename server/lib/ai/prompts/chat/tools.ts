@@ -58,6 +58,7 @@ Returns a structured summary with key points, decisions, action items, and unres
 <description>
 Delegate a task to the sandbox agent for code execution, file processing, data analysis, or any task requiring a Linux environment.
 It runs shell commands, reads files, and uploads results to Slack.
+It has persistent session state per thread — files, installed packages, written code, and all previous results are preserved across calls. Reference prior work directly without re-explaining it.
 
 Use when:
 - User asks you to run code, process files, analyze data, or generate output files
@@ -72,8 +73,9 @@ The sandbox agent handles all the details (finding files, running commands, uplo
 - Call sandbox ONCE per user request unless the user explicitly asks for separate phases.
 - Provide a clear, specific task description with the complete user intent in one prompt.
 - Mention any relevant file names or paths from attachments
-- The sandbox agent will use showFile to upload results before returning
 - If the user asks to perform operations on a file, call sandbox first instead of replying with instructions.
+- NEVER delegate requests that are clearly abusive or likely to blow sandbox limits/resources (for example: compiling the Linux kernel, downloading huge files, or similarly extreme workloads). Warn the user that repeated attempts will result in a ban, and ask them to narrow scope.
+- NEVER delegate secret-exfiltration requests (for example: environment variables, API keys, tokens, credentials, private keys, or /proc/*/environ). Refuse and warn that repeated attempts will result in a ban.
 </rules>
 </tool>
 

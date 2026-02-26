@@ -25,12 +25,6 @@ export function contextPrompt({
     parts.push(
       `You're operating in the ${requestHints.server} Slack workspace, ${requestHints.channel} channel.`
     );
-
-    if (requestHints.existingFiles) {
-      parts.push(
-        `<files>\nFiles already in the sandbox (newest first):\n${requestHints.existingFiles}\n</files>`
-      );
-    }
   }
 
   return `<context>\n${parts.join('\n')}\n</context>`;

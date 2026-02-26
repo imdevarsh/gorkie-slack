@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '~/db';
 import {
   type NewSandboxSession,
@@ -25,8 +25,8 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
     .onConflictDoUpdate({
       target: sandboxSessions.threadId,
       set: {
-        channelId: session.channelId,
         sandboxId: session.sandboxId,
+        sessionId: session.sessionId,
         status: session.status,
         pausedAt: session.pausedAt ?? null,
         resumedAt: session.resumedAt ?? null,
@@ -55,7 +55,25 @@ export async function updateStatus(
 export async function markActivity(threadId: string): Promise<void> {
   await db
     .update(sandboxSessions)
+    .set({ updatedAt: new Date() })
+    .where(eq(sandboxSessions.threadId, threadId));
+}
+
+export async function updateRuntime(
+  threadId: string,
+  runtime: {
+    sandboxId: string;
+    sessionId: string;
+    status?: string;
+  }
+): Promise<void> {
+  await db
+    .update(sandboxSessions)
     .set({
+      sandboxId: runtime.sandboxId,
+      sessionId: runtime.sessionId,
+      ...(runtime.status ? { status: runtime.status } : {}),
+      resumedAt: runtime.status === 'active' ? new Date() : null,
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));
@@ -70,45 +88,4 @@ export async function clearDestroyed(threadId: string): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));
-}
-
-export function listExpired(
-  cutoff: Date,
-  limit = 50
-): Promise<Pick<SandboxSession, 'threadId' | 'sandboxId'>[]> {
-  return db
-    .select({
-      threadId: sandboxSessions.threadId,
-      sandboxId: sandboxSessions.sandboxId,
-    })
-    .from(sandboxSessions)
-    .where(
-      and(
-        eq(sandboxSessions.status, 'paused'),
-        isNull(sandboxSessions.destroyedAt),
-        lt(sandboxSessions.updatedAt, cutoff)
-      )
-    )
-    .limit(limit);
-}
-
-export async function claimExpired(threadId: string): Promise<boolean> {
-  const rows = await db
-    .update(sandboxSessions)
-    .set({
-      status: 'deleting',
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(sandboxSessions.threadId, threadId),
-        eq(sandboxSessions.status, 'paused'),
-        isNull(sandboxSessions.destroyedAt)
-      )
-    )
-    .returning({
-      threadId: sandboxSessions.threadId,
-    });
-
-  return rows.length > 0;
 }

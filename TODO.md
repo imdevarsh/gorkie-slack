@@ -1,29 +1,23 @@
 # TODO
 
-## Current Priority
-1. Execute `TODO_REFACTOR_IMPLEMENTATION.md` top-to-bottom with no legacy compatibility.
-2. Keep architecture fixed to: orchestrator -> chat sandbox tool -> sandbox execution agent -> typed E2B tools.
-3. Remove all Daytona/sandbox-agent/OpenCode runtime code.
-
-## Immediate Next Actions
-1. Rewrite `server/lib/sandbox/*` to E2B lifecycle + filesystem modules.
-2. Rewrite `server/lib/ai/tools/chat/sandbox.ts` to new E2B delegation path.
-3. Rebuild sandbox execution agent and typed sandbox tools.
-4. Complete compile/lint/manual validation matrix.
-5. Implement E2B inactivity auto-delete policy (nuke sandbox after X idle time); currently not implemented because pause vs delete cost is near-equal, but we still want deterministic cleanup semantics.
-
-## Gate Before Merge
-1. `bun x tsc --noEmit` passes.
-2. `bun run lint` passes.
-3. Manual Slack sandbox scenarios pass with sandbox reuse and display uploads.
-
-- Show tool call on prepareStep to reduce lag
-- Articulate the bash tool inputs and outputs, e.g exit codes better
-
-- Also, for upload files round to mb/gb whatever
-- For prepareStep, always run tool call
-- Do NOT truncate the task text... 
-- Also, for web search show sources (new param in slack sdk)
-- For sending 4 replies said (showing only first reply)
-- if one thing has an error the whole task is marked as failed (fix it)
-- if the items exceed the limit they split into another plan, why? and the remaining steps vanished (https://hackclub.slack.com/archives/C0A6C5F52BE/p1771610325086369)
+- Audit security: authentication boundaries, data access, and tool permissions.
+- Check With User DMs
+- Fix ratelimiting
+- fix lint
+- TODO: Langfuse shows daytona tools run in sandbox tool? it is very cursed
+- TODO: Test multiple prompt / queue
+- TODO: Test if it self-timeouts without interaction
+- TODO: re-eval pricing
+- TODO: add observability and better logging sandbox
+- add a path function to join paths rather than ${config.runtime.workdir}/xyz
+- remove unused unwanted db fields
+- Use typed ACP event schemas instead of manual casting in events.ts
+- Fix updateStatus to not clear historical timestamps
+- Delete unused getSandbox() and reconnectSandbox() exports
+- Status update logic is half broken; fix that and cleanup RPC code, support custom MCP integrations
+- extend / bump timeouts tus: "is creating assets and rendering video"
+- Sandbox run timeout captured in logs; move full payload to issue/runbook with redacted identifiers.
+- Add clearer error messages, parse errors properly from pi
+- Add model retry support
+- Preconfigure playwright MCP (npm install -g agent-browser )
+- Handle timeouts and retries per task command vs per global agent

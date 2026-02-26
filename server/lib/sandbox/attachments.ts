@@ -1,6 +1,6 @@
-import type { Sandbox } from '@e2b/code-interpreter';
+import type { Sandbox } from '@daytonaio/sdk';
 import sanitizeFilename from 'sanitize-filename';
-import { sandbox as config } from '~/config';
+import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
@@ -8,82 +8,92 @@ import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 
 export const ATTACHMENTS_DIR = 'attachments';
-const MAX_ATTACHMENT_BYTES = config.attachments.maxBytes;
+const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}`;
+const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 
-export interface SyncedAttachment {
-  id: string;
+export interface PromptResourceLink {
   mimeType?: string;
   name: string;
-  path: string;
-  size: number;
+  type: 'resource_link';
+  uri: string;
 }
 
 export async function syncAttachments(
   sandbox: Sandbox,
   context: SlackMessageContext,
   files?: SlackFile[]
-): Promise<SyncedAttachment[]> {
+): Promise<PromptResourceLink[]> {
   if (!files?.length) {
     return [];
   }
 
+  const messageTs = context.event.ts;
+  if (!messageTs) {
+    return [];
+  }
+
   const ctxId = getContextId(context);
-  await sandbox.files.makeDir(config.paths.attachments);
 
-  const uploaded = await Promise.all(
-    files.map(async (file): Promise<SyncedAttachment | null> => {
-      const content = await downloadAttachment(file, ctxId);
-      if (!content) {
-        return null;
-      }
+  await sandbox.fs.createFolder(ATTACHMENTS_ABS_DIR, '755').catch(() => {
+    // Directory may already exist.
+  });
 
-      const safeName =
-        sanitizeFilename(file.name ?? `attachment-${file.id ?? 'unknown'}`, {
-          replacement: '_',
-        }) || `attachment-${file.id ?? 'unknown'}`;
-
-      const path = `${config.paths.attachments}/${safeName}`;
-
-      try {
-        await sandbox.files.write(path, new Blob([content]));
-
-        return {
-          id: file.id ?? safeName,
-          name: safeName,
-          path,
-          mimeType: file.mimetype,
-          size: content.byteLength,
-        };
-      } catch (error) {
-        logger.warn(
-          {
-            error,
-            fileId: file.id,
-            fileName: file.name,
-            path,
-            ctxId,
-          },
-          '[sandbox] Failed to write attachment into sandbox'
-        );
-        return null;
-      }
-    })
+  const results = await Promise.all(
+    files.map((file) => syncFile(sandbox, file, ctxId))
   );
 
-  const synced = uploaded.filter(
-    (item): item is SyncedAttachment => item !== null
+  const uploaded = results.filter(
+    (item): item is PromptResourceLink => item !== null
   );
+
+  if (uploaded.length !== files.length) {
+    logger.warn({ messageTs, ctxId }, '[sandbox] Attachment sync incomplete');
+  }
 
   logger.info(
     {
+      count: uploaded.length,
+      messageTs,
       ctxId,
-      syncedCount: synced.length,
-      requestedCount: files.length,
     },
-    '[sandbox] Attachment sync completed'
+    '[sandbox] Attachments synced'
   );
 
-  return synced;
+  return uploaded;
+}
+
+async function syncFile(
+  sandbox: Sandbox,
+  file: SlackFile,
+  ctxId: string
+): Promise<PromptResourceLink | null> {
+  const content = await downloadAttachment(file, ctxId);
+  if (!content) {
+    return null;
+  }
+
+  const name = sanitizeFilename(file.name ?? 'attachment', {
+    replacement: '_',
+  });
+  const safeName = name || `file-${file.id ?? 'unknown'}`;
+  const path = `${ATTACHMENTS_ABS_DIR}/${safeName}`;
+  const uri = new URL(`file://${path}`).toString();
+
+  try {
+    await sandbox.fs.uploadFile(content, path);
+    return {
+      type: 'resource_link',
+      name: safeName,
+      uri,
+      ...(file.mimetype ? { mimeType: file.mimetype } : {}),
+    };
+  } catch (error) {
+    logger.warn(
+      { error, fileId: file.id, name: file.name, ctxId },
+      '[sandbox] Failed to write attachment'
+    );
+    return null;
+  }
 }
 
 async function downloadAttachment(
@@ -97,50 +107,32 @@ async function downloadAttachment(
 
   if (typeof file.size === 'number' && file.size > MAX_ATTACHMENT_BYTES) {
     logger.warn(
-      {
-        ctxId,
-        fileId: file.id,
-        fileName: file.name,
-        size: file.size,
-      },
-      '[sandbox] Skipping oversized attachment'
+      { fileId: file.id, name: file.name, size: file.size, ctxId },
+      '[sandbox] Attachment exceeds size limit'
     );
     return null;
   }
 
   const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
-    },
+    headers: { Authorization: `Bearer ${env.SLACK_BOT_TOKEN}` },
   }).catch(() => null);
 
   if (!response?.ok) {
     logger.warn(
-      {
-        ctxId,
-        fileId: file.id,
-        fileName: file.name,
-        status: response?.status,
-      },
-      '[sandbox] Failed to download attachment from Slack'
+      { fileId: file.id, name: file.name, status: response?.status, ctxId },
+      '[sandbox] Failed to download attachment'
     );
     return null;
   }
 
-  const data = Buffer.from(await response.arrayBuffer());
-
-  if (data.byteLength > MAX_ATTACHMENT_BYTES) {
+  const content = Buffer.from(await response.arrayBuffer());
+  if (content.byteLength > MAX_ATTACHMENT_BYTES) {
     logger.warn(
-      {
-        ctxId,
-        fileId: file.id,
-        fileName: file.name,
-        size: data.byteLength,
-      },
-      '[sandbox] Downloaded attachment exceeds limit'
+      { fileId: file.id, name: file.name, size: content.byteLength, ctxId },
+      '[sandbox] Attachment exceeds size limit'
     );
     return null;
   }
 
-  return data;
+  return content;
 }
