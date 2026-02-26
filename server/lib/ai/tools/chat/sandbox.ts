@@ -124,7 +124,7 @@ export const sandbox = ({
         );
 
         try {
-          const idle = runtime.client.waitForIdle(config.runtime.executionTimeoutMs);
+          const idle = runtime.client.waitForIdle();
           await runtime.client.prompt(prompt);
           await idle;
         } catch (error) {
