@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import PQueue from 'p-queue';
 import { z } from 'zod';
+import { sandbox as config } from '~/config';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
@@ -130,14 +131,23 @@ export const sandbox = ({
           3 * 60 * 1000
         );
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('[sandbox] Execution timed out')),
+            config.runtime.executionTimeoutMs
+          );
+        });
+
         try {
           const idle = runtime.client.waitForIdle();
           await runtime.client.prompt(prompt);
-          await idle;
+          await Promise.race([idle, timeoutPromise]);
         } catch (error) {
           await runtime.client.abort().catch(() => null);
           throw error;
         } finally {
+          clearTimeout(timeoutId);
           clearInterval(keepAlive);
           unsubscribe();
         }
