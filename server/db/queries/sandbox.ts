@@ -73,7 +73,7 @@ export async function updateRuntime(
       sandboxId: runtime.sandboxId,
       sessionId: runtime.sessionId,
       ...(runtime.status ? { status: runtime.status } : {}),
-      resumedAt: runtime.status === 'active' ? new Date() : undefined,
+      resumedAt: runtime.status === 'active' ? new Date() : null,
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));

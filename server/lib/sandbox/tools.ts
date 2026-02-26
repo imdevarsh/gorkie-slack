@@ -33,7 +33,7 @@ function asString(value: unknown): string | undefined {
 }
 
 function getArg(args: unknown, key: string, fallback: string): string {
-  return nonEmptyTrimString(asRecord(args)?.[key]) ?? fallback;
+  return asString(asRecord(args)?.[key]) ?? fallback;
 }
 
 const toolTitles = {
@@ -73,6 +73,23 @@ function extractTextResult(result: unknown): string | undefined {
 
   const joined = chunks.join('\n').trim();
   return joined.length > 0 ? joined : undefined;
+}
+
+function extractErrorResult(result: unknown): string | undefined {
+  const error = asRecord(result)?.error;
+  if (!error) {
+    return undefined;
+  }
+  if (typeof error === 'string') {
+    return asString(error);
+  }
+  if (typeof error === 'object') {
+    const message = asString(asRecord(error)?.message);
+    if (message) {
+      return message;
+    }
+  }
+  return undefined;
 }
 
 function resolveDetails(toolName: string, args: unknown): string {
@@ -121,7 +138,7 @@ export function getToolTaskStart(input: ToolStartInput) {
 }
 
 export function getToolTaskEnd(input: ToolEndInput) {
-  const { toolName, result } = input;
+  const { toolName, result, isError } = input;
 
   if (toolName === 'showFile') {
     const details = asRecord(result)?.details;
@@ -138,10 +155,13 @@ export function getToolTaskEnd(input: ToolEndInput) {
 
   if (toolName === 'bash') {
     const text = extractTextResult(result);
+    if (text) {
+      return {
+        output: `output:\n${clampNormalizedText(text, config.toolOutput.outputMaxChars)}`,
+      };
+    }
     return {
-      output: text
-        ? `output:\n${clampNormalizedText(text, config.toolOutput.outputMaxChars)}`
-        : 'output:\ncommand failed',
+      output: isError ? 'output:\ncommand failed' : 'output:\n',
     };
   }
 
@@ -149,6 +169,15 @@ export function getToolTaskEnd(input: ToolEndInput) {
   if (text) {
     return {
       output: clampNormalizedText(text, config.toolOutput.outputMaxChars),
+    };
+  }
+
+  if (isError) {
+    return {
+      output: clampNormalizedText(
+        extractErrorResult(result) ?? 'Tool execution failed',
+        config.toolOutput.outputMaxChars
+      ),
     };
   }
 

@@ -1,3 +1,4 @@
+// cspell:ignore ONLCR stty
 import type { PtyHandle, PtyResult, Sandbox } from '@daytonaio/sdk';
 import type { ImageContent } from '@mariozechner/pi-ai';
 import { sandbox as config } from '~/config';
@@ -30,6 +31,7 @@ type ModelInfo = Extract<
   RpcResponse,
   { command: 'get_available_models'; success: true }
 >['data']['models'][number];
+const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 export class PiRpcClient {
   private buffer = '';
@@ -50,11 +52,6 @@ export class PiRpcClient {
   }
 
   handleProcessExit(result: PtyResult): void {
-    if (this.exited) {
-      return;
-    }
-    this.exited = true;
-
     const detail = result.error ?? `exit code ${result.exitCode ?? 'unknown'}`;
     const error = new Error(
       `[pi-rpc] Pi process exited unexpectedly (${detail})`
@@ -65,8 +62,7 @@ export class PiRpcClient {
       '[pi-rpc] Pi process exited unexpectedly'
     );
 
-    this.rejectExit(error);
-    this.rejectPending(error);
+    this.finishWithError(error);
   }
 
   handleStdout(chunk: string): void {
@@ -263,29 +259,31 @@ export class PiRpcClient {
   }
 
   waitForIdle(): Promise<void> {
+    let off = () => {};
     const idlePromise = new Promise<void>((resolve) => {
-      const off = this.onEvent((event) => {
+      off = this.onEvent((event) => {
         if (event.type === 'agent_end') {
-          off();
           resolve();
         }
       });
     });
-    return Promise.race([idlePromise, this.exitPromise]);
+    return Promise.race([idlePromise, this.exitPromise]).finally(() => off());
   }
 
   collectEvents(): Promise<AgentEvent[]> {
+    let off = () => {};
     const collectPromise = new Promise<AgentEvent[]>((resolve) => {
       const events: AgentEvent[] = [];
-      const off = this.onEvent((event) => {
+      off = this.onEvent((event) => {
         events.push(event);
         if (event.type === 'agent_end') {
-          off();
           resolve(events);
         }
       });
     });
-    return Promise.race([collectPromise, this.exitPromise]);
+    return Promise.race([collectPromise, this.exitPromise]).finally(() =>
+      off()
+    );
   }
 
   async promptAndWait(
@@ -298,8 +296,7 @@ export class PiRpcClient {
   }
 
   async disconnect(): Promise<void> {
-    this.exited = true;
-    this.rejectPending(
+    this.finishWithError(
       new Error('[pi-rpc] Client disconnected before response was received')
     );
     await this.pty.kill().catch(() => null);
@@ -349,6 +346,15 @@ export class PiRpcClient {
       this.pending.delete(id);
       request.reject(error);
     }
+  }
+
+  private finishWithError(error: Error): void {
+    if (this.exited) {
+      return;
+    }
+    this.exited = true;
+    this.rejectExit(error);
+    this.rejectPending(error);
   }
 
   private getData<T = unknown>(response: RpcResponse): T {
@@ -402,6 +408,9 @@ export async function boot(
 
   // Disable PTY echo so our JSON commands are not mirrored back to stdout,
   // then exec Pi directly so the shell exits and takes its prompt with it.
+  if (sessionId && !SESSION_ID_PATTERN.test(sessionId)) {
+    throw new Error(`[pi-rpc] Invalid session id: ${sessionId}`);
+  }
   const piCmd = sessionId
     ? `pi --mode rpc --session ${sessionId}`
     : 'pi --mode rpc';

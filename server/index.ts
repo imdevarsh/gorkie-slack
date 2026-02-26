@@ -16,6 +16,17 @@ process.on('unhandledRejection', (reason) => {
 
 process.on('uncaughtException', (error) => {
   logger.error({ error }, 'Uncaught exception');
+  void sdk
+    .shutdown()
+    .catch((shutdownError: unknown) => {
+      logger.error(
+        { error: shutdownError },
+        'Failed to shutdown telemetry after uncaught exception'
+      );
+    })
+    .finally(() => {
+      process.exit(1);
+    });
 });
 
 async function main() {

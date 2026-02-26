@@ -20,7 +20,7 @@ Summary: "Renamed the source as cat-original.png, generated cat.png, and uploade
 <context>
 <recent_messages>
 User: convert my image to black and white
-Assistant: Done! Converted photo.png to grayscale.
+Assistant: Done! Renamed your photo to cat-original.png and converted it to grayscale as cat.png.
 </recent_messages>
 </context>
 <task>Now invert it</task>
