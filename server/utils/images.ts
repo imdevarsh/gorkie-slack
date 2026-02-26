@@ -1,4 +1,3 @@
-import type { UploadedFile } from '@slack/bolt';
 import type { ImagePart } from 'ai';
 import { env } from '~/env';
 import logger from '~/lib/logger';
@@ -12,7 +11,16 @@ const SUPPORTED_IMAGE_TYPES = [
   'image/webp',
 ];
 
-export type SlackFile = UploadedFile;
+export interface SlackFile {
+  id?: string;
+  mimetype?: string;
+  name?: string;
+  original_h?: number;
+  original_w?: number;
+  size?: number;
+  url_private?: string;
+  url_private_download?: string;
+}
 
 /**
  * Check if a file is a supported image type
@@ -100,7 +108,7 @@ export async function processSlackFiles(
         return null;
       }
       return {
-        type: 'image' as const,
+        type: 'image',
         image: result.data,
         mediaType: result.mimeType,
       };

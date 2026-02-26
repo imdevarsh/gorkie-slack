@@ -15,7 +15,7 @@ import { skip } from '~/lib/ai/tools/chat/skip';
 import { summariseThread } from '~/lib/ai/tools/chat/summarise-thread';
 import { successToolCall } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
-import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
+import type { ChatRequestHints, ChatRuntimeContext, Stream } from '~/types';
 import type { SlackFile } from '~/utils/images';
 import { createTask, finishTask } from '../utils/task';
 
@@ -27,7 +27,7 @@ export const orchestratorAgent = ({
   files,
   stream,
 }: {
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
   requestHints: ChatRequestHints;
   files?: SlackFile[];
   stream: Stream;

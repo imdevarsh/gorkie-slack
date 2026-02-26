@@ -12,8 +12,9 @@ export const env = createEnv({
     // Slack
     SLACK_BOT_TOKEN: z.string().min(1),
     SLACK_SIGNING_SECRET: z.string().min(1),
-    SLACK_APP_TOKEN: z.string().optional(),
-    SLACK_SOCKET_MODE: z.coerce.boolean().optional().default(false),
+    SLACK_CLIENT_ID: z.string().optional(),
+    SLACK_CLIENT_SECRET: z.string().optional(),
+    SLACK_ENCRYPTION_KEY: z.string().optional(),
     PORT: z.coerce.number().default(3000),
     // Channel to add user to automatically
     AUTO_ADD_CHANNEL: z.string().optional(),

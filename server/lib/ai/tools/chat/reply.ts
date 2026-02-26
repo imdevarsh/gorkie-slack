@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext, Stream } from '~/types';
+import type { ChatRuntimeContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import { getSlackUserName } from '~/utils/users';
@@ -13,7 +13,7 @@ interface SlackHistoryMessage {
 }
 
 async function resolveTargetMessage(
-  ctx: SlackMessageContext,
+  ctx: ChatRuntimeContext,
   offset: number,
   ctxId: string
 ): Promise<SlackHistoryMessage | null> {
@@ -70,7 +70,7 @@ export const reply = ({
   context,
   stream,
 }: {
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
   stream: Stream;
 }) =>
   tool({

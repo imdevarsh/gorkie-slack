@@ -1,8 +1,9 @@
 import { LangfuseSpanProcessor } from '@langfuse/otel';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { serve } from 'bun';
+import { bot, initializeBot, shutdownBot } from '~/chat/bot';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import { createSlackApp } from '~/slack/app';
 
 const sdk = new NodeSDK({
   spanProcessors: [new LangfuseSpanProcessor()],
@@ -19,20 +20,50 @@ process.on('uncaughtException', (error) => {
 });
 
 async function main() {
-  const { app, socketMode } = createSlackApp();
+  await initializeBot();
 
-  if (socketMode) {
-    await app.start();
-    logger.info('Slack Bolt app connected via Socket Mode');
-    return;
-  }
+  const server = serve({
+    port: env.PORT,
+    fetch(request: Request) {
+      const url = new URL(request.url);
 
-  await app.start(env.PORT);
-  logger.info({ port: env.PORT }, 'Slack Bolt app listening for events');
+      if (url.pathname === '/api/webhooks/slack') {
+        return bot.webhooks.slack(request);
+      }
+
+      if (url.pathname === '/health') {
+        return new Response('ok');
+      }
+
+      return new Response('Not Found', { status: 404 });
+    },
+  });
+
+  logger.info({ port: server.port }, 'Chat SDK bot listening for webhooks');
+
+  const shutdown = async () => {
+    logger.info('Shutting down Chat SDK bot');
+    server.stop(true);
+    await shutdownBot();
+    await sdk.shutdown();
+  };
+
+  process.on('SIGINT', () => {
+    shutdown().catch((error: unknown) => {
+      logger.error({ error }, 'Failed to shut down on SIGINT');
+    });
+  });
+
+  process.on('SIGTERM', () => {
+    shutdown().catch((error: unknown) => {
+      logger.error({ error }, 'Failed to shut down on SIGTERM');
+    });
+  });
 }
 
 main().catch(async (error) => {
-  logger.error({ error }, 'Failed to start Slack Bolt app');
-  await sdk.shutdown();
+  logger.error({ error }, 'Failed to start Chat SDK bot');
+  await shutdownBot().catch(() => null);
+  await sdk.shutdown().catch(() => null);
   process.exitCode = 1;
 });

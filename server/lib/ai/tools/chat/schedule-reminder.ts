@@ -3,7 +3,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext, Stream } from '~/types';
+import type { ChatRuntimeContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
@@ -11,7 +11,7 @@ export const scheduleReminder = ({
   context,
   stream,
 }: {
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
   stream: Stream;
 }) =>
   tool({

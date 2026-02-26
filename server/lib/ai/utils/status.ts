@@ -1,4 +1,4 @@
-import type { SlackMessageContext } from '~/types';
+import type { ChatRuntimeContext } from '~/types';
 
 type LoadingOption = boolean | string[];
 
@@ -7,31 +7,32 @@ interface SetStatusParams {
   status: string;
 }
 
-export function setStatus(
-  context: SlackMessageContext,
+export async function setStatus(
+  context: ChatRuntimeContext,
   params: SetStatusParams
-): Promise<unknown> {
-  const threadTs =
-    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
+): Promise<void> {
   const { status, loading } = params;
-  const payload: {
-    channel_id: string;
-    thread_ts: string;
-    status: string;
-    loading_messages?: string[];
-  } = {
-    channel_id: context.event.channel,
-    thread_ts: threadTs,
-    status,
-  };
 
+  let loadingMessages: string[] | undefined;
   if (Array.isArray(loading)) {
-    payload.loading_messages = loading;
+    loadingMessages = loading;
   } else if (loading) {
-    payload.loading_messages = [status];
+    loadingMessages = [status];
   }
 
-  return context.client.assistant.threads.setStatus(payload).catch(() => {
-    // ignore status update failures
-  });
+  await context.slack
+    .setAssistantStatus(
+      context.channelId,
+      context.event.thread_ts ?? context.event.ts,
+      status,
+      loadingMessages
+    )
+    .catch(async () => {
+      if (!status) {
+        return;
+      }
+      await context.thread.startTyping(status).catch(() => {
+        // ignore status update failures
+      });
+    });
 }

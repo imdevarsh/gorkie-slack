@@ -1,7 +1,7 @@
 import type { AgentSessionEvent } from '@mariozechner/pi-coding-agent';
 import logger from '~/lib/logger';
 import { showFileInputSchema } from '~/lib/validators/sandbox';
-import type { SlackMessageContext } from '~/types';
+import type { ChatRuntimeContext } from '~/types';
 import type { AgentEvent } from '~/types/sandbox/rpc';
 import { nonEmptyTrimString } from '~/utils/text';
 import type { PiRpcClient } from './rpc';
@@ -11,7 +11,7 @@ import { showFile } from './show-file';
 function handleShowFileTool(params: {
   result: unknown;
   runtime: ResolvedSandboxSession;
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
   ctxId: string;
 }): void {
   const { result, runtime, context, ctxId } = params;
@@ -37,7 +37,7 @@ function handleShowFileTool(params: {
 export function subscribeEvents(params: {
   client: PiRpcClient;
   runtime: ResolvedSandboxSession;
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
   ctxId: string;
   stream: unknown[];
   onToolStart?: (input: {

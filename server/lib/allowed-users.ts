@@ -1,65 +1,87 @@
-import type { App } from '@slack/bolt';
+import type { WebClient } from '@slack/web-api';
 import { env } from '~/env';
 import { toLogError } from '~/utils/error';
 import logger from './logger';
 
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const allowedUsers = new Set<string>();
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
-export async function buildCache(app: App) {
+async function refreshAllowedUsers(client: WebClient): Promise<void> {
   if (!env.OPT_IN_CHANNEL) {
     return;
   }
 
-  // biome-ignore lint/suspicious/useAwait: await is not needed here
-  app.event('member_joined_channel', async ({ event }) => {
-    if (event.channel !== env.OPT_IN_CHANNEL) {
-      return;
-    }
-    logger.debug(`${event.user} joined opt-in channel`);
-    allowedUsers.add(event.user);
-    return;
-  });
-
-  // biome-ignore lint/suspicious/useAwait: await is not needed here
-  app.event('member_left_channel', async ({ event }) => {
-    if (event.channel !== env.OPT_IN_CHANNEL) {
-      return;
-    }
-    logger.debug(`${event.user} left opt-in channel`);
-    allowedUsers.delete(event.user);
-    return;
-  });
-
+  const nextAllowedUsers = new Set<string>();
   let cursor: string | undefined;
 
-  logger.info('Building opt-in user cache');
   do {
-    const req = await app.client.conversations.members({
+    const req = await client.conversations.members({
       channel: env.OPT_IN_CHANNEL,
       limit: 200,
       cursor,
     });
+
     if (!req.ok) {
       logger.error(
         { ...toLogError(req.error), channelId: env.OPT_IN_CHANNEL },
-        'Error building opt-in cache'
+        'Error refreshing opt-in cache'
       );
-      throw new Error('Failed to build opt-in cache');
+      throw new Error('Failed to refresh opt-in cache');
     }
+
     cursor = req.response_metadata?.next_cursor;
-    if (!req.members) {
-      continue;
-    }
-    for (const member of req.members) {
-      allowedUsers.add(member);
+    for (const member of req.members ?? []) {
+      nextAllowedUsers.add(member);
     }
   } while (cursor);
-  logger.info(`${allowedUsers.size} users added to opt-in cache`);
+
+  allowedUsers.clear();
+  for (const user of nextAllowedUsers) {
+    allowedUsers.add(user);
+  }
+
+  logger.info(
+    { count: allowedUsers.size, channelId: env.OPT_IN_CHANNEL },
+    'Refreshed opt-in user cache'
+  );
 }
 
-export function isUserAllowed(userId: string) {
+export async function startAllowedUsersSync(client: WebClient): Promise<void> {
+  if (!env.OPT_IN_CHANNEL) {
+    return;
+  }
+
+  logger.info('Starting opt-in user cache sync');
+  await refreshAllowedUsers(client);
+
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+  }
+
+  refreshTimer = setInterval(() => {
+    refreshAllowedUsers(client).catch((error: unknown) => {
+      logger.error(
+        { ...toLogError(error) },
+        'Failed periodic opt-in cache sync'
+      );
+    });
+  }, REFRESH_INTERVAL_MS);
+}
+
+export function stopAllowedUsersSync(): void {
+  if (!refreshTimer) {
+    return;
+  }
+
+  clearInterval(refreshTimer);
+  refreshTimer = null;
+}
+
+export function isUserAllowed(userId: string): boolean {
   if (!env.OPT_IN_CHANNEL) {
     return true;
   }
+
   return allowedUsers.has(userId);
 }

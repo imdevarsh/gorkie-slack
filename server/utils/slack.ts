@@ -1,7 +1,7 @@
-import type { SlackMessageContext } from '~/types';
+import type { ChatRuntimeContext } from '~/types';
 
 export async function resolveChannelName(
-  ctx: SlackMessageContext
+  ctx: ChatRuntimeContext
 ): Promise<string> {
   const channelId = (ctx.event as { channel?: string }).channel;
   if (!channelId) {
@@ -24,7 +24,7 @@ export async function resolveChannelName(
 }
 
 export async function resolveServerName(
-  ctx: SlackMessageContext
+  ctx: ChatRuntimeContext
 ): Promise<string> {
   try {
     const info = await ctx.client.team.info();

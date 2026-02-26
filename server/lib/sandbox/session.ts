@@ -10,7 +10,7 @@ import {
 } from '~/db/queries/sandbox';
 import { systemPrompt } from '~/lib/ai/prompts';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { ChatRuntimeContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { configureAgent } from './config';
 import {
@@ -28,7 +28,7 @@ export interface ResolvedSandboxSession {
 }
 
 async function createSandbox(
-  context: SlackMessageContext,
+  context: ChatRuntimeContext,
   threadId: string
 ): Promise<ResolvedSandboxSession> {
   const hasSnapshot = await daytona.snapshot
@@ -113,7 +113,7 @@ async function resumeSandbox(
 }
 
 export async function resolveSession(
-  context: SlackMessageContext
+  context: ChatRuntimeContext
 ): Promise<ResolvedSandboxSession> {
   const threadId = getContextId(context);
   const existing = await getByThread(threadId);

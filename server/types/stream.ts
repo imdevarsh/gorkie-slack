@@ -1,4 +1,4 @@
-import type { WebClient } from '@slack/web-api';
+import type { Thread } from 'chat';
 
 export interface TaskSource {
   text: string;
@@ -30,10 +30,8 @@ export interface StreamTask {
 }
 
 export interface Stream {
-  channel: string;
-  client: WebClient;
   noop?: true;
   tasks: Map<string, StreamTask>;
   thought: boolean;
-  ts: string;
+  thread: Thread;
 }

@@ -1,4 +1,4 @@
-import type { SandboxRequestHints, SlackMessageContext } from '~/types';
+import type { ChatRuntimeContext, SandboxRequestHints } from '~/types';
 import { contextPrompt } from './context';
 import { corePrompt } from './core';
 import { environmentPrompt } from './environment';
@@ -6,7 +6,7 @@ import { examplesPrompt } from './examples';
 import { workflowPrompt } from './workflow';
 
 interface SandboxPromptOptions {
-  context?: SlackMessageContext;
+  context?: ChatRuntimeContext;
   requestHints?: SandboxRequestHints;
 }
 

@@ -2,16 +2,16 @@ import type { ModelMessage, UserContent } from 'ai';
 import { orchestratorAgent } from '~/lib/ai/agents';
 import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream } from '~/lib/ai/utils/stream';
-import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
+import type { ChatRequestHints, ChatRuntimeContext } from '~/types';
 import { processSlackFiles, type SlackFile } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
 export async function generateResponse(
-  context: SlackMessageContext,
+  context: ChatRuntimeContext,
   messages: ModelMessage[],
   requestHints: ChatRequestHints
 ) {
-  let stream: Stream | null = null;
+  const stream = await initStream(context);
 
   try {
     await setStatus(context, {
@@ -30,10 +30,8 @@ export async function generateResponse(
       ],
     });
 
-    stream = await initStream(context);
-
-    const userId = (context.event as { user?: string }).user;
-    const messageText = (context.event as { text?: string }).text ?? '';
+    const userId = context.userId;
+    const messageText = context.message.text;
     const files = (context.event as { files?: SlackFile[] }).files;
     const authorName = userId
       ? await getSlackUserName(context.client, userId)
@@ -43,15 +41,10 @@ export async function generateResponse(
 
     const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
 
-    let currentMessageContent: UserContent;
-    if (imageContents.length > 0) {
-      currentMessageContent = [
-        { type: 'text' as const, text: replyPrompt },
-        ...imageContents,
-      ];
-    } else {
-      currentMessageContent = replyPrompt;
-    }
+    const currentMessageContent: UserContent =
+      imageContents.length > 0
+        ? [{ type: 'text', text: replyPrompt }, ...imageContents]
+        : replyPrompt;
 
     const agent = orchestratorAgent({
       context,
@@ -74,14 +67,13 @@ export async function generateResponse(
     await setStatus(context, { status: '' });
 
     return { success: true, toolCalls };
-  } catch (e) {
-    if (stream) {
-      await closeStream(stream);
-    }
+  } catch (error) {
+    await closeStream(stream);
     await setStatus(context, { status: '' });
+
     return {
       success: false,
-      error: e instanceof Error ? e.message : String(e),
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }

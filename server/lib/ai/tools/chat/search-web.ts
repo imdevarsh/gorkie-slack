@@ -3,7 +3,7 @@ import type { RegularSearchOptions } from 'exa-js';
 import { z } from 'zod';
 import { exa } from '~/lib/ai/exa';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
-import type { SlackMessageContext, Stream, TaskSource } from '~/types';
+import type { ChatRuntimeContext, Stream, TaskSource } from '~/types';
 
 const EXA_SEARCH_OPTIONS = {
   type: 'auto',
@@ -16,7 +16,7 @@ const EXA_SEARCH_OPTIONS = {
 export const searchWeb = ({
   stream,
 }: {
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
   stream: Stream;
 }) =>
   tool({

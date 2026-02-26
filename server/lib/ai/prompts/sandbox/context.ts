@@ -1,7 +1,7 @@
-import type { SandboxRequestHints, SlackMessageContext } from '~/types';
+import type { ChatRuntimeContext, SandboxRequestHints } from '~/types';
 
 interface ContextOptions {
-  context?: SlackMessageContext;
+  context?: ChatRuntimeContext;
   requestHints?: SandboxRequestHints;
 }
 

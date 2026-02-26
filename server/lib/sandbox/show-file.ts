@@ -1,6 +1,6 @@
 import nodePath from 'node:path';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { ChatRuntimeContext } from '~/types';
 import type { ResolvedSandboxSession } from './session';
 
 export interface ShowFileInput {
@@ -11,7 +11,7 @@ export interface ShowFileInput {
 export async function showFile(params: {
   input: ShowFileInput;
   runtime: ResolvedSandboxSession;
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
   ctxId: string;
 }): Promise<void> {
   const { input, runtime, context, ctxId } = params;

@@ -3,7 +3,7 @@ import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { ChatRuntimeContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import type { SlackFile } from '~/utils/images';
 
@@ -20,7 +20,7 @@ export interface PromptResourceLink {
 
 export async function syncAttachments(
   sandbox: Sandbox,
-  context: SlackMessageContext,
+  context: ChatRuntimeContext,
   files?: SlackFile[]
 ): Promise<PromptResourceLink[]> {
   if (!files?.length) {

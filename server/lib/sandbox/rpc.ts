@@ -30,6 +30,13 @@ type ModelInfo = Extract<
   { command: 'get_available_models'; success: true }
 >['data']['models'][number];
 
+const ANSI_ESCAPE_SEQUENCE_PATTERN =
+  '\\u001B(?:[@-Z\\\\-_]|\\[[0-9;?]*[ -/]*[@-~])';
+const ANSI_ESCAPE_SEQUENCE_REGEX = new RegExp(
+  ANSI_ESCAPE_SEQUENCE_PATTERN,
+  'g'
+);
+
 export class PiRpcClient {
   private buffer = '';
   private exited = false;
@@ -70,10 +77,9 @@ export class PiRpcClient {
 
   handleStdout(chunk: string): void {
     // Strip \r (ONLCR) and ANSI/VT100 escape sequences that the PTY injects.
-    // eslint-disable-next-line no-control-regex
     this.buffer += chunk
       .replace(/\r/g, '')
-      .replace(/\x1b(?:[@-Z\\-_]|\[[0-9;?]*[ -/]*[@-~])/g, '');
+      .replace(ANSI_ESCAPE_SEQUENCE_REGEX, '');
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() ?? '';
 

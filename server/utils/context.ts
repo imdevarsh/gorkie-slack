@@ -1,24 +1,24 @@
 import type { ModelMessage } from 'ai';
 import { getConversationMessages } from '~/slack/conversations';
-import type { ChatRequestHints, SlackMessageContext } from '~/types';
+import type { ChatRequestHints, ChatRuntimeContext } from '~/types';
 import { resolveChannelName, resolveServerName } from '~/utils/slack';
 import { getTime } from '~/utils/time';
 
-export function getContextId(context: SlackMessageContext): string {
-  const channel = context.event.channel ?? 'unknown-channel';
+export function getContextId(context: ChatRuntimeContext): string {
+  const channel = context.channelId;
   const channelType = context.event.channel_type;
-  const userId = (context.event as { user?: string }).user;
-  const threadTs =
-    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
+  const userId = context.userId;
+  const threadTs = context.event.thread_ts ?? context.event.ts;
 
   if (channelType === 'im' && userId) {
     return `dm:${userId}`;
   }
+
   return `${channel}:${threadTs}`;
 }
 
 async function resolveBotDetails(
-  ctx: SlackMessageContext
+  ctx: ChatRuntimeContext
 ): Promise<{ joined: number; status: string; activity: string }> {
   const botId = ctx.botUserId;
   if (!botId) {
@@ -36,6 +36,7 @@ async function resolveBotDetails(
       info.user?.profile?.status_text?.trim() ||
       info.user?.profile?.status_emoji?.trim() ||
       'active';
+
     return {
       joined: joinedSeconds * 1000,
       status,
@@ -47,7 +48,7 @@ async function resolveBotDetails(
 }
 
 export async function buildChatContext(
-  ctx: SlackMessageContext,
+  ctx: ChatRuntimeContext,
   opts?: {
     messages?: ModelMessage[];
     requestHints?: ChatRequestHints;
@@ -56,13 +57,9 @@ export async function buildChatContext(
   let messages = opts?.messages;
   let requestHints = opts?.requestHints;
 
-  const channelId = (ctx.event as { channel?: string }).channel;
-  const threadTs = (ctx.event as { thread_ts?: string }).thread_ts;
+  const channelId = ctx.channelId;
+  const threadTs = ctx.event.thread_ts;
   const messageTs = ctx.event.ts;
-
-  if (!(channelId && messageTs)) {
-    throw new Error('Slack message missing channel or timestamp');
-  }
 
   if (!messages) {
     messages = await getConversationMessages({

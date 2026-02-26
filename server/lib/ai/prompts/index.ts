@@ -1,7 +1,7 @@
 import type {
   ChatRequestHints,
+  ChatRuntimeContext,
   SandboxRequestHints,
-  SlackMessageContext,
 } from '~/types';
 import { chatPrompt } from './chat';
 import { sandboxPrompt } from './sandbox';
@@ -11,11 +11,11 @@ export function systemPrompt(
     | {
         agent: 'chat';
         requestHints: ChatRequestHints;
-        context: SlackMessageContext;
+        context: ChatRuntimeContext;
       }
     | {
         agent: 'sandbox';
-        context?: SlackMessageContext;
+        context?: ChatRuntimeContext;
         requestHints?: SandboxRequestHints;
       }
 ): string {

@@ -1,24 +1,24 @@
 import { tool } from 'ai';
 import PQueue from 'p-queue';
 import { z } from 'zod';
+import { sandbox as config } from '~/config';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { resolveSession } from '~/lib/sandbox/session';
 import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
-import type { SlackMessageContext, Stream } from '~/types';
+import type { ChatRuntimeContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
-import { sandbox as config } from '~/config';
 
 export const sandbox = ({
   context,
   files,
   stream,
 }: {
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
   files?: SlackFile[];
   stream: Stream;
 }) =>
@@ -45,7 +45,6 @@ export const sandbox = ({
       const tasks = new Map<string, string>();
       const queue = new PQueue({ concurrency: 1 });
       const enqueue = (fn: () => Promise<unknown>) => {
-        // biome-ignore lint/suspicious/noFloatingPromises: task order is managed by the queue
         queue.add(fn);
       };
 

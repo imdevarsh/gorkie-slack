@@ -1,4 +1,4 @@
-import type { ChatRequestHints, SlackMessageContext } from '~/types';
+import type { ChatRequestHints, ChatRuntimeContext } from '~/types';
 import { attachmentsPrompt } from './attachments';
 import { corePrompt } from './core';
 import { examplesPrompt } from './examples';
@@ -19,7 +19,7 @@ export function chatPrompt({
   context,
 }: {
   requestHints: ChatRequestHints;
-  context: SlackMessageContext;
+  context: ChatRuntimeContext;
 }): string {
   return [
     corePrompt,
