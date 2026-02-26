@@ -14,6 +14,7 @@ Follow these steps for every task:
 3. Execute: Run commands and ALWAYS write outputs to output/.
   Check exit codes and stderr after every command; diagnose and retry on failures.
   On setup failures (init/scaffold/install), recover in the same directory and continue from partial progress.
+  Treat command timeouts as unresolved failures, not success: retry with a longer timeout or lighter verification path and report exactly what was or was not validated.
   Rename generic files to semantic names and ensure final commands include all required input paths from step 1.
   Every tool call needs a present-participle status (for example "Installing ffmpeg"); keep it under 40 chars.
 
@@ -24,4 +25,5 @@ Follow these steps for every task:
   Summary:
   Files:
   Notes:
+  In Notes, include any warnings/timeouts/partial verification explicitly. Never claim a build/typecheck passed unless it completed successfully.
 </workflow>`;

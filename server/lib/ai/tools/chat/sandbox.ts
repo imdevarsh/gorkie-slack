@@ -15,6 +15,8 @@ import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
 
+const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
+
 export const sandbox = ({
   context,
   files,
@@ -73,6 +75,8 @@ export const sandbox = ({
         );
 
         const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
+        const keepSandboxAlive = () =>
+          extendSandboxTimeout(activeRuntime.sandbox, SANDBOX_MIN_REMAINING_MS);
 
         const eventStream: AgentSessionEvent[] = [];
         const unsubscribe = subscribeEvents({
@@ -94,7 +98,7 @@ export const sandbox = ({
           onToolStart: ({ toolName, toolCallId, args, status }) => {
             const id = `${taskId}:${toolCallId}`;
             tasks.set(toolCallId, id);
-            void extendSandboxTimeout(activeRuntime.sandbox);
+            keepSandboxAlive();
             const toolTask = getToolTaskStart({ toolName, args, status });
             enqueue(() =>
               createTask(stream, {
@@ -122,14 +126,10 @@ export const sandbox = ({
           },
         });
 
-        const keepAlive = setInterval(
-          () => {
-            enqueue(() =>
-              updateTask(stream, { taskId, status: 'in_progress' })
-            );
-          },
-          3 * 60 * 1000
-        );
+        const keepAlive = setInterval(() => {
+          keepSandboxAlive();
+          enqueue(() => updateTask(stream, { taskId, status: 'in_progress' }));
+        }, 3 * 60 * 1000);
 
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
