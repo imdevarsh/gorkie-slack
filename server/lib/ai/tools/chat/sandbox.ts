@@ -5,7 +5,8 @@ import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
-import { resolveSession } from '~/lib/sandbox/session';
+import { pauseSession, resolveSession } from '~/lib/sandbox/session';
+import { extendSandboxTimeout } from '~/lib/sandbox/timeout';
 import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
 import type { SlackMessageContext, Stream } from '~/types';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
@@ -62,14 +63,20 @@ export const sandbox = ({
 
       try {
         runtime = await resolveSession(context);
-        const uploads = await syncAttachments(runtime.sandbox, context, files);
+        const activeRuntime = runtime;
+
+        const uploads = await syncAttachments(
+          activeRuntime.sandbox,
+          context,
+          files
+        );
 
         const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
 
         const eventStream: AgentSessionEvent[] = [];
         const unsubscribe = subscribeEvents({
           client: runtime.client,
-          runtime,
+          runtime: activeRuntime,
           context,
           ctxId,
           events: eventStream,
@@ -83,7 +90,8 @@ export const sandbox = ({
               })
             );
           },
-          onToolStart: ({ toolName, toolCallId, args, status }) => {
+          onToolStart: async ({ toolName, toolCallId, args, status }) => {
+            await extendSandboxTimeout(activeRuntime.sandbox);
             const toolTask = getToolTaskStart({ toolName, args, status });
             const id = `${taskId}:${toolCallId}`;
             tasks.set(toolCallId, id);
@@ -184,6 +192,7 @@ export const sandbox = ({
               '[subagent] Failed to disconnect Pi client'
             );
           });
+          await pauseSession(context, runtime.sandbox.sandboxId);
         }
       }
     },

@@ -166,3 +166,21 @@ export async function resolveSession(
     throw error;
   }
 }
+
+export async function pauseSession(
+  context: SlackMessageContext,
+  sandboxId: string
+): Promise<void> {
+  const threadId = getContextId(context);
+
+  try {
+    await Sandbox.betaPause(sandboxId, { apiKey: env.E2B_API_KEY });
+    await updateStatus(threadId, 'paused');
+    logger.info({ threadId, sandboxId }, '[sandbox] Paused sandbox');
+  } catch (error) {
+    logger.warn(
+      { ...toLogError(error), threadId, sandboxId },
+      '[sandbox] Failed to pause sandbox'
+    );
+  }
+}
