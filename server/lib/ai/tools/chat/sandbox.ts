@@ -91,11 +91,11 @@ export const sandbox = ({
               })
             );
           },
-          onToolStart: async ({ toolName, toolCallId, args, status }) => {
-            await extendSandboxTimeout(activeRuntime.sandbox);
-            const toolTask = getToolTaskStart({ toolName, args, status });
+          onToolStart: ({ toolName, toolCallId, args, status }) => {
             const id = `${taskId}:${toolCallId}`;
             tasks.set(toolCallId, id);
+            void extendSandboxTimeout(activeRuntime.sandbox);
+            const toolTask = getToolTaskStart({ toolName, args, status });
             enqueue(() =>
               createTask(stream, {
                 taskId: id,

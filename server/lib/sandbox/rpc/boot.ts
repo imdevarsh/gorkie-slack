@@ -2,7 +2,7 @@ import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import { PiRpcClient, type PtyLike } from './rpc-client';
+import { PiRpcClient, type PtyLike } from './client';
 
 const PTY_COLS = 220;
 const PTY_ROWS = 24;
