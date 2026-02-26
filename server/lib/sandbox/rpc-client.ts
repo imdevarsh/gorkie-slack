@@ -14,7 +14,7 @@ import type {
   ThinkingLevel,
 } from '~/types/sandbox/rpc';
 import { errorMessage } from '~/utils/error';
-import { stripTerminalArtifacts } from '~/utils/text';
+import { cleanTerminalText } from '~/utils/text';
 
 type BashResult = Extract<
   RpcResponse,
@@ -68,7 +68,7 @@ export class PiRpcClient {
   }
 
   handleStdout(chunk: string): void {
-    this.buffer += stripTerminalArtifacts(chunk);
+    this.buffer += cleanTerminalText(chunk);
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() ?? '';
 

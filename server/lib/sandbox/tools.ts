@@ -1,5 +1,5 @@
 import { sandbox as config } from '~/config';
-import { clampNormalizedText } from '~/utils/text';
+import { clampText } from '~/utils/text';
 import {
   asRecord,
   asString,
@@ -34,7 +34,7 @@ const toolTitles = {
 function resolveTitle(toolName: string): string {
   const label = toolTitles[toolName as keyof typeof toolTitles] ?? toolName;
 
-  return clampNormalizedText(label, config.toolOutput.titleMaxChars);
+  return clampText(label, config.toolOutput.titleMaxChars);
 }
 
 function resolveDetails(toolName: string, args: unknown): string {
@@ -73,9 +73,9 @@ export function getToolTaskStart(input: ToolStartInput) {
 
   return {
     title: status
-      ? clampNormalizedText(status, config.toolOutput.titleMaxChars)
+      ? clampText(status, config.toolOutput.titleMaxChars)
       : resolveTitle(toolName),
-    details: clampNormalizedText(
+    details: clampText(
       resolveDetails(toolName, args),
       config.toolOutput.detailsMaxChars
     ),
@@ -90,10 +90,7 @@ export function getToolTaskEnd(input: ToolEndInput) {
     const path = asString(asRecord(details)?.path);
     if (path) {
       return {
-        output: clampNormalizedText(
-          `Uploaded ${path}`,
-          config.toolOutput.outputMaxChars
-        ),
+        output: clampText(`Uploaded ${path}`, config.toolOutput.outputMaxChars),
       };
     }
   }
@@ -102,7 +99,7 @@ export function getToolTaskEnd(input: ToolEndInput) {
     const text = extractTextResult(result);
     if (text) {
       return {
-        output: `output:\n${clampNormalizedText(text, config.toolOutput.outputMaxChars)}`,
+        output: `output:\n${clampText(text, config.toolOutput.outputMaxChars)}`,
       };
     }
     return {
@@ -113,13 +110,13 @@ export function getToolTaskEnd(input: ToolEndInput) {
   const text = extractTextResult(result);
   if (text) {
     return {
-      output: clampNormalizedText(text, config.toolOutput.outputMaxChars),
+      output: clampText(text, config.toolOutput.outputMaxChars),
     };
   }
 
   if (isError) {
     return {
-      output: clampNormalizedText(
+      output: clampText(
         extractErrorResult(result) ?? 'Tool execution failed',
         config.toolOutput.outputMaxChars
       ),

@@ -1,4 +1,4 @@
-import { nonEmptyTrimString, sanitizeDisplayText } from '~/utils/text';
+import { cleanText, trimmed } from '~/utils/text';
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') {
@@ -13,7 +13,7 @@ export function asString(value: unknown): string | undefined {
     return undefined;
   }
 
-  return nonEmptyTrimString(sanitizeDisplayText(value));
+  return trimmed(cleanText(value));
 }
 
 export function getArg(args: unknown, key: string, fallback: string): string {

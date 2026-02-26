@@ -1,11 +1,11 @@
 import stripAnsi from 'strip-ansi';
 
-export function stripTerminalArtifacts(text: string): string {
+export function cleanTerminalText(text: string): string {
   return stripAnsi(text).replace(/\r/g, '');
 }
 
-export function sanitizeDisplayText(text: string): string {
-  const withoutAnsi = stripTerminalArtifacts(text);
+export function cleanText(text: string): string {
+  const withoutAnsi = cleanTerminalText(text);
   let output = '';
 
   for (const char of withoutAnsi) {
@@ -26,7 +26,7 @@ export function sanitizeDisplayText(text: string): string {
   return output;
 }
 
-export function clampNormalizedText(text: string, maxLength: number): string {
+export function clampText(text: string, maxLength: number): string {
   const normalized = text.replace(/\s+/g, ' ').trim();
   if (maxLength <= 0) {
     return '';
@@ -40,7 +40,7 @@ export function clampNormalizedText(text: string, maxLength: number): string {
   return `${normalized.slice(0, maxLength - 3)}...`;
 }
 
-export function nonEmptyTrimString(value: unknown): string | undefined {
+export function trimmed(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0
     ? value.trim()
     : undefined;
