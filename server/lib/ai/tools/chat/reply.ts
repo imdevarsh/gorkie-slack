@@ -2,15 +2,10 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext, Stream } from '~/types';
+import type { SlackHistoryMessage, SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import { getSlackUserName } from '~/utils/users';
-
-interface SlackHistoryMessage {
-  thread_ts?: string;
-  ts?: string;
-}
 
 async function resolveTargetMessage(
   ctx: SlackMessageContext,

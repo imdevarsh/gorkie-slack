@@ -2,13 +2,8 @@ import { App, ExpressReceiver, LogLevel } from '@slack/bolt';
 import { env } from '~/env';
 import { buildCache } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
+import type { SlackApp } from '~/types';
 import { events } from './events';
-
-export interface SlackApp {
-  app: App;
-  receiver?: ExpressReceiver;
-  socketMode: boolean;
-}
 
 function registerApp(app: App) {
   buildCache(app);

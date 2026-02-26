@@ -2,20 +2,13 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext, Stream } from '~/types';
+import type {
+  AssistantThreadEvent,
+  SlackMessageContext,
+  SlackSearchResponse,
+  Stream,
+} from '~/types';
 import { getContextId } from '~/utils/context';
-
-interface AssistantThreadEvent {
-  assistant_thread?: { action_token?: string };
-}
-
-interface SlackSearchResponse {
-  error?: string;
-  ok: boolean;
-  results?: {
-    messages: unknown[];
-  };
-}
 
 export const searchSlack = ({
   context,

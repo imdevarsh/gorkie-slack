@@ -1,11 +1,4 @@
-import type { SlackMessageContext } from '~/types';
-
-type LoadingOption = boolean | string[];
-
-interface SetStatusParams {
-  loading?: LoadingOption;
-  status: string;
-}
+import type { SetStatusParams, SlackMessageContext } from '~/types';
 
 export function setStatus(
   context: SlackMessageContext,

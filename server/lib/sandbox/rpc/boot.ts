@@ -26,7 +26,7 @@ export async function boot(
       TERM: PTY_TERM,
     },
     timeoutMs: 0,
-    onData: (data) => {
+    onData: (data: Uint8Array) => {
       if (!client) {
         return;
       }

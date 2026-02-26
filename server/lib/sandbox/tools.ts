@@ -1,4 +1,5 @@
 import { sandbox as config } from '~/config';
+import type { ToolEndInput, ToolStartInput } from '~/types';
 import { clampText } from '~/utils/text';
 import {
   asRecord,
@@ -7,18 +8,6 @@ import {
   extractTextResult,
   getArg,
 } from './parser';
-
-interface ToolStartInput {
-  args: unknown;
-  status?: string;
-  toolName: string;
-}
-
-interface ToolEndInput {
-  isError: boolean;
-  result: unknown;
-  toolName: string;
-}
 
 const toolTitles = {
   bash: 'Run command',

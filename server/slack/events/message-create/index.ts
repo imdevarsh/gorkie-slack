@@ -1,110 +1,38 @@
-import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from '@slack/bolt';
 import { env } from '~/env';
-import { isUserAllowed } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
-import type { SlackMessageContext } from '~/types';
+import type { MessageEventArgs } from '~/types';
 import { buildChatContext, getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
 import { logReply } from '~/utils/log';
-import { shouldUse } from '~/utils/messages';
 import { getTrigger } from '~/utils/triggers';
 import { generateResponse } from './utils/respond';
+import {
+  canUseBot,
+  getAuthorName,
+  hasSupportedSubtype,
+  shouldHandleMessage,
+  toMessageContext,
+  toMessageEventView,
+} from './utils/message-context';
 
 export const name = 'message';
-
-type MessageEventArgs = SlackEventMiddlewareArgs<'message'> & AllMiddlewareArgs;
-
-function hasSupportedSubtype(args: MessageEventArgs): boolean {
-  const subtype = args.event.subtype;
-  return !subtype || subtype === 'thread_broadcast' || subtype === 'file_share';
-}
-
-function isProcessableMessage(
-  args: MessageEventArgs
-): SlackMessageContext | null {
-  const { event, context, client, body } = args;
-  const userId = (event as { user?: string }).user;
-
-  if (!hasSupportedSubtype(args)) {
-    return null;
-  }
-
-  if ('bot_id' in event && event.bot_id) {
-    return null;
-  }
-
-  if (context.botUserId && userId === context.botUserId) {
-    return null;
-  }
-
-  if (!('text' in event)) {
-    return null;
-  }
-
-  return {
-    event: event as SlackMessageContext['event'],
-    client,
-    botUserId: context.botUserId,
-    teamId:
-      context.teamId ??
-      (typeof body === 'object' && body
-        ? (body as { team_id?: string }).team_id
-        : undefined),
-  } satisfies SlackMessageContext;
-}
-
-async function getAuthorName(
-  ctx: SlackMessageContext,
-  ctxId: string
-): Promise<string> {
-  const userId = (ctx.event as { user?: string }).user;
-  if (!userId) {
-    return 'unknown';
-  }
-  try {
-    const info = await ctx.client.users.info({ user: userId });
-    return (
-      info.user?.profile?.display_name ||
-      info.user?.real_name ||
-      info.user?.name ||
-      userId
-    );
-  } catch (error) {
-    logger.warn(
-      { ...toLogError(error), userId, ctxId },
-      'Failed to fetch user info for logging'
-    );
-    return userId;
-  }
-}
 
 async function handleMessage(args: MessageEventArgs) {
   if (!hasSupportedSubtype(args)) {
     return;
   }
 
-  const messageContext = isProcessableMessage(args);
+  const messageContext = toMessageContext(args);
   if (!messageContext) {
     return;
   }
 
-  const event = messageContext.event as {
-    channel?: string;
-    text?: string;
-    thread_ts?: string;
-    ts: string;
-    user?: string;
-  };
-  const userId = event.user;
-  const messageText = event.text ?? '';
-  if (!userId) {
+  const event = toMessageEventView(messageContext);
+  if (!shouldHandleMessage(event)) {
     return;
   }
-
-  if (!shouldUse(messageText)) {
-    return;
-  }
+  const { user: userId, text: messageText = '' } = event;
 
   const ctxId = getContextId(messageContext);
   const trigger = await getTrigger(messageContext, messageContext.botUserId);
@@ -115,7 +43,7 @@ async function handleMessage(args: MessageEventArgs) {
   const { messages, requestHints } = await buildChatContext(messageContext);
 
   if (trigger.type) {
-    if (!isUserAllowed(userId)) {
+    if (!canUseBot(userId)) {
       if (!event.channel) {
         return;
       }
@@ -146,7 +74,7 @@ async function handleMessage(args: MessageEventArgs) {
     return;
   }
 
-  if (!isUserAllowed(userId)) {
+  if (!canUseBot(userId)) {
     return;
   }
 }
@@ -156,7 +84,7 @@ export async function execute(args: MessageEventArgs): Promise<void> {
     return;
   }
 
-  const messageContext = isProcessableMessage(args);
+  const messageContext = toMessageContext(args);
   if (!messageContext) {
     return;
   }

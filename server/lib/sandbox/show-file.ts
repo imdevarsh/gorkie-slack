@@ -1,13 +1,11 @@
 import nodePath from 'node:path';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type {
+  ResolvedSandboxSession,
+  ShowFileInput,
+  SlackMessageContext,
+} from '~/types';
 import { toLogError } from '~/utils/error';
-import type { ResolvedSandboxSession } from './session';
-
-export interface ShowFileInput {
-  path: string;
-  title?: string;
-}
 
 export async function showFile(params: {
   input: ShowFileInput;

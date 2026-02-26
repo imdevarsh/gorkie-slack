@@ -1,14 +1,9 @@
-import type { SandboxRequestHints, SlackMessageContext } from '~/types';
-
-interface ContextOptions {
-  context?: SlackMessageContext;
-  requestHints?: SandboxRequestHints;
-}
+import type { ContextPromptOptions } from '~/types';
 
 export function contextPrompt({
   context,
   requestHints,
-}: ContextOptions): string {
+}: ContextPromptOptions): string {
   const messageTs = (context?.event as { ts?: string } | undefined)?.ts;
   if (!(messageTs || requestHints)) {
     return '';
