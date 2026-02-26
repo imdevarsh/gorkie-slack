@@ -24,8 +24,8 @@ export async function showFile(params: {
     return;
   }
 
-  const file = await runtime.sandbox.fs
-    .downloadFile(input.path)
+  const file = await runtime.sandbox.files
+    .read(input.path, { format: 'bytes' })
     .catch(() => null);
   if (!file) {
     logger.warn(

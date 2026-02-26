@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import type { Sandbox } from '@daytonaio/sdk';
+import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 
 export interface SandboxBootstrapFile {
@@ -45,20 +45,10 @@ export async function configureAgent(
   const bootstrap = await buildConfig(prompt);
 
   for (const path of bootstrap.paths) {
-    await sandbox.fs.createFolder(path, '700').catch((error: unknown) => {
-      if (
-        error instanceof Error &&
-        error.message.toLowerCase().includes('already exists')
-      ) {
-        return;
-      }
-      throw error;
-    });
-    await sandbox.fs.setFilePermissions(path, { mode: '700' });
+    await sandbox.files.makeDir(path).catch(() => {});
   }
 
   for (const file of bootstrap.files) {
-    await sandbox.fs.uploadFile(Buffer.from(file.content, 'utf8'), file.path);
-    await sandbox.fs.setFilePermissions(file.path, { mode: '600' });
+    await sandbox.files.write(file.path, file.content);
   }
 }

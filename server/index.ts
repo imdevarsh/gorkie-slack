@@ -2,6 +2,7 @@ import { LangfuseSpanProcessor } from '@langfuse/otel';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { env } from '~/env';
 import logger from '~/lib/logger';
+import { startSandboxJanitor } from '~/lib/sandbox/janitor';
 import { createSlackApp } from '~/slack/app';
 
 const sdk = new NodeSDK({
@@ -30,6 +31,7 @@ process.on('uncaughtException', (error) => {
 });
 
 async function main() {
+  startSandboxJanitor();
   const { app, socketMode } = createSlackApp();
 
   if (socketMode) {

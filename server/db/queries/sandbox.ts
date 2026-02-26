@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, lt, notInArray } from 'drizzle-orm';
 import { db } from '~/db';
 import {
   type NewSandboxSession,
@@ -88,4 +88,45 @@ export async function clearDestroyed(threadId: string): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));
+}
+
+export function listExpired(
+  cutoff: Date,
+  limit = 50
+): Promise<Pick<SandboxSession, 'threadId' | 'sandboxId'>[]> {
+  return db
+    .select({
+      threadId: sandboxSessions.threadId,
+      sandboxId: sandboxSessions.sandboxId,
+    })
+    .from(sandboxSessions)
+    .where(
+      and(
+        notInArray(sandboxSessions.status, ['destroyed', 'deleting']),
+        isNull(sandboxSessions.destroyedAt),
+        lt(sandboxSessions.updatedAt, cutoff)
+      )
+    )
+    .limit(limit);
+}
+
+export async function claimExpired(threadId: string): Promise<boolean> {
+  const rows = await db
+    .update(sandboxSessions)
+    .set({
+      status: 'deleting',
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(sandboxSessions.threadId, threadId),
+        notInArray(sandboxSessions.status, ['destroyed', 'deleting']),
+        isNull(sandboxSessions.destroyedAt)
+      )
+    )
+    .returning({
+      threadId: sandboxSessions.threadId,
+    });
+
+  return rows.length > 0;
 }

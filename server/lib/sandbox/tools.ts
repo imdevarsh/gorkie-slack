@@ -1,9 +1,12 @@
 import { sandbox as config } from '~/config';
+import { clampText } from '~/utils/text';
 import {
-  clampNormalizedText,
-  nonEmptyTrimString,
-  sanitizeDisplayText,
-} from '~/utils/text';
+  asRecord,
+  asString,
+  extractErrorResult,
+  extractTextResult,
+  getArg,
+} from './tools-parse';
 
 interface ToolStartInput {
   args: unknown;
@@ -15,25 +18,6 @@ interface ToolEndInput {
   isError: boolean;
   result: unknown;
   toolName: string;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-  return value as Record<string, unknown>;
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  return nonEmptyTrimString(sanitizeDisplayText(value));
-}
-
-function getArg(args: unknown, key: string, fallback: string): string {
-  return asString(asRecord(args)?.[key]) ?? fallback;
 }
 
 const toolTitles = {
@@ -50,46 +34,7 @@ const toolTitles = {
 function resolveTitle(toolName: string): string {
   const label = toolTitles[toolName as keyof typeof toolTitles] ?? toolName;
 
-  return clampNormalizedText(label, config.toolOutput.titleMaxChars);
-}
-
-function extractTextResult(result: unknown): string | undefined {
-  const content = asRecord(result)?.content;
-  if (!Array.isArray(content)) {
-    return undefined;
-  }
-
-  const chunks: string[] = [];
-  for (const item of content) {
-    const part = asRecord(item);
-    if (part?.type !== 'text') {
-      continue;
-    }
-    const text = asString(part.text);
-    if (text) {
-      chunks.push(text);
-    }
-  }
-
-  const joined = chunks.join('\n').trim();
-  return joined.length > 0 ? joined : undefined;
-}
-
-function extractErrorResult(result: unknown): string | undefined {
-  const error = asRecord(result)?.error;
-  if (!error) {
-    return undefined;
-  }
-  if (typeof error === 'string') {
-    return asString(error);
-  }
-  if (typeof error === 'object') {
-    const message = asString(asRecord(error)?.message);
-    if (message) {
-      return message;
-    }
-  }
-  return undefined;
+  return clampText(label, config.toolOutput.titleMaxChars);
 }
 
 function resolveDetails(toolName: string, args: unknown): string {
@@ -128,9 +73,9 @@ export function getToolTaskStart(input: ToolStartInput) {
 
   return {
     title: status
-      ? clampNormalizedText(status, config.toolOutput.titleMaxChars)
+      ? clampText(status, config.toolOutput.titleMaxChars)
       : resolveTitle(toolName),
-    details: clampNormalizedText(
+    details: clampText(
       resolveDetails(toolName, args),
       config.toolOutput.detailsMaxChars
     ),
@@ -145,10 +90,7 @@ export function getToolTaskEnd(input: ToolEndInput) {
     const path = asString(asRecord(details)?.path);
     if (path) {
       return {
-        output: clampNormalizedText(
-          `Uploaded ${path}`,
-          config.toolOutput.outputMaxChars
-        ),
+        output: clampText(`Uploaded ${path}`, config.toolOutput.outputMaxChars),
       };
     }
   }
@@ -157,7 +99,7 @@ export function getToolTaskEnd(input: ToolEndInput) {
     const text = extractTextResult(result);
     if (text) {
       return {
-        output: `output:\n${clampNormalizedText(text, config.toolOutput.outputMaxChars)}`,
+        output: `output:\n${clampText(text, config.toolOutput.outputMaxChars)}`,
       };
     }
     return {
@@ -168,13 +110,13 @@ export function getToolTaskEnd(input: ToolEndInput) {
   const text = extractTextResult(result);
   if (text) {
     return {
-      output: clampNormalizedText(text, config.toolOutput.outputMaxChars),
+      output: clampText(text, config.toolOutput.outputMaxChars),
     };
   }
 
   if (isError) {
     return {
-      output: clampNormalizedText(
+      output: clampText(
         extractErrorResult(result) ?? 'Tool execution failed',
         config.toolOutput.outputMaxChars
       ),
