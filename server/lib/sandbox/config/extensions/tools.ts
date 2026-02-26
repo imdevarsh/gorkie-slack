@@ -144,7 +144,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
     Type.Object({
       path: Type.String({
         description:
-          'Absolute path to the file in sandbox, e.g. /home/daytona/output/result.png',
+          'Absolute path to the file in sandbox, e.g. /home/user/output/result.png',
       }),
       title: Type.Optional(
         Type.String({

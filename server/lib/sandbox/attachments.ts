@@ -1,4 +1,4 @@
-import type { Sandbox } from '@daytonaio/sdk';
+import type { Sandbox } from '@e2b/code-interpreter';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
@@ -34,9 +34,7 @@ export async function syncAttachments(
 
   const ctxId = getContextId(context);
 
-  await sandbox.fs.createFolder(ATTACHMENTS_ABS_DIR, '755').catch(() => {
-    // Directory may already exist.
-  });
+  await sandbox.files.makeDir(ATTACHMENTS_ABS_DIR).catch(() => {});
 
   const results = await Promise.all(
     files.map((file) => syncFile(sandbox, file, ctxId))
@@ -78,9 +76,10 @@ async function syncFile(
   const safeName = name || `file-${file.id ?? 'unknown'}`;
   const path = `${ATTACHMENTS_ABS_DIR}/${safeName}`;
   const uri = new URL(`file://${path}`).toString();
+  const fileData = Uint8Array.from(content).buffer;
 
   try {
-    await sandbox.fs.uploadFile(content, path);
+    await sandbox.files.write(path, fileData);
     return {
       type: 'resource_link',
       name: safeName,

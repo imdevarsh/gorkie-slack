@@ -1,5 +1,4 @@
-// cspell:ignore ONLCR stty
-import type { PtyHandle, PtyResult, Sandbox } from '@daytonaio/sdk';
+import type { Sandbox } from '@e2b/code-interpreter';
 import type { ImageContent } from '@mariozechner/pi-ai';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
@@ -31,6 +30,15 @@ type ModelInfo = Extract<
   RpcResponse,
   { command: 'get_available_models'; success: true }
 >['data']['models'][number];
+interface PtyLike {
+  disconnect(): Promise<void>;
+  kill(): Promise<unknown>;
+  sendInput(data: string): Promise<void>;
+}
+
+const PTY_COLS = 220;
+const PTY_ROWS = 24;
+const PTY_TERM = 'dumb';
 const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 export class PiRpcClient {
@@ -41,9 +49,9 @@ export class PiRpcClient {
   private readonly listeners = new Set<RpcEventListener>();
   private readonly pending = new Map<string, PendingRequest>();
   private requestId = 0;
-  private readonly pty: PtyHandle;
+  private readonly pty: PtyLike;
 
-  constructor(pty: PtyHandle) {
+  constructor(pty: PtyLike) {
     this.pty = pty;
     this.exitPromise = new Promise<never>((_, reject) => {
       this.rejectExit = reject;
@@ -51,7 +59,7 @@ export class PiRpcClient {
     this.exitPromise.catch(() => null);
   }
 
-  handleProcessExit(result: PtyResult): void {
+  handleProcessExit(result: { exitCode?: number; error?: string }): void {
     const detail = result.error ?? `exit code ${result.exitCode ?? 'unknown'}`;
     const error = new Error(
       `[pi-rpc] Pi process exited unexpectedly (${detail})`
@@ -66,7 +74,6 @@ export class PiRpcClient {
   }
 
   handleStdout(chunk: string): void {
-    // Strip \r (ONLCR) and ANSI/VT100 escape sequences that the PTY injects.
     this.buffer += stripTerminalArtifacts(chunk);
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() ?? '';
@@ -375,20 +382,20 @@ export async function boot(
   sandbox: Sandbox,
   sessionId?: string
 ): Promise<PiRpcClient> {
-  const ptySessionId = `pi-${Date.now()}`;
   const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
   let client: PiRpcClient | null = null;
 
-  const pty = await sandbox.process.createPty({
-    id: ptySessionId,
-    cols: 220, // wide enough that long JSON frames are never line-wrapped
-    rows: 24,
+  const terminal = await sandbox.pty.create({
+    cols: PTY_COLS,
+    rows: PTY_ROWS,
     cwd: config.runtime.workdir,
     envs: {
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
       HOME: config.runtime.workdir,
-      TERM: 'dumb', // suppress colour/control sequences from shell and readline
+      TERM: PTY_TERM,
     },
+    timeoutMs: 0,
     onData: (data) => {
       if (!client) {
         return;
@@ -397,17 +404,24 @@ export async function boot(
     },
   });
 
-  await pty.waitForConnection();
+  const pty: PtyLike = {
+    sendInput: (data) =>
+      sandbox.pty.sendInput(terminal.pid, encoder.encode(data)),
+    kill: () => terminal.kill(),
+    disconnect: () => terminal.disconnect(),
+  };
+
   client = new PiRpcClient(pty);
 
   const piClient = client;
-  pty
+  terminal
     .wait()
-    .catch(() => null)
-    .then((result) => piClient.handleProcessExit(result ?? {}));
+    .then((result) => piClient.handleProcessExit(result))
+    .catch((error: unknown) => {
+      const exitCode = (error as { exitCode?: number }).exitCode;
+      piClient.handleProcessExit({ exitCode });
+    });
 
-  // Disable PTY echo so our JSON commands are not mirrored back to stdout,
-  // then exec Pi directly so the shell exits and takes its prompt with it.
   if (sessionId && !SESSION_ID_PATTERN.test(sessionId)) {
     throw new Error(`[pi-rpc] Invalid session id: ${sessionId}`);
   }
@@ -417,6 +431,6 @@ export async function boot(
   await pty.sendInput(`stty -echo; exec ${piCmd}\n`);
   await client.waitUntilReady();
 
-  logger.debug({ ptySessionId, sessionId }, '[pi-rpc] Pi process started');
+  logger.debug({ sessionId }, '[pi-rpc] Pi process started');
   return client;
 }

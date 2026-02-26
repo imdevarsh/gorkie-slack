@@ -1,4 +1,4 @@
-import type { Sandbox } from '@daytonaio/sdk';
+import { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 import {
   clearDestroyed,
@@ -8,49 +8,74 @@ import {
   updateStatus,
   upsert,
 } from '~/db/queries/sandbox';
+import { env } from '~/env';
 import { systemPrompt } from '~/lib/ai/prompts';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
+import { toLogError } from '~/utils/error';
 import { configureAgent } from './config';
-import {
-  bringOnline,
-  daytona,
-  isNotFoundError,
-  SandboxNotFoundError,
-} from './daytona';
 import { boot, type PiRpcClient } from './rpc';
-import { createSnapshot, SANDBOX_SNAPSHOT } from './snapshot';
+import { buildTemplateIfMissing, getTemplate } from './template.build';
 
 export interface ResolvedSandboxSession {
   client: PiRpcClient;
   sandbox: Sandbox;
 }
 
+function isMissingSandboxError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  return (
+    message.includes('not found') ||
+    message.includes('404') ||
+    message.includes('does not exist')
+  );
+}
+
+function getChannelId(context: SlackMessageContext): string {
+  const channelId = (context.event as { channel?: string }).channel;
+  if (!(typeof channelId === 'string' && channelId.length > 0)) {
+    throw new Error('Missing Slack channel ID for sandbox session');
+  }
+  return channelId;
+}
+
+function getSandboxMetadata(context: SlackMessageContext, threadId: string) {
+  return {
+    threadId,
+    channelId: getChannelId(context),
+    app: 'gorkie-slack',
+  } as const;
+}
+
+function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
+  return Sandbox.connect(sandboxId, {
+    apiKey: env.E2B_API_KEY,
+    timeoutMs: config.timeoutMs,
+  }).catch((error: unknown) => {
+    if (isMissingSandboxError(error)) {
+      return null;
+    }
+    throw error;
+  });
+}
+
 async function createSandbox(
   context: SlackMessageContext,
   threadId: string
 ): Promise<ResolvedSandboxSession> {
-  const hasSnapshot = await daytona.snapshot
-    .get(SANDBOX_SNAPSHOT)
-    .then(() => true)
-    .catch((error: unknown) => {
-      if (isNotFoundError(error)) {
-        return false;
-      }
-      throw error;
-    });
+  const template = getTemplate();
+  await buildTemplateIfMissing(template);
 
-  if (!hasSnapshot) {
-    await createSnapshot(daytona);
-  }
-
-  const sandbox = await daytona.create({
-    autoStopInterval: config.timeouts.stopMinutes,
-    autoArchiveInterval: config.timeouts.archiveMinutes,
-    autoDeleteInterval: config.timeouts.deleteMinutes,
-    snapshot: SANDBOX_SNAPSHOT,
+  const sandbox = await Sandbox.betaCreate(template, {
+    apiKey: env.E2B_API_KEY,
+    timeoutMs: config.timeoutMs,
+    autoPause: true,
+    allowInternetAccess: true,
+    metadata: getSandboxMetadata(context, threadId),
   });
+
+  await sandbox.setTimeout(config.timeoutMs);
 
   try {
     await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
@@ -59,18 +84,20 @@ async function createSandbox(
 
     await upsert({
       threadId,
-      sandboxId: sandbox.id,
+      sandboxId: sandbox.sandboxId,
       sessionId,
       status: 'active',
     });
     logger.info(
-      { threadId, sandboxId: sandbox.id, sessionId },
+      { threadId, sandboxId: sandbox.sandboxId, sessionId, template },
       '[sandbox] Created sandbox'
     );
 
     return { client, sandbox };
   } catch (error) {
-    await sandbox.stop().catch(() => null);
+    await Sandbox.kill(sandbox.sandboxId, { apiKey: env.E2B_API_KEY }).catch(
+      () => null
+    );
     throw error;
   }
 }
@@ -80,19 +107,14 @@ async function resumeSandbox(
   sandboxId: string,
   sessionId: string
 ): Promise<ResolvedSandboxSession> {
-  const sandbox = await daytona.get(sandboxId).catch((error: unknown) => {
-    if (isNotFoundError(error)) {
-      return null;
-    }
-    throw error;
-  });
+  const sandbox = await connectSandbox(sandboxId);
 
   if (!sandbox) {
     await clearDestroyed(threadId);
-    throw new SandboxNotFoundError(`Sandbox ${sandboxId} not found`);
+    throw new Error(`[sandbox] Sandbox ${sandboxId} not found`);
   }
 
-  await bringOnline(sandbox, threadId);
+  await sandbox.setTimeout(config.timeoutMs);
 
   const client = await boot(sandbox, sessionId);
 
@@ -103,7 +125,7 @@ async function resumeSandbox(
   );
 
   await updateRuntime(threadId, {
-    sandboxId: sandbox.id,
+    sandboxId: sandbox.sandboxId,
     sessionId: state.sessionId,
     status: 'active',
   });
@@ -130,12 +152,16 @@ export async function resolveSession(
       existing.sandboxId,
       existing.sessionId
     ).catch((error: unknown) => {
-      if (error instanceof SandboxNotFoundError) {
+      if (isMissingSandboxError(error)) {
         return createSandbox(context, threadId);
       }
       throw error;
     });
   } catch (error) {
+    logger.warn(
+      { ...toLogError(error), threadId },
+      '[sandbox] Failed to resume, creating new sandbox'
+    );
     await updateStatus(threadId, 'error');
     throw error;
   }

@@ -16,7 +16,6 @@ function handleShowFileTool(params: {
 }): void {
   const { result, runtime, context, ctxId } = params;
 
-  // showFile returns { content: [...], details: { path, title } }
   const details = (result as Record<string, unknown> | null)?.details;
   const parsed = showFileInputSchema.safeParse(details);
   if (!parsed.success) {
