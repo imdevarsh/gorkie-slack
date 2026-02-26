@@ -7,7 +7,6 @@ import { PiRpcClient, type PtyLike } from './rpc-client';
 const PTY_COLS = 220;
 const PTY_ROWS = 24;
 const PTY_TERM = 'dumb';
-const SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 export async function boot(
   sandbox: Sandbox,
@@ -52,10 +51,6 @@ export async function boot(
       const exitCode = (error as { exitCode?: number }).exitCode;
       piClient.handleProcessExit({ exitCode });
     });
-
-  if (sessionId && !SESSION_ID_PATTERN.test(sessionId)) {
-    throw new Error(`[pi-rpc] Invalid session id: ${sessionId}`);
-  }
 
   const piCmd = sessionId
     ? `pi --mode rpc --session ${sessionId}`
