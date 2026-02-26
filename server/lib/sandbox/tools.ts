@@ -36,29 +36,19 @@ function getArg(args: unknown, key: string, fallback: string): string {
   return nonEmptyTrimString(asRecord(args)?.[key]) ?? fallback;
 }
 
+const toolTitles = {
+  bash: 'Run command',
+  read: 'Read file',
+  write: 'Write file',
+  edit: 'Edit file',
+  grep: 'Search text',
+  find: 'Find files',
+  ls: 'List files',
+  showFile: 'Upload file',
+};
+
 function resolveTitle(toolName: string): string {
-  const label = (() => {
-    switch (toolName) {
-      case 'bash':
-        return 'Run command';
-      case 'read':
-        return 'Read file';
-      case 'write':
-        return 'Write file';
-      case 'edit':
-        return 'Edit file';
-      case 'grep':
-        return 'Search text';
-      case 'find':
-        return 'Find files';
-      case 'ls':
-        return 'List files';
-      case 'showFile':
-        return 'Upload file';
-      default:
-        return toolName;
-    }
-  })();
+  const label = toolTitles[toolName as keyof typeof toolTitles] ?? toolName;
 
   return clampNormalizedText(label, config.toolOutput.titleMaxChars);
 }

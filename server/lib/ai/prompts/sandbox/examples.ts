@@ -5,11 +5,11 @@ export const examplesPrompt = `\
 <description>Fresh task with a new upload, no prior sandbox state.</description>
 <task>Convert the uploaded image to black and white</task>
 <steps>
-1. glob({ "pattern": "**/*.png", "path": "/home/vercel-sandbox/attachments", "status": "Finding uploaded png" })
-   → /home/vercel-sandbox/attachments/photo.png
+1. glob({ "pattern": "**/*.png", "path": "/home/daytona/attachments", "status": "Finding uploaded png" })
+   → /home/daytona/attachments/photo.png
 2. bash({ "command": "sudo dnf install -y ImageMagick", "status": "Installing ImageMagick" })
-3. bash({ "command": "mv /home/vercel-sandbox/attachments/photo.png /home/vercel-sandbox/attachments/cat-original.png && convert /home/vercel-sandbox/attachments/cat-original.png -colorspace Gray /home/vercel-sandbox/output/cat.png", "status": "Converting to grayscale" })
-4. showFile({ "path": "/home/vercel-sandbox/output/cat.png", "title": "Black and white", "status": "Uploading result image" })
+3. bash({ "command": "mv /home/daytona/attachments/photo.png /home/daytona/attachments/cat-original.png && convert /home/daytona/attachments/cat-original.png -colorspace Gray /home/daytona/output/cat.png", "status": "Converting to grayscale" })
+4. showFile({ "path": "/home/daytona/output/cat.png", "title": "Black and white", "status": "Uploading result image" })
 Summary: "Renamed the source as cat-original.png, generated cat.png, and uploaded the result."
 </steps>
 <note>ALWAYS write output to output/. Rename files immediately to semantic names (cat, cat-original style).</note>
@@ -25,8 +25,8 @@ Assistant: Done! Converted photo.png to grayscale.
 </context>
 <task>Now invert it</task>
 <steps>
-1. bash({ "command": "convert /home/vercel-sandbox/output/cat.png -negate /home/vercel-sandbox/output/cat-inverted.png", "status": "Inverting image colors" })
-2. showFile({ "path": "/home/vercel-sandbox/output/cat-inverted.png", "title": "Inverted", "status": "Uploading inverted image" })
+1. bash({ "command": "convert /home/daytona/output/cat.png -negate /home/daytona/output/cat-inverted.png", "status": "Inverting image colors" })
+2. showFile({ "path": "/home/daytona/output/cat-inverted.png", "title": "Inverted", "status": "Uploading inverted image" })
 Summary: "Inverted the black and white image and uploaded."
 </steps>
 <note>The agent used the file listing to find the previous output directly, no glob needed. Keep semantic names in output/.</note>
@@ -39,8 +39,8 @@ Summary: "Inverted the black and white image and uploaded."
 <task>Process that image I uploaded earlier</task>
 <steps>
 1. bash({ "command": "sudo dnf install -y ImageMagick", "status": "Installing ImageMagick" })
-2. bash({ "command": "mv /home/vercel-sandbox/attachments/diagram.png /home/vercel-sandbox/attachments/diagram-original.png && convert /home/vercel-sandbox/attachments/diagram-original.png -negate /home/vercel-sandbox/output/diagram.png", "status": "Negating diagram colors" })
-3. showFile({ "path": "/home/vercel-sandbox/output/diagram.png", "title": "Inverted diagram", "status": "Uploading diagram output" })
+2. bash({ "command": "mv /home/daytona/attachments/diagram.png /home/daytona/attachments/diagram-original.png && convert /home/daytona/attachments/diagram-original.png -negate /home/daytona/output/diagram.png", "status": "Negating diagram colors" })
+3. showFile({ "path": "/home/daytona/output/diagram.png", "title": "Inverted diagram", "status": "Uploading diagram output" })
 Summary: "Found your diagram from an earlier message, inverted the colors, and uploaded."
 </steps>
 <note>Read the file path from sandbox_files instead of globbing. Write outputs to output/ and rename to semantic names.</note>
