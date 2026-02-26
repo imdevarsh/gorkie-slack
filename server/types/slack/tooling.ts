@@ -17,14 +17,6 @@ export interface SlackHistoryMessage {
   ts?: string;
 }
 
-export interface MessageEventView {
-  channel?: string;
-  text?: string;
-  thread_ts?: string;
-  ts: string;
-  user?: string;
-}
-
 export interface SlackFileShareMessage {
   files?: SlackFile[];
   subtype?: string;

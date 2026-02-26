@@ -14,7 +14,6 @@ import logger from '~/lib/logger';
 import type { ResolvedSandboxSession, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
-import { contextChannel } from '~/utils/slack-event';
 import { configureAgent } from './config';
 import { boot } from './rpc';
 import { buildTemplateIfMissing, getTemplate } from './template.build';
@@ -29,7 +28,7 @@ function isMissingSandboxError(error: unknown): boolean {
 }
 
 function getChannelId(context: SlackMessageContext): string {
-  const channelId = contextChannel(context);
+  const channelId = context.event.channel;
   if (!(typeof channelId === 'string' && channelId.length > 0)) {
     throw new Error('Missing Slack channel ID for sandbox session');
   }

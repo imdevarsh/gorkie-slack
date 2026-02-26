@@ -5,7 +5,6 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-import { contextChannel, contextUserId } from '~/utils/slack-event';
 
 export const leaveChannel = ({
   context,
@@ -32,8 +31,8 @@ export const leaveChannel = ({
     },
     execute: async ({ reason }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const authorId = contextUserId(context);
-      const channelId = contextChannel(context);
+      const authorId = context.event.user;
+      const channelId = context.event.channel;
 
       if (!channelId) {
         return {

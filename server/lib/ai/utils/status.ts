@@ -1,12 +1,11 @@
 import type { SetStatusParams, SlackMessageContext } from '~/types';
-import { contextChannel, contextRootTs } from '~/utils/slack-event';
 
 export function setStatus(
   context: SlackMessageContext,
   params: SetStatusParams
 ): Promise<unknown> {
-  const channelId = contextChannel(context);
-  const threadTs = contextRootTs(context);
+  const channelId = context.event.channel;
+  const threadTs = context.event.thread_ts ?? context.event.ts;
   if (!(channelId && threadTs)) {
     return Promise.resolve();
   }

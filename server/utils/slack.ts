@@ -1,10 +1,9 @@
 import type { SlackMessageContext } from '~/types';
-import { contextChannel } from '~/utils/slack-event';
 
 export async function resolveChannelName(
   ctx: SlackMessageContext
 ): Promise<string> {
-  const channelId = contextChannel(ctx);
+  const channelId = ctx.event.channel;
   if (!channelId) {
     return 'Unknown channel';
   }

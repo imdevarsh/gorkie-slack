@@ -3,21 +3,14 @@ import type {
   SlackMessageEvent,
   TriggerType,
 } from '~/types';
-import {
-  eventChannel,
-  eventChannelType,
-  eventThreadTs,
-  eventUserId,
-  eventText,
-} from '~/utils/slack-event';
 import { primeSlackUserName } from '~/utils/users';
 
 function isPlainMessage(
   event: SlackMessageEvent
 ): event is SlackMessageEvent & { text: string; user: string } {
-  const subtype = 'subtype' in event ? event.subtype : undefined;
-  const text = eventText(event);
-  const userId = eventUserId(event);
+  const subtype = event.subtype;
+  const text = event.text;
+  const userId = event.user;
   return (
     (!subtype || subtype === 'thread_broadcast' || subtype === 'file_share') &&
     typeof text === 'string' &&
@@ -51,13 +44,13 @@ export async function getTrigger(
     }
   }
 
-  const channelType = eventChannelType(event);
+  const channelType = event.channel_type;
   if (channelType === 'im') {
     return { type: 'dm', info: event.user };
   }
 
-  const channelId = eventChannel(message.event);
-  const threadTs = eventThreadTs(message.event);
+  const channelId = message.event.channel;
+  const threadTs = message.event.thread_ts;
   if (
     channelId &&
     threadTs &&

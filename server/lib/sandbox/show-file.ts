@@ -6,7 +6,6 @@ import type {
   SlackMessageContext,
 } from '~/types';
 import { errorMessage, toLogError } from '~/utils/error';
-import { contextChannel, contextThreadTs } from '~/utils/slack-event';
 
 async function postThreadError(
   context: SlackMessageContext,
@@ -32,8 +31,8 @@ export async function showFile(params: {
 }): Promise<void> {
   const { input, runtime, context, ctxId } = params;
 
-  const channelId = contextChannel(context);
-  const threadTs = contextThreadTs(context);
+  const channelId = context.event.channel;
+  const threadTs = context.event.thread_ts;
   const messageTs = context.event.ts;
 
   if (!channelId) {

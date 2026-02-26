@@ -6,7 +6,6 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-import { contextUserId } from '~/utils/slack-event';
 
 export const scheduleReminder = ({
   context,
@@ -43,7 +42,7 @@ export const scheduleReminder = ({
     },
     execute: async ({ text, seconds }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const userId = contextUserId(context);
+      const userId = context.event.user;
 
       if (!userId) {
         return {

@@ -1,20 +1,14 @@
 import type { ModelMessage } from 'ai';
 import { getConversationMessages } from '~/slack/conversations';
 import type { ChatRequestHints, SlackMessageContext } from '~/types';
-import {
-  contextChannel,
-  contextThreadTs,
-  contextUserId,
-  eventChannelType,
-} from '~/utils/slack-event';
 import { resolveChannelName, resolveServerName } from '~/utils/slack';
 import { getTime } from '~/utils/time';
 
 export function getContextId(context: SlackMessageContext): string {
-  const channel = contextChannel(context) ?? 'unknown-channel';
-  const channelType = eventChannelType(context.event);
-  const userId = contextUserId(context);
-  const threadTs = contextThreadTs(context) ?? context.event.ts;
+  const channel = context.event.channel ?? 'unknown-channel';
+  const channelType = context.event.channel_type;
+  const userId = context.event.user;
+  const threadTs = context.event.thread_ts ?? context.event.ts;
 
   if (channelType === 'im' && userId) {
     return `dm:${userId}`;
@@ -61,8 +55,8 @@ export async function buildChatContext(
   let messages = opts?.messages;
   let requestHints = opts?.requestHints;
 
-  const channelId = contextChannel(ctx);
-  const threadTs = contextThreadTs(ctx);
+  const channelId = ctx.event.channel;
+  const threadTs = ctx.event.thread_ts;
   const messageTs = ctx.event.ts;
 
   if (!(channelId && messageTs)) {

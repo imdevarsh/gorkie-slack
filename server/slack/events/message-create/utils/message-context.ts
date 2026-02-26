@@ -2,12 +2,54 @@ import { isUserAllowed } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
 import type {
   MessageEventArgs,
-  MessageEventView,
+  SlackMessageEvent,
   SlackMessageContext,
+  SlackRawMessageEvent,
 } from '~/types';
 import { toLogError } from '~/utils/error';
 import { isUsableMessage } from '~/utils/messages';
-import { contextUserId, eventUserId } from '~/utils/slack-event';
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function normalizeEvent(event: SlackRawMessageEvent): SlackMessageEvent | null {
+  const record = asRecord(event);
+  const channel = typeof event.channel === 'string' ? event.channel : undefined;
+  const ts = typeof event.ts === 'string' ? event.ts : undefined;
+  const eventTs =
+    typeof record?.event_ts === 'string' ? (record.event_ts as string) : ts;
+  if (!(channel && ts && eventTs)) {
+    return null;
+  }
+
+  const files = Array.isArray(record?.files) ? record.files : undefined;
+  const assistantThread = asRecord(record?.assistant_thread);
+
+  return {
+    channel,
+    ts,
+    event_ts: eventTs,
+    text: typeof record?.text === 'string' ? record.text : undefined,
+    user: typeof record?.user === 'string' ? record.user : undefined,
+    thread_ts:
+      typeof record?.thread_ts === 'string' ? record.thread_ts : undefined,
+    channel_type:
+      typeof record?.channel_type === 'string'
+        ? record.channel_type
+        : undefined,
+    subtype: typeof record?.subtype === 'string' ? record.subtype : undefined,
+    bot_id: typeof record?.bot_id === 'string' ? record.bot_id : undefined,
+    files,
+    assistant_thread:
+      typeof assistantThread?.action_token === 'string'
+        ? { action_token: assistantThread.action_token }
+        : undefined,
+  };
+}
 
 export function hasSupportedSubtype(args: MessageEventArgs): boolean {
   const subtype = args.event.subtype;
@@ -18,7 +60,10 @@ export function toMessageContext(
   args: MessageEventArgs
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
-  const userId = eventUserId(event);
+  const userId =
+    typeof (event as { user?: unknown }).user === 'string'
+      ? (event as { user: string }).user
+      : undefined;
 
   if (!hasSupportedSubtype(args)) {
     return null;
@@ -36,8 +81,13 @@ export function toMessageContext(
     return null;
   }
 
+  const normalized = normalizeEvent(event);
+  if (!normalized) {
+    return null;
+  }
+
   return {
-    event: event as SlackMessageContext['event'],
+    event: normalized,
     client,
     botUserId: context.botUserId,
     teamId:
@@ -48,15 +98,9 @@ export function toMessageContext(
   } satisfies SlackMessageContext;
 }
 
-export function toMessageEventView(
-  context: SlackMessageContext
-): MessageEventView {
-  return context.event as MessageEventView;
-}
-
 export function shouldHandleMessage(
-  event: MessageEventView
-): event is MessageEventView & { user: string } {
+  event: SlackMessageEvent
+): event is SlackMessageEvent & { user: string } {
   const messageText = event.text ?? '';
   return Boolean(event.user) && isUsableMessage(messageText);
 }
@@ -69,7 +113,7 @@ export async function getAuthorName(
   ctx: SlackMessageContext,
   ctxId: string
 ): Promise<string> {
-  const userId = contextUserId(ctx);
+  const userId = ctx.event.user;
   if (!userId) {
     return 'unknown';
   }

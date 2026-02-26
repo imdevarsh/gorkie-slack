@@ -13,7 +13,6 @@ import {
   hasSupportedSubtype,
   shouldHandleMessage,
   toMessageContext,
-  toMessageEventView,
 } from './utils/message-context';
 
 export const name = 'message';
@@ -22,7 +21,7 @@ async function handleMessage(
   args: MessageEventArgs,
   messageContext: NonNullable<ReturnType<typeof toMessageContext>>
 ) {
-  const event = toMessageEventView(messageContext);
+  const event = messageContext.event;
   if (!shouldHandleMessage(event)) {
     return;
   }

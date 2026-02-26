@@ -8,7 +8,6 @@ import { getConversationMessages } from '~/slack/conversations';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-import { contextChannel, contextThreadTs } from '~/utils/slack-event';
 
 export const summariseThread = ({
   context,
@@ -26,10 +25,10 @@ export const summariseThread = ({
         .describe('Optional instructions to provide to the summariser agent'),
       channelId: z
         .string()
-        .default(contextChannel(context) ?? '')
+        .default(context.event.channel ?? '')
         .describe('Channel ID containing the thread to summarise.'),
-      threadTs: (contextThreadTs(context)
-        ? z.string().default(contextThreadTs(context) ?? '')
+      threadTs: (context.event.thread_ts
+        ? z.string().default(context.event.thread_ts)
         : z.string()
       ).describe('Timestamp of thread to summarise.'),
     }),
