@@ -7,6 +7,7 @@ import type {
 } from '~/types';
 import { toLogError } from '~/utils/error';
 import { isUsableMessage } from '~/utils/messages';
+import { contextUserId, eventUserId } from '~/utils/slack-event';
 
 export function hasSupportedSubtype(args: MessageEventArgs): boolean {
   const subtype = args.event.subtype;
@@ -17,7 +18,7 @@ export function toMessageContext(
   args: MessageEventArgs
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
-  const userId = (event as { user?: string }).user;
+  const userId = eventUserId(event);
 
   if (!hasSupportedSubtype(args)) {
     return null;
@@ -68,7 +69,7 @@ export async function getAuthorName(
   ctx: SlackMessageContext,
   ctxId: string
 ): Promise<string> {
-  const userId = (ctx.event as { user?: string }).user;
+  const userId = contextUserId(ctx);
   if (!userId) {
     return 'unknown';
   }

@@ -12,12 +12,17 @@ import type {
 } from '~/types';
 import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
+import {
+  contextChannel,
+  contextRootTs,
+  contextUserId,
+} from '~/utils/slack-event';
 import { setStatus } from './status';
 
 export async function initStream(
   context: SlackMessageContext
 ): Promise<Stream> {
-  const channelId = (context.event as { channel?: string }).channel;
+  const channelId = contextChannel(context);
   const ctxId = getContextId(context);
 
   if (!channelId) {
@@ -32,9 +37,8 @@ export async function initStream(
     };
   }
 
-  const threadTs =
-    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
-  const userId = (context.event as { user?: string }).user;
+  const threadTs = contextRootTs(context);
+  const userId = contextUserId(context);
 
   let ts: string;
   try {

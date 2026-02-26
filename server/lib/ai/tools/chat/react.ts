@@ -5,6 +5,7 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
+import { contextChannel } from '~/utils/slack-event';
 export const react = ({
   context,
   stream,
@@ -30,7 +31,7 @@ export const react = ({
     },
     execute: async ({ emojis }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const channelId = (context.event as { channel?: string }).channel;
+      const channelId = contextChannel(context);
       const messageTs = context.event.ts;
 
       if (!(channelId && messageTs)) {

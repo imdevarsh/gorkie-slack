@@ -6,6 +6,11 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
+import {
+  contextChannel,
+  contextRootTs,
+  contextThreadTs,
+} from '~/utils/slack-event';
 
 const PLUS_REGEX = /\+/g;
 const SLASH_REGEX = /\//g;
@@ -67,9 +72,9 @@ export const mermaid = ({
     },
     execute: async ({ code, title }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const channelId = (context.event as { channel?: string }).channel;
-      const threadTs = (context.event as { thread_ts?: string }).thread_ts;
-      const messageTs = context.event.ts;
+      const channelId = contextChannel(context);
+      const threadTs = contextThreadTs(context);
+      const messageTs = contextRootTs(context);
 
       if (!channelId) {
         logger.warn(
@@ -98,7 +103,7 @@ export const mermaid = ({
 
         await context.client.files.uploadV2({
           channel_id: channelId,
-          thread_ts: threadTs ?? messageTs,
+          thread_ts: threadTs ?? messageTs ?? context.event.ts,
           file: Buffer.from(imageBuffer),
           filename: 'diagram.png',
           title: title ?? 'Mermaid Diagram',

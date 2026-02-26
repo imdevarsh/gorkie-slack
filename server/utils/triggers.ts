@@ -3,18 +3,25 @@ import type {
   SlackMessageEvent,
   TriggerType,
 } from '~/types';
+import {
+  eventChannel,
+  eventChannelType,
+  eventThreadTs,
+  eventUserId,
+  eventText,
+} from '~/utils/slack-event';
 import { primeSlackUserName } from '~/utils/users';
 
 function isPlainMessage(
   event: SlackMessageEvent
 ): event is SlackMessageEvent & { text: string; user: string } {
   const subtype = 'subtype' in event ? event.subtype : undefined;
+  const text = eventText(event);
+  const userId = eventUserId(event);
   return (
     (!subtype || subtype === 'thread_broadcast' || subtype === 'file_share') &&
-    'text' in event &&
-    typeof (event as { text?: unknown }).text === 'string' &&
-    'user' in event &&
-    typeof (event as { user?: unknown }).user === 'string'
+    typeof text === 'string' &&
+    typeof userId === 'string'
   );
 }
 
@@ -44,20 +51,23 @@ export async function getTrigger(
     }
   }
 
-  const channelType = (event as { channel_type?: string }).channel_type;
+  const channelType = eventChannelType(event);
   if (channelType === 'im') {
     return { type: 'dm', info: event.user };
   }
 
+  const channelId = eventChannel(message.event);
+  const threadTs = eventThreadTs(message.event);
   if (
+    channelId &&
+    threadTs &&
     (!message.event.subtype ||
       message.event.subtype === 'thread_broadcast' ||
       message.event.subtype === 'file_share') &&
-    message.event.thread_ts &&
     (
       await client.conversations.replies({
-        channel: message.event.channel,
-        ts: message.event.thread_ts,
+        channel: channelId,
+        ts: threadTs,
         limit: 1,
       })
     )?.messages?.[0]?.text?.includes(`<@${botId}>`)

@@ -2,13 +2,24 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type {
-  AssistantThreadEvent,
-  SlackMessageContext,
-  SlackSearchResponse,
-  Stream,
-} from '~/types';
+import type { SlackMessageContext, SlackSearchResponse, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
+
+function getActionToken(event: unknown): string | undefined {
+  if (!event || typeof event !== 'object') {
+    return undefined;
+  }
+
+  const assistantThread = (event as { assistant_thread?: unknown })
+    .assistant_thread;
+  if (!assistantThread || typeof assistantThread !== 'object') {
+    return undefined;
+  }
+
+  const actionToken = (assistantThread as { action_token?: unknown })
+    .action_token;
+  return typeof actionToken === 'string' ? actionToken : undefined;
+}
 
 export const searchSlack = ({
   context,
@@ -31,8 +42,7 @@ export const searchSlack = ({
     },
     execute: async ({ query }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const action_token = (context.event as AssistantThreadEvent)
-        .assistant_thread?.action_token;
+      const action_token = getActionToken(context.event);
 
       if (!action_token) {
         return {

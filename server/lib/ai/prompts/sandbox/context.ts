@@ -4,7 +4,7 @@ export function contextPrompt({
   context,
   requestHints,
 }: ContextPromptOptions): string {
-  const messageTs = (context?.event as { ts?: string } | undefined)?.ts;
+  const messageTs = context?.event.ts;
   if (!(messageTs || requestHints)) {
     return '';
   }

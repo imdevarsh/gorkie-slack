@@ -5,6 +5,11 @@ import logger from '~/lib/logger';
 import type { SlackHistoryMessage, SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
+import {
+  contextChannel,
+  contextThreadTs,
+  contextUserId,
+} from '~/utils/slack-event';
 import { getSlackUserName } from '~/utils/users';
 
 async function resolveTargetMessage(
@@ -12,7 +17,7 @@ async function resolveTargetMessage(
   offset: number,
   ctxId: string
 ): Promise<SlackHistoryMessage | null> {
-  const channelId = (ctx.event as { channel?: string }).channel;
+  const channelId = contextChannel(ctx);
   const messageTs = ctx.event.ts;
 
   if (!(channelId && messageTs)) {
@@ -22,7 +27,7 @@ async function resolveTargetMessage(
   if (offset <= 0) {
     return {
       ts: messageTs,
-      thread_ts: (ctx.event as { thread_ts?: string }).thread_ts,
+      thread_ts: contextThreadTs(ctx),
     };
   }
 
@@ -77,7 +82,7 @@ export const reply = ({
         .min(0)
         .optional()
         .describe(
-          `Number of messages to go back from the triggering message. 0 or omitted means that you will reply to the message that you were triggered by. This would usually stay as 0. ${(context.event as { thread_ts?: string }).thread_ts ? 'NOTE: YOU ARE IN A THREAD - THE OFFSET WILL RESPOND TO A DIFFERENT THREAD. Change the offset only if you are sure.' : ''}`.trim()
+          `Number of messages to go back from the triggering message. 0 or omitted means that you will reply to the message that you were triggered by. This would usually stay as 0. ${contextThreadTs(context) ? 'NOTE: YOU ARE IN A THREAD - THE OFFSET WILL RESPOND TO A DIFFERENT THREAD. Change the offset only if you are sure.' : ''}`.trim()
         ),
       content: z
         .array(z.string())
@@ -98,10 +103,10 @@ export const reply = ({
     },
     execute: async ({ offset = 0, content, type }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const channelId = (context.event as { channel?: string }).channel;
+      const channelId = contextChannel(context);
       const messageTs = context.event.ts;
-      const currentThread = (context.event as { thread_ts?: string }).thread_ts;
-      const userId = (context.event as { user?: string }).user;
+      const currentThread = contextThreadTs(context);
+      const userId = contextUserId(context);
 
       if (!(channelId && messageTs)) {
         logger.warn(

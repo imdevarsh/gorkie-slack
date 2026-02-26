@@ -4,6 +4,7 @@ import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
+import { contextText, contextUserId } from '~/utils/slack-event';
 import { getSlackUserName } from '~/utils/users';
 
 export const skip = ({
@@ -38,8 +39,8 @@ export const skip = ({
       });
 
       if (reason) {
-        const authorId = (context.event as { user?: string }).user;
-        const content = (context.event as { text?: string }).text ?? '';
+        const authorId = contextUserId(context);
+        const content = contextText(context) ?? '';
         const author = authorId
           ? await getSlackUserName(context.client, authorId)
           : 'unknown';
