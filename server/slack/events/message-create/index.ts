@@ -20,15 +20,6 @@ function hasSupportedSubtype(args: MessageEventArgs): boolean {
   return !subtype || subtype === 'thread_broadcast' || subtype === 'file_share';
 }
 
-// biome-ignore lint/suspicious/useAwait: await is not needed here, this code is for the future
-async function canReply(_ctxId: string): Promise<boolean> {
-  return true;
-}
-
-async function onSuccess(_context: SlackMessageContext) {
-  // todo: add operations here
-}
-
 function isProcessableMessage(
   args: MessageEventArgs
 ): SlackMessageContext | null {
@@ -137,8 +128,6 @@ async function handleMessage(args: MessageEventArgs) {
       return;
     }
 
-    // await resetMessageCount(ctxId);
-
     logger.info(
       {
         ctxId,
@@ -154,10 +143,6 @@ async function handleMessage(args: MessageEventArgs) {
     );
 
     logReply(ctxId, authorName, result, 'trigger');
-
-    if (result.success && result.toolCalls) {
-      await onSuccess(messageContext);
-    }
     return;
   }
 
@@ -166,7 +151,7 @@ async function handleMessage(args: MessageEventArgs) {
   }
 }
 
-export async function execute(args: MessageEventArgs) {
+export function execute(args: MessageEventArgs) {
   if (!hasSupportedSubtype(args)) {
     return;
   }
@@ -177,10 +162,6 @@ export async function execute(args: MessageEventArgs) {
   }
 
   const ctxId = getContextId(messageContext);
-  if (!(await canReply(ctxId))) {
-    return;
-  }
-
   return getQueue(ctxId)
     .add(async () => handleMessage(args))
     .catch((error: unknown) => {

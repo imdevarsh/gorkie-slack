@@ -44,9 +44,9 @@ export async function updateStatus(
     .update(sandboxSessions)
     .set({
       status,
-      pausedAt: status === 'paused' ? new Date() : null,
-      resumedAt: status === 'active' ? new Date() : null,
-      destroyedAt: status === 'destroyed' ? new Date() : null,
+      ...(status === 'paused' && { pausedAt: new Date() }),
+      ...(status === 'active' && { resumedAt: new Date() }),
+      ...(status === 'destroyed' && { destroyedAt: new Date() }),
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));
@@ -73,7 +73,7 @@ export async function updateRuntime(
       sandboxId: runtime.sandboxId,
       sessionId: runtime.sessionId,
       ...(runtime.status ? { status: runtime.status } : {}),
-      resumedAt: runtime.status === 'active' ? new Date() : null,
+      ...(runtime.status === 'active' && { resumedAt: new Date() }),
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));

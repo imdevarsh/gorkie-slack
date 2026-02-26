@@ -16,7 +16,7 @@ process.on('unhandledRejection', (reason) => {
 
 process.on('uncaughtException', (error) => {
   logger.error({ error }, 'Uncaught exception');
-  void sdk
+  sdk
     .shutdown()
     .catch((shutdownError: unknown) => {
       logger.error(

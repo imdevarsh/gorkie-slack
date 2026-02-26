@@ -14,7 +14,6 @@ export type {
   RpcCommand,
   RpcResponse,
   RpcSessionState,
-  RpcSlashCommand,
 } from '@mariozechner/pi-coding-agent/rpc';
 
 type DistributiveOmit<T, K extends keyof T> = T extends unknown
