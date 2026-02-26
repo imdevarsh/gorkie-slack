@@ -1,5 +1,6 @@
 import type { PtyHandle, PtyResult, Sandbox } from '@daytonaio/sdk';
 import type { ImageContent } from '@mariozechner/pi-ai';
+import stripAnsi from 'strip-ansi';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
@@ -70,10 +71,7 @@ export class PiRpcClient {
 
   handleStdout(chunk: string): void {
     // Strip \r (ONLCR) and ANSI/VT100 escape sequences that the PTY injects.
-    // eslint-disable-next-line no-control-regex
-    this.buffer += chunk
-      .replace(/\r/g, '')
-      .replace(/\x1b(?:[@-Z\\-_]|\[[0-9;?]*[ -/]*[@-~])/g, '');
+    this.buffer += stripAnsi(chunk.replace(/\r/g, ''));
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop() ?? '';
 

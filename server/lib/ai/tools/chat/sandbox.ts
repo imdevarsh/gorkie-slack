@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import PQueue from 'p-queue';
 import { z } from 'zod';
+import { sandbox as config } from '~/config';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
@@ -11,7 +12,6 @@ import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import type { SlackFile } from '~/utils/images';
-import { sandbox as config } from '~/config';
 
 export const sandbox = ({
   context,
@@ -45,8 +45,12 @@ export const sandbox = ({
       const tasks = new Map<string, string>();
       const queue = new PQueue({ concurrency: 1 });
       const enqueue = (fn: () => Promise<unknown>) => {
-        // biome-ignore lint/suspicious/noFloatingPromises: task order is managed by the queue
-        queue.add(fn);
+        queue.add(fn).catch((error: unknown) => {
+          logger.warn(
+            { ...toLogError(error), ctxId },
+            '[sandbox] Failed queued task update'
+          );
+        });
       };
 
       const taskId = await updateTask(stream, {

@@ -45,7 +45,7 @@ const toolTitles = {
   find: 'Find files',
   ls: 'List files',
   showFile: 'Upload file',
-};
+} as const;
 
 function resolveTitle(toolName: string): string {
   const label = toolTitles[toolName as keyof typeof toolTitles] ?? toolName;

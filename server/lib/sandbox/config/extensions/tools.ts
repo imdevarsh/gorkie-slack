@@ -22,7 +22,7 @@ const statusSchema = Type.Object({
   status: Type.Optional(
     Type.String({
       description:
-      "Required brief operation status in present-progressive form, e.g. 'fetching data', 'reading files'.",
+        "Required brief operation status in present-progressive form, e.g. 'fetching data', 'reading files'.",
     })
   ),
 });
