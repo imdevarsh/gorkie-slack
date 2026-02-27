@@ -4,6 +4,7 @@ import { corePrompt } from './core';
 import { environmentPrompt } from './environment';
 import { examplesPrompt } from './examples';
 import { workflowPrompt } from './workflow';
+import { skillsPrompt } from './skills';
 
 export function sandboxPrompt({
   context,
@@ -12,6 +13,7 @@ export function sandboxPrompt({
   return [
     corePrompt,
     environmentPrompt,
+    skillsPrompt,
     contextPrompt({ context, requestHints }),
     workflowPrompt,
     examplesPrompt,

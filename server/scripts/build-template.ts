@@ -70,6 +70,7 @@ async function main(): Promise<void> {
         'bash -lc "yes | agent-browser install --with-deps"',
         'npx --yes skills add vercel-labs/agent-browser --yes',
         'npx --yes skills add https://github.com/agentmail-to/agentmail-skills --skill agentmail --yes',
+        'npx --yes skills add remotion-dev/skills --yes',
         'mkdir -p /home/user/attachments /home/user/output',
         'chown -R user:user /home/user/attachments /home/user/output',
       ])

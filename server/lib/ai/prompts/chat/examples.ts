@@ -127,6 +127,24 @@ export const examplesPrompt = `\
 </example>
 
 <example>
+<title>Email triage with AgentMail</title>
+<user>Check gorkie@agentmail.to for unreplied threads from the last 24 hours and draft responses for each.</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Use AgentMail. For inbox gorkie@agentmail.to, list unreplied threads from the last 24 hours, draft concise replies for each thread (do not send yet), save a triage summary to output/agentmail-triage.md, and upload it with showFile. Include thread IDs and draft IDs in the summary." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done. I triaged recent unreplied threads in AgentMail, prepared drafts, and uploaded a summary with thread and draft IDs."] }</input></tool>
+</workflow>
+</example>
+
+<example>
+<title>Remotion video render</title>
+<user>[uploads logo.png] Make a 15-second 1080x1920 promo video with animated title, captions, and background music.</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Use Remotion best practices skill. Build a 15-second vertical (1080x1920) promo composition using /home/user/attachments/logo.png, include animated title text, burned-in captions from a short scripted voiceover, and subtle background music. Render final output to /home/user/output/promo-vertical.mp4, then upload it with showFile and include render settings (fps, duration, composition name)." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done. I rendered the 15-second Remotion promo video and uploaded the MP4 with the render settings summary."] }</input></tool>
+</workflow>
+</example>
+
+<example>
 <title>Spam or low-value message</title>
 <user>gm</user>
 <workflow>
