@@ -14,6 +14,8 @@ import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 
+const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
+
 export const sandbox = ({
   context,
   files,
@@ -62,8 +64,11 @@ export const sandbox = ({
       });
 
       try {
-        const session = await resolveSession(context);
-        runtime = session;
+        runtime = await resolveSession(context);
+        if (!runtime) {
+          throw new Error('[sandbox] Failed to resolve runtime session');
+        }
+        const session = runtime;
         const uploads = await syncAttachments(session.sandbox, context, files);
         const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
 
@@ -85,16 +90,20 @@ export const sandbox = ({
             );
           },
           onToolStart: ({ toolName, toolCallId, args, status }) => {
-            extendSandboxTimeout(session.sandbox).catch((error: unknown) => {
-              logger.warn(
-                { ...toLogError(error), ctxId, toolName, toolCallId },
-                '[sandbox] Failed to extend timeout'
-              );
-            });
-
             const toolTask = getToolTaskStart({ toolName, args, status });
             const id = `${taskId}:${toolCallId}`;
             tasks.set(toolCallId, id);
+
+            // biome-ignore lint/complexity/noVoid: explicit fire-and-forget timeout extension
+            void extendSandboxTimeout(session.sandbox).catch(
+              (error: unknown) => {
+                logger.warn(
+                  { ...toLogError(error), ctxId, toolName, toolCallId },
+                  '[sandbox] Failed to extend timeout'
+                );
+              }
+            );
+            
             enqueue(() =>
               createTask(stream, {
                 taskId: id,
@@ -121,14 +130,9 @@ export const sandbox = ({
           },
         });
 
-        const keepAlive = setInterval(
-          () => {
-            enqueue(() =>
-              updateTask(stream, { taskId, status: 'in_progress' })
-            );
-          },
-          3 * 60 * 1000
-        );
+        const keepAlive = setInterval(() => {
+          enqueue(() => updateTask(stream, { taskId, status: 'in_progress' }));
+        }, KEEP_ALIVE_INTERVAL_MS);
 
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
@@ -191,7 +195,7 @@ export const sandbox = ({
         await finishTask(stream, {
           status: 'error',
           taskId,
-          output: message.slice(0, 200),
+          output: message,
         });
 
         return { success: false, error: message, task };
@@ -200,10 +204,17 @@ export const sandbox = ({
           await runtime.client.disconnect().catch((error: unknown) => {
             logger.debug(
               { ...toLogError(error), ctxId },
-              '[subagent] Failed to disconnect Pi client'
+              '[sandbox] Failed to disconnect Pi client'
             );
           });
-          await pauseSession(context, runtime.sandbox.sandboxId);
+          await pauseSession(context, runtime.sandbox.sandboxId).catch(
+            (error: unknown) => {
+              logger.debug(
+                { ...toLogError(error), ctxId },
+                '[sandbox] Failed to pause sandbox session'
+              );
+            }
+          );
         }
       }
     },

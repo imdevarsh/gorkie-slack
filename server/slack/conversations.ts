@@ -5,6 +5,13 @@ import { toLogError } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
 import { isUsableMessage } from '~/utils/messages';
 
+interface CachedUser {
+  displayName: string;
+  id: string;
+  realName?: string;
+  username?: string;
+}
+
 async function joinChannel(
   client: ConversationOptions['client'],
   channel: string
@@ -72,10 +79,10 @@ function filterMessages(
   });
 }
 
-async function buildUserNameCache(
+async function buildUserCache(
   client: ConversationOptions['client'],
   messages: SlackConversationMessage[]
-): Promise<Map<string, string>> {
+): Promise<Map<string, CachedUser>> {
   const userIds = new Set<string>();
   for (const message of messages) {
     if (message.user) {
@@ -83,28 +90,36 @@ async function buildUserNameCache(
     }
   }
 
-  const userNameCache = new Map<string, string>();
+  const userCache = new Map<string, CachedUser>();
   await Promise.all(
     Array.from(userIds).map(async (userId) => {
       try {
         const info = await client.users.info({ user: userId });
-        const name =
+        const displayName =
           info.user?.profile?.display_name ||
           info.user?.real_name ||
           info.user?.name ||
           userId;
-        userNameCache.set(userId, name);
+        userCache.set(userId, {
+          id: userId,
+          displayName,
+          realName: info.user?.real_name || undefined,
+          username: info.user?.name || undefined,
+        });
       } catch (error) {
         logger.warn(
           { ...toLogError(error), userId },
           'Failed to fetch Slack user info'
         );
-        userNameCache.set(userId, userId);
+        userCache.set(userId, {
+          id: userId,
+          displayName: userId,
+        });
       }
     })
   );
 
-  return userNameCache;
+  return userCache;
 }
 
 function sortForModel(messages: SlackConversationMessage[]) {
@@ -128,10 +143,10 @@ async function toModelMessage(
   options: {
     botUserId?: string;
     mentionRegex: RegExp | null;
-    userNameCache: Map<string, string>;
+    userCache: Map<string, CachedUser>;
   }
 ): Promise<ModelMessage> {
-  const { botUserId, mentionRegex, userNameCache } = options;
+  const { botUserId, mentionRegex, userCache } = options;
 
   const isBot = message.user === botUserId || Boolean(message.bot_id);
   const original = message.text ?? '';
@@ -141,7 +156,7 @@ async function toModelMessage(
   const textContent = cleaned.length > 0 ? cleaned : original;
 
   const author = message.user
-    ? (userNameCache.get(message.user) ?? message.user)
+    ? (userCache.get(message.user)?.displayName ?? message.user)
     : (message.bot_id ?? 'unknown');
 
   const formattedText = `${author} (${message.user}): ${textContent}`;
@@ -200,12 +215,12 @@ export async function getConversationMessages({
       inclusive,
     });
     const filteredMessages = filterMessages(messages, latest, inclusive);
-    const userNameCache = await buildUserNameCache(client, filteredMessages);
+    const userCache = await buildUserCache(client, filteredMessages);
     const sortedMessages = sortForModel(filteredMessages);
 
     return await Promise.all(
       sortedMessages.map((message) =>
-        toModelMessage(message, { botUserId, mentionRegex, userNameCache })
+        toModelMessage(message, { botUserId, mentionRegex, userCache })
       )
     );
   } catch (error) {

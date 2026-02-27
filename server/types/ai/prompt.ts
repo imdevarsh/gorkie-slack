@@ -1,11 +1,9 @@
 import type { SandboxRequestHints, SlackMessageContext } from '~/types';
 
-export interface ContextPromptOptions {
+export interface PromptOptions {
   context?: SlackMessageContext;
   requestHints?: SandboxRequestHints;
 }
 
-export interface SandboxPromptOptions {
-  context?: SlackMessageContext;
-  requestHints?: SandboxRequestHints;
-}
+export type ContextPromptOptions = PromptOptions;
+export type SandboxPromptOptions = PromptOptions;

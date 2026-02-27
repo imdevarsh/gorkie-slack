@@ -37,9 +37,16 @@ async function resolveTargetMessage(
     logger.error({ ctxId, res: history }, 'Error fetching history');
   }
 
-  const sorted = (history.messages ?? [])
-    .filter((msg) => Boolean(msg.ts))
-    .sort((a, b) => Number(b.ts ?? '0') - Number(a.ts ?? '0'));
+  const sorted: SlackHistoryMessage[] = (history.messages ?? [])
+    .filter(
+      (msg): msg is { thread_ts?: string; ts: string } =>
+        typeof msg.ts === 'string'
+    )
+    .sort((a, b) => Number(b.ts) - Number(a.ts))
+    .map((msg) => ({
+      ts: msg.ts,
+      thread_ts: msg.thread_ts,
+    }));
 
   return sorted[offset - 1] ?? { ts: messageTs };
 }
