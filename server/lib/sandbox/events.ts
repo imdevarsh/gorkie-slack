@@ -35,18 +35,10 @@ function handleShowFileTool(params: {
 }
 
 export function subscribeEvents(params: SubscribeEventsParams): () => void {
-  const {
-    client,
-    runtime,
-    context,
-    ctxId,
-    events,
-    onToolStart,
-    onToolEnd,
-    onRetry,
-  } = params;
+  const { runtime, context, ctxId, events, onToolStart, onToolEnd, onRetry } =
+    params;
 
-  return client.onEvent((event) => {
+  return runtime.client.onEvent((event) => {
     try {
       events.push(event);
 

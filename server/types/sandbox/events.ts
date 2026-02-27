@@ -1,4 +1,3 @@
-import type { PiRpcClient } from '~/lib/sandbox/rpc/client';
 import type { ResolvedSandboxSession, SlackMessageContext } from '~/types';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 
@@ -24,7 +23,6 @@ export interface RetryEvent {
 }
 
 export interface SubscribeEventsParams {
-  client: PiRpcClient;
   context: SlackMessageContext;
   ctxId: string;
   events: AgentSessionEvent[];

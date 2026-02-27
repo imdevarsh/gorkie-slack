@@ -78,7 +78,6 @@ export const sandbox = ({
 
         const eventStream: AgentSessionEvent[] = [];
         const unsubscribe = subscribeEvents({
-          client: session.client,
           runtime: session,
           context,
           ctxId,

@@ -61,16 +61,15 @@ function filterMessages(
   latest: string | undefined,
   inclusive: boolean
 ): SlackConversationMessage[] {
-  if (!latest) {
-    return messages;
-  }
-
   return messages.filter((message) => {
     if (!message.ts) {
       return false;
     }
     if (!isUsableMessage(message.text || '')) {
       return false;
+    }
+    if (!latest) {
+      return true;
     }
 
     const messageTs = Number(message.ts);
@@ -158,8 +157,9 @@ async function toModelMessage(
   const author = message.user
     ? (userCache.get(message.user)?.displayName ?? message.user)
     : (message.bot_id ?? 'unknown');
+  const authorId = message.user ?? message.bot_id ?? 'unknown';
 
-  const formattedText = `${author} (${message.user}): ${textContent}`;
+  const formattedText = `${author} (${authorId}): ${textContent}`;
 
   if (isBot) {
     return {
