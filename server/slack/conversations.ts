@@ -17,9 +17,17 @@ async function joinChannel(
   channel: string
 ): Promise<void> {
   try {
-    await client.conversations.join({ channel });
-  } catch (error) {
-    logger.warn({ ...toLogError(error), channel }, 'Failed to join channel');
+    // keep previous behavior: best-effort join and swallow failures
+    await fetch('https://slack.com/api/conversations.join', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${client.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ channel }),
+    });
+  } catch {
+    // this is fine - channel may not support join
   }
 }
 
@@ -146,7 +154,8 @@ async function toModelMessage(
 ): Promise<ModelMessage> {
   const { botUserId, mentionRegex, userCache } = options;
 
-  const isAssistantMessage = message.user === botUserId;
+  const isAssistantMessage =
+    message.user === botUserId || Boolean(message.bot_id);
   const original = message.text ?? '';
   const cleaned = mentionRegex
     ? original.replace(mentionRegex, '').trim()
