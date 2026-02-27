@@ -5,21 +5,15 @@ import { toLogError } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
 import { isUsableMessage } from '~/utils/messages';
 
-async function joinChannel(clientToken: string | undefined, channel: string) {
-  if (!clientToken) {
-    return;
-  }
-
+async function joinChannel(
+  client: ConversationOptions['client'],
+  channel: string
+): Promise<void> {
   try {
-    await fetch('https://slack.com/api/conversations.join', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${clientToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ channel }),
-    });
-  } catch {}
+    await client.conversations.join({ channel });
+  } catch (error) {
+    logger.warn({ ...toLogError(error), channel }, 'Failed to join channel');
+  }
 }
 
 async function fetchMessages(
@@ -114,7 +108,13 @@ async function buildUserNameCache(
 
 function sortForModel(messages: SlackConversationMessage[]) {
   return messages
-    .filter((message) => !message.subtype || message.subtype === 'file_share')
+    .filter(
+      (message) =>
+        !message.subtype ||
+        message.subtype === 'file_share' ||
+        message.subtype === 'bot_message' ||
+        Boolean(message.bot_id)
+    )
     .sort((a, b) => {
       const aTs = Number(a.ts ?? '0');
       const bTs = Number(b.ts ?? '0');
@@ -185,7 +185,7 @@ export async function getConversationMessages({
   inclusive = false,
 }: ConversationOptions): Promise<ModelMessage[]> {
   try {
-    await joinChannel(client.token, channel);
+    await joinChannel(client, channel);
 
     const mentionRegex = botUserId ? new RegExp(`<@${botUserId}>`, 'gi') : null;
     const messages = await fetchMessages({

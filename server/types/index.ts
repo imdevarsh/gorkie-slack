@@ -13,5 +13,9 @@ export * from './slack/events';
 export * from './slack/file';
 export * from './slack/tooling';
 export * from './slack/trigger';
-export * from './slack';
+export type {
+  SlackMessageContext,
+  SlackMessageEvent,
+  SlackRawMessageEvent,
+} from './slack';
 export * from './stream';

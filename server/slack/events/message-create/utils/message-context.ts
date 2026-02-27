@@ -2,31 +2,32 @@ import { isUserAllowed } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
 import type {
   MessageEventArgs,
+  SlackFile,
   SlackMessageEvent,
   SlackMessageContext,
   SlackRawMessageEvent,
 } from '~/types';
 import { toLogError } from '~/utils/error';
 import { isUsableMessage } from '~/utils/messages';
+import { asRecord } from '~/utils/record';
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-  return value as Record<string, unknown>;
+function isSlackFile(value: unknown): value is SlackFile {
+  return Boolean(asRecord(value));
 }
 
 function normalizeEvent(event: SlackRawMessageEvent): SlackMessageEvent | null {
   const record = asRecord(event);
   const channel = typeof event.channel === 'string' ? event.channel : undefined;
   const ts = typeof event.ts === 'string' ? event.ts : undefined;
-  const eventTs =
-    typeof record?.event_ts === 'string' ? (record.event_ts as string) : ts;
+  const eventTs = typeof record?.event_ts === 'string' ? record.event_ts : ts;
   if (!(channel && ts && eventTs)) {
     return null;
   }
 
-  const files = Array.isArray(record?.files) ? record.files : undefined;
+  const files =
+    Array.isArray(record?.files) && record.files.every(isSlackFile)
+      ? (record.files as SlackFile[])
+      : undefined;
   const assistantThread = asRecord(record?.assistant_thread);
 
   return {

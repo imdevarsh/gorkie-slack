@@ -18,7 +18,6 @@ import {
 export const name = 'message';
 
 async function handleMessage(
-  args: MessageEventArgs,
   messageContext: NonNullable<ReturnType<typeof toMessageContext>>
 ) {
   const event = messageContext.event;
@@ -41,7 +40,7 @@ async function handleMessage(
         return;
       }
 
-      await args.client.chat.postMessage({
+      await messageContext.client.chat.postMessage({
         channel: event.channel,
         thread_ts: event.thread_ts ?? event.ts,
         markdown_text: `Hey there <@${userId}>! For security and privacy reasons, you must be in <#${env.OPT_IN_CHANNEL}> to talk to me. When you're ready, ping me again and we can talk!`,
@@ -84,7 +83,7 @@ export async function execute(args: MessageEventArgs): Promise<void> {
 
   const ctxId = getContextId(messageContext);
   await getQueue(ctxId)
-    .add(async () => handleMessage(args, messageContext))
+    .add(async () => handleMessage(messageContext))
     .catch((error: unknown) => {
       logger.error(
         { ...toLogError(error), ctxId },

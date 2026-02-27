@@ -52,20 +52,25 @@ export async function getTrigger(
   const channelId = message.event.channel;
   const threadTs = message.event.thread_ts;
   if (
+    botId &&
     channelId &&
     threadTs &&
     (!message.event.subtype ||
       message.event.subtype === 'thread_broadcast' ||
-      message.event.subtype === 'file_share') &&
-    (
-      await client.conversations.replies({
+      message.event.subtype === 'file_share')
+  ) {
+    try {
+      const replies = await client.conversations.replies({
         channel: channelId,
         ts: threadTs,
         limit: 1,
-      })
-    )?.messages?.[0]?.text?.includes(`<@${botId}>`)
-  ) {
-    return { type: 'thread', info: event.user };
+      });
+      if (replies.messages?.[0]?.text?.includes(`<@${botId}>`)) {
+        return { type: 'thread', info: event.user };
+      }
+    } catch {
+      return { type: null, info: null };
+    }
   }
 
   return { type: null, info: null };

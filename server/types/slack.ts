@@ -1,6 +1,6 @@
 import type { SlackEventMiddlewareArgs } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
-import type { SlackFile } from './slack/file';
+import type { SlackFile } from '~/types/slack/file';
 
 export type SlackRawMessageEvent = SlackEventMiddlewareArgs<'message'>['event'];
 
