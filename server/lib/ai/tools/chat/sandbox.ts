@@ -1,8 +1,18 @@
 import { tool } from 'ai';
+import PQueue from 'p-queue';
 import { z } from 'zod';
-import { createTask } from '~/lib/ai/utils/task';
+import { sandbox as config } from '~/config';
+import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
+import logger from '~/lib/logger';
+import { syncAttachments } from '~/lib/sandbox/attachments';
+import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
+import { pauseSession, resolveSession } from '~/lib/sandbox/session';
+import { extendSandboxTimeout } from '~/lib/sandbox/timeout';
+import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
 import type { SlackFile, SlackMessageContext, Stream } from '~/types';
-import { runSandboxTask } from './sandbox-runner';
+import type { AgentSessionEvent } from '~/types/sandbox/rpc';
+import { getContextId } from '~/utils/context';
+import { errorMessage, toLogError } from '~/utils/error';
 
 export const sandbox = ({
   context,
@@ -30,13 +40,171 @@ export const sandbox = ({
         status: 'pending',
       });
     },
-    execute: ({ task }, { toolCallId }) => {
-      return runSandboxTask({
-        context,
-        files,
-        stream,
-        task,
-        toolCallId,
+    execute: async ({ task }, { toolCallId }) => {
+      const ctxId = getContextId(context);
+      let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
+      const tasks = new Map<string, string>();
+      const queue = new PQueue({ concurrency: 1 });
+      const enqueue = (fn: () => Promise<unknown>) => {
+        queue.add(fn).catch((error: unknown) => {
+          logger.warn(
+            { ...toLogError(error), ctxId },
+            '[sandbox] Failed queued task update'
+          );
+        });
+      };
+
+      const taskId = await updateTask(stream, {
+        taskId: toolCallId,
+        title: 'Running sandbox',
+        details: task,
+        status: 'in_progress',
       });
+
+      try {
+        const session = await resolveSession(context);
+        runtime = session;
+        const uploads = await syncAttachments(session.sandbox, context, files);
+        const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
+
+        const eventStream: AgentSessionEvent[] = [];
+        const unsubscribe = subscribeEvents({
+          client: session.client,
+          runtime: session,
+          context,
+          ctxId,
+          events: eventStream,
+          onRetry: ({ attempt, maxAttempts, delayMs }) => {
+            const seconds = Math.round(delayMs / 1000);
+            enqueue(() =>
+              updateTask(stream, {
+                taskId,
+                status: 'in_progress',
+                details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
+              })
+            );
+          },
+          onToolStart: ({ toolName, toolCallId, args, status }) => {
+            extendSandboxTimeout(session.sandbox).catch((error: unknown) => {
+              logger.warn(
+                { ...toLogError(error), ctxId, toolName, toolCallId },
+                '[sandbox] Failed to extend timeout'
+              );
+            });
+
+            const toolTask = getToolTaskStart({ toolName, args, status });
+            const id = `${taskId}:${toolCallId}`;
+            tasks.set(toolCallId, id);
+            enqueue(() =>
+              createTask(stream, {
+                taskId: id,
+                title: toolTask.title,
+                details: toolTask.details,
+                status: 'in_progress',
+              })
+            );
+          },
+          onToolEnd: ({ toolName, toolCallId, isError, result }) => {
+            const id = tasks.get(toolCallId);
+            if (!id) {
+              return;
+            }
+            tasks.delete(toolCallId);
+            const { output } = getToolTaskEnd({ toolName, result, isError });
+            enqueue(() =>
+              finishTask(stream, {
+                status: isError ? 'error' : 'complete',
+                taskId: id,
+                output,
+              })
+            );
+          },
+        });
+
+        const keepAlive = setInterval(
+          () => {
+            enqueue(() =>
+              updateTask(stream, { taskId, status: 'in_progress' })
+            );
+          },
+          3 * 60 * 1000
+        );
+
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('[sandbox] Execution timed out')),
+            config.runtime.executionTimeoutMs
+          );
+        });
+
+        try {
+          const run = async () => {
+            await session.client.prompt(prompt);
+            await session.client.waitForIdle();
+          };
+          await Promise.race([run(), timeoutPromise]);
+        } catch (error) {
+          await session.client.abort().catch(() => null);
+          throw error;
+        } finally {
+          clearTimeout(timeoutId);
+          clearInterval(keepAlive);
+          unsubscribe();
+        }
+
+        await queue.onIdle();
+
+        const response =
+          (
+            await session.client.getLastAssistantText().catch(() => null)
+          )?.trim() ||
+          getResponse(eventStream) ||
+          'Done';
+
+        logger.info(
+          {
+            ctxId,
+            sandboxId: session.sandbox.sandboxId,
+            attachments: uploads.map((file) => file.uri),
+            task,
+            response,
+          },
+          '[sandbox] Sandbox run completed'
+        );
+
+        await finishTask(stream, {
+          status: 'complete',
+          taskId,
+          output: response,
+        });
+
+        return { success: true, response };
+      } catch (error) {
+        const message = errorMessage(error);
+
+        logger.error(
+          { ...toLogError(error), ctxId, task, message },
+          '[sandbox] Sandbox run failed'
+        );
+
+        await finishTask(stream, {
+          status: 'error',
+          taskId,
+          output: message.slice(0, 200),
+        });
+
+        return { success: false, error: message, task };
+      } finally {
+        if (runtime) {
+          await runtime.client.disconnect().catch((error: unknown) => {
+            logger.debug(
+              { ...toLogError(error), ctxId },
+              '[subagent] Failed to disconnect Pi client'
+            );
+          });
+          await pauseSession(context, runtime.sandbox.sandboxId);
+        }
+      }
     },
   });
