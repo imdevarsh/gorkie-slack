@@ -38,12 +38,12 @@ export const examplesPrompt = `\
 </workflow>
 <user>Nice, now make it a bit more blue</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Apply a slightly stronger blue tint to the latest output image from this session, then upload the new result with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Continue from the existing sandbox session. Use the latest image output from this thread, apply a slightly stronger blue tint, and upload the new result with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done, I updated the tint and uploaded the new version."] }</input></tool>
 </workflow>
 <user>Great, crop it square and keep the same style</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Use the latest image output from this session, crop it to a centered square, preserve the current style, then upload with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Continue from the existing sandbox session. Use the latest image output, crop it to a centered square, preserve the current style, and upload with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done, I cropped the latest version to square and uploaded it."] }</input></tool>
 </workflow>
 </example>
@@ -57,7 +57,7 @@ export const examplesPrompt = `\
 </workflow>
 <user>now show me top 10 rows by revenue</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Use the same CSV from this session and produce the top 10 rows by revenue. Save output to output/ and upload with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Continue from the existing sandbox session. Use the same CSV and produce the top 10 rows by revenue. Save output to output/ and upload with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done, I generated and uploaded the top-10-by-revenue output."] }</input></tool>
 </workflow>
 </example>
@@ -80,7 +80,7 @@ export const examplesPrompt = `\
 </workflow>
 <user>Nice, now export only rows where amount > 100</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Use the current session dataset/report, filter rows where amount > 100, write a new CSV to output/, and upload with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Continue from the existing sandbox session. Use the current dataset/report, filter rows where amount > 100, write a new CSV to output/, and upload with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done, I filtered the data and uploaded the new CSV."] }</input></tool>
 </workflow>
 </example>
@@ -94,8 +94,26 @@ export const examplesPrompt = `\
 </workflow>
 <user>Trim that to the first 20 seconds</user>
 <workflow>
-<tool><name>sandbox</name><input>{ "task": "Use the latest downloaded video from this session, trim to the first 20 seconds, save to output/, and upload with showFile." }</input></tool>
+<tool><name>sandbox</name><input>{ "task": "Continue from the existing sandbox session. Use the latest downloaded video, trim to the first 20 seconds, save to output/, and upload with showFile." }</input></tool>
 <tool><name>reply</name><input>{ "content": ["Done, I trimmed the video and uploaded the 20-second clip."] }</input></tool>
+</workflow>
+</example>
+
+<example>
+<title>Fix in place after bad output</title>
+<user>The CSS isn't loading right.</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "Continue from the existing sandbox workspace and fix the CSS wiring in place. Diagnose the current issue, patch the existing app, verify with build/typecheck, then upload updated artifacts with showFile." }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Fixed in place. I kept the existing project, repaired the CSS setup, and uploaded the updated build artifacts."] }</input></tool>
+</workflow>
+</example>
+
+<example>
+<title>Verbatim sandbox handoff</title>
+<user>Pass this message EXACTLY to sandbox: "pnpm build and upload dist zip"</user>
+<workflow>
+<tool><name>sandbox</name><input>{ "task": "pnpm build and upload dist zip" }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done. I passed your instruction verbatim to sandbox and shared the result."] }</input></tool>
 </workflow>
 </example>
 

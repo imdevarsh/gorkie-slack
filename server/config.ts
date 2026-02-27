@@ -3,7 +3,7 @@ export const sandbox = {
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
   janitorIntervalMs: 60 * 1000,
   rpc: {
-    commandTimeoutMs: 30_000,
+    commandTimeoutMs: 60_000,
     startupTimeoutMs: 2 * 60 * 1000,
   },
   toolOutput: {

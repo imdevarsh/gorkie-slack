@@ -16,6 +16,8 @@ import { errorMessage, toLogError } from '~/utils/error';
 
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
 
+const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
+
 export const sandbox = ({
   context,
   files,
@@ -71,6 +73,8 @@ export const sandbox = ({
         const session = runtime;
         const uploads = await syncAttachments(session.sandbox, context, files);
         const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
+        const keepSandboxAlive = () =>
+          extendSandboxTimeout(session.sandbox, SANDBOX_MIN_REMAINING_MS);
 
         const eventStream: AgentSessionEvent[] = [];
         const unsubscribe = subscribeEvents({
@@ -90,20 +94,15 @@ export const sandbox = ({
             );
           },
           onToolStart: ({ toolName, toolCallId, args, status }) => {
+            keepSandboxAlive().catch((error: unknown) => {
+              logger.warn(
+                { ...toLogError(error), ctxId, toolName, toolCallId },
+                '[sandbox] Failed to extend timeout'
+              );
+            });
             const toolTask = getToolTaskStart({ toolName, args, status });
             const id = `${taskId}:${toolCallId}`;
             tasks.set(toolCallId, id);
-
-            // biome-ignore lint/complexity/noVoid: explicit fire-and-forget timeout extension
-            void extendSandboxTimeout(session.sandbox).catch(
-              (error: unknown) => {
-                logger.warn(
-                  { ...toLogError(error), ctxId, toolName, toolCallId },
-                  '[sandbox] Failed to extend timeout'
-                );
-              }
-            );
-            
             enqueue(() =>
               createTask(stream, {
                 taskId: id,
@@ -131,6 +130,12 @@ export const sandbox = ({
         });
 
         const keepAlive = setInterval(() => {
+          keepSandboxAlive().catch((error: unknown) => {
+            logger.warn(
+              { ...toLogError(error), ctxId },
+              '[sandbox] Keep-alive failed'
+            );
+          });
           enqueue(() => updateTask(stream, { taskId, status: 'in_progress' }));
         }, KEEP_ALIVE_INTERVAL_MS);
 

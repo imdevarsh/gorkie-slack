@@ -116,8 +116,8 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
       Type.Object({
         timeout: Type.Optional(
           Type.Number({
-            description: 'Timeout in seconds (defaults to 120 seconds).',
-            default: 120,
+            description: 'Timeout in seconds (defaults to 600 seconds).',
+            default: 600,
           })
         ),
       }),
@@ -134,7 +134,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
         Number.isFinite(rawArgs.timeout) &&
         rawArgs.timeout > 0
           ? rawArgs.timeout
-          : 120,
+          : 600,
     })),
   });
 

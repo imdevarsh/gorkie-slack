@@ -3,29 +3,27 @@ export const workflowPrompt = `\
 Follow these steps for every task:
 
 1. Discover: Find the relevant files before doing anything.
-  Use glob to locate uploads in attachments/ or outputs from earlier messages.
-  Never claim a file does not exist without checking first.
-  For edit iterations, pick the latest relevant output as base input, not the oldest original, unless user says to restart.
-  If user requested an uploaded asset, bind that exact file path before running transforms.
+  Check existing workspace state first, then locate uploads in attachments/ and prior outputs.
+  Never claim a file is missing without checking.
+  For iterative fixes, patch in place and start from the latest relevant output unless the user asks to restart.
+  If an uploaded asset is requested, use that exact path.
 
 2. Install: Install any tools you need before first use.
-  The base image is minimal. If you need ImageMagick, pandas, ffmpeg, etc., install them.
-  Use deterministic fallback for any missing system tool.
+  The base image is minimal, so install missing tools (ImageMagick, pandas, ffmpeg, etc.) and use deterministic fallbacks.
 
 3. Execute: Run commands and ALWAYS write outputs to output/.
-  Check exit codes and stderr after every command. If something fails, diagnose and retry.
-  Prefer renaming input once in attachments/<name>-original.<ext> before processing.
-  Immediately rename generic filenames to semantic names aligned with user intent.
-  The final render command MUST include every required input path discovered in step 1.
-  EVERY tool call MUST include a required status field as a plain present-participle phrase, e.g. "Installing ffmpeg", "Rendering video", "Converting image".
-  Tip: Keep status under 40 chars, otherwise Slack rejects it.
+  Check exit codes and stderr after every command; diagnose and retry on failures.
+  On setup failures (init/scaffold/install), recover in the same directory and continue from partial progress.
+  Treat command timeouts as unresolved failures, not success: retry with a longer timeout or lighter verification path and report exactly what was or was not validated.
+  Rename generic files to semantic names and ensure final commands include all required input paths from step 1.
+  Every tool call needs a present-participle status (for example "Installing ffmpeg"); keep it under 40 chars.
 
 4. Upload: Call showFile for the finished result.
-  Do this immediately when the file is ready, not at the very end.
-  showFile also requires status and should describe the upload step.
+  Upload immediately when ready (not only at the end). showFile also requires a status for the upload step.
 
 5. Summarize: Return a compact structured summary with these exact sections:
   Summary:
   Files:
   Notes:
+  In Notes, include any warnings/timeouts/partial verification explicitly. Never claim a build/typecheck passed unless it completed successfully.
 </workflow>`;

@@ -19,3 +19,11 @@
 - Add model retry support
 - Preconfigure playwright MCP (npm install -g agent-browser )
 - Handle timeouts and retries per task command vs per global agent
+
+Sandbox:
+Give Gorkie Access to AgentMail.to (gorkie@agentmail.to)
+Give Gorkei it's own Github Account
+Give Gorkie persistant volumes
+Block Gorkie process inspection (ps -a)
+Preinstall remotion skill + to make videos
+Pre-configure moltbook for FUN

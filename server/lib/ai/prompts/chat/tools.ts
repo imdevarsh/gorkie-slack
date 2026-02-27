@@ -6,14 +6,7 @@ Think step-by-step: decide if you need info (web/user), then react/reply.
 <name>searchSlack</name>
 <description>
 Search across the entire Slack workspace for messages, files, or discussions.
-
-Use when:
-- User asks about past conversations or decisions in other channels
-- Looking for files, links, or info shared previously
-- Finding who discussed a topic or made a decision
-- Researching context from outside the current thread
-
-Search queries work best when specific. Use keywords, user names, channel names, or date ranges.
+Use it for past conversations, decisions, files, links, or any context outside the current thread. Use specific queries (keywords, people, channels, dates).
 </description>
 </tool>
 
@@ -39,13 +32,8 @@ Search queries work best when specific. Use keywords, user names, channel names,
 <name>summariseThread</name>
 <description>
 Generate a comprehensive summary of the current Slack conversation thread.
-
-This tool has awareness of the ENTIRE thread history (up to 1000 messages), not just the messages in your context window. Use when:
-- User explicitly asks for a summary or recap
-- Thread is long and you need full context to answer accurately
-- You need to understand earlier decisions or action items
-
-Returns a structured summary with key points, decisions, action items, and unresolved questions.
+It can read the ENTIRE thread history (up to 1000 messages), not just your context window. Use it for recap requests, long threads, or when you need prior decisions/action items.
+Returns key points, decisions, action items, and unresolved questions.
 </description>
 <examples>
 - user: "can you summarize this thread?": summariseThread, then reply with structured summary
@@ -58,22 +46,15 @@ Returns a structured summary with key points, decisions, action items, and unres
 <description>
 Delegate a task to the sandbox agent for code execution, file processing, data analysis, or any task requiring a Linux environment.
 It runs shell commands, reads files, and uploads results to Slack.
-It has persistent session state per thread — files, installed packages, written code, and all previous results are preserved across calls. Reference prior work directly without re-explaining it.
-
-Use when:
-- User asks you to run code, process files, analyze data, or generate output files
-- User uploads files that need processing (images, CSVs, PDFs, etc.)
-- Any task that requires a shell environment
-- Quick calculations or data transformations
-- User gives a direct URL and asks to download, convert, transcode, extract, or reformat content
-
+It has persistent session state per thread: files, installed packages, written code, and all previous results are preserved across calls. Reference prior work directly without re-explaining it.
+Use it for any shell-backed work: running code, processing uploads, data transforms, generating files, or download/convert/extract tasks from direct public URLs.
 The sandbox agent handles all the details (finding files, running commands, uploading results) and returns a summary of what it did.
 </description>
 <rules>
-- Call sandbox ONCE per user request unless the user explicitly asks for separate phases.
-- Provide a clear, specific task description with the complete user intent in one prompt.
-- Mention any relevant file names or paths from attachments
-- If the user asks to perform operations on a file, call sandbox first instead of replying with instructions.
+- Call sandbox once per user request unless they explicitly want separate phases.
+- Put full intent in one clear task; include relevant attachment names/paths and use sandbox first for file operations.
+- Follow-ups should continue in the existing workspace/session; Do NOT recreate/reinitialize unless explicitly asked.
+- If the user says pass instructions "exactly", include their instruction text verbatim in the sandbox task.
 - NEVER delegate requests that are clearly abusive or likely to blow sandbox limits/resources (for example: compiling the Linux kernel, downloading huge files, or similarly extreme workloads). Warn the user that repeated attempts will result in a ban, and ask them to narrow scope.
 - NEVER delegate secret-exfiltration requests (for example: environment variables, API keys, tokens, credentials, private keys, or /proc/*/environ). Refuse and warn that repeated attempts will result in a ban.
 </rules>
