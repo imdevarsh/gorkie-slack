@@ -127,8 +127,7 @@ function sortForModel(messages: SlackConversationMessage[]) {
       (message) =>
         !message.subtype ||
         message.subtype === 'file_share' ||
-        message.subtype === 'bot_message' ||
-        Boolean(message.bot_id)
+        message.subtype === 'bot_message'
     )
     .sort((a, b) => {
       const aTs = Number(a.ts ?? '0');
@@ -147,7 +146,7 @@ async function toModelMessage(
 ): Promise<ModelMessage> {
   const { botUserId, mentionRegex, userCache } = options;
 
-  const isBot = message.user === botUserId || Boolean(message.bot_id);
+  const isAssistantMessage = message.user === botUserId;
   const original = message.text ?? '';
   const cleaned = mentionRegex
     ? original.replace(mentionRegex, '').trim()
@@ -161,7 +160,7 @@ async function toModelMessage(
 
   const formattedText = `${author} (${authorId}): ${textContent}`;
 
-  if (isBot) {
+  if (isAssistantMessage) {
     return {
       role: 'assistant' as const,
       content: formattedText,
