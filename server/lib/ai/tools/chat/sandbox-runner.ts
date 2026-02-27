@@ -8,10 +8,18 @@ import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { pauseSession, resolveSession } from '~/lib/sandbox/session';
 import { extendSandboxTimeout } from '~/lib/sandbox/timeout';
 import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
-import type { SlackFile, SlackMessageContext, Stream } from '~/types';
+import type {
+  SlackFile,
+  SlackMessageContext,
+  Stream,
+  ToolEndEvent,
+  ToolStartEvent,
+} from '~/types';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
+
+type Enqueue = (fn: () => Promise<unknown>) => void;
 
 interface RunSandboxTaskParams {
   context: SlackMessageContext;
@@ -81,11 +89,7 @@ async function disconnectAndPause(params: {
   await pauseSession(context, runtime.sandbox.sandboxId);
 }
 
-function keepAliveTask(
-  enqueue: (fn: () => Promise<unknown>) => void,
-  stream: Stream,
-  taskId: string
-) {
+function keepAliveTask(enqueue: Enqueue, stream: Stream, taskId: string) {
   return setInterval(
     () => {
       enqueue(() => updateTask(stream, { taskId, status: 'in_progress' }));
@@ -95,26 +99,22 @@ function keepAliveTask(
 }
 
 function onToolStartHandler(params: {
-  enqueue: (fn: () => Promise<unknown>) => void;
+  enqueue: Enqueue;
   stream: Stream;
   parentTaskId: string;
   tasks: Map<string, string>;
   sandbox: Sandbox;
+  ctxId: string;
 }) {
-  const { enqueue, stream, parentTaskId, tasks, sandbox } = params;
+  const { enqueue, stream, parentTaskId, tasks, sandbox, ctxId } = params;
 
-  return async ({
-    toolName,
-    toolCallId,
-    args,
-    status,
-  }: {
-    toolName: string;
-    toolCallId: string;
-    args: unknown;
-    status?: string;
-  }) => {
-    await extendSandboxTimeout(sandbox);
+  return ({ toolName, toolCallId, args, status }: ToolStartEvent) => {
+    extendSandboxTimeout(sandbox).catch((error: unknown) => {
+      logger.warn(
+        { ...toLogError(error), ctxId, toolName, toolCallId },
+        '[sandbox] Failed to extend timeout'
+      );
+    });
     const toolTask = getToolTaskStart({ toolName, args, status });
     const id = `${parentTaskId}:${toolCallId}`;
     tasks.set(toolCallId, id);
@@ -130,22 +130,12 @@ function onToolStartHandler(params: {
 }
 
 function onToolEndHandler(params: {
-  enqueue: (fn: () => Promise<unknown>) => void;
+  enqueue: Enqueue;
   stream: Stream;
   tasks: Map<string, string>;
 }) {
   const { enqueue, stream, tasks } = params;
-  return ({
-    toolName,
-    toolCallId,
-    isError,
-    result,
-  }: {
-    toolName: string;
-    toolCallId: string;
-    isError: boolean;
-    result: unknown;
-  }) => {
+  return ({ toolName, toolCallId, isError, result }: ToolEndEvent) => {
     const id = tasks.get(toolCallId);
     if (!id) {
       return;
@@ -216,6 +206,7 @@ export async function runSandboxTask({
         parentTaskId: taskId,
         tasks,
         sandbox: activeRuntime.sandbox,
+        ctxId,
       }),
       onToolEnd: onToolEndHandler({ enqueue, stream, tasks }),
     });
