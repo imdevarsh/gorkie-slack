@@ -52,7 +52,7 @@ export const orchestratorAgent = ({
     toolChoice: 'required',
     tools: {
       getWeather: getWeather({ context, stream }),
-      generateImage: generateImageTool({ context, stream }),
+      generateImage: generateImageTool({ context, files, stream }),
       searchWeb: searchWeb({ context, stream }),
       searchSlack: searchSlack({ context, stream }),
       getUserInfo: getUserInfo({ context, stream }),

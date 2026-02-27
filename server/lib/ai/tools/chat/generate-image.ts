@@ -1,38 +1,26 @@
 import { generateImage, tool } from 'ai';
+import { extension as getExtension } from 'mime-types';
 import { z } from 'zod';
 import { provider } from '~/lib/ai/providers';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext, Stream } from '~/types';
+import type { SlackFile, SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-
-const SIZE_REGEX = /^\d+x\d+$/;
-const ASPECT_RATIO_REGEX = /^\d+:\d+$/;
-
-function getExtensionFromMediaType(mediaType: string): string {
-  if (mediaType === 'image/png') {
-    return 'png';
-  }
-  if (mediaType === 'image/webp') {
-    return 'webp';
-  }
-  if (mediaType === 'image/jpeg') {
-    return 'jpg';
-  }
-  return 'png';
-}
+import { processSlackFiles } from '~/utils/images';
 
 export const generateImageTool = ({
   context,
+  files,
   stream,
 }: {
   context: SlackMessageContext;
+  files?: SlackFile[];
   stream: Stream;
 }) =>
   tool({
     description:
-      'Generate one or more AI images from a prompt and upload them to the current Slack thread.',
+      'Generate one or more AI images from a prompt and upload them to the current Slack thread. If image attachments are present, use them as source images for editing/transformation.',
     inputSchema: z
       .object({
         prompt: z
@@ -49,12 +37,14 @@ export const generateImageTool = ({
           .describe('Number of images to generate'),
         size: z
           .string()
-          .regex(SIZE_REGEX)
+          // biome-ignore lint/performance/useTopLevelRegex: Inlined for local schema readability.
+          .regex(/^\d+x\d+$/)
           .optional()
           .describe('Optional image size in {width}x{height} format'),
         aspectRatio: z
           .string()
-          .regex(ASPECT_RATIO_REGEX)
+          // biome-ignore lint/performance/useTopLevelRegex: Inlined for local schema readability.
+          .regex(/^\d+:\d+$/)
           .optional()
           .describe('Optional aspect ratio in {width}:{height} format'),
         seed: z
@@ -99,9 +89,24 @@ export const generateImageTool = ({
       });
 
       try {
+        const inputImages = await processSlackFiles(files);
+        const sourceImages = inputImages
+          .map((item) => item.image)
+          .filter(
+            (image): image is string | Uint8Array | ArrayBuffer | Buffer =>
+              typeof image === 'string' ||
+              image instanceof Uint8Array ||
+              image instanceof ArrayBuffer ||
+              image instanceof Buffer
+          );
+        const imagePrompt =
+          sourceImages.length > 0
+            ? { text: prompt, images: sourceImages }
+            : prompt;
+
         const result = await generateImage({
           model: provider.imageModel('image-model'),
-          prompt,
+          prompt: imagePrompt,
           n,
           ...(size ? { size: size as `${number}x${number}` } : {}),
           ...(aspectRatio
@@ -111,7 +116,7 @@ export const generateImageTool = ({
         });
 
         for (const [index, image] of result.images.entries()) {
-          const extension = getExtensionFromMediaType(image.mediaType);
+          const extension = getExtension(image.mediaType) || 'png';
           await context.client.files.uploadV2({
             channel_id: channelId,
             thread_ts: threadTs,
@@ -126,7 +131,7 @@ export const generateImageTool = ({
             {
               ctxId,
               channel: channelId,
-              warnings: result.warnings
+              warnings: result.warnings,
             },
             'Image generation returned warnings'
           );
@@ -149,7 +154,7 @@ export const generateImageTool = ({
 
         return {
           success: true,
-          content: `Generated ${result.images.length} image(s)`,
+          content: `Generated ${result.images.length} image(s)${sourceImages.length > 0 ? ' from attachment(s)' : ''}`,
         };
       } catch (error) {
         logger.error(
