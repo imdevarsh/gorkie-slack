@@ -1,6 +1,7 @@
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
+import { generateImageTool } from '~/lib/ai/tools/chat/generate-image';
 import { getUserInfo } from '~/lib/ai/tools/chat/get-user-info';
 import { getWeather } from '~/lib/ai/tools/chat/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/chat/leave-channel';
@@ -51,6 +52,7 @@ export const orchestratorAgent = ({
     toolChoice: 'required',
     tools: {
       getWeather: getWeather({ context, stream }),
+      generateImage: generateImageTool({ context, stream }),
       searchWeb: searchWeb({ context, stream }),
       searchSlack: searchSlack({ context, stream }),
       getUserInfo: getUserInfo({ context, stream }),

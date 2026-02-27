@@ -19,6 +19,16 @@ Use it for past conversations, decisions, files, links, or any context outside t
 </tool>
 
 <tool>
+<name>generateImage</name>
+<description>Generate AI images from a prompt and upload them directly to the current Slack thread.</description>
+<rules>
+- Use for explicit image creation requests (illustrations, mockups, posters, concept art).
+- Prefer either size or aspectRatio (not both).
+- Follow up with reply to explain what was generated or ask if they want variations.
+</rules>
+</tool>
+
+<tool>
 <name>getUserInfo</name>
 <description>Fetch Slack user profile including display name, real name, avatar, status, timezone, and role.</description>
 </tool>
