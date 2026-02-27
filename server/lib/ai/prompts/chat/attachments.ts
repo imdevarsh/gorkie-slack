@@ -1,9 +1,8 @@
 import { ATTACHMENTS_DIR } from '~/lib/sandbox/attachments';
 import type { SlackMessageContext } from '~/types';
-import type { SlackFile } from '~/utils/images';
 
 export function attachmentsPrompt(context: SlackMessageContext): string {
-  const files = (context.event as { files?: SlackFile[] }).files;
+  const files = context.event.files;
   if (!files || files.length === 0) {
     return '';
   }

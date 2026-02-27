@@ -5,20 +5,15 @@
     "": {
       "name": "gorkie-slack",
       "dependencies": {
-        "@ai-sdk/openai": "^3.0.30",
         "@e2b/code-interpreter": "^2.3.3",
         "@langfuse/otel": "^4.6.1",
-        "@langfuse/tracing": "^4.6.1",
         "@mariozechner/pi-coding-agent": "^0.54.0",
-        "@modelcontextprotocol/sdk": "^1.20.0",
         "@neondatabase/serverless": "^1.0.2",
         "@openrouter/ai-sdk-provider": "^2.2.3",
         "@opentelemetry/sdk-node": "^0.212.0",
         "@sinclair/typebox": "^0.34.48",
         "@slack/bolt": "^4.6.0",
-        "@slack/types": "^2.20.0",
         "@t3-oss/env-core": "^0.13.10",
-        "@types/pako": "^2.0.4",
         "ai": "^6.0.97",
         "ai-retry": "^1.2.0",
         "date-fns": "^4.1.0",
@@ -40,6 +35,7 @@
         "@commitlint/types": "^20.3.1",
         "@cspell/dict-bash": "^4.2.2",
         "@types/bun": "^1.3.9",
+        "@types/pako": "^2.0.4",
         "cspell": "^9.6.0",
         "drizzle-kit": "^0.31.9",
         "lefthook": "^2.1.1",
@@ -50,8 +46,6 @@
   },
   "packages": {
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.53", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.15", "@vercel/oidc": "3.1.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-QT3FEoNARMRlk8JJVR7L98exiK9C8AGfrEJVbRxBT1yIXKs/N19o/+PsjTRVsARgDJNcy9JbJp1FspKucEat0Q=="],
-
-    "@ai-sdk/openai": ["@ai-sdk/openai@3.0.30", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.15" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-YDht3t7TDyWKP+JYZp20VuYqSjyF2brHYh47GGFDUPf2wZiqNQ263ecL+quar2bP3GZ3BeQA8f0m2B7UwLPR+g=="],
 
     "@ai-sdk/provider": ["@ai-sdk/provider@3.0.8", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-oGMAgGoQdBXbZqNG0Ze56CHjDZ1IDYOwGYxYjO5KLSlz5HiNQ9udIXsPZ61VWaHGZ5XW/jyjmr6t2xz2jGVwbQ=="],
 
@@ -423,8 +417,6 @@
 
     "@langfuse/otel": ["@langfuse/otel@4.6.1", "", { "dependencies": { "@langfuse/core": "^4.6.1" }, "peerDependencies": { "@opentelemetry/api": "^1.9.0", "@opentelemetry/core": "^2.0.1", "@opentelemetry/exporter-trace-otlp-http": ">=0.202.0 <1.0.0", "@opentelemetry/sdk-trace-base": "^2.0.1" } }, "sha512-ZUa+nV5und6IYK2b5w1vXoNzU/Hfpl1MJ2uu9Woyb74ZBQi36nBwo7SeX+NLvy+n/UzKcJMetOYrA5ywlXvnuA=="],
 
-    "@langfuse/tracing": ["@langfuse/tracing@4.6.1", "", { "dependencies": { "@langfuse/core": "^4.6.1" }, "peerDependencies": { "@opentelemetry/api": "^1.9.0" } }, "sha512-Ld1bPU6RxzifgGEDtN70Og8u2eL906jtnnEnt62BEOcML8UUiMgzwAKZDBbIjF2midnfac7Xnho3s546fcCDtQ=="],
-
     "@mariozechner/clipboard": ["@mariozechner/clipboard@0.3.2", "", { "optionalDependencies": { "@mariozechner/clipboard-darwin-arm64": "0.3.2", "@mariozechner/clipboard-darwin-universal": "0.3.2", "@mariozechner/clipboard-darwin-x64": "0.3.2", "@mariozechner/clipboard-linux-arm64-gnu": "0.3.2", "@mariozechner/clipboard-linux-arm64-musl": "0.3.2", "@mariozechner/clipboard-linux-riscv64-gnu": "0.3.2", "@mariozechner/clipboard-linux-x64-gnu": "0.3.2", "@mariozechner/clipboard-linux-x64-musl": "0.3.2", "@mariozechner/clipboard-win32-arm64-msvc": "0.3.2", "@mariozechner/clipboard-win32-x64-msvc": "0.3.2" } }, "sha512-IHQpksNjo7EAtGuHFU+tbWDp5LarH3HU/8WiB9O70ZEoBPHOg0/6afwSLK0QyNMMmx4Bpi/zl6+DcBXe95nWYA=="],
 
     "@mariozechner/clipboard-darwin-arm64": ["@mariozechner/clipboard-darwin-arm64@0.3.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-uBf6K7Je1ihsgvmWxA8UCGCeI+nbRVRXoarZdLjl6slz94Zs1tNKFZqx7aCI5O1i3e0B6ja82zZ06BWrl0MCVw=="],
@@ -559,7 +551,7 @@
 
     "@slack/socket-mode": ["@slack/socket-mode@2.0.5", "", { "dependencies": { "@slack/logger": "^4", "@slack/web-api": "^7.10.0", "@types/node": ">=18", "@types/ws": "^8", "eventemitter3": "^5", "ws": "^8" } }, "sha512-VaapvmrAifeFLAFaDPfGhEwwunTKsI6bQhYzxRXw7BSujZUae5sANO76WqlVsLXuhVtCVrBWPiS2snAQR2RHJQ=="],
 
-    "@slack/types": ["@slack/types@2.20.0", "", {}, "sha512-PVF6P6nxzDMrzPC8fSCsnwaI+kF8YfEpxf3MqXmdyjyWTYsZQURpkK7WWUWvP5QpH55pB7zyYL9Qem/xSgc5VA=="],
+    "@slack/types": ["@slack/types@2.19.0", "", {}, "sha512-7+QZ38HGcNh/b/7MpvPG6jnw7mliV6UmrquJLqgdxkzJgQEYUcEztvFWRU49z0x4vthF0ixL5lTK601AXrS8IA=="],
 
     "@slack/web-api": ["@slack/web-api@7.13.0", "", { "dependencies": { "@slack/logger": "^4.0.0", "@slack/types": "^2.18.0", "@types/node": ">=18.0.0", "@types/retry": "0.12.0", "axios": "^1.11.0", "eventemitter3": "^5.0.1", "form-data": "^4.0.4", "is-electron": "2.2.2", "is-stream": "^2", "p-queue": "^6", "p-retry": "^4", "retry": "^0.13.1" } }, "sha512-ERcExbWrnkDN8ovoWWe6Wgt/usanj1dWUd18dJLpctUI4mlPS0nKt81Joh8VI+OPbNnY1lIilVt9gdMBD9U2ig=="],
 
@@ -1577,15 +1569,11 @@
 
     "@opentelemetry/sdk-trace-node/@opentelemetry/sdk-trace-base": ["@opentelemetry/sdk-trace-base@2.5.1", "", { "dependencies": { "@opentelemetry/core": "2.5.1", "@opentelemetry/resources": "2.5.1", "@opentelemetry/semantic-conventions": "^1.29.0" }, "peerDependencies": { "@opentelemetry/api": ">=1.3.0 <1.10.0" } }, "sha512-iZH3Gw8cxQn0gjpOjJMmKLd9GIaNh/E3v3ST67vyzLSxHBs14HsG4dy7jMYyC5WXGdBVEcM7U/XTF5hCQxjDMw=="],
 
-    "@slack/bolt/@slack/types": ["@slack/types@2.19.0", "", {}, "sha512-7+QZ38HGcNh/b/7MpvPG6jnw7mliV6UmrquJLqgdxkzJgQEYUcEztvFWRU49z0x4vthF0ixL5lTK601AXrS8IA=="],
-
     "@slack/logger/@types/node": ["@types/node@25.0.9", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-/rpCXHlCWeqClNBwUhDcusJxXYDjZTyE8v5oTO7WbL8eij2nKhUeU89/6xgjU7N4/Vh3He0BtyhJdQbDyhiXAw=="],
 
     "@slack/oauth/@types/node": ["@types/node@25.0.9", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-/rpCXHlCWeqClNBwUhDcusJxXYDjZTyE8v5oTO7WbL8eij2nKhUeU89/6xgjU7N4/Vh3He0BtyhJdQbDyhiXAw=="],
 
     "@slack/socket-mode/@types/node": ["@types/node@25.0.9", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-/rpCXHlCWeqClNBwUhDcusJxXYDjZTyE8v5oTO7WbL8eij2nKhUeU89/6xgjU7N4/Vh3He0BtyhJdQbDyhiXAw=="],
-
-    "@slack/web-api/@slack/types": ["@slack/types@2.19.0", "", {}, "sha512-7+QZ38HGcNh/b/7MpvPG6jnw7mliV6UmrquJLqgdxkzJgQEYUcEztvFWRU49z0x4vthF0ixL5lTK601AXrS8IA=="],
 
     "@slack/web-api/@types/node": ["@types/node@25.0.9", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-/rpCXHlCWeqClNBwUhDcusJxXYDjZTyE8v5oTO7WbL8eij2nKhUeU89/6xgjU7N4/Vh3He0BtyhJdQbDyhiXAw=="],
 

@@ -2,7 +2,8 @@ import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import { PiRpcClient, type PtyLike } from './client';
+import type { PtyLike } from '~/types/sandbox/rpc';
+import { PiRpcClient } from './client';
 
 const PTY_COLS = 220;
 const PTY_ROWS = 24;
@@ -26,7 +27,7 @@ export async function boot(
       TERM: PTY_TERM,
     },
     timeoutMs: 0,
-    onData: (data) => {
+    onData: (data: Uint8Array) => {
       if (!client) {
         return;
       }

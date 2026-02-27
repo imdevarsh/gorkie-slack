@@ -15,8 +15,12 @@ import { skip } from '~/lib/ai/tools/chat/skip';
 import { summariseThread } from '~/lib/ai/tools/chat/summarise-thread';
 import { successToolCall } from '~/lib/ai/utils';
 import logger from '~/lib/logger';
-import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
-import type { SlackFile } from '~/utils/images';
+import type {
+  ChatRequestHints,
+  SlackFile,
+  SlackMessageContext,
+  Stream,
+} from '~/types';
 import { createTask, finishTask } from '../utils/task';
 
 const taskMap = new Map<string, string>();

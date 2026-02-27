@@ -5,8 +5,6 @@ import logger from '~/lib/logger';
 import type { SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-
-// TODO: Add offset or timestamp support so that the bot can react to previous messages?
 export const react = ({
   context,
   stream,
@@ -32,7 +30,7 @@ export const react = ({
     },
     execute: async ({ emojis }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const channelId = (context.event as { channel?: string }).channel;
+      const channelId = context.event.channel;
       const messageTs = context.event.ts;
 
       if (!(channelId && messageTs)) {

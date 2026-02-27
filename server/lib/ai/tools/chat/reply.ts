@@ -2,22 +2,17 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import type { SlackMessageContext, Stream } from '~/types';
+import type { SlackHistoryMessage, SlackMessageContext, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
 import { getSlackUserName } from '~/utils/users';
-
-interface SlackHistoryMessage {
-  thread_ts?: string;
-  ts?: string;
-}
 
 async function resolveTargetMessage(
   ctx: SlackMessageContext,
   offset: number,
   ctxId: string
 ): Promise<SlackHistoryMessage | null> {
-  const channelId = (ctx.event as { channel?: string }).channel;
+  const channelId = ctx.event.channel;
   const messageTs = ctx.event.ts;
 
   if (!(channelId && messageTs)) {
@@ -27,7 +22,7 @@ async function resolveTargetMessage(
   if (offset <= 0) {
     return {
       ts: messageTs,
-      thread_ts: (ctx.event as { thread_ts?: string }).thread_ts,
+      thread_ts: ctx.event.thread_ts,
     };
   }
 
@@ -42,10 +37,16 @@ async function resolveTargetMessage(
     logger.error({ ctxId, res: history }, 'Error fetching history');
   }
 
-  // TODO: Integrate shouldUse with this to prevent offset mismatches
-  const sorted = (history.messages ?? [])
-    .filter((msg) => Boolean(msg.ts))
-    .sort((a, b) => Number(b.ts ?? '0') - Number(a.ts ?? '0'));
+  const sorted: SlackHistoryMessage[] = (history.messages ?? [])
+    .filter(
+      (msg): msg is { thread_ts?: string; ts: string } =>
+        typeof msg.ts === 'string'
+    )
+    .sort((a, b) => Number(b.ts) - Number(a.ts))
+    .map((msg) => ({
+      ts: msg.ts,
+      thread_ts: msg.thread_ts,
+    }));
 
   return sorted[offset - 1] ?? { ts: messageTs };
 }
@@ -83,7 +84,7 @@ export const reply = ({
         .min(0)
         .optional()
         .describe(
-          `Number of messages to go back from the triggering message. 0 or omitted means that you will reply to the message that you were triggered by. This would usually stay as 0. ${(context.event as { thread_ts?: string }).thread_ts ? 'NOTE: YOU ARE IN A THREAD - THE OFFSET WILL RESPOND TO A DIFFERENT THREAD. Change the offset only if you are sure.' : ''}`.trim()
+          `Number of messages to go back from the triggering message. 0 or omitted means that you will reply to the message that you were triggered by. This would usually stay as 0. ${context.event.thread_ts ? 'NOTE: YOU ARE IN A THREAD - THE OFFSET WILL RESPOND TO A DIFFERENT THREAD. Change the offset only if you are sure.' : ''}`.trim()
         ),
       content: z
         .array(z.string())
@@ -104,10 +105,10 @@ export const reply = ({
     },
     execute: async ({ offset = 0, content, type }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const channelId = (context.event as { channel?: string }).channel;
+      const channelId = context.event.channel;
       const messageTs = context.event.ts;
-      const currentThread = (context.event as { thread_ts?: string }).thread_ts;
-      const userId = (context.event as { user?: string }).user;
+      const currentThread = context.event.thread_ts;
+      const userId = context.event.user;
 
       if (!(channelId && messageTs)) {
         logger.warn(

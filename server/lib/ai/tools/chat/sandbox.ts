@@ -9,11 +9,12 @@ import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { pauseSession, resolveSession } from '~/lib/sandbox/session';
 import { extendSandboxTimeout } from '~/lib/sandbox/timeout';
 import { getToolTaskEnd, getToolTaskStart } from '~/lib/sandbox/tools';
-import type { SlackMessageContext, Stream } from '~/types';
+import type { SlackFile, SlackMessageContext, Stream } from '~/types';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-import type { SlackFile } from '~/utils/images';
+
+const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
 
 const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
 
@@ -66,22 +67,18 @@ export const sandbox = ({
 
       try {
         runtime = await resolveSession(context);
-        const activeRuntime = runtime;
-
-        const uploads = await syncAttachments(
-          activeRuntime.sandbox,
-          context,
-          files
-        );
-
+        if (!runtime) {
+          throw new Error('[sandbox] Failed to resolve runtime session');
+        }
+        const session = runtime;
+        const uploads = await syncAttachments(session.sandbox, context, files);
         const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
         const keepSandboxAlive = () =>
-          extendSandboxTimeout(activeRuntime.sandbox, SANDBOX_MIN_REMAINING_MS);
+          extendSandboxTimeout(session.sandbox, SANDBOX_MIN_REMAINING_MS);
 
         const eventStream: AgentSessionEvent[] = [];
         const unsubscribe = subscribeEvents({
-          client: runtime.client,
-          runtime: activeRuntime,
+          runtime: session,
           context,
           ctxId,
           events: eventStream,
@@ -96,10 +93,15 @@ export const sandbox = ({
             );
           },
           onToolStart: ({ toolName, toolCallId, args, status }) => {
+            keepSandboxAlive().catch((error: unknown) => {
+              logger.warn(
+                { ...toLogError(error), ctxId, toolName, toolCallId },
+                '[sandbox] Failed to extend timeout'
+              );
+            });
+            const toolTask = getToolTaskStart({ toolName, args, status });
             const id = `${taskId}:${toolCallId}`;
             tasks.set(toolCallId, id);
-            keepSandboxAlive();
-            const toolTask = getToolTaskStart({ toolName, args, status });
             enqueue(() =>
               createTask(stream, {
                 taskId: id,
@@ -127,9 +129,14 @@ export const sandbox = ({
         });
 
         const keepAlive = setInterval(() => {
-          keepSandboxAlive();
+          keepSandboxAlive().catch((error: unknown) => {
+            logger.warn(
+              { ...toLogError(error), ctxId },
+              '[sandbox] Keep-alive failed'
+            );
+          });
           enqueue(() => updateTask(stream, { taskId, status: 'in_progress' }));
-        }, 3 * 60 * 1000);
+        }, KEEP_ALIVE_INTERVAL_MS);
 
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
@@ -140,11 +147,13 @@ export const sandbox = ({
         });
 
         try {
-          const idle = runtime.client.waitForIdle();
-          await runtime.client.prompt(prompt);
-          await Promise.race([idle, timeoutPromise]);
+          const run = async () => {
+            await session.client.prompt(prompt);
+            await session.client.waitForIdle();
+          };
+          await Promise.race([run(), timeoutPromise]);
         } catch (error) {
-          await runtime.client.abort().catch(() => null);
+          await session.client.abort().catch(() => null);
           throw error;
         } finally {
           clearTimeout(timeoutId);
@@ -156,7 +165,7 @@ export const sandbox = ({
 
         const response =
           (
-            await runtime.client.getLastAssistantText().catch(() => null)
+            await session.client.getLastAssistantText().catch(() => null)
           )?.trim() ||
           getResponse(eventStream) ||
           'Done';
@@ -164,8 +173,8 @@ export const sandbox = ({
         logger.info(
           {
             ctxId,
-            sandboxId: runtime.sandbox.sandboxId,
-            attachments: uploads.map((f) => f.uri),
+            sandboxId: session.sandbox.sandboxId,
+            attachments: uploads.map((file) => file.uri),
             task,
             response,
           },
@@ -190,19 +199,26 @@ export const sandbox = ({
         await finishTask(stream, {
           status: 'error',
           taskId,
-          output: message.slice(0, 200),
+          output: message,
         });
 
         return { success: false, error: message, task };
       } finally {
         if (runtime) {
-          await runtime.client.disconnect().catch((e: unknown) => {
+          await runtime.client.disconnect().catch((error: unknown) => {
             logger.debug(
-              { ...toLogError(e), ctxId },
-              '[subagent] Failed to disconnect Pi client'
+              { ...toLogError(error), ctxId },
+              '[sandbox] Failed to disconnect Pi client'
             );
           });
-          await pauseSession(context, runtime.sandbox.sandboxId);
+          await pauseSession(context, runtime.sandbox.sandboxId).catch(
+            (error: unknown) => {
+              logger.debug(
+                { ...toLogError(error), ctxId },
+                '[sandbox] Failed to pause sandbox session'
+              );
+            }
+          );
         }
       }
     },

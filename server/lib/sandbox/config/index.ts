@@ -1,11 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
-
-export interface SandboxBootstrapFile {
-  content: string;
-  path: string;
-}
+import type { SandboxBootstrapFile } from '~/types';
 
 function readTemplate(path: string): Promise<string> {
   return readFile(new URL(path, import.meta.url), 'utf8');
@@ -45,7 +41,7 @@ export async function configureAgent(
   const bootstrap = await buildConfig(prompt);
 
   for (const path of bootstrap.paths) {
-    await sandbox.files.makeDir(path).catch(() => {});
+    await sandbox.files.makeDir(path).catch(() => undefined);
   }
 
   for (const file of bootstrap.files) {

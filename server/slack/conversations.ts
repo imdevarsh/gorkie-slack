@@ -1,28 +1,193 @@
-import type { WebClient } from '@slack/web-api';
 import type { ModelMessage, UserContent } from 'ai';
 import logger from '~/lib/logger';
+import type { ConversationOptions, SlackConversationMessage } from '~/types';
 import { toLogError } from '~/utils/error';
-import { processSlackFiles, type SlackFile } from '~/utils/images';
-import { shouldUse } from '~/utils/messages';
+import { processSlackFiles } from '~/utils/images';
+import { isUsableMessage } from '~/utils/messages';
 
-interface ConversationOptions {
-  botUserId?: string;
-  channel: string;
-  client: WebClient;
-  inclusive?: boolean;
-  latest?: string;
-  limit?: number;
-  oldest?: string;
-  threadTs?: string;
+interface CachedUser {
+  displayName: string;
+  id: string;
+  realName?: string;
+  username?: string;
 }
 
-interface SlackMessage {
-  bot_id?: string;
-  files?: SlackFile[];
-  subtype?: string;
-  text?: string;
-  ts?: string;
-  user?: string;
+async function joinChannel(
+  client: ConversationOptions['client'],
+  channel: string
+): Promise<void> {
+  try {
+    await client.conversations.join({ channel });
+  } catch (error) {
+    logger.warn({ ...toLogError(error), channel }, 'Failed to join channel');
+  }
+}
+
+async function fetchMessages(
+  options: ConversationOptions
+): Promise<SlackConversationMessage[]> {
+  const {
+    client,
+    channel,
+    threadTs,
+    limit = 40,
+    latest,
+    oldest,
+    inclusive = false,
+  } = options;
+
+  const response = threadTs
+    ? await client.conversations.replies({
+        channel,
+        ts: threadTs,
+        limit,
+        latest,
+        oldest,
+        inclusive,
+      })
+    : await client.conversations.history({
+        channel,
+        limit,
+        latest,
+        oldest,
+        inclusive,
+      });
+
+  return (response.messages as SlackConversationMessage[] | undefined) ?? [];
+}
+
+function filterMessages(
+  messages: SlackConversationMessage[],
+  latest: string | undefined,
+  inclusive: boolean
+): SlackConversationMessage[] {
+  return messages.filter((message) => {
+    if (!message.ts) {
+      return false;
+    }
+    if (!isUsableMessage(message.text || '')) {
+      return false;
+    }
+    if (!latest) {
+      return true;
+    }
+
+    const messageTs = Number(message.ts);
+    const latestTs = Number(latest);
+    return inclusive ? messageTs <= latestTs : messageTs < latestTs;
+  });
+}
+
+async function buildUserCache(
+  client: ConversationOptions['client'],
+  messages: SlackConversationMessage[]
+): Promise<Map<string, CachedUser>> {
+  const userIds = new Set<string>();
+  for (const message of messages) {
+    if (message.user) {
+      userIds.add(message.user);
+    }
+  }
+
+  const userCache = new Map<string, CachedUser>();
+  await Promise.all(
+    Array.from(userIds).map(async (userId) => {
+      try {
+        const info = await client.users.info({ user: userId });
+        const displayName =
+          info.user?.profile?.display_name ||
+          info.user?.real_name ||
+          info.user?.name ||
+          userId;
+        userCache.set(userId, {
+          id: userId,
+          displayName,
+          realName: info.user?.real_name || undefined,
+          username: info.user?.name || undefined,
+        });
+      } catch (error) {
+        logger.warn(
+          { ...toLogError(error), userId },
+          'Failed to fetch Slack user info'
+        );
+        userCache.set(userId, {
+          id: userId,
+          displayName: userId,
+        });
+      }
+    })
+  );
+
+  return userCache;
+}
+
+function sortForModel(messages: SlackConversationMessage[]) {
+  return messages
+    .filter(
+      (message) =>
+        !message.subtype ||
+        message.subtype === 'file_share' ||
+        message.subtype === 'bot_message' ||
+        Boolean(message.bot_id)
+    )
+    .sort((a, b) => {
+      const aTs = Number(a.ts ?? '0');
+      const bTs = Number(b.ts ?? '0');
+      return aTs - bTs;
+    });
+}
+
+async function toModelMessage(
+  message: SlackConversationMessage,
+  options: {
+    botUserId?: string;
+    mentionRegex: RegExp | null;
+    userCache: Map<string, CachedUser>;
+  }
+): Promise<ModelMessage> {
+  const { botUserId, mentionRegex, userCache } = options;
+
+  const isBot = message.user === botUserId || Boolean(message.bot_id);
+  const original = message.text ?? '';
+  const cleaned = mentionRegex
+    ? original.replace(mentionRegex, '').trim()
+    : original.trim();
+  const textContent = cleaned.length > 0 ? cleaned : original;
+
+  const author = message.user
+    ? (userCache.get(message.user)?.displayName ?? message.user)
+    : (message.bot_id ?? 'unknown');
+  const authorId = message.user ?? message.bot_id ?? 'unknown';
+
+  const formattedText = `${author} (${authorId}): ${textContent}`;
+
+  if (isBot) {
+    return {
+      role: 'assistant' as const,
+      content: formattedText,
+    };
+  }
+
+  const imageContents = await processSlackFiles(message.files);
+  if (imageContents.length > 0) {
+    const contentParts: UserContent = [
+      {
+        type: 'text' as const,
+        text: formattedText,
+      },
+      ...imageContents,
+    ];
+
+    return {
+      role: 'user' as const,
+      content: contentParts,
+    };
+  }
+
+  return {
+    role: 'user' as const,
+    content: formattedText,
+  };
 }
 
 export async function getConversationMessages({
@@ -36,143 +201,28 @@ export async function getConversationMessages({
   inclusive = false,
 }: ConversationOptions): Promise<ModelMessage[]> {
   try {
-    try {
-      // required to be able to view messages
-      // using fetch to avoid warnings in logs
-      await fetch('https://slack.com/api/conversations.join', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${client.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ channel }),
-      });
-    } catch {
-      // this is fine - the channel may be private
-    }
-
-    const response = threadTs
-      ? await client.conversations.replies({
-          channel,
-          ts: threadTs,
-          limit,
-          latest,
-          oldest,
-          inclusive,
-        })
-      : await client.conversations.history({
-          channel,
-          limit,
-          latest,
-          oldest,
-          inclusive,
-        });
-
-    const messages = (response.messages as SlackMessage[] | undefined) ?? [];
-
-    const filteredMessages = latest
-      ? messages.filter((message) => {
-          if (!message.ts) {
-            return false;
-          }
-          if (!shouldUse(message.text || '')) {
-            return false;
-          }
-          const messageTs = Number(message.ts);
-          const latestTs = Number(latest);
-          return inclusive ? messageTs <= latestTs : messageTs < latestTs;
-        })
-      : messages;
-
-    const userIds = new Set<string>();
-    for (const message of filteredMessages) {
-      if (message.user) {
-        userIds.add(message.user);
-      }
-    }
-
-    const userNameCache = new Map<string, string>();
-    await Promise.all(
-      Array.from(userIds).map(async (userId) => {
-        try {
-          const info = await client.users.info({ user: userId });
-          const name =
-            info.user?.profile?.display_name ||
-            info.user?.real_name ||
-            info.user?.name ||
-            userId;
-          userNameCache.set(userId, name);
-        } catch (error) {
-          logger.warn(
-            { ...toLogError(error), userId },
-            'Failed to fetch Slack user info'
-          );
-          userNameCache.set(userId, userId);
-        }
-      })
-    );
+    await joinChannel(client, channel);
 
     const mentionRegex = botUserId ? new RegExp(`<@${botUserId}>`, 'gi') : null;
+    const messages = await fetchMessages({
+      client,
+      channel,
+      threadTs,
+      botUserId,
+      limit,
+      latest,
+      oldest,
+      inclusive,
+    });
+    const filteredMessages = filterMessages(messages, latest, inclusive);
+    const userCache = await buildUserCache(client, filteredMessages);
+    const sortedMessages = sortForModel(filteredMessages);
 
-    const sortedMessages = filteredMessages
-      .filter((message) => !message.subtype || message.subtype === 'file_share')
-      .sort((a, b) => {
-        const aTs = Number(a.ts ?? '0');
-        const bTs = Number(b.ts ?? '0');
-        return aTs - bTs;
-      });
-
-    const modelMessages: ModelMessage[] = await Promise.all(
-      sortedMessages.map(async (message): Promise<ModelMessage> => {
-        const isBot = message.user === botUserId || Boolean(message.bot_id);
-        const original = message.text ?? '';
-        const cleaned = mentionRegex
-          ? original.replace(mentionRegex, '').trim()
-          : original.trim();
-
-        const textContent = cleaned.length > 0 ? cleaned : original;
-
-        const author = message.user
-          ? (userNameCache.get(message.user) ?? message.user)
-          : (message.bot_id ?? 'unknown');
-
-        const formattedText = `${author} (${message.user}): ${textContent}`;
-
-        // Bot/assistant messages can only have text content
-        if (isBot) {
-          return {
-            role: 'assistant' as const,
-            content: formattedText,
-          };
-        }
-
-        // Process images from files for user messages
-        const imageContents = await processSlackFiles(message.files);
-
-        // If there are images, create a multi-part content message
-        if (imageContents.length > 0) {
-          const contentParts: UserContent = [
-            {
-              type: 'text' as const,
-              text: formattedText,
-            },
-            ...imageContents,
-          ];
-
-          return {
-            role: 'user' as const,
-            content: contentParts,
-          };
-        }
-
-        return {
-          role: 'user' as const,
-          content: formattedText,
-        };
-      })
+    return await Promise.all(
+      sortedMessages.map((message) =>
+        toModelMessage(message, { botUserId, mentionRegex, userCache })
+      )
     );
-
-    return modelMessages;
   } catch (error) {
     logger.error(
       { ...toLogError(error), channel, threadTs },

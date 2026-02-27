@@ -67,8 +67,8 @@ export const mermaid = ({
     },
     execute: async ({ code, title }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const channelId = (context.event as { channel?: string }).channel;
-      const threadTs = (context.event as { thread_ts?: string }).thread_ts;
+      const channelId = context.event.channel;
+      const threadTs = context.event.thread_ts;
       const messageTs = context.event.ts;
 
       if (!channelId) {
@@ -98,7 +98,7 @@ export const mermaid = ({
 
         await context.client.files.uploadV2({
           channel_id: channelId,
-          thread_ts: threadTs ?? messageTs,
+          thread_ts: threadTs ?? messageTs ?? context.event.ts,
           file: Buffer.from(imageBuffer),
           filename: 'diagram.png',
           title: title ?? 'Mermaid Diagram',

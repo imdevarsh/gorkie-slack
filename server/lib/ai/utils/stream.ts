@@ -17,7 +17,7 @@ import { setStatus } from './status';
 export async function initStream(
   context: SlackMessageContext
 ): Promise<Stream> {
-  const channelId = (context.event as { channel?: string }).channel;
+  const channelId = context.event.channel;
   const ctxId = getContextId(context);
 
   if (!channelId) {
@@ -32,9 +32,8 @@ export async function initStream(
     };
   }
 
-  const threadTs =
-    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
-  const userId = (context.event as { user?: string }).user;
+  const threadTs = context.event.thread_ts ?? context.event.ts;
+  const userId = context.event.user;
 
   let ts: string;
   try {

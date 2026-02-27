@@ -3,7 +3,7 @@ import type { SlackMessageContext } from '~/types';
 export async function resolveChannelName(
   ctx: SlackMessageContext
 ): Promise<string> {
-  const channelId = (ctx.event as { channel?: string }).channel;
+  const channelId = ctx.event.channel;
   if (!channelId) {
     return 'Unknown channel';
   }

@@ -1,12 +1,26 @@
 import nodePath from 'node:path';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
-import { toLogError } from '~/utils/error';
-import type { ResolvedSandboxSession } from './session';
+import type {
+  ResolvedSandboxSession,
+  ShowFileInput,
+  SlackMessageContext,
+} from '~/types';
+import { errorMessage, toLogError } from '~/utils/error';
 
-export interface ShowFileInput {
-  path: string;
-  title?: string;
+async function postThreadError(
+  context: SlackMessageContext,
+  channelId: string,
+  threadTs: string | undefined,
+  messageTs: string | undefined,
+  text: string
+): Promise<void> {
+  await context.client.chat
+    .postMessage({
+      channel: channelId,
+      thread_ts: threadTs ?? messageTs,
+      text,
+    })
+    .catch(() => null);
 }
 
 export async function showFile(params: {
@@ -17,8 +31,8 @@ export async function showFile(params: {
 }): Promise<void> {
   const { input, runtime, context, ctxId } = params;
 
-  const channelId = (context.event as { channel?: string }).channel;
-  const threadTs = (context.event as { thread_ts?: string }).thread_ts;
+  const channelId = context.event.channel;
+  const threadTs = context.event.thread_ts;
   const messageTs = context.event.ts;
 
   if (!channelId) {
@@ -32,6 +46,13 @@ export async function showFile(params: {
     logger.warn(
       { path: input.path, ctxId },
       '[subagent] showFile: file not found in sandbox'
+    );
+    await postThreadError(
+      context,
+      channelId,
+      threadTs,
+      messageTs,
+      `showFile failed: could not find \`${input.path}\` in sandbox.`
     );
     return;
   }
@@ -51,9 +72,17 @@ export async function showFile(params: {
       '[subagent] showFile: uploaded to Slack'
     );
   } catch (error) {
+    const cause = errorMessage(error).slice(0, 140);
     logger.warn(
       { ...toLogError(error), path: input.path, ctxId },
       '[subagent] showFile: failed to upload to Slack'
+    );
+    await postThreadError(
+      context,
+      channelId,
+      threadTs,
+      messageTs,
+      `showFile failed while uploading \`${filename}\`: ${cause}`
     );
   }
 }

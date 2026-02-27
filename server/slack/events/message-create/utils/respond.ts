@@ -1,9 +1,9 @@
 import type { ModelMessage, UserContent } from 'ai';
-import { orchestratorAgent } from '~/lib/ai/agents';
+import { orchestratorAgent } from '~/lib/ai/agents/orchestrator';
 import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream } from '~/lib/ai/utils/stream';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
-import { processSlackFiles, type SlackFile } from '~/utils/images';
+import { processSlackFiles } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
 export async function generateResponse(
@@ -32,9 +32,9 @@ export async function generateResponse(
 
     stream = await initStream(context);
 
-    const userId = (context.event as { user?: string }).user;
-    const messageText = (context.event as { text?: string }).text ?? '';
-    const files = (context.event as { files?: SlackFile[] }).files;
+    const userId = context.event.user;
+    const messageText = context.event.text ?? '';
+    const files = context.event.files;
     const authorName = userId
       ? await getSlackUserName(context.client, userId)
       : 'user';

@@ -1,30 +1,15 @@
 import { safeAppend } from '~/lib/ai/utils/stream';
-import type { Stream, TaskChunk } from '~/types';
-
-interface FinishTaskInput {
-  output?: string;
-  sources?: TaskChunk['sources'];
-  status: 'complete' | 'error';
-  taskId: string;
-}
+import type {
+  CreateTaskInput,
+  FinishTaskInput,
+  Stream,
+  TaskChunk,
+  UpdateTaskInput,
+} from '~/types';
 
 export async function updateTask(
   stream: Stream,
-  {
-    taskId,
-    title,
-    status,
-    details,
-    output,
-    sources,
-  }: {
-    taskId: string;
-    title?: string;
-    status: TaskChunk['status'];
-    details?: string;
-    output?: string;
-    sources?: TaskChunk['sources'];
-  }
+  { taskId, title, status, details, output, sources }: UpdateTaskInput
 ): Promise<string> {
   const chunks: TaskChunk[] = [];
 
@@ -63,17 +48,7 @@ export async function updateTask(
 
 export function createTask(
   stream: Stream,
-  {
-    taskId,
-    title,
-    details,
-    status,
-  }: {
-    taskId: string;
-    title: string;
-    details?: string;
-    status?: Extract<TaskChunk['status'], 'pending' | 'in_progress'>;
-  }
+  { taskId, title, details, status }: CreateTaskInput
 ): Promise<string> {
   return updateTask(stream, {
     taskId,

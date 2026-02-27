@@ -1,15 +1,12 @@
 import logger from '~/lib/logger';
 import { showFileInputSchema } from '~/lib/validators/sandbox';
-import type { SlackMessageContext } from '~/types';
 import type {
-  RetryEvent,
-  ToolEndEvent,
-  ToolStartEvent,
-} from '~/types/sandbox/events';
+  ResolvedSandboxSession,
+  SlackMessageContext,
+  SubscribeEventsParams,
+} from '~/types';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 import { trimmed } from '~/utils/text';
-import type { PiRpcClient } from './rpc';
-import type { ResolvedSandboxSession } from './session';
 import { showFile } from './show-file';
 
 function handleShowFileTool(params: {
@@ -37,30 +34,11 @@ function handleShowFileTool(params: {
   );
 }
 
-export interface SubscribeEventsParams {
-  client: PiRpcClient;
-  context: SlackMessageContext;
-  ctxId: string;
-  events: AgentSessionEvent[];
-  onRetry?: (event: RetryEvent) => void | Promise<void>;
-  onToolEnd?: (event: ToolEndEvent) => void | Promise<void>;
-  onToolStart?: (event: ToolStartEvent) => void | Promise<void>;
-  runtime: ResolvedSandboxSession;
-}
-
 export function subscribeEvents(params: SubscribeEventsParams): () => void {
-  const {
-    client,
-    runtime,
-    context,
-    ctxId,
-    events,
-    onToolStart,
-    onToolEnd,
-    onRetry,
-  } = params;
+  const { runtime, context, ctxId, events, onToolStart, onToolEnd, onRetry } =
+    params;
 
-  return client.onEvent((event) => {
+  return runtime.client.onEvent((event) => {
     try {
       events.push(event);
 

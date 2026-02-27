@@ -11,17 +11,12 @@ import {
 import { env } from '~/env';
 import { systemPrompt } from '~/lib/ai/prompts';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type { ResolvedSandboxSession, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
 import { configureAgent } from './config';
-import { boot, type PiRpcClient } from './rpc';
+import { boot } from './rpc/boot';
 import { buildTemplateIfMissing, getTemplate } from './template.build';
-
-export interface ResolvedSandboxSession {
-  client: PiRpcClient;
-  sandbox: Sandbox;
-}
 
 function isMissingSandboxError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
@@ -33,7 +28,7 @@ function isMissingSandboxError(error: unknown): boolean {
 }
 
 function getChannelId(context: SlackMessageContext): string {
-  const channelId = (context.event as { channel?: string }).channel;
+  const channelId = context.event.channel;
   if (!(typeof channelId === 'string' && channelId.length > 0)) {
     throw new Error('Missing Slack channel ID for sandbox session');
   }

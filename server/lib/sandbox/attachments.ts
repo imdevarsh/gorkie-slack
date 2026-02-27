@@ -3,20 +3,16 @@ import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';
+import type {
+  PromptResourceLink,
+  SlackFile,
+  SlackMessageContext,
+} from '~/types';
 import { getContextId } from '~/utils/context';
-import type { SlackFile } from '~/utils/images';
 
 export const ATTACHMENTS_DIR = 'attachments';
 const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}`;
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
-
-export interface PromptResourceLink {
-  mimeType?: string;
-  name: string;
-  type: 'resource_link';
-  uri: string;
-}
 
 export async function syncAttachments(
   sandbox: Sandbox,
@@ -34,7 +30,7 @@ export async function syncAttachments(
 
   const ctxId = getContextId(context);
 
-  await sandbox.files.makeDir(ATTACHMENTS_ABS_DIR).catch(() => {});
+  await sandbox.files.makeDir(ATTACHMENTS_ABS_DIR).catch(() => undefined);
 
   const results = await Promise.all(
     files.map((file) => syncFile(sandbox, file, ctxId))

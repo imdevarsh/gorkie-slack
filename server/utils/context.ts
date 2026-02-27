@@ -7,9 +7,8 @@ import { getTime } from '~/utils/time';
 export function getContextId(context: SlackMessageContext): string {
   const channel = context.event.channel ?? 'unknown-channel';
   const channelType = context.event.channel_type;
-  const userId = (context.event as { user?: string }).user;
-  const threadTs =
-    (context.event as { thread_ts?: string }).thread_ts ?? context.event.ts;
+  const userId = context.event.user;
+  const threadTs = context.event.thread_ts ?? context.event.ts;
 
   if (channelType === 'im' && userId) {
     return `dm:${userId}`;
@@ -56,8 +55,8 @@ export async function buildChatContext(
   let messages = opts?.messages;
   let requestHints = opts?.requestHints;
 
-  const channelId = (ctx.event as { channel?: string }).channel;
-  const threadTs = (ctx.event as { thread_ts?: string }).thread_ts;
+  const channelId = ctx.event.channel;
+  const threadTs = ctx.event.thread_ts;
   const messageTs = ctx.event.ts;
 
   if (!(channelId && messageTs)) {

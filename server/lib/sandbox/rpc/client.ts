@@ -6,6 +6,7 @@ import type {
   AgentSessionEvent,
   CompactionResult,
   PendingRequest,
+  PtyLike,
   RpcCommand,
   RpcCommandBody,
   RpcEventListener,
@@ -28,12 +29,6 @@ type ModelInfo = Extract<
   RpcResponse,
   { command: 'get_available_models'; success: true }
 >['data']['models'][number];
-
-export interface PtyLike {
-  disconnect(): Promise<void>;
-  kill(): Promise<unknown>;
-  sendInput(data: string): Promise<void>;
-}
 
 export class PiRpcClient {
   private buffer = '';
@@ -264,7 +259,7 @@ export class PiRpcClient {
   }
 
   waitForIdle(): Promise<void> {
-    let off = () => {};
+    let off: () => void = () => undefined;
     const idlePromise = new Promise<void>((resolve) => {
       off = this.onEvent((event) => {
         if (event.type === 'agent_end') {
@@ -276,7 +271,7 @@ export class PiRpcClient {
   }
 
   collectEvents(): Promise<AgentSessionEvent[]> {
-    let off = () => {};
+    let off: () => void = () => undefined;
     const collectPromise = new Promise<AgentSessionEvent[]>((resolve) => {
       const events: AgentSessionEvent[] = [];
       off = this.onEvent((event) => {

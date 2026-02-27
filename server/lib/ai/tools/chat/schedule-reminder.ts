@@ -42,7 +42,7 @@ export const scheduleReminder = ({
     },
     execute: async ({ text, seconds }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const userId = (context.event as { user?: string }).user;
+      const userId = context.event.user;
 
       if (!userId) {
         return {

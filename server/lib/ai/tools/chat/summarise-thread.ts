@@ -25,9 +25,9 @@ export const summariseThread = ({
         .describe('Optional instructions to provide to the summariser agent'),
       channelId: z
         .string()
-        .default(context.event.channel)
+        .default(context.event.channel ?? '')
         .describe('Channel ID containing the thread to summarise.'),
-      threadTs: ('thread_ts' in context.event && context.event.thread_ts
+      threadTs: (context.event.thread_ts
         ? z.string().default(context.event.thread_ts)
         : z.string()
       ).describe('Timestamp of thread to summarise.'),

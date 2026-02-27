@@ -1,18 +1,20 @@
-import type { SlackMessageContext, SlackMessageEvent } from '~/types';
+import type {
+  SlackMessageContext,
+  SlackMessageEvent,
+  TriggerType,
+} from '~/types';
 import { primeSlackUserName } from '~/utils/users';
-
-export type TriggerType = 'ping' | 'dm' | 'thread' | null;
 
 function isPlainMessage(
   event: SlackMessageEvent
 ): event is SlackMessageEvent & { text: string; user: string } {
-  const subtype = 'subtype' in event ? event.subtype : undefined;
+  const subtype = event.subtype;
+  const text = event.text;
+  const userId = event.user;
   return (
     (!subtype || subtype === 'thread_broadcast' || subtype === 'file_share') &&
-    'text' in event &&
-    typeof (event as { text?: unknown }).text === 'string' &&
-    'user' in event &&
-    typeof (event as { user?: unknown }).user === 'string'
+    typeof text === 'string' &&
+    typeof userId === 'string'
   );
 }
 
@@ -42,25 +44,33 @@ export async function getTrigger(
     }
   }
 
-  const channelType = (event as { channel_type?: string }).channel_type;
+  const channelType = event.channel_type;
   if (channelType === 'im') {
     return { type: 'dm', info: event.user };
   }
 
+  const channelId = message.event.channel;
+  const threadTs = message.event.thread_ts;
   if (
+    botId &&
+    channelId &&
+    threadTs &&
     (!message.event.subtype ||
       message.event.subtype === 'thread_broadcast' ||
-      message.event.subtype === 'file_share') &&
-    message.event.thread_ts &&
-    (
-      await client.conversations.replies({
-        channel: message.event.channel,
-        ts: message.event.thread_ts,
-        limit: 1,
-      })
-    )?.messages?.[0]?.text?.includes(`<@${botId}>`)
+      message.event.subtype === 'file_share')
   ) {
-    return { type: 'thread', info: event.user };
+    try {
+      const replies = await client.conversations.replies({
+        channel: channelId,
+        ts: threadTs,
+        limit: 1,
+      });
+      if (replies.messages?.[0]?.text?.includes(`<@${botId}>`)) {
+        return { type: 'thread', info: event.user };
+      }
+    } catch {
+      return { type: null, info: null };
+    }
   }
 
   return { type: null, info: null };

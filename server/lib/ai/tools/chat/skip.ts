@@ -38,8 +38,8 @@ export const skip = ({
       });
 
       if (reason) {
-        const authorId = (context.event as { user?: string }).user;
-        const content = (context.event as { text?: string }).text ?? '';
+        const authorId = context.event.user;
+        const content = context.event.text ?? '';
         const author = authorId
           ? await getSlackUserName(context.client, authorId)
           : 'unknown';

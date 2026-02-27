@@ -31,9 +31,18 @@ export const leaveChannel = ({
     },
     execute: async ({ reason }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const authorId = (context.event as { user?: string }).user;
+      const authorId = context.event.user;
+      const channelId = context.event.channel;
+
+      if (!channelId) {
+        return {
+          success: false,
+          error: 'Missing Slack channel',
+        };
+      }
+
       logger.info(
-        { ctxId, reason, authorId, channel: context.event.channel },
+        { ctxId, reason, authorId, channel: channelId },
         'Leaving channel'
       );
 
@@ -46,11 +55,11 @@ export const leaveChannel = ({
 
       try {
         await context.client.conversations.leave({
-          channel: context.event.channel,
+          channel: channelId,
         });
       } catch (error) {
         logger.error(
-          { ...toLogError(error), ctxId, channel: context.event.channel },
+          { ...toLogError(error), ctxId, channel: channelId },
           'Failed to leave channel'
         );
         await finishTask(stream, {

@@ -1,3 +1,6 @@
+import type { ResolvedSandboxSession, SlackMessageContext } from '~/types';
+import type { AgentSessionEvent } from '~/types/sandbox/rpc';
+
 export interface ToolStartEvent {
   args: unknown;
   status?: string;
@@ -17,4 +20,14 @@ export interface RetryEvent {
   delayMs: number;
   errorMessage: string;
   maxAttempts: number;
+}
+
+export interface SubscribeEventsParams {
+  context: SlackMessageContext;
+  ctxId: string;
+  events: AgentSessionEvent[];
+  onRetry?: (event: RetryEvent) => void | Promise<void>;
+  onToolEnd?: (event: ToolEndEvent) => void | Promise<void>;
+  onToolStart?: (event: ToolStartEvent) => void | Promise<void>;
+  runtime: ResolvedSandboxSession;
 }
