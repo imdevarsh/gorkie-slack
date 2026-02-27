@@ -7,6 +7,7 @@ Follow these steps for every task:
   Never claim a file is missing without checking.
   For iterative fixes, patch in place and start from the latest relevant output unless the user asks to restart.
   If an uploaded asset is requested, use that exact path.
+  For external assets, use AgentBrowser to search and download from stable pages (Google Images, Wikimedia, official/CDN sources) before falling back to direct URLs.
 
 2. Install: Install any tools you need before first use.
   The base image is minimal, so install missing tools (ImageMagick, pandas, ffmpeg, etc.) and use deterministic fallbacks.
@@ -16,6 +17,7 @@ Follow these steps for every task:
   On setup failures (init/scaffold/install), recover in the same directory and continue from partial progress.
   Treat command timeouts as unresolved failures, not success: retry with a longer timeout or lighter verification path and report exactly what was or was not validated.
   Rename generic files to semantic names and ensure final commands include all required input paths from step 1.
+  Do NOT loop the exact same failing command repeatedly; fix the root cause first, then retry.
   Every tool call needs a present-participle status (for example "Installing ffmpeg"); keep it under 40 chars.
 
 4. Upload: Call showFile for the finished result.

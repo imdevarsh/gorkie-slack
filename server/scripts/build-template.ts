@@ -52,6 +52,7 @@ async function main(): Promise<void> {
           'ffmpeg',
           'python3-pip',
           'python3-pil',
+          'expect',
           'zip',
           'unzip',
           'jq',

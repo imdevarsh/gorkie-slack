@@ -12,12 +12,14 @@ Browser automation skill for public websites. Best for opening pages, reading co
 - Scrape structured text from public pages and export results.
 - Reproduce UI issues and capture before/after screenshots.
 - Download files triggered from buttons/links on public pages.
+- Find accurate media assets by searching Google Images or source sites, then download the original file URL.
 </use-cases>
 <workflow>
 - Start with: open URL -> snapshot -i
 - Interact with @e refs (click/fill/select/check/press)
 - Re-snapshot after navigation or DOM changes
 - Use wait (networkidle/url/selector) before final capture
+- For assets: search -> open source page -> download -> validate file type/size/dimensions.
 </workflow>
 </skill>
 
@@ -53,6 +55,10 @@ Video creation skill using React + Remotion best practices. Useful for scripted 
 - Advanced modules: charts, maps, 3D, transparent video
 - Use ffmpeg for non-Remotion media operations
 </capabilities>
+<workflow>
+- Use this non-interactive Remotion picker script (Tailwind=Yes, Agent Skills=No):
+bash -lc "expect -c 'set timeout -1; spawn npx --yes create-video@latest my-video --blank; expect -re {Add TailwindCSS\\?}; send -- \"\\r\"; expect -re {agent skills}; send -- \"\\033\\[D\\r\"; expect eof'"
+</workflow>
 </skill>
 
 </skills>`;

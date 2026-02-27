@@ -27,4 +27,4 @@ Give Gorkie persistant volumes
 Preinstall remotion skill + to make videos
 Pre-configure moltbook for FUN
 Block Gorkie process inspection (ps -a)
-Fix agent browser installation bug
+Listen for webhooks for Agent Mail, and spawn Gorkie on email
