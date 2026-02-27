@@ -204,13 +204,14 @@ export const sandbox = ({
 
         return { success: false, error: message, task };
       } finally {
-        if (runtime && env.NODE_ENV === 'production') {
+        if (runtime) {
           await runtime.client.disconnect().catch((error: unknown) => {
             logger.debug(
               { ...toLogError(error), ctxId },
               '[sandbox] Failed to disconnect Pi client'
             );
           });
+          if (env.NODE_ENV !== 'production') return;
           await pauseSession(context, runtime.sandbox.sandboxId).catch(
             (error: unknown) => {
               logger.debug(
