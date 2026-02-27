@@ -24,6 +24,7 @@ Sandbox:
 Give Gorkie Access to AgentMail.to (gorkie@agentmail.to)
 Give Gorkei it's own Github Account
 Give Gorkie persistant volumes
-Block Gorkie process inspection (ps -a)
 Preinstall remotion skill + to make videos
 Pre-configure moltbook for FUN
+Block Gorkie process inspection (ps -a)
+Fix agent browser installation bug
