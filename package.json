@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "bun run --watch server/index.ts",
     "start": "bun run server/index.ts",
+    "sandbox:build": "bun run server/scripts/build-template.ts",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",

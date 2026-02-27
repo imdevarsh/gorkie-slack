@@ -36,6 +36,8 @@ export const env = createEnv({
     EXA_API_KEY: z.string().min(1),
     // E2B
     E2B_API_KEY: z.string().min(1),
+    // Sandbox
+    AGENTMAIL_API_KEY: z.string().min(1).startsWith('am_'),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

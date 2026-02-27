@@ -16,7 +16,6 @@ import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
 import { configureAgent } from './config';
 import { boot } from './rpc/boot';
-import { buildTemplateIfMissing, getTemplate } from './template.build';
 
 function isMissingSandboxError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
@@ -59,8 +58,7 @@ async function createSandbox(
   context: SlackMessageContext,
   threadId: string
 ): Promise<ResolvedSandboxSession> {
-  const template = getTemplate();
-  await buildTemplateIfMissing(template);
+  const template = config.template;
 
   const sandbox = await Sandbox.betaCreate(template, {
     apiKey: env.E2B_API_KEY,

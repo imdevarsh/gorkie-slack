@@ -23,6 +23,7 @@ export async function boot(
     cwd: config.runtime.workdir,
     envs: {
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
+      AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
       HOME: config.runtime.workdir,
       TERM: PTY_TERM,
     },

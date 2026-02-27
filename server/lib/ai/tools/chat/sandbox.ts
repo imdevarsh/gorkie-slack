@@ -13,9 +13,9 @@ import type { SlackFile, SlackMessageContext, Stream } from '~/types';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
+import { env } from '~/env';
 
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
-
 const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
 
 export const sandbox = ({
@@ -204,7 +204,7 @@ export const sandbox = ({
 
         return { success: false, error: message, task };
       } finally {
-        if (runtime) {
+        if (runtime && env.NODE_ENV === 'production') {
           await runtime.client.disconnect().catch((error: unknown) => {
             logger.debug(
               { ...toLogError(error), ctxId },
