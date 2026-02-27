@@ -69,6 +69,10 @@ function filterMessages(
   latest: string | undefined,
   inclusive: boolean
 ): SlackConversationMessage[] {
+  if (!latest) {
+    return messages;
+  }
+
   return messages.filter((message) => {
     if (!message.ts) {
       return false;
@@ -76,10 +80,6 @@ function filterMessages(
     if (!isUsableMessage(message.text || '')) {
       return false;
     }
-    if (!latest) {
-      return true;
-    }
-
     const messageTs = Number(message.ts);
     const latestTs = Number(latest);
     return inclusive ? messageTs <= latestTs : messageTs < latestTs;
