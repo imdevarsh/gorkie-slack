@@ -3,8 +3,8 @@ import logger from '~/lib/logger';
 import type {
   MessageEventArgs,
   SlackFile,
-  SlackMessageEvent,
   SlackMessageContext,
+  SlackMessageEvent,
   SlackRawMessageEvent,
 } from '~/types';
 import { toLogError } from '~/utils/error';

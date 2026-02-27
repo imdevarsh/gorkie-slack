@@ -41,7 +41,7 @@ export async function configureAgent(
   const bootstrap = await buildConfig(prompt);
 
   for (const path of bootstrap.paths) {
-    await sandbox.files.makeDir(path).catch(() => {});
+    await sandbox.files.makeDir(path).catch(() => undefined);
   }
 
   for (const file of bootstrap.files) {

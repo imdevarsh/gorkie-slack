@@ -1,5 +1,5 @@
 import type { ModelMessage, UserContent } from 'ai';
-import { orchestratorAgent } from '~/lib/ai/agents';
+import { orchestratorAgent } from '~/lib/ai/agents/orchestrator';
 import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream } from '~/lib/ai/utils/stream';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';

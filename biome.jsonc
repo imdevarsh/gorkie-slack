@@ -49,14 +49,26 @@
         "noExcessiveCognitiveComplexity": "off"
       },
       "performance": {
-        "noBarrelFile": "off"
+        "noBarrelFile": "error"
       },
       "suspicious": {
-        "noEmptyBlockStatements": "off"
+        "noEmptyBlockStatements": "error"
       },
       "recommended": true
     }
   },
+  "overrides": [
+    {
+      "includes": ["server/types/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    }
+  ],
   "json": {
     "parser": {
       "allowComments": true

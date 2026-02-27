@@ -30,7 +30,7 @@ export async function syncAttachments(
 
   const ctxId = getContextId(context);
 
-  await sandbox.files.makeDir(ATTACHMENTS_ABS_DIR).catch(() => {});
+  await sandbox.files.makeDir(ATTACHMENTS_ABS_DIR).catch(() => undefined);
 
   const results = await Promise.all(
     files.map((file) => syncFile(sandbox, file, ctxId))

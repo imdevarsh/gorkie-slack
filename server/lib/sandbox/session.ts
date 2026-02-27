@@ -15,7 +15,7 @@ import type { ResolvedSandboxSession, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
 import { configureAgent } from './config';
-import { boot } from './rpc';
+import { boot } from './rpc/boot';
 import { buildTemplateIfMissing, getTemplate } from './template.build';
 
 function isMissingSandboxError(error: unknown): boolean {

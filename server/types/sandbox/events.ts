@@ -1,4 +1,4 @@
-import type { PiRpcClient } from '~/lib/sandbox/rpc';
+import type { PiRpcClient } from '~/lib/sandbox/rpc/client';
 import type { ResolvedSandboxSession, SlackMessageContext } from '~/types';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 

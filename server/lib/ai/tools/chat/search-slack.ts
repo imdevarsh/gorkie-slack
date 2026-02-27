@@ -42,13 +42,19 @@ export const searchSlack = ({
     },
     execute: async ({ query }, { toolCallId }) => {
       const ctxId = getContextId(context);
-      const action_token = getActionToken(context.event);
+      const actionToken = getActionToken(context.event);
 
-      if (!action_token) {
+      if (!actionToken) {
+        const pingMessage =
+          'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.';
+        await finishTask(stream, {
+          status: 'error',
+          taskId: toolCallId,
+          output: pingMessage,
+        });
         return {
           success: false,
-          error:
-            'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
+          error: pingMessage,
         };
       }
 
@@ -67,7 +73,7 @@ export const searchSlack = ({
             Authorization: `Bearer ${context.client.token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query, action_token }),
+          body: JSON.stringify({ query, action_token: actionToken }),
         }
       );
 

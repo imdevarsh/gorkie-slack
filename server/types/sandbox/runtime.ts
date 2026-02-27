@@ -1,5 +1,5 @@
 import type { Sandbox } from '@e2b/code-interpreter';
-import type { PiRpcClient } from '~/lib/sandbox/rpc';
+import type { PiRpcClient } from '~/lib/sandbox/rpc/client';
 
 export interface ResolvedSandboxSession {
   client: PiRpcClient;

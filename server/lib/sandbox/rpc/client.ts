@@ -259,7 +259,7 @@ export class PiRpcClient {
   }
 
   waitForIdle(): Promise<void> {
-    let off = () => {};
+    let off: () => void = () => undefined;
     const idlePromise = new Promise<void>((resolve) => {
       off = this.onEvent((event) => {
         if (event.type === 'agent_end') {
@@ -271,7 +271,7 @@ export class PiRpcClient {
   }
 
   collectEvents(): Promise<AgentSessionEvent[]> {
-    let off = () => {};
+    let off: () => void = () => undefined;
     const collectPromise = new Promise<AgentSessionEvent[]>((resolve) => {
       const events: AgentSessionEvent[] = [];
       off = this.onEvent((event) => {

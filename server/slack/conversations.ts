@@ -65,6 +65,7 @@ function filterMessages(
     if (!isUsableMessage(message.text || '')) {
       return false;
     }
+
     const messageTs = Number(message.ts);
     const latestTs = Number(latest);
     return inclusive ? messageTs <= latestTs : messageTs < latestTs;

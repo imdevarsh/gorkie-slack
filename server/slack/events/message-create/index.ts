@@ -6,7 +6,6 @@ import { buildChatContext, getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
 import { logReply } from '~/utils/log';
 import { getTrigger } from '~/utils/triggers';
-import { generateResponse } from './utils/respond';
 import {
   canUseBot,
   getAuthorName,
@@ -14,6 +13,7 @@ import {
   shouldHandleMessage,
   toMessageContext,
 } from './utils/message-context';
+import { generateResponse } from './utils/respond';
 
 export const name = 'message';
 
