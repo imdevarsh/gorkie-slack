@@ -4,11 +4,8 @@
 
 Refactor the entire codebase for readability-first maintainability while preserving expected runtime behavior.
 
-Primary objective:
-- Any junior engineer should be able to trace request flow, sandbox flow, and failure flow quickly.
-
-Secondary objective:
-- Remove redundancy, dead code, stale adapters, and unnecessary abstraction layers.
+objective:
+- Remove dead code, stale adapters, and unnecessary abstraction layers.
 
 Current blockers for unchecked items:
 - Manual smoke tests require live Slack workspace events + valid runtime credentials.
