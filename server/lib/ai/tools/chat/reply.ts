@@ -135,7 +135,7 @@ export const reply = ({
         for (const text of content) {
           await context.client.chat.postMessage({
             channel: channelId,
-            text,
+            markdown_text: text,
             thread_ts: threadTs,
           });
         }
