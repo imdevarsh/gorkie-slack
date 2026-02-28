@@ -1,5 +1,8 @@
 import type { ModelMessage, UserContent } from 'ai';
-import { orchestratorAgent } from '~/lib/ai/agents/orchestrator';
+import {
+  consumeOrchestratorReasoningStream,
+  orchestratorAgent,
+} from '~/lib/ai/agents/orchestrator';
 import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream } from '~/lib/ai/utils/stream';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
@@ -60,7 +63,7 @@ export async function generateResponse(
       stream,
     });
 
-    const { toolCalls } = await agent.generate({
+    const streamResult = await agent.stream({
       messages: [
         ...messages,
         {
@@ -69,6 +72,12 @@ export async function generateResponse(
         },
       ],
     });
+    await consumeOrchestratorReasoningStream({
+      context,
+      stream,
+      fullStream: streamResult.fullStream,
+    });
+    const toolCalls = await streamResult.toolCalls;
 
     await closeStream(stream);
     await setStatus(context, { status: '' });

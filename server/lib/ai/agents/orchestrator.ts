@@ -22,9 +22,64 @@ import type {
   SlackMessageContext,
   Stream,
 } from '~/types';
-import { createTask, finishTask } from '../utils/task';
+import { createTask, finishTask, updateTask } from '../utils/task';
 
 const taskMap = new Map<string, string>();
+const taskStartedMap = new Map<string, boolean>();
+
+type ReasoningStreamPart =
+  | { type: 'start-step' }
+  | { type: 'reasoning-delta'; text: string }
+  | { type: string };
+
+function normalizeReasoning(reasoningText: unknown): string {
+  return String(reasoningText)
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .filter((line) => line !== '[REDACTED]')
+    .join('\n');
+}
+
+export async function consumeOrchestratorReasoningStream({
+  context,
+  stream,
+  fullStream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+  fullStream: AsyncIterable<ReasoningStreamPart>;
+}): Promise<void> {
+  const eventTs = context.event.event_ts;
+
+  for await (const part of fullStream) {
+    if (part.type === 'start-step') {
+      continue;
+    }
+
+    if (part.type !== 'reasoning-delta' || !('text' in part)) {
+      continue;
+    }
+
+    const reasoningSummary = normalizeReasoning(part.text);
+    if (!reasoningSummary) {
+      continue;
+    }
+
+    const taskId = taskMap.get(eventTs);
+    if (!taskId) {
+      logger.warn({ eventTs }, 'No taskId found in taskMap');
+      continue;
+    }
+
+    await updateTask(stream, {
+      taskId,
+      status: 'in_progress',
+      output: '\n' + reasoningSummary,
+    });
+    taskStartedMap.set(eventTs, true);
+  }
+}
 
 export const orchestratorAgent = ({
   context,
@@ -79,30 +134,53 @@ export const orchestratorAgent = ({
         status: 'in_progress',
       });
       taskMap.set(context.event.event_ts, task);
+      taskStartedMap.set(context.event.event_ts, false);
       return {};
     },
-    async onStepFinish({ reasoningText }) {
-      const normalizedReasoning = String(reasoningText)
-        .trim()
-        .split('\n')
-        .filter(Boolean)
-        .filter((x) => x !== '[REDACTED]')
-        .join('\n');
+    async experimental_onToolCallStart({ toolCall }) {
+      if (taskStartedMap.get(context.event.event_ts)) {
+        return;
+      }
 
       const taskId = taskMap.get(context.event.event_ts);
       if (taskId) {
-        const reasoningSummary = normalizedReasoning || 'No reasoning provided';
+        const toolTitle =
+          typeof toolCall.title === 'string' ? toolCall.title.trim() : '';
+        const reasoningSummary =
+          toolTitle || `Preparing to run ${toolCall.toolName}`;
         await finishTask(stream, {
           status: 'complete',
           taskId,
           output: reasoningSummary,
         });
-      } else {
-        logger.warn(
-          { eventTs: context.event.event_ts },
-          'No taskId found in taskMap'
-        );
+        taskStartedMap.set(context.event.event_ts, true);
+        return;
       }
+
+      logger.warn(
+        { eventTs: context.event.event_ts },
+        'No taskId found in taskMap'
+      );
+    },
+    async onStepFinish({ reasoningText }) {
+      const taskId = taskMap.get(context.event.event_ts);
+      if (taskId) {
+        await finishTask(stream, {
+          status: 'complete',
+          taskId,
+        });
+        taskStartedMap.set(context.event.event_ts, true);
+        return;
+      }
+
+      logger.warn(
+        { eventTs: context.event.event_ts },
+        'No taskId found in taskMap'
+      );
+    },
+    onFinish() {
+      taskMap.delete(context.event.event_ts);
+      taskStartedMap.delete(context.event.event_ts);
     },
     experimental_telemetry: {
       isEnabled: true,
