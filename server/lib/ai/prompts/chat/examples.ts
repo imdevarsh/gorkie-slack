@@ -136,15 +136,6 @@ export const examplesPrompt = `\
 </example>
 
 <example>
-<title>Remotion video render</title>
-<user>[uploads logo.png] Make a 15-second 1080x1920 promo video with animated title, captions, and background music.</user>
-<workflow>
-<tool><name>sandbox</name><input>{ "task": "Use Remotion best practices skill. Build a 15-second vertical (1080x1920) promo composition using /home/user/attachments/logo.png, include animated title text, burned-in captions from a short scripted voiceover, and subtle background music. Render final output to /home/user/output/promo-vertical.mp4, then upload it with showFile and include render settings (fps, duration, composition name)." }</input></tool>
-<tool><name>reply</name><input>{ "content": ["Done. I rendered the 15-second Remotion promo video and uploaded the MP4 with the render settings summary."] }</input></tool>
-</workflow>
-</example>
-
-<example>
 <title>Spam or low-value message</title>
 <user>gm</user>
 <workflow>

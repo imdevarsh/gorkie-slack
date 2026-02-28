@@ -35,30 +35,4 @@ Email automation skill via AgentMail API/SDK (Node and Python). Supports inbox l
 </playbook>
 </skill>
 
-<skill>
-<name>Remotion</name>
-<description>
-Video creation skill using React + Remotion best practices. Useful for scripted renders, animation timing, captions, transitions, and template-driven video output.
-</description>
-<use-cases>
-- Generate social clips from a script with branded typography.
-- Add captions/subtitles and voiceover to existing media.
-- Build reusable composition templates with typed params.
-- Render explainers with charts, maps, Lottie, and transitions.
-- Trim and combine assets for final export.
-</use-cases>
-<capabilities>
-- Compositions, sequencing, timing/interpolation/springs
-- Text animations, fonts, images, videos, audio, voiceover
-- Captions/subtitles/transcription and transitions
-- Metadata-driven renders and parameterized templates
-- Advanced modules: charts, maps, 3D, transparent video
-- Use ffmpeg for non-Remotion media operations
-</capabilities>
-<workflow>
-- Use this non-interactive Remotion picker script (Tailwind=Yes, Agent Skills=No):
-bash -lc "expect -c 'set timeout -1; spawn npx --yes create-video@latest my-video --blank; expect -re {Add TailwindCSS\\?}; send -- \"\\r\"; expect -re {agent skills}; send -- \"\\033\\[D\\r\"; expect eof'"
-</workflow>
-</skill>
-
 </skills>`;
