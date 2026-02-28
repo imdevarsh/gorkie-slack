@@ -25,7 +25,6 @@ import type {
 import { createTask, finishTask, updateTask } from '../utils/task';
 
 const taskMap = new Map<string, string>();
-const taskStartedMap = new Map<string, boolean>();
 
 type ReasoningStreamPart =
   | { type: 'start-step' }
@@ -77,7 +76,6 @@ export async function consumeOrchestratorReasoningStream({
       status: 'in_progress',
       output: '\n' + reasoningSummary,
     });
-    taskStartedMap.set(eventTs, true);
   }
 }
 
@@ -134,26 +132,15 @@ export const orchestratorAgent = ({
         status: 'in_progress',
       });
       taskMap.set(context.event.event_ts, task);
-      taskStartedMap.set(context.event.event_ts, false);
       return {};
     },
-    async experimental_onToolCallStart({ toolCall }) {
-      if (taskStartedMap.get(context.event.event_ts)) {
-        return;
-      }
-
+    async experimental_onToolCallStart() {
       const taskId = taskMap.get(context.event.event_ts);
       if (taskId) {
-        const toolTitle =
-          typeof toolCall.title === 'string' ? toolCall.title.trim() : '';
-        const reasoningSummary =
-          toolTitle || `Preparing to run ${toolCall.toolName}`;
         await finishTask(stream, {
           status: 'complete',
           taskId,
-          output: reasoningSummary,
         });
-        taskStartedMap.set(context.event.event_ts, true);
         return;
       }
 
@@ -162,14 +149,13 @@ export const orchestratorAgent = ({
         'No taskId found in taskMap'
       );
     },
-    async onStepFinish({ reasoningText }) {
+    async onStepFinish() {
       const taskId = taskMap.get(context.event.event_ts);
       if (taskId) {
         await finishTask(stream, {
           status: 'complete',
           taskId,
         });
-        taskStartedMap.set(context.event.event_ts, true);
         return;
       }
 
@@ -180,7 +166,6 @@ export const orchestratorAgent = ({
     },
     onFinish() {
       taskMap.delete(context.event.event_ts);
-      taskStartedMap.delete(context.event.event_ts);
     },
     experimental_telemetry: {
       isEnabled: true,
