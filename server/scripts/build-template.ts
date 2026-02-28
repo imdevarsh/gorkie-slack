@@ -1,12 +1,12 @@
-import { defaultBuildLogger, Template } from 'e2b';
 import { parseArgs } from 'node:util';
+import { defaultBuildLogger, Template } from 'e2b';
 import { sandbox } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 
 function args() {
   const { values } = parseArgs({
-    args: Bun.argv.slice(2),
+    args: process.argv.slice(2),
     options: {
       template: {
         type: 'string',
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
   );
 }
 
-void main().catch((error: unknown) => {
+main().catch((error: unknown) => {
   logger.error(
     { error: error instanceof Error ? error.message : String(error) },
     '[sandbox] Failed to build e2b template'

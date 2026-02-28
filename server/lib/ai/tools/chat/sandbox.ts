@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import PQueue from 'p-queue';
 import { z } from 'zod';
 import { sandbox as config } from '~/config';
+import { env } from '~/env';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import { syncAttachments } from '~/lib/sandbox/attachments';
@@ -13,7 +14,6 @@ import type { SlackFile, SlackMessageContext, Stream } from '~/types';
 import type { AgentSessionEvent } from '~/types/sandbox/rpc';
 import { getContextId } from '~/utils/context';
 import { errorMessage, toLogError } from '~/utils/error';
-import { env } from '~/env';
 
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
 const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
@@ -209,15 +209,17 @@ export const sandbox = ({
               '[sandbox] Failed to disconnect Pi client'
             );
           });
-          if (env.NODE_ENV !== 'production') return;
-          await pauseSession(context, runtime.sandbox.sandboxId).catch(
-            (error: unknown) => {
-              logger.debug(
-                { ...toLogError(error), ctxId },
-                '[sandbox] Failed to pause sandbox session'
-              );
-            }
-          );
+          if (env.NODE_ENV === 'production') {
+            // Only pause in development to allow inspection
+            await pauseSession(context, runtime.sandbox.sandboxId).catch(
+              (error: unknown) => {
+                logger.debug(
+                  { ...toLogError(error), ctxId },
+                  '[sandbox] Failed to pause sandbox session'
+                );
+              }
+            );
+          }
         }
       }
     },

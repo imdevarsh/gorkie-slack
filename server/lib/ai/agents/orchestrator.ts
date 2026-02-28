@@ -74,7 +74,7 @@ export async function consumeOrchestratorReasoningStream({
     await updateTask(stream, {
       taskId,
       status: 'in_progress',
-      output: '\n' + reasoningSummary,
+      output: `\n${reasoningSummary}`,
     });
   }
 }

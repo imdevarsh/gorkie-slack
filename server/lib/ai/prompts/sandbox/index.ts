@@ -3,8 +3,8 @@ import { contextPrompt } from './context';
 import { corePrompt } from './core';
 import { environmentPrompt } from './environment';
 import { examplesPrompt } from './examples';
-import { workflowPrompt } from './workflow';
 import { skillsPrompt } from './skills';
+import { workflowPrompt } from './workflow';
 
 export function sandboxPrompt({
   context,
