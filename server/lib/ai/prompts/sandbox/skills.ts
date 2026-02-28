@@ -35,4 +35,16 @@ Email automation skill via AgentMail API/SDK (Node and Python). Supports inbox l
 </playbook>
 </skill>
 
+<skill>
+<name>Hackclub Revoker</name>
+<description>
+Revoke a HackClub API token via the Revoker API.
+</description>
+<playbook>
+- Endpoint: POST https://revoke.hackclub.com/api/v1/revocations
+- JSON body: { "token": "...", "submitter": "gorkie", "comment": "user-reported leak in Slack" }
+- Report the result status to the user. Do NOT repeat the full token in your reply.
+</playbook>
+</skill>
+
 </skills>`;
