@@ -18,11 +18,11 @@ export const sandboxSessions = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => ({
-    statusIdx: index('sandbox_sessions_status_idx').on(table.status),
-    pausedIdx: index('sandbox_sessions_paused_idx').on(table.pausedAt),
-    updatedIdx: index('sandbox_sessions_updated_idx').on(table.updatedAt),
-  })
+  (table) => [
+    index('sandbox_sessions_status_idx').on(table.status),
+    index('sandbox_sessions_paused_idx').on(table.pausedAt),
+    index('sandbox_sessions_updated_idx').on(table.updatedAt),
+  ]
 );
 
 export type SandboxSession = typeof sandboxSessions.$inferSelect;
@@ -53,11 +53,11 @@ export const scheduledTasks = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => ({
-    dueIdx: index('scheduled_tasks_due_idx').on(table.enabled, table.nextRunAt),
-    runningIdx: index('scheduled_tasks_running_idx').on(table.runningAt),
-    creatorIdx: index('scheduled_tasks_creator_idx').on(table.creatorUserId),
-  })
+  (table) => [
+    index('scheduled_tasks_due_idx').on(table.enabled, table.nextRunAt),
+    index('scheduled_tasks_running_idx').on(table.runningAt),
+    index('scheduled_tasks_creator_idx').on(table.creatorUserId),
+  ]
 );
 
 export type ScheduledTask = typeof scheduledTasks.$inferSelect;
