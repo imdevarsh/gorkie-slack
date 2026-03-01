@@ -3,6 +3,7 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 import { startSandboxJanitor } from '~/lib/sandbox/janitor';
+import { startScheduledTaskRunner } from '~/lib/tasks/runner';
 import { createSlackApp } from '~/slack/app';
 
 const sdk = new NodeSDK({
@@ -33,6 +34,7 @@ process.on('uncaughtException', (error) => {
 async function main() {
   startSandboxJanitor();
   const { app, socketMode } = createSlackApp();
+  startScheduledTaskRunner(app.client);
 
   if (socketMode) {
     await app.start();

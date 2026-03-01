@@ -30,6 +30,25 @@ export const examplesPrompt = `\
 </example>
 
 <example>
+<title>Recurring cron task</title>
+<user>Every weekday at 9am New York time, send me a concise AI news digest.</user>
+<workflow>
+<tool><name>scheduleTask</name><input>{ "task": "Prepare a concise digest of important AI news from the last 24 hours.", "cronExpression": "0 9 * * 1-5", "timezone": "America/New_York", "destinationType": "dm" }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done — I scheduled that recurring task for weekdays at 9:00 AM America/New_York and will send results by DM."] }</input></tool>
+</workflow>
+</example>
+
+<example>
+<title>Manage and cancel scheduled task</title>
+<user>Cancel my daily digest task.</user>
+<workflow>
+<tool><name>listScheduledTasks</name><input>{}</input></tool>
+<tool><name>cancelScheduledTask</name><input>{ "taskId": "task_123" }</input></tool>
+<tool><name>reply</name><input>{ "content": ["Done — I cancelled your scheduled task task_123."] }</input></tool>
+</workflow>
+</example>
+
+<example>
 <title>Image processing with attachment</title>
 <user>[uploads photo.png] Invert this to black and white</user>
 <workflow>

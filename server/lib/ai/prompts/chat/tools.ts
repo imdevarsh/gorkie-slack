@@ -40,6 +40,30 @@ Use it for past conversations, decisions, files, links, or any context outside t
 </tool>
 
 <tool>
+<name>scheduleTask</name>
+<description>Create a recurring cron-scheduled task that runs automatically and delivers output to a DM or channel.</description>
+<rules>
+- Use this for recurring automations (daily/weekly/monthly/etc.), not one-off reminders.
+- Always provide a valid cron expression and explicit IANA timezone.
+- Use scheduleReminder for simple one-time follow-ups.
+</rules>
+</tool>
+
+<tool>
+<name>listScheduledTasks</name>
+<description>List the user's scheduled recurring tasks so they can review IDs, schedules, and status.</description>
+</tool>
+
+<tool>
+<name>cancelScheduledTask</name>
+<description>Cancel one scheduled recurring task by task ID.</description>
+<rules>
+- Use listScheduledTasks first when the user asks to manage/cancel but does not provide an exact task ID.
+- Prefer exact task ID confirmation before cancellation when ambiguity exists.
+</rules>
+</tool>
+
+<tool>
 <name>summariseThread</name>
 <description>
 Generate a comprehensive summary of the current Slack conversation thread.
