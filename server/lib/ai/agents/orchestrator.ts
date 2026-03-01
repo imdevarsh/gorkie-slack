@@ -1,15 +1,18 @@
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
+import { cancelScheduledTask } from '~/lib/ai/tools/chat/cancel-scheduled-task';
 import { generateImageTool } from '~/lib/ai/tools/chat/generate-image';
 import { getUserInfo } from '~/lib/ai/tools/chat/get-user-info';
 import { getWeather } from '~/lib/ai/tools/chat/get-weather';
 import { leaveChannel } from '~/lib/ai/tools/chat/leave-channel';
+import { listScheduledTasks } from '~/lib/ai/tools/chat/list-scheduled-tasks';
 import { mermaid } from '~/lib/ai/tools/chat/mermaid';
 import { react } from '~/lib/ai/tools/chat/react';
 import { reply } from '~/lib/ai/tools/chat/reply';
 import { sandbox } from '~/lib/ai/tools/chat/sandbox';
 import { scheduleReminder } from '~/lib/ai/tools/chat/schedule-reminder';
+import { scheduleTask } from '~/lib/ai/tools/chat/schedule-task';
 import { searchSlack } from '~/lib/ai/tools/chat/search-slack';
 import { searchWeb } from '~/lib/ai/tools/chat/search-web';
 import { skip } from '~/lib/ai/tools/chat/skip';
@@ -109,8 +112,11 @@ export const orchestratorAgent = ({
       searchWeb: searchWeb({ context, stream }),
       searchSlack: searchSlack({ context, stream }),
       getUserInfo: getUserInfo({ context, stream }),
+      listScheduledTasks: listScheduledTasks({ context, stream }),
+      cancelScheduledTask: cancelScheduledTask({ context, stream }),
       leaveChannel: leaveChannel({ context, stream }),
       scheduleReminder: scheduleReminder({ context, stream }),
+      scheduleTask: scheduleTask({ context, stream }),
       summariseThread: summariseThread({ context, stream }),
       sandbox: sandbox({ context, files, stream }),
       mermaid: mermaid({ context, stream }),
