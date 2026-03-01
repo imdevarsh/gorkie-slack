@@ -9,6 +9,7 @@ import { leaveChannel } from '~/lib/ai/tools/chat/leave-channel';
 import { listScheduledTasks } from '~/lib/ai/tools/chat/list-scheduled-tasks';
 import { mermaid } from '~/lib/ai/tools/chat/mermaid';
 import { react } from '~/lib/ai/tools/chat/react';
+import { readConversationHistory } from '~/lib/ai/tools/chat/read-conversation-history';
 import { reply } from '~/lib/ai/tools/chat/reply';
 import { sandbox } from '~/lib/ai/tools/chat/sandbox';
 import { scheduleReminder } from '~/lib/ai/tools/chat/schedule-reminder';
@@ -121,6 +122,7 @@ export const orchestratorAgent = ({
       sandbox: sandbox({ context, files, stream }),
       mermaid: mermaid({ context, stream }),
       react: react({ context, stream }),
+      readConversationHistory: readConversationHistory({ context, stream }),
       reply: reply({ context, stream }),
       skip: skip({ context, stream }),
     },

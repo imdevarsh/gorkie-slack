@@ -2,6 +2,7 @@ import { stepCountIs, ToolLoopAgent } from 'ai';
 import { provider } from '~/lib/ai/providers';
 import { getUserInfo } from '~/lib/ai/tools/chat/get-user-info';
 import { getWeather } from '~/lib/ai/tools/chat/get-weather';
+import { readConversationHistory } from '~/lib/ai/tools/chat/read-conversation-history';
 import { sandbox } from '~/lib/ai/tools/chat/sandbox';
 import { searchWeb } from '~/lib/ai/tools/chat/search-web';
 import { skip } from '~/lib/ai/tools/chat/skip';
@@ -35,7 +36,7 @@ The current ISO time is: ${getTime()}.
 
 Rules:
 - Complete the task autonomously.
-- Use tools when needed for facts or execution (searchWeb/getWeather/getUserInfo/sandbox).
+- Use tools when needed for facts or execution (searchWeb/getWeather/getUserInfo/readConversationHistory/sandbox).
 - Do not create new schedules or reminders.
 - Always end by calling sendScheduledMessage exactly once with the final user-facing result.
 - If the task cannot be completed, still call sendScheduledMessage with a concise failure summary and next step.
@@ -45,6 +46,7 @@ Rules:
       searchWeb: searchWeb({ context, stream }),
       getWeather: getWeather({ context, stream }),
       getUserInfo: getUserInfo({ context, stream }),
+      readConversationHistory: readConversationHistory({ context, stream }),
       sandbox: sandbox({ context, stream }),
       sendScheduledMessage: sendScheduledMessage({
         client: context.client,

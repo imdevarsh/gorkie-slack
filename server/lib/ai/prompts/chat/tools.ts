@@ -67,7 +67,7 @@ Use it for past conversations, decisions, files, links, or any context outside t
 <tool>
 <name>summariseThread</name>
 <description>
-Generate a comprehensive summary of the current Slack conversation thread.
+Generate a comprehensive summary of a Slack conversation thread.
 It can read the ENTIRE thread history (up to 1000 messages), not just your context window. Use it for recap requests, long threads, or when you need prior decisions/action items.
 Returns key points, decisions, action items, and unresolved questions.
 </description>
@@ -75,6 +75,14 @@ Returns key points, decisions, action items, and unresolved questions.
 - user: "can you summarize this thread?": summariseThread, then reply with structured summary
 - user: "what did we agree on?": summariseThread to get full context, then reply
 </examples>
+</tool>
+
+<tool>
+<name>readConversationHistory</name>
+<description>
+Read a channel or thread with the conversations.history or conversations.replies Slack APIs.
+Only works for public channels.
+</description>
 </tool>
 
 <tool>

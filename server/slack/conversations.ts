@@ -31,7 +31,7 @@ async function joinChannel(
   }
 }
 
-async function fetchMessages(
+export async function fetchMessages(
   options: ConversationOptions
 ): Promise<SlackConversationMessage[]> {
   const {
@@ -43,6 +43,8 @@ async function fetchMessages(
     oldest,
     inclusive = false,
   } = options;
+
+  await joinChannel(client, channel);
 
   const response = threadTs
     ? await client.conversations.replies({
@@ -209,8 +211,6 @@ export async function getConversationMessages({
   inclusive = false,
 }: ConversationOptions): Promise<ModelMessage[]> {
   try {
-    await joinChannel(client, channel);
-
     const mentionRegex = botUserId ? new RegExp(`<@${botUserId}>`, 'gi') : null;
     const messages = await fetchMessages({
       client,
