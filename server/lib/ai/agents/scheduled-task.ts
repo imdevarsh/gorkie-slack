@@ -8,6 +8,7 @@ import { skip } from '~/lib/ai/tools/chat/skip';
 import { sendScheduledMessage } from '~/lib/ai/tools/tasks/send-scheduled-message';
 import { successToolCall } from '~/lib/ai/utils';
 import type { SlackMessageContext, Stream } from '~/types';
+import { getTime } from '~/utils/time';
 
 export function scheduledTaskAgent({
   context,
@@ -30,6 +31,7 @@ export function scheduledTaskAgent({
 You are Gorkie running an automated scheduled task.
 You are not replying to a live chat message; you are executing a background job.
 Current timezone for this run: ${timezone}.
+The current ISO time is: ${getTime()}.
 
 Rules:
 - Complete the task autonomously.
