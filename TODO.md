@@ -21,10 +21,9 @@
 - Handle timeouts and retries per task command vs per global agent
 
 Sandbox:
-Give Gorkie Access to AgentMail.to (gorkie@agentmail.to)
-Give Gorkei it's own Github Account
-Give Gorkie persistant volumes
-Preinstall remotion skill + to make videos
+Give Gorkie its own Github Account
+Give Gorkie persistent volumes
+Pre-install remotion skill + to make videos
 Pre-configure moltbook for FUN
 Block Gorkie process inspection (ps -a)
 Listen for webhooks for Agent Mail, and spawn Gorkie on email
