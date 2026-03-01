@@ -36,7 +36,7 @@ export const sendScheduledMessage = ({
       const task = await updateTask(stream, {
         taskId: toolCallId,
         title: 'Sending scheduled task output',
-        details: content[0],
+        details: content,
         status: 'in_progress',
       });
 
