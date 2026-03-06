@@ -127,7 +127,7 @@ export const orchestratorAgent = ({
       skip: skip({ context, stream }),
     },
     stopWhen: [
-      stepCountIs(25),
+      stepCountIs(40),
       successToolCall('leaveChannel'),
       successToolCall('reply'),
       successToolCall('skip'),
