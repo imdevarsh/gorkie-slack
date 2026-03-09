@@ -1,6 +1,7 @@
 export const skillsPrompt = `\
 <skills>
 These are sandbox skills available to you in this coding environment.
+When you want to use a skill, ALWAYS read the full SKILL.md first to understand how to use it.
 
 <skill>
 <name>AgentBrowser</name>
