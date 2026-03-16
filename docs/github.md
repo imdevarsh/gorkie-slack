@@ -15,10 +15,79 @@ Gorkie can be given a GitHub identity so sandboxes can clone repos, push code, o
 3. Set **Repository permissions**:
    | Permission | Access |
    |---|---|
+   | Actions | Read & write |
+   | Administration | Read & write |
+   | Checks | Read & write |
+   | Code scanning alerts | Read & write |
+   | Codespaces | Read & write |
+   | Codespaces lifecycle admin | Read & write |
+   | Codespaces metadata | Read-only |
+   | Codespaces secrets | Read & write |
+   | Commit statuses | Read & write |
    | Contents | Read & write |
+   | Dependabot alerts | Read & write |
+   | Dependabot secrets | Read & write |
+   | Deployments | Read & write |
+   | Discussions | Read & write |
+   | Environments | Read & write |
    | Issues | Read & write |
-   | Pull requests | Read & write |
+   | Merge queues | Read & write |
    | Metadata | Read-only (required) |
+   | Pages | Read & write |
+   | Projects | Read & write |
+   | Pull requests | Read & write |
+   | Repository advisories | Read & write |
+   | Repository hooks | Read & write |
+   | Repository security advisories | Read & write |
+   | Secret scanning alerts | Read & write |
+   | Secrets | Read & write |
+   | Single file | Read & write |
+   | Variables | Read & write |
+   | Vulnerability alerts | Read & write |
+   | Workflows | Read & write |
+
+   Set **Account permissions**:
+   | Permission | Access |
+   |---|---|
+   | Block another user | Read & write |
+   | Codespaces user secrets | Read & write |
+   | Email addresses | Read-only |
+   | Followers | Read & write |
+   | GPG keys | Read & write |
+   | Gists | Read & write |
+   | Git SSH keys | Read & write |
+   | Interaction limits | Read & write |
+   | Plan | Read-only |
+   | Profile | Read & write |
+   | SSH signing keys | Read & write |
+   | Starring | Read & write |
+   | Watching | Read & write |
+
+   Set **Organization permissions** (if installing on an org):
+   | Permission | Access |
+   |---|---|
+   | Administration | Read & write |
+   | Blocking users | Read & write |
+   | Custom org roles | Read & write |
+   | Custom repository roles | Read & write |
+   | Events | Read-only |
+   | Members | Read & write |
+   | Organization announcement banners | Read & write |
+   | Organization codespaces | Read & write |
+   | Organization codespaces secrets | Read & write |
+   | Organization codespaces settings | Read & write |
+   | Organization dependabot secrets | Read & write |
+   | Organization hooks | Read & write |
+   | Organization packages | Read & write |
+   | Organization personal access token requests | Read & write |
+   | Organization personal access tokens | Read & write |
+   | Organization plan | Read-only |
+   | Organization projects | Read & write |
+   | Organization secrets | Read & write |
+   | Organization self-hosted runners | Read & write |
+   | Organization user blocking | Read & write |
+   | Projects | Read & write |
+   | Team discussions | Read & write |
 
 4. Under **Where can this GitHub App be installed?** — choose "Only on this account" unless you need org-wide.
 
