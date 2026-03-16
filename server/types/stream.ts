@@ -32,9 +32,7 @@ export interface StreamTask {
 export interface Stream {
   channel: string;
   client: WebClient;
-  flushTimer?: ReturnType<typeof setTimeout>;
   noop?: true;
-  pendingChunks: (TaskChunk | PlanChunk)[];
   tasks: Map<string, StreamTask>;
   thought: boolean;
   ts: string;
