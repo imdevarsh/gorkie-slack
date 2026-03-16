@@ -2,24 +2,19 @@ import { createAppAuth } from '@octokit/auth-app';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 
-export async function createToken(): Promise<string | null> {
-  try {
-    const auth = createAppAuth({
-      appId: env.GITHUB_APP_ID,
-      privateKey: Buffer.from(env.GITHUB_APP_PRIVATE_KEY, 'base64').toString(
-        'utf8'
-      ),
-      installationId: env.GITHUB_APP_INSTALLATION_ID,
-    });
+export async function createToken(): Promise<string> {
+  const auth = createAppAuth({
+    appId: env.GITHUB_APP_ID,
+    privateKey: Buffer.from(env.GITHUB_APP_PRIVATE_KEY, 'base64').toString(
+      'utf8'
+    ),
+    installationId: env.GITHUB_APP_INSTALLATION_ID,
+  });
 
-    const { token } = await auth({ type: 'installation' });
+  const { token } = await auth({ type: 'installation' });
 
-    logger.debug('[github] Created installation token');
-    return token;
-  } catch (error) {
-    logger.error({ error }, '[github] Failed to create installation token');
-    return null;
-  }
+  logger.debug('[github] Created installation token');
+  return token;
 }
 
 export async function revokeToken(token: string): Promise<void> {
