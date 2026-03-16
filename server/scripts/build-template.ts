@@ -61,6 +61,12 @@ async function main(): Promise<void> {
         { noInstallRecommends: true }
       )
       .runCmd([
+        'mkdir -p -m 755 /etc/apt/keyrings',
+        'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null',
+        'chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg',
+        'echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null',
+        'apt-get update',
+        'apt-get install -y --no-install-recommends gh',
         'if command -v fdfind >/dev/null 2>&1; then ln -sf "$(command -v fdfind)" /usr/local/bin/fd; fi',
         'curl -fsSL https://deb.nodesource.com/setup_24.x | bash -',
         'apt-get install -y nodejs',
@@ -72,6 +78,7 @@ async function main(): Promise<void> {
         'bash -lc "yes | agent-browser install --with-deps"',
         'npx --yes skills add vercel-labs/agent-browser --skill agent-browser --yes',
         'npx --yes skills add https://github.com/agentmail-to/agentmail-skills --skill agentmail --yes',
+        'npx --yes skills add https://github.com/github/awesome-copilot --skill gh-cli --yes',
         'mkdir -p /home/user/attachments /home/user/output',
         'chown -R user:user /home/user/attachments /home/user/output',
       ])

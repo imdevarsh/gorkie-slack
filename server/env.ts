@@ -38,6 +38,10 @@ export const env = createEnv({
     E2B_API_KEY: z.string().min(1),
     // Sandbox
     AGENTMAIL_API_KEY: z.string().min(1).startsWith('am_'),
+    // GitHub App
+    GITHUB_APP_ID: z.coerce.number().optional(),
+    GITHUB_APP_PRIVATE_KEY: z.string().optional(),
+    GITHUB_APP_INSTALLATION_ID: z.coerce.number().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

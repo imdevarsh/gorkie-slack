@@ -211,14 +211,16 @@ export const sandbox = ({
           });
           if (env.NODE_ENV === 'production') {
             // Only pause in development to allow inspection
-            await pauseSession(context, runtime.sandbox.sandboxId).catch(
-              (error: unknown) => {
-                logger.debug(
-                  { ...toLogError(error), ctxId },
-                  '[sandbox] Failed to pause sandbox session'
-                );
-              }
-            );
+            await pauseSession(
+              context,
+              runtime.sandbox.sandboxId,
+              runtime.tokens
+            ).catch((error: unknown) => {
+              logger.debug(
+                { ...toLogError(error), ctxId },
+                '[sandbox] Failed to pause sandbox session'
+              );
+            });
           }
         }
       }

@@ -49,7 +49,8 @@
         "noExcessiveCognitiveComplexity": "off"
       },
       "performance": {
-        "noBarrelFile": "error"
+        "noBarrelFile": "error",
+        "noNamespaceImport": "off"
       },
       "suspicious": {
         "noEmptyBlockStatements": "error"
@@ -59,7 +60,7 @@
   },
   "overrides": [
     {
-      "includes": ["server/types/index.ts"],
+      "includes": ["server/types/index.ts", "server/lib/github/index.ts"],
       "linter": {
         "rules": {
           "performance": {
