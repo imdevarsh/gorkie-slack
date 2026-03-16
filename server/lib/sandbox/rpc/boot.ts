@@ -11,7 +11,8 @@ const PTY_TERM = 'dumb';
 
 export async function boot(
   sandbox: Sandbox,
-  sessionId?: string
+  sessionId?: string,
+  envs?: Record<string, string>
 ): Promise<PiRpcClient> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -24,6 +25,7 @@ export async function boot(
     envs: {
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
       AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
+      ...envs,
       HOME: config.runtime.workdir,
       TERM: PTY_TERM,
     },

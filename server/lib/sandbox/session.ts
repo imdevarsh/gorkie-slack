@@ -11,6 +11,12 @@ import {
 import { env } from '~/env';
 import { systemPrompt } from '~/lib/ai/prompts';
 import logger from '~/lib/logger';
+import {
+  revokeTokens,
+  type SandboxTokens,
+  setupTokens,
+  tokensToEnvs,
+} from '~/lib/sandbox/tokens';
 import type { ResolvedSandboxSession, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
@@ -72,7 +78,8 @@ async function createSandbox(
 
   try {
     await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
-    const client = await boot(sandbox);
+    const tokens = await setupTokens();
+    const client = await boot(sandbox, undefined, tokensToEnvs(tokens));
     const { sessionId } = await client.getState();
 
     await upsert({
@@ -86,7 +93,7 @@ async function createSandbox(
       '[sandbox] Created sandbox'
     );
 
-    return { client, sandbox };
+    return { client, sandbox, tokens };
   } catch (error) {
     await Sandbox.kill(sandbox.sandboxId, { apiKey: env.E2B_API_KEY }).catch(
       () => null
@@ -109,7 +116,8 @@ async function resumeSandbox(
 
   await sandbox.setTimeout(config.timeoutMs);
 
-  const client = await boot(sandbox, sessionId);
+  const tokens = await setupTokens();
+  const client = await boot(sandbox, sessionId, tokensToEnvs(tokens));
 
   const state = await client.getState();
   logger.debug(
@@ -124,7 +132,7 @@ async function resumeSandbox(
   });
   await markActivity(threadId);
 
-  return { client, sandbox };
+  return { client, sandbox, tokens };
 }
 
 export async function resolveSession(
@@ -162,18 +170,23 @@ export async function resolveSession(
 
 export async function pauseSession(
   context: SlackMessageContext,
-  sandboxId: string
+  sandboxId: string,
+  tokens?: SandboxTokens
 ): Promise<void> {
   const threadId = getContextId(context);
 
-  try {
-    await Sandbox.betaPause(sandboxId, { apiKey: env.E2B_API_KEY });
-    await updateStatus(threadId, 'paused');
-    logger.info({ threadId, sandboxId }, '[sandbox] Paused sandbox');
-  } catch (error) {
-    logger.warn(
-      { ...toLogError(error), threadId, sandboxId },
-      '[sandbox] Failed to pause sandbox'
-    );
-  }
+  await Promise.all([
+    Sandbox.betaPause(sandboxId, { apiKey: env.E2B_API_KEY })
+      .then(() => updateStatus(threadId, 'paused'))
+      .then(() => {
+        logger.info({ threadId, sandboxId }, '[sandbox] Paused sandbox');
+      })
+      .catch((error: unknown) => {
+        logger.warn(
+          { ...toLogError(error), threadId, sandboxId },
+          '[sandbox] Failed to pause sandbox'
+        );
+      }),
+    tokens ? revokeTokens(tokens) : Promise.resolve(),
+  ]);
 }

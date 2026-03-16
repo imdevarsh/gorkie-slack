@@ -25,6 +25,7 @@
     "@langfuse/otel": "^4.6.1",
     "@mariozechner/pi-coding-agent": "^0.54.0",
     "@neondatabase/serverless": "^1.0.2",
+    "@octokit/auth-app": "^8.2.0",
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "@opentelemetry/sdk-node": "^0.212.0",
     "@sinclair/typebox": "^0.34.48",

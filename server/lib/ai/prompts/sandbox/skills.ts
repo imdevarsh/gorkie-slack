@@ -37,6 +37,27 @@ Email automation skill via AgentMail API/SDK (Node and Python). Supports inbox l
 </skill>
 
 <skill>
+<name>GitHub CLI (gh)</name>
+<description>
+GitHub CLI skill. The sandbox has \`GH_TOKEN\` set, \`gh\` is fully authenticated with no extra steps needed.
+</description>
+<use-cases>
+- Clone, push, and pull from any repo the app has access to.
+- Create and merge pull requests (\`gh pr create\`, \`gh pr merge\`).
+- Open, close, and comment on issues (\`gh issue create\`, \`gh issue comment\`).
+- Create and switch branches, then push without credential prompts.
+- List repos, view CI run status, download release assets.
+- Run \`gh api\` for any GitHub REST or GraphQL endpoint.
+</use-cases>
+<workflow>
+- Read SKILL.md first for available commands and options.
+- Use \`gh repo clone <owner>/<repo>\` rather than \`git clone\` with tokens.
+- After making changes: \`git add\`, \`git commit\`, \`git push\`, credentials are pre-configured via git.
+- Check status with \`gh auth status\` if something seems wrong.
+</workflow>
+</skill>
+
+<skill>
 <name>Hackclub Revoker</name>
 <description>
 Revoke a HackClub API token via the Revoker API.

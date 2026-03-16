@@ -1,9 +1,11 @@
 import type { Sandbox } from '@e2b/code-interpreter';
 import type { PiRpcClient } from '~/lib/sandbox/rpc/client';
+import type { SandboxTokens } from '~/lib/sandbox/tokens';
 
 export interface ResolvedSandboxSession {
   client: PiRpcClient;
   sandbox: Sandbox;
+  tokens: SandboxTokens;
 }
 
 export interface ShowFileInput {
