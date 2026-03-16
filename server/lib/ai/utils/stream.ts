@@ -27,6 +27,7 @@ export async function initStream(
       ts: '',
       client: context.client,
       tasks: new Map(),
+      pendingChunks: [],
       thought: false,
       noop: true,
     };
@@ -67,6 +68,7 @@ export async function initStream(
     ts,
     client: context.client,
     tasks: new Map(),
+    pendingChunks: [],
     thought: false,
   };
 
@@ -80,6 +82,11 @@ export async function closeStream(stream: Stream): Promise<void> {
     return;
   }
   stream.noop = true;
+  if (stream.flushTimer !== undefined) {
+    clearTimeout(stream.flushTimer);
+    stream.flushTimer = undefined;
+  }
+  await flushChunks(stream);
   try {
     await stream.client.chat.stopStream({
       channel: stream.channel,
@@ -102,13 +109,32 @@ export async function setPlanTitle(
   await safeAppend(stream, [{ type: 'plan_update', title }]);
 }
 
-export async function safeAppend(
+const FLUSH_INTERVAL_MS = 300;
+
+export function safeAppend(
   stream: Stream,
   chunks: (TaskChunk | PlanChunk)[]
-): Promise<void> {
+): void {
   if (stream.noop) {
     return;
   }
+  stream.pendingChunks.push(...chunks);
+  if (stream.flushTimer !== undefined) {
+    return;
+  }
+  stream.flushTimer = setTimeout(() => {
+    stream.flushTimer = undefined;
+    flushChunks(stream).catch((error: unknown) => {
+      logger.warn({ ...toLogError(error) }, 'Failed to flush stream chunks');
+    });
+  }, FLUSH_INTERVAL_MS);
+}
+
+async function flushChunks(stream: Stream): Promise<void> {
+  if (stream.pendingChunks.length === 0) {
+    return;
+  }
+  const chunks = stream.pendingChunks.splice(0);
   try {
     await stream.client.chat.appendStream({
       channel: stream.channel,
