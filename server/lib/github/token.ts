@@ -3,16 +3,6 @@ import { env } from '~/env';
 import logger from '~/lib/logger';
 
 export async function createToken(): Promise<string | null> {
-  if (
-    !(
-      env.GITHUB_APP_ID &&
-      env.GITHUB_APP_PRIVATE_KEY &&
-      env.GITHUB_APP_INSTALLATION_ID
-    )
-  ) {
-    return null;
-  }
-
   try {
     const auth = createAppAuth({
       appId: env.GITHUB_APP_ID,
