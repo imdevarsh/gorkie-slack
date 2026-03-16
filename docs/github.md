@@ -61,6 +61,5 @@ GITHUB_APP_INSTALLATION_ID=12345678
 When a sandbox starts or resumes, Gorkie:
 
 1. Requests a short-lived installation access token from GitHub (~1 hour TTL)
-2. Runs `gh auth login --with-token` inside the sandbox so the `gh` CLI is fully authenticated
-3. Sets `GITHUB_TOKEN` in the sandbox PTY environment for git and other tools
-4. Revokes the token when the sandbox pauses
+2. Sets `GH_TOKEN` in the sandbox PTY environment — `gh` CLI and `git` pick it up automatically, no `gh auth login` needed
+3. Revokes the token when the sandbox pauses

@@ -1,6 +1,7 @@
 import { createAppAuth } from '@octokit/auth-app';
 import { env } from '~/env';
 import logger from '~/lib/logger';
+import { toLogError } from '~/utils/error';
 
 export async function createToken(): Promise<string> {
   const auth = createAppAuth({
@@ -29,6 +30,9 @@ export async function revokeToken(token: string): Promise<void> {
     });
     logger.debug('[github] Revoked installation token');
   } catch (error) {
-    logger.warn({ error }, '[github] Failed to revoke installation token');
+    logger.warn(
+      { ...toLogError(error) },
+      '[github] Failed to revoke installation token'
+    );
   }
 }
