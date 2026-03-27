@@ -11,13 +11,13 @@ const hackclubBase = createOpenRouter({
 
 const openrouter = createOpenRouter({
   apiKey: env.OPENROUTER_API_KEY,
+  baseURL: env.OPENROUTER_BASE_URL ?? undefined,
 });
 
 const hackclub = wrapProvider({
   provider: hackclubBase,
   languageModelMiddleware: {
     specificationVersion: 'v3',
-    // overrideModelId: ({ model }) => `override-${model.modelId}`,
     overrideProvider: () => 'hackclub',
   },
   imageModelMiddleware: {
@@ -40,9 +40,13 @@ const chatModel = createRetryable({
   retries: [
     hackclub.languageModel('google/gemini-2.5-flash'),
     hackclub.languageModel('openai/gpt-5-mini'),
-    openrouter('google/gemini-3-flash-preview'),
-    openrouter('google/gemini-2.5-flash'),
-    openrouter('openai/gpt-5-mini'),
+    ...(openrouter
+      ? [
+          openrouter.languageModel('google/gemini-3-flash-preview'),
+          openrouter.languageModel('google/gemini-2.5-flash'),
+          openrouter.languageModel('openai/gpt-5-mini'),
+        ]
+      : []),
   ],
   onError: onModelError,
 });
@@ -52,8 +56,13 @@ const summariserModel = createRetryable({
   retries: [
     hackclub.languageModel('google/gemini-2.5-flash'),
     hackclub.languageModel('openai/gpt-5-mini'),
-    openrouter('google/gemini-2.5-flash-lite-preview-09-2025'),
-    openrouter('openai/gpt-5-nano'),
+    ...(openrouter
+      ? [
+          openrouter.languageModel('google/gemini-3-flash-preview'),
+          openrouter.languageModel('google/gemini-2.5-flash'),
+          openrouter.languageModel('openai/gpt-5-nano'),
+        ]
+      : []),
   ],
   onError: onModelError,
 });

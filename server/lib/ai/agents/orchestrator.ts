@@ -67,7 +67,6 @@ export async function resolveOrchestratorTask({
     ...(title ? { title } : {}),
     ...(details ? { details } : {}),
   });
-  taskMap.delete(eventTs);
 }
 
 export async function consumeOrchestratorReasoningStream({
