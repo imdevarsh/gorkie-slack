@@ -48,18 +48,3 @@ export function getErrorDetails(error: unknown): ErrorDetails {
 
   return { name, message, statusCode, code };
 }
-
-export function formatUserFacingError(error: unknown): string {
-  const details = getErrorDetails(error);
-  const parts = [details.name];
-
-  if (details.statusCode !== undefined) {
-    parts.push(`status ${details.statusCode}`);
-  }
-
-  if (details.code) {
-    parts.push(`code ${details.code}`);
-  }
-
-  return `Something went wrong. ${parts.join(' | ')}: ${details.message}`;
-}
