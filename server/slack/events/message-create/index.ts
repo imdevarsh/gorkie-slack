@@ -62,6 +62,14 @@ async function handleMessage(
       requestHints
     );
 
+    if (!result.success && result.error && event.channel) {
+      await messageContext.client.chat.postMessage({
+        channel: event.channel,
+        thread_ts: event.thread_ts ?? event.ts,
+        text: result.error,
+      });
+    }
+
     logReply(ctxId, authorName, result, 'trigger');
     return;
   }

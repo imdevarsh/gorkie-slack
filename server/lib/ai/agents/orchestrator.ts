@@ -44,6 +44,32 @@ function normalizeReasoning(reasoningText: unknown): string {
     .join('\n');
 }
 
+export async function resolveOrchestratorTask({
+  context,
+  stream,
+  title,
+  details,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+  title?: string;
+  details?: string;
+}): Promise<void> {
+  const eventTs = context.event.event_ts;
+  const taskId = taskMap.get(eventTs);
+  if (!taskId) {
+    return;
+  }
+
+  await finishTask(stream, {
+    taskId,
+    status: 'complete',
+    ...(title ? { title } : {}),
+    ...(details ? { details } : {}),
+  });
+  taskMap.delete(eventTs);
+}
+
 export async function consumeOrchestratorReasoningStream({
   context,
   stream,
@@ -145,10 +171,7 @@ export const orchestratorAgent = ({
     async experimental_onToolCallStart() {
       const taskId = taskMap.get(context.event.event_ts);
       if (taskId) {
-        await finishTask(stream, {
-          status: 'complete',
-          taskId,
-        });
+        await resolveOrchestratorTask({ context, stream });
         return;
       }
 
@@ -160,10 +183,7 @@ export const orchestratorAgent = ({
     async onStepFinish() {
       const taskId = taskMap.get(context.event.event_ts);
       if (taskId) {
-        await finishTask(stream, {
-          status: 'complete',
-          taskId,
-        });
+        await resolveOrchestratorTask({ context, stream });
         return;
       }
 

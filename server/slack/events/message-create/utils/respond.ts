@@ -2,10 +2,12 @@ import type { ModelMessage, UserContent } from 'ai';
 import {
   consumeOrchestratorReasoningStream,
   orchestratorAgent,
+  resolveOrchestratorTask,
 } from '~/lib/ai/agents/orchestrator';
 import { setStatus } from '~/lib/ai/utils/status';
-import { closeStream, initStream } from '~/lib/ai/utils/stream';
+import { closeStream, initStream, setPlanTitle } from '~/lib/ai/utils/stream';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
+import { getErrorDetails } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
@@ -83,14 +85,31 @@ export async function generateResponse(
     await setStatus(context, { status: '' });
 
     return { success: true, toolCalls };
-  } catch (e) {
+  } catch (error) {
+    const errorDetails = getErrorDetails(error);
+    const detailParts = [errorDetails.name];
+    if (errorDetails.statusCode !== undefined) {
+      detailParts.push(`status ${errorDetails.statusCode}`);
+    }
+    if (errorDetails.code) {
+      detailParts.push(`code ${errorDetails.code}`);
+    }
+    const failureDetails = `${detailParts.join(' | ')}: ${errorDetails.message}`;
+
     if (stream) {
+      await setPlanTitle(stream, 'Generation Failed');
+      await resolveOrchestratorTask({
+        context,
+        stream,
+        title: 'Generation Failed',
+        details: failureDetails,
+      });
       await closeStream(stream);
     }
-    await setStatus(context, { status: '' });
+    await setStatus(context, { status: 'failed to generate' });
     return {
       success: false,
-      error: e instanceof Error ? e.message : String(e),
+      error: 'Oops! Something went wrong, try again later.',
     };
   }
 }
