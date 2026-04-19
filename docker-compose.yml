@@ -2,6 +2,9 @@ services:
   gorkie:
     build: .
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379
     depends_on:
       redis:
         condition: service_healthy
