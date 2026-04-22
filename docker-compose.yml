@@ -11,6 +11,8 @@ services:
       postgres:
         condition: service_healthy
     restart: always
+    volumes:
+      - ./logs:/usr/src/app/logs
 
   redis:
     image: redis:7-alpine

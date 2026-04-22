@@ -24,11 +24,17 @@ if (!(await exists(logDir))) {
   await mkdir(logDir, { recursive: true });
 }
 
+const runId = new Date()
+  .toISOString()
+  .replace('T', '_')
+  .replace(/[:.]/g, '-')
+  .slice(0, 19);
+
 const targets: TransportTargetOptions[] = [];
 
 targets.push({
   target: 'pino/file',
-  options: { destination: path.join(logDir, 'app.log') },
+  options: { destination: path.join(logDir, `${runId}.log`) },
   level: logLevel,
 });
 
