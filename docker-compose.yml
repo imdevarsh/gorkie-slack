@@ -10,13 +10,13 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    restart: always
+    restart: unless-stopped
     volumes:
       - ./logs:/usr/src/app/logs
 
   redis:
     image: redis:7-alpine
-    restart: always
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -27,7 +27,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
