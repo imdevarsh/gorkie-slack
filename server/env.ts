@@ -33,8 +33,6 @@ export const env = createEnv({
       .enum(['debug', 'info', 'warn', 'error'])
       .optional()
       .default('info'),
-    // Admins (comma-separated Slack user IDs)
-    ADMIN_IDS: z.string().optional(),
     // Exa
     EXA_API_KEY: z.string().min(1),
     // E2B
