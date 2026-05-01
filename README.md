@@ -1,4 +1,9 @@
-<h1 align="center">Gorkie (for Slack)</h4>
+<div align="center">
+  <img alt="banner" src="./.github/banner.png" />
+  <h1>
+    Gorkie (for Slack)
+  </h1>
+</div>
 
 ## 📋 Table of Contents
 
