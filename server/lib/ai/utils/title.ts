@@ -3,6 +3,7 @@ import { provider } from '~/lib/ai/providers';
 import logger from '~/lib/logger';
 import type { SlackMessageContext } from '~/types';
 import { toLogError } from '~/utils/error';
+import { cleanText, trimmed } from '~/utils/text';
 
 export async function setConversationTitle(
   context: SlackMessageContext,
@@ -15,17 +16,37 @@ export async function setConversationTitle(
     return;
   }
 
+  const prompt = trimmed(cleanText(messageText));
+  if (!prompt) {
+    return;
+  }
+
   try {
-    const { text: title } = await generateText({
+    const { text } = await generateText({
       model: provider.languageModel('summariser-model'),
-      prompt: `Generate a short 3-7 word title for a conversation that starts with this message. Reply with ONLY the title, no punctuation, no quotes:\n\n${messageText}`,
+      prompt: `Write a short Slack conversation title for the opening message below.
+
+Rules:
+- 3 to 7 words
+- plain text only
+- no quotes
+- no trailing punctuation
+- summarize the actual request, not the assistant persona
+
+Opening message:
+${prompt}`,
       maxOutputTokens: 20,
     });
+
+    const title = trimmed(cleanText(text));
+    if (!title) {
+      return;
+    }
 
     await client.assistant.threads.setTitle({
       channel_id: event.channel,
       thread_ts: event.ts,
-      title: title.trim(),
+      title,
     });
   } catch (error) {
     logger.warn(
