@@ -3,14 +3,13 @@ import { db } from '~/db';
 import { userPrompts } from '~/db/schema';
 
 export async function getUserPrompt(userId: string): Promise<string | null> {
-  const row = await db
+  const rows = await db
     .select({ prompt: userPrompts.prompt })
     .from(userPrompts)
     .where(eq(userPrompts.userId, userId))
-    .limit(1)
-    .then((rows) => rows[0] ?? null);
+    .limit(1);
 
-  return row?.prompt ?? null;
+  return rows[0]?.prompt ?? null;
 }
 
 export async function setUserPrompt(

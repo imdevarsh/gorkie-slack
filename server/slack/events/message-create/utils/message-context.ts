@@ -1,4 +1,3 @@
-import { isUserAllowed } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
 import type {
   MessageEventArgs,
@@ -17,8 +16,8 @@ function isSlackFile(value: unknown): value is SlackFile {
 
 function normalizeEvent(event: SlackRawMessageEvent): SlackMessageEvent | null {
   const record = asRecord(event);
-  const channel = typeof event.channel === 'string' ? event.channel : undefined;
-  const ts = typeof event.ts === 'string' ? event.ts : undefined;
+  const channel = typeof record?.channel === 'string' ? record.channel : null;
+  const ts = typeof record?.ts === 'string' ? record.ts : null;
   const eventTs = typeof record?.event_ts === 'string' ? record.event_ts : ts;
   if (!(channel && ts && eventTs)) {
     return null;
@@ -91,12 +90,12 @@ export function toMessageContext(
     event: normalized,
     client,
     botUserId: context.botUserId,
-    teamId: context.teamId ?? asTeamId(bodyRecord),
+    teamId:
+      context.teamId ??
+      (typeof bodyRecord?.team_id === 'string'
+        ? bodyRecord.team_id
+        : undefined),
   } satisfies SlackMessageContext;
-}
-
-function asTeamId(record: Record<string, unknown> | null): string | undefined {
-  return typeof record?.team_id === 'string' ? record.team_id : undefined;
 }
 
 export function shouldHandleMessage(
@@ -104,10 +103,6 @@ export function shouldHandleMessage(
 ): event is SlackMessageEvent & { user: string } {
   const messageText = event.text ?? '';
   return Boolean(event.user) && isUsableMessage(messageText);
-}
-
-export function canUseBot(userId: string): boolean {
-  return isUserAllowed(userId);
 }
 
 export async function getAuthorName(

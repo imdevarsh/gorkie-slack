@@ -1,4 +1,5 @@
 import { env } from '~/env';
+import { isUserAllowed } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { MessageEventArgs } from '~/types';
@@ -7,7 +8,6 @@ import { toLogError } from '~/utils/error';
 import { logReply } from '~/utils/log';
 import { getTrigger } from '~/utils/triggers';
 import {
-  canUseBot,
   getAuthorName,
   hasSupportedSubtype,
   shouldHandleMessage,
@@ -35,7 +35,7 @@ async function handleMessage(
   const { messages, requestHints } = await buildChatContext(messageContext);
 
   if (trigger.type) {
-    if (!canUseBot(userId)) {
+    if (!isUserAllowed(userId)) {
       if (!event.channel) {
         return;
       }
@@ -74,7 +74,7 @@ async function handleMessage(
     return;
   }
 
-  if (!canUseBot(userId)) {
+  if (!isUserAllowed(userId)) {
     return;
   }
 }

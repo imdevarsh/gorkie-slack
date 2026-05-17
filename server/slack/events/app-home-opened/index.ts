@@ -19,21 +19,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function getActionValue(action: unknown): string {
-  const value = asRecord(action)?.value;
-  return typeof value === 'string' ? value : '';
-}
-
-function getTriggerId(body: unknown): string {
-  const triggerId = asRecord(body)?.trigger_id;
-  return typeof triggerId === 'string' ? triggerId : '';
-}
-
-function getPlainTextInputValue(input: unknown): string | undefined {
-  const value = asRecord(input)?.value;
-  return typeof value === 'string' ? value : undefined;
-}
-
 async function publishHome(client: WebClient, userId: string): Promise<void> {
   const [tasks, userPrompt] = await Promise.all([
     listScheduledTasksByUser(userId),
@@ -61,7 +46,8 @@ export function register(app: App): void {
   app.action('home_cancel_task', async ({ ack, action, body, client }) => {
     await ack();
     const userId = body.user.id;
-    const taskId = getActionValue(action);
+    const actionValue = asRecord(action)?.value;
+    const taskId = typeof actionValue === 'string' ? actionValue : '';
     try {
       await cancelScheduledTaskForUser(taskId, userId);
       await publishHome(client, userId);
@@ -77,9 +63,10 @@ export function register(app: App): void {
     await ack();
     const userId = body.user.id;
     const currentPrompt = await getUserPrompt(userId).catch(() => null);
+    const triggerId = asRecord(body)?.trigger_id;
 
     await client.views.open({
-      trigger_id: getTriggerId(body),
+      trigger_id: typeof triggerId === 'string' ? triggerId : '',
       view: buildPromptModal(currentPrompt),
     });
   });
@@ -87,8 +74,10 @@ export function register(app: App): void {
   app.view('home_save_prompt', async ({ ack, view, body, client }) => {
     await ack();
     const userId = body.user.id;
-    const promptInput = view.state.values.prompt_block?.prompt_input;
-    const prompt = getPlainTextInputValue(promptInput)?.trim() ?? '';
+    const promptInput = asRecord(
+      view.state.values.prompt_block?.prompt_input
+    )?.value;
+    const prompt = (typeof promptInput === 'string' ? promptInput : '').trim();
 
     try {
       if (prompt) {

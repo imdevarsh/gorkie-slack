@@ -16,43 +16,41 @@ import type { ScheduledTask } from '~/db/schema';
 const MAX_PROMPT_DISPLAY = 200;
 const MAX_TASK_PROMPT = 80;
 
-function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max)}...` : text;
-}
-
-function formatNextRun(date: Date): string {
-  if (isPast(date)) {
-    return 'overdue';
-  }
-  return `in ${formatDistanceToNowStrict(date, { roundingMethod: 'floor' })}`;
-}
-
-function formatLastRun(task: ScheduledTask): string {
-  if (!task.lastRunAt) {
-    return 'Never run';
-  }
-
-  let icon = '';
-  if (task.lastStatus === 'success') {
-    icon = ' [ok]';
-  } else if (task.lastStatus === 'error') {
-    icon = ' [error]';
-  }
-  return `${formatDistanceToNowStrict(task.lastRunAt, {
-    addSuffix: true,
-    roundingMethod: 'floor',
-  })}${icon}`;
-}
-
 function buildTaskBlock(task: ScheduledTask) {
   const destination =
     task.destinationType === 'dm' ? 'your DM' : `<#${task.destinationId}>`;
+  let title = task.prompt;
+  if (task.prompt.length > MAX_TASK_PROMPT) {
+    title = `${task.prompt.slice(0, MAX_TASK_PROMPT)}...`;
+  }
+
+  let nextRunText = 'overdue';
+  if (!isPast(task.nextRunAt)) {
+    nextRunText = `in ${formatDistanceToNowStrict(task.nextRunAt, {
+      roundingMethod: 'floor',
+    })}`;
+  }
+
+  let lastRunStatus = '';
+  if (task.lastStatus === 'success') {
+    lastRunStatus = ' [ok]';
+  } else if (task.lastStatus === 'error') {
+    lastRunStatus = ' [error]';
+  }
+
+  let lastRunText = 'Never run';
+  if (task.lastRunAt) {
+    lastRunText = `${formatDistanceToNowStrict(task.lastRunAt, {
+      addSuffix: true,
+      roundingMethod: 'floor',
+    })}${lastRunStatus}`;
+  }
 
   return Blocks.Section({
     text: [
-      `*${truncate(task.prompt, MAX_TASK_PROMPT)}*`,
+      `*${title}*`,
       `\`${task.cronExpression}\` (${task.timezone}) -> ${destination}`,
-      `Next: ${formatNextRun(task.nextRunAt)} · Last: ${formatLastRun(task)}`,
+      `Next: ${nextRunText} · Last: ${lastRunText}`,
     ].join('\n'),
   }).accessory(
     Elements.Button({
@@ -76,9 +74,13 @@ export function buildHomeView(
   tasks: ScheduledTask[],
   userPrompt: string | null
 ): SlackHomeTabDto {
-  const promptDisplay = userPrompt
-    ? truncate(userPrompt, MAX_PROMPT_DISPLAY)
-    : '_No custom instructions set._';
+  let promptDisplay = '_No custom instructions set._';
+  if (userPrompt) {
+    promptDisplay =
+      userPrompt.length > MAX_PROMPT_DISPLAY
+        ? `${userPrompt.slice(0, MAX_PROMPT_DISPLAY)}...`
+        : userPrompt;
+  }
 
   const scheduledTasksLabel =
     tasks.length > 0
