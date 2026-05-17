@@ -11,13 +11,17 @@ export async function setConversationTitle(
 ): Promise<void> {
   const { event, client } = context;
 
-  // Only set title for new DM threads (not thread replies)
-  if (event.channel_type !== 'im' || event.thread_ts) {
+  if (event.channel_type !== 'im') {
     return;
   }
 
   const prompt = trimmed(cleanText(messageText));
   if (!prompt) {
+    return;
+  }
+
+  const threadTs = event.thread_ts ?? event.ts;
+  if (!threadTs) {
     return;
   }
 
@@ -45,7 +49,7 @@ ${prompt}`,
 
     await client.assistant.threads.setTitle({
       channel_id: event.channel,
-      thread_ts: event.ts,
+      thread_ts: threadTs,
       title,
     });
   } catch (error) {
