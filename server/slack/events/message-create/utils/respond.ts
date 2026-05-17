@@ -1,4 +1,8 @@
-import type { ModelMessage, UserContent } from 'ai';
+import {
+  NoOutputGeneratedError,
+  type ModelMessage,
+  type UserContent,
+} from 'ai';
 import {
   consumeOrchestratorReasoningStream,
   orchestratorAgent,
@@ -109,7 +113,10 @@ export async function generateResponse(
     await setStatus(context, { status: 'failed to generate' });
     return {
       success: false,
-      error: 'Oops! Something went wrong, try again later.',
+      error:
+        error instanceof NoOutputGeneratedError
+          ? 'Oops! Gorkie is out of credits right now. Please try again later.'
+          : 'Oops! Something went wrong, try again later.',
     };
   }
 }
