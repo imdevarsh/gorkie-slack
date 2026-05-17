@@ -1,6 +1,7 @@
 import {
-  NoOutputGeneratedError,
+  type LanguageModel,
   type ModelMessage,
+  NoOutputGeneratedError,
   type UserContent,
 } from 'ai';
 import {
@@ -8,6 +9,7 @@ import {
   orchestratorAgent,
   resolveOrchestratorTask,
 } from '~/lib/ai/agents/orchestrator';
+import { consentFallbackModel } from '~/lib/ai/providers';
 import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '~/lib/ai/utils/stream';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
@@ -15,10 +17,20 @@ import { getErrorDetails } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
 
+const OUT_OF_CREDITS_ERROR = consentFallbackModel
+  ? 'Gorkie is out of credits right now. Use `!retry <your message>` to resend your message through Google (no conversation history included).'
+  : 'Gorkie is out of credits right now. Try again later.';
+
 export async function generateResponse(
   context: SlackMessageContext,
   messages: ModelMessage[],
-  requestHints: ChatRequestHints
+  requestHints: ChatRequestHints,
+  options?: {
+    modelOverride?: LanguageModel;
+    withoutHistory?: boolean;
+    overrideMessageText?: string;
+    forceDirectReply?: boolean;
+  }
 ) {
   let stream: Stream | null = null;
 
@@ -42,7 +54,8 @@ export async function generateResponse(
     stream = await initStream(context);
 
     const userId = context.event.user;
-    const messageText = context.event.text ?? '';
+    const messageText =
+      options?.overrideMessageText ?? context.event.text ?? '';
     const files = context.event.files;
     const authorName = userId
       ? await getSlackUserName(context.client, userId)
@@ -50,8 +63,7 @@ export async function generateResponse(
 
     const imageContents = await processSlackFiles(files);
 
-    const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
-
+    const replyPrompt = `${options?.forceDirectReply ? 'Answer this message directly. Do not skip it.\n\n' : ''}You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
     let currentMessageContent: UserContent;
     if (imageContents.length > 0) {
       currentMessageContent = [
@@ -67,16 +79,24 @@ export async function generateResponse(
       requestHints,
       files,
       stream,
+      ...(options?.modelOverride ? { model: options.modelOverride } : {}),
     });
 
     const streamResult = await agent.stream({
-      messages: [
-        ...messages,
-        {
-          role: 'user',
-          content: currentMessageContent,
-        },
-      ],
+      messages: options?.withoutHistory
+        ? [
+            {
+              role: 'user',
+              content: currentMessageContent,
+            },
+          ]
+        : [
+            ...messages,
+            {
+              role: 'user',
+              content: currentMessageContent,
+            },
+          ],
     });
     await consumeOrchestratorReasoningStream({
       context,
@@ -90,6 +110,7 @@ export async function generateResponse(
 
     return { success: true, toolCalls };
   } catch (error) {
+    const isOutOfCredits = error instanceof NoOutputGeneratedError;
     const errorDetails = getErrorDetails(error);
     const detailParts = [errorDetails.name];
     if (errorDetails.statusCode !== undefined) {
@@ -101,22 +122,24 @@ export async function generateResponse(
     const failureDetails = `${detailParts.join(' | ')}: ${errorDetails.message}`;
 
     if (stream) {
-      await setPlanTitle(stream, 'Generation Failed');
+      await setPlanTitle(
+        stream,
+        isOutOfCredits ? 'Temporarily Unavailable' : 'Generation Failed'
+      );
       await resolveOrchestratorTask({
         context,
         stream,
-        title: 'Generation Failed',
-        details: failureDetails,
+        title: isOutOfCredits ? 'Temporarily Unavailable' : 'Generation Failed',
+        details: isOutOfCredits ? OUT_OF_CREDITS_ERROR : failureDetails,
       });
       await closeStream(stream);
     }
     await setStatus(context, { status: 'failed to generate' });
     return {
       success: false,
-      error:
-        error instanceof NoOutputGeneratedError
-          ? 'Oops! Gorkie is out of credits right now. Please try again later.'
-          : 'Oops! Something went wrong, try again later.',
+      error: isOutOfCredits
+        ? OUT_OF_CREDITS_ERROR
+        : 'Oops! Something went wrong, try again later.',
     };
   }
 }

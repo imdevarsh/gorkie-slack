@@ -27,6 +27,7 @@ export const env = createEnv({
     HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
     OPENROUTER_API_KEY: z.string().min(1).startsWith('sk-'),
     OPENROUTER_BASE_URL: z.string().url().optional(),
+    GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
     // Logging
     LOG_DIRECTORY: z.string().optional().default('logs'),
     LOG_LEVEL: z

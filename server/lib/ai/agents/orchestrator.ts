@@ -1,4 +1,4 @@
-import { stepCountIs, ToolLoopAgent } from 'ai';
+import { type LanguageModel, stepCountIs, ToolLoopAgent } from 'ai';
 import { systemPrompt } from '~/lib/ai/prompts';
 import { provider } from '~/lib/ai/providers';
 import { cancelScheduledTask } from '~/lib/ai/tools/chat/cancel-scheduled-task';
@@ -113,14 +113,16 @@ export const orchestratorAgent = ({
   requestHints,
   files,
   stream,
+  model = provider.languageModel('chat-model'),
 }: {
   context: SlackMessageContext;
   requestHints: ChatRequestHints;
   files?: SlackFile[];
   stream: Stream;
+  model?: LanguageModel;
 }) =>
   new ToolLoopAgent({
-    model: provider.languageModel('chat-model'),
+    model,
     instructions: systemPrompt({
       agent: 'chat',
       requestHints,

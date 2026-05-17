@@ -21,6 +21,7 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.75",
     "@e2b/code-interpreter": "^2.3.3",
     "@langfuse/otel": "^4.6.1",
     "@mariozechner/pi-coding-agent": "^0.54.0",

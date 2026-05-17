@@ -1,4 +1,5 @@
 import { env } from '~/env';
+import { consentFallbackModel } from '~/lib/ai/providers';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
 import type { MessageEventArgs } from '~/types';
@@ -17,6 +18,16 @@ import { generateResponse } from './utils/respond';
 
 export const name = 'message';
 
+const RETRY_TRIGGER_PATTERN = /\B!retry\b/i;
+
+function parseRetryMessage(messageText: string) {
+  if (!RETRY_TRIGGER_PATTERN.test(messageText)) {
+    return null;
+  }
+
+  return messageText.replace(RETRY_TRIGGER_PATTERN, '').trim();
+}
+
 async function handleMessage(
   messageContext: NonNullable<ReturnType<typeof toMessageContext>>
 ) {
@@ -31,8 +42,23 @@ async function handleMessage(
 
   const authorName = await getAuthorName(messageContext, ctxId);
   const content = messageText;
+  const retryMessage = parseRetryMessage(messageText);
+  const isRetry = retryMessage !== null;
+  const messageToProcess = isRetry ? retryMessage : messageText;
 
-  const { messages, requestHints } = await buildChatContext(messageContext);
+  const responseContext = isRetry
+    ? {
+        ...messageContext,
+        event: {
+          ...messageContext.event,
+          text: messageToProcess,
+        },
+      }
+    : messageContext;
+
+  const { messages, requestHints } = await buildChatContext(responseContext, {
+    ...(isRetry ? { messages: [] } : {}),
+  });
 
   if (trigger.type) {
     if (!canUseBot(userId)) {
@@ -52,14 +78,23 @@ async function handleMessage(
       {
         ctxId,
         message: `${authorName}: ${content}`,
+        isRetry,
       },
       `Triggered by ${trigger.type}`
     );
 
     const result = await generateResponse(
-      messageContext,
+      responseContext,
       messages,
-      requestHints
+      requestHints,
+      isRetry
+        ? {
+            modelOverride: consentFallbackModel,
+            withoutHistory: true,
+            overrideMessageText: messageToProcess,
+            forceDirectReply: true,
+          }
+        : undefined
     );
 
     if (!result.success && result.error && event.channel) {

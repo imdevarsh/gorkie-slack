@@ -1,3 +1,4 @@
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { customProvider, wrapProvider } from 'ai';
 import { createRetryable } from 'ai-retry';
@@ -12,6 +13,10 @@ const hackclubBase = createOpenRouter({
 const openrouter = createOpenRouter({
   apiKey: env.OPENROUTER_API_KEY,
   baseURL: env.OPENROUTER_BASE_URL ?? undefined,
+});
+
+const googleConsentFallback = createGoogleGenerativeAI({
+  apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
 const hackclub = wrapProvider({
@@ -79,3 +84,6 @@ export const provider = customProvider({
     'image-model': hackclub.imageModel('google/gemini-3.1-flash-image-preview'),
   },
 });
+
+export const consentFallbackModel =
+  googleConsentFallback.languageModel('gemini-2.5-flash');
