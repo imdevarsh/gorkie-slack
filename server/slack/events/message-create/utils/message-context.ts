@@ -61,10 +61,10 @@ export function toMessageContext(
   args: MessageEventArgs
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
+  const eventRecord = asRecord(event);
+  const bodyRecord = asRecord(body);
   const userId =
-    typeof (event as { user?: unknown }).user === 'string'
-      ? (event as { user: string }).user
-      : undefined;
+    typeof eventRecord?.user === 'string' ? eventRecord.user : undefined;
 
   if (!hasSupportedSubtype(args)) {
     return null;
@@ -91,12 +91,12 @@ export function toMessageContext(
     event: normalized,
     client,
     botUserId: context.botUserId,
-    teamId:
-      context.teamId ??
-      (typeof body === 'object' && body
-        ? (body as { team_id?: string }).team_id
-        : undefined),
+    teamId: context.teamId ?? asTeamId(bodyRecord),
   } satisfies SlackMessageContext;
+}
+
+function asTeamId(record: Record<string, unknown> | null): string | undefined {
+  return typeof record?.team_id === 'string' ? record.team_id : undefined;
 }
 
 export function shouldHandleMessage(

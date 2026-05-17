@@ -4,12 +4,18 @@ import { buildCache } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
 import type { SlackApp } from '~/types';
 import { events } from './events';
+import { register as registerAppHomeOpened } from './events/app-home-opened';
+import { register as registerAssistantThreadContextChanged } from './events/assistant-thread-context-changed';
+import { register as registerAssistantThreadStarted } from './events/assistant-thread-started';
 
 function registerApp(app: App) {
   buildCache(app);
   for (const event of events) {
     app.event(event.name, event.execute);
   }
+  registerAssistantThreadStarted(app);
+  registerAssistantThreadContextChanged(app);
+  registerAppHomeOpened(app);
 }
 
 export function createSlackApp(): SlackApp {

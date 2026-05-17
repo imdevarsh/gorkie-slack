@@ -22,7 +22,9 @@
       "!.vercel",
       "!bun.lock",
       "!**/*.md",
-      "!**/*.mdx"
+      "!**/*.mdx",
+      "!**/.agents",
+      "!**/.claude"
     ]
   },
   "formatter": {

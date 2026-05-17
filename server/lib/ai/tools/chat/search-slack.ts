@@ -4,20 +4,11 @@ import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
 import type { SlackMessageContext, SlackSearchResponse, Stream } from '~/types';
 import { getContextId } from '~/utils/context';
+import { asRecord } from '~/utils/record';
 
 function getActionToken(event: unknown): string | undefined {
-  if (!event || typeof event !== 'object') {
-    return undefined;
-  }
-
-  const assistantThread = (event as { assistant_thread?: unknown })
-    .assistant_thread;
-  if (!assistantThread || typeof assistantThread !== 'object') {
-    return undefined;
-  }
-
-  const actionToken = (assistantThread as { action_token?: unknown })
-    .action_token;
+  const assistantThread = asRecord(asRecord(event)?.assistant_thread);
+  const actionToken = assistantThread?.action_token;
   return typeof actionToken === 'string' ? actionToken : undefined;
 }
 

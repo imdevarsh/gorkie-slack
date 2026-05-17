@@ -6,6 +6,7 @@ import {
 } from '~/lib/ai/agents/orchestrator';
 import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '~/lib/ai/utils/stream';
+import { setConversationTitle } from '~/lib/ai/utils/title';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
 import { getErrorDetails } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
@@ -39,6 +40,8 @@ export async function generateResponse(
 
     const userId = context.event.user;
     const messageText = context.event.text ?? '';
+
+    setConversationTitle(context, messageText).catch(() => undefined);
     const files = context.event.files;
     const authorName = userId
       ? await getSlackUserName(context.client, userId)
