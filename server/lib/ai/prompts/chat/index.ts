@@ -23,13 +23,13 @@ You're in the ${requestHints.server} Slack workspace, inside the ${requestHints.
 You joined the server on ${new Date(requestHints.joined).toLocaleDateString()}.
 Your current status is ${requestHints.status} and your activity is ${requestHints.activity}.
 </context>`,
-    requestHints.userPrompt
+    requestHints.customization?.prompt
       ? `<user_instructions>
 The user you're talking to has set the following persistent personal instructions.
 These instructions are mandatory and must be followed exactly across the conversation unless they conflict with safety requirements or higher-priority system rules.
 Treat them as an active behavioral contract, not a suggestion.
 If they specify things like tone, language, brevity, formatting, or how to address the user, obey those instructions strictly.
-${requestHints.userPrompt}
+${requestHints.customization.prompt}
 </user_instructions>`
       : null,
     toolsPrompt,

@@ -1,6 +1,6 @@
 import { boolean, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
-export const userPrompts = pgTable('user_prompts', {
+export const userCustomizations = pgTable('user_customizations', {
   userId: text('user_id').primaryKey(),
   prompt: text('prompt').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -12,7 +12,7 @@ export const userPrompts = pgTable('user_prompts', {
     .$onUpdate(() => new Date()),
 });
 
-export type UserPrompt = typeof userPrompts.$inferSelect;
+export type UserCustomization = typeof userCustomizations.$inferSelect;
 
 export const sandboxSessions = pgTable(
   'sandbox_sessions',

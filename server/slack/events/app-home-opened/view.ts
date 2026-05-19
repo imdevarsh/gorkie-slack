@@ -70,8 +70,9 @@ function buildTaskBlock(task: ScheduledTask) {
 
 export function buildHomeView(
   tasks: ScheduledTask[],
-  userPrompt: string | null
+  customization: { prompt?: string } | null
 ): SlackHomeTabDto {
+  const userPrompt = customization?.prompt ?? null;
   let promptDisplay = '_No custom instructions set._';
   if (userPrompt) {
     promptDisplay =
