@@ -51,15 +51,13 @@ export async function generateResponse(
 
     const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
 
-    let currentMessageContent: UserContent;
-    if (imageContents.length > 0) {
-      currentMessageContent = [
-        { type: 'text' as const, text: replyPrompt },
-        ...imageContents,
-      ];
-    } else {
-      currentMessageContent = replyPrompt;
-    }
+    const currentMessageContent: UserContent =
+      imageContents.length > 0
+        ? ([
+            { type: 'text', text: replyPrompt },
+            ...imageContents,
+          ] as UserContent)
+        : replyPrompt;
 
     const agent = orchestratorAgent({
       context,

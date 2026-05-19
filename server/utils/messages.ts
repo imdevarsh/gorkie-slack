@@ -45,7 +45,3 @@ export function buildHistorySnippet(
     .filter(Boolean)
     .join('\n');
 }
-
-export function isUsableMessage(message: string): boolean {
-  return !message.startsWith('##');
-}

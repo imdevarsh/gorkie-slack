@@ -1,4 +1,12 @@
-import type { App } from '@slack/bolt';
+import type {
+  AllMiddlewareArgs,
+  App,
+  BlockAction,
+  ButtonAction,
+  SlackActionMiddlewareArgs,
+  SlackViewMiddlewareArgs,
+  ViewSubmitAction,
+} from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
 import {
   cancelScheduledTaskForUser,
@@ -9,22 +17,21 @@ import {
   getUserPrompt,
   setUserPrompt,
 } from '~/db/queries/user-prompts';
+import { PERSONAS } from '~/lib/ai/prompts/chat/presets';
 import logger from '~/lib/logger';
 import { toLogError } from '~/utils/error';
+import { asRecord } from '~/utils/record';
 import { buildHomeView, buildPromptModal } from './view';
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null
-    ? (value as Record<string, unknown>)
-    : null;
-}
+type ActionArgs = SlackActionMiddlewareArgs<BlockAction<ButtonAction>> &
+  AllMiddlewareArgs;
+type ViewArgs = SlackViewMiddlewareArgs<ViewSubmitAction> & AllMiddlewareArgs;
 
 async function publishHome(client: WebClient, userId: string): Promise<void> {
   const [tasks, userPrompt] = await Promise.all([
     listScheduledTasksByUser(userId),
     getUserPrompt(userId),
   ]);
-
   await client.views.publish({
     user_id: userId,
     view: buildHomeView(tasks, userPrompt),
@@ -43,58 +50,35 @@ export function register(app: App): void {
     }
   });
 
-  app.action('home_cancel_task', async ({ ack, action, body, client }) => {
-    await ack();
-    const userId = body.user.id;
-    const actionValue = asRecord(action)?.value;
-    const taskId = typeof actionValue === 'string' ? actionValue : '';
-    try {
-      await cancelScheduledTaskForUser(taskId, userId);
-      await publishHome(client, userId);
-    } catch (error) {
-      logger.warn(
-        { ...toLogError(error), userId, taskId },
-        'Failed to cancel task from App Home'
-      );
+  app.action(
+    'home_cancel_task',
+    async ({ ack, action, body, client }: ActionArgs) => {
+      await ack();
+      const userId = body.user.id;
+      const taskId = typeof action.value === 'string' ? action.value : '';
+      try {
+        await cancelScheduledTaskForUser(taskId, userId);
+        await publishHome(client, userId);
+      } catch (error) {
+        logger.warn(
+          { ...toLogError(error), userId, taskId },
+          'Failed to cancel task from App Home'
+        );
+      }
     }
-  });
+  );
 
-  app.action('home_edit_prompt', async ({ ack, body, client }) => {
+  app.action('home_edit_prompt', async ({ ack, body, client }: ActionArgs) => {
     await ack();
     const userId = body.user.id;
     const currentPrompt = await getUserPrompt(userId).catch(() => null);
-    const triggerId = asRecord(body)?.trigger_id;
-
     await client.views.open({
-      trigger_id: typeof triggerId === 'string' ? triggerId : '',
+      trigger_id: body.trigger_id,
       view: buildPromptModal(currentPrompt),
     });
   });
 
-  app.view('home_save_prompt', async ({ ack, view, body, client }) => {
-    await ack();
-    const userId = body.user.id;
-    const promptInput = asRecord(
-      view.state.values.prompt_block?.prompt_input
-    )?.value;
-    const prompt = (typeof promptInput === 'string' ? promptInput : '').trim();
-
-    try {
-      if (prompt) {
-        await setUserPrompt(userId, prompt);
-      } else {
-        await clearUserPrompt(userId);
-      }
-      await publishHome(client, userId);
-    } catch (error) {
-      logger.warn(
-        { ...toLogError(error), userId },
-        'Failed to save custom prompt'
-      );
-    }
-  });
-
-  app.action('home_clear_prompt', async ({ ack, body, client }) => {
+  app.action('home_clear_prompt', async ({ ack, body, client }: ActionArgs) => {
     await ack();
     const userId = body.user.id;
     try {
@@ -107,4 +91,53 @@ export function register(app: App): void {
       );
     }
   });
+
+  app.action(
+    /^home_set_preset_/,
+    async ({ ack, action, body, client }: ActionArgs) => {
+      await ack();
+      const userId = body.user.id;
+      const presetId = typeof action.value === 'string' ? action.value : '';
+      const preset = PERSONAS[presetId];
+      if (!preset) {
+        return;
+      }
+      try {
+        await setUserPrompt(userId, preset.prompt);
+        await publishHome(client, userId);
+      } catch (error) {
+        logger.warn(
+          { ...toLogError(error), userId, presetId },
+          'Failed to apply preset'
+        );
+      }
+    }
+  );
+
+  app.view(
+    'home_save_prompt',
+    async ({ ack, view, body, client }: ViewArgs) => {
+      await ack();
+      const userId = body.user.id;
+      const promptInput = asRecord(
+        view.state.values.prompt_block?.prompt_input
+      )?.value;
+      const prompt = (
+        typeof promptInput === 'string' ? promptInput : ''
+      ).trim();
+      try {
+        if (prompt) {
+          await setUserPrompt(userId, prompt);
+        } else {
+          await clearUserPrompt(userId);
+        }
+        await publishHome(client, userId);
+      } catch (error) {
+        logger.warn(
+          { ...toLogError(error), userId },
+          'Failed to save custom prompt'
+        );
+      }
+    }
+  );
 }

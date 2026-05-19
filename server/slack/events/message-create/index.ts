@@ -70,7 +70,7 @@ async function handleMessage(
       });
     }
 
-    logReply(ctxId, authorName, result, 'trigger');
+    logReply({ ctxId, author: authorName, result, reason: 'trigger' });
     return;
   }
 

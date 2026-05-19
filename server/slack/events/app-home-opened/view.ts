@@ -11,18 +11,17 @@ import type {
   SlackHomeTabDto,
   SlackModalDto,
 } from 'slack-block-builder/dist/internal';
+import { appHome } from '~/config';
 import type { ScheduledTask } from '~/db/schema';
-
-const MAX_PROMPT_DISPLAY = 200;
-const MAX_TASK_PROMPT = 80;
+import { PERSONA_LIST } from '~/lib/ai/prompts/chat/presets';
 
 function buildTaskBlock(task: ScheduledTask) {
   const destination =
     task.destinationType === 'dm' ? 'your DM' : `<#${task.destinationId}>`;
-  let title = task.prompt;
-  if (task.prompt.length > MAX_TASK_PROMPT) {
-    title = `${task.prompt.slice(0, MAX_TASK_PROMPT)}...`;
-  }
+  const title =
+    task.prompt.length > appHome.maxTaskPrompt
+      ? `${task.prompt.slice(0, appHome.maxTaskPrompt)}...`
+      : task.prompt;
 
   let nextRunText = 'overdue';
   if (!isPast(task.nextRunAt)) {
@@ -38,13 +37,12 @@ function buildTaskBlock(task: ScheduledTask) {
     lastRunStatus = ' [error]';
   }
 
-  let lastRunText = 'Never run';
-  if (task.lastRunAt) {
-    lastRunText = `${formatDistanceToNowStrict(task.lastRunAt, {
-      addSuffix: true,
-      roundingMethod: 'floor',
-    })}${lastRunStatus}`;
-  }
+  const lastRunText = task.lastRunAt
+    ? `${formatDistanceToNowStrict(task.lastRunAt, {
+        addSuffix: true,
+        roundingMethod: 'floor',
+      })}${lastRunStatus}`
+    : 'Never run';
 
   return Blocks.Section({
     text: [
@@ -77,8 +75,8 @@ export function buildHomeView(
   let promptDisplay = '_No custom instructions set._';
   if (userPrompt) {
     promptDisplay =
-      userPrompt.length > MAX_PROMPT_DISPLAY
-        ? `${userPrompt.slice(0, MAX_PROMPT_DISPLAY)}...`
+      userPrompt.length > appHome.maxPromptDisplay
+        ? `${userPrompt.slice(0, appHome.maxPromptDisplay)}...`
         : userPrompt;
   }
 
@@ -101,6 +99,18 @@ export function buildHomeView(
           text: userPrompt ? 'Edit' : 'Add',
           actionId: 'home_edit_prompt',
         })
+      ),
+      Blocks.Context().elements(
+        `Presets: ${PERSONA_LIST.map((p) => p.name).join(' · ')}`
+      ),
+      Blocks.Actions().elements(
+        ...PERSONA_LIST.map((p) =>
+          Elements.Button({
+            text: p.name,
+            actionId: `home_set_preset_${p.id}`,
+            value: p.id,
+          })
+        )
       ),
       setIfTruthy(
         userPrompt,

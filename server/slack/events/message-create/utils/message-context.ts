@@ -7,7 +7,6 @@ import type {
   SlackRawMessageEvent,
 } from '~/types';
 import { toLogError } from '~/utils/error';
-import { isUsableMessage } from '~/utils/messages';
 import { asRecord } from '~/utils/record';
 
 function isSlackFile(value: unknown): value is SlackFile {
@@ -102,7 +101,7 @@ export function shouldHandleMessage(
   event: SlackMessageEvent
 ): event is SlackMessageEvent & { user: string } {
   const messageText = event.text ?? '';
-  return Boolean(event.user) && isUsableMessage(messageText);
+  return Boolean(event.user) && !messageText.startsWith('##');
 }
 
 export async function getAuthorName(
