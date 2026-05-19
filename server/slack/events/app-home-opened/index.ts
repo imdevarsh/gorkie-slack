@@ -1,23 +1,17 @@
-import type { App } from '@slack/bolt';
-import type { WebClient } from '@slack/web-api';
-import { getUserCustomization } from '~/db/queries/customizations';
-import { listScheduledTasksByUser } from '~/db/queries/scheduled-tasks';
+import type {
+  AllMiddlewareArgs,
+  App,
+  BlockAction,
+  ButtonAction,
+  SlackActionMiddlewareArgs,
+} from '@slack/bolt';
+import { cancelScheduledTaskForUser } from '~/db/queries/scheduled-tasks';
 import logger from '~/lib/logger';
+import { publishHome } from '~/slack/features/customizations/publish';
 import { toLogError } from '~/utils/error';
-import { registerActions } from './actions';
-import { registerViews } from './on-view';
-import { buildHomeView } from './view';
 
-async function publishHome(client: WebClient, userId: string): Promise<void> {
-  const [tasks, customization] = await Promise.all([
-    listScheduledTasksByUser(userId),
-    getUserCustomization(userId),
-  ]);
-  await client.views.publish({
-    user_id: userId,
-    view: buildHomeView(tasks, customization),
-  });
-}
+type ActionArgs = SlackActionMiddlewareArgs<BlockAction<ButtonAction>> &
+  AllMiddlewareArgs;
 
 export function register(app: App): void {
   app.event('app_home_opened', async ({ event, client }) => {
@@ -31,6 +25,21 @@ export function register(app: App): void {
     }
   });
 
-  registerActions(app, publishHome);
-  registerViews(app, publishHome);
+  app.action(
+    'home_cancel_task',
+    async ({ ack, action, body, client }: ActionArgs) => {
+      await ack();
+      const userId = body.user.id;
+      const taskId = typeof action.value === 'string' ? action.value : '';
+      try {
+        await cancelScheduledTaskForUser(taskId, userId);
+        await publishHome(client, userId);
+      } catch (error) {
+        logger.warn(
+          { ...toLogError(error), userId, taskId },
+          'Failed to cancel task from App Home'
+        );
+      }
+    }
+  );
 }
