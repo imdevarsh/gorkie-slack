@@ -27,7 +27,7 @@ export async function execute({
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId, taskId },
-      'Failed to cancel task from App Home'
+      'Failed to cancel task'
     );
   }
 }

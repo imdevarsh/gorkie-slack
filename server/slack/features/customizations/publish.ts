@@ -7,19 +7,6 @@ import {
 import { listScheduledTasksByUser } from '~/db/queries/scheduled-tasks';
 import { buildHomeView } from './view';
 
-export async function applyPrompt(
-  client: WebClient,
-  userId: string,
-  prompt: string
-): Promise<void> {
-  if (prompt) {
-    await setUserCustomization(userId, { prompt });
-  } else {
-    await clearUserCustomization(userId);
-  }
-  await publishHome(client, userId);
-}
-
 export async function publishHome(
   client: WebClient,
   userId: string
@@ -32,4 +19,17 @@ export async function publishHome(
     user_id: userId,
     view: buildHomeView(tasks, customization),
   });
+}
+
+export async function applyPrompt(
+  client: WebClient,
+  userId: string,
+  prompt: string
+): Promise<void> {
+  if (prompt) {
+    await setUserCustomization(userId, { prompt });
+  } else {
+    await clearUserCustomization(userId);
+  }
+  await publishHome(client, userId);
 }

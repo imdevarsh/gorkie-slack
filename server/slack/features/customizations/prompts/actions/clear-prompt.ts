@@ -4,10 +4,9 @@ import type {
   ButtonAction,
   SlackActionMiddlewareArgs,
 } from '@slack/bolt';
-import { clearUserCustomization } from '~/db/queries/customizations';
 import logger from '~/lib/logger';
 import { toLogError } from '~/utils/error';
-import { publishHome } from '../../publish';
+import { applyPrompt } from '../../publish';
 
 export const name = 'home_clear_prompt';
 
@@ -20,12 +19,8 @@ export async function execute({
   await ack();
   const userId = body.user.id;
   try {
-    await clearUserCustomization(userId);
-    await publishHome(client, userId);
+    await applyPrompt(client, userId, '');
   } catch (error) {
-    logger.warn(
-      { ...toLogError(error), userId },
-      'Failed to clear custom prompt'
-    );
+    logger.warn({ ...toLogError(error), userId }, 'Failed to clear prompt');
   }
 }
