@@ -48,7 +48,6 @@ Use it for past conversations, decisions, files, links, or any context outside t
 <description>Create a recurring cron-scheduled task that runs automatically and delivers output to a DM or channel.</description>
 <rules>
 - Use this for recurring automations (daily/weekly/monthly/etc.), not one-off reminders.
-- If the user asks for something to happen every day, every week, on weekdays, monthly, repeatedly, or on a recurring cadence, prefer this tool.
 - Always provide a valid cron expression and explicit IANA timezone.
 - Use scheduleReminder for simple one-time follow-ups.
 - If you need more details from the user (e.g. timezone) when creating a task, feel free to ask follow-up questions before running this tool.

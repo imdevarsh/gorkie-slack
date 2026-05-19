@@ -13,7 +13,7 @@ import type {
 } from 'slack-block-builder/dist/internal';
 import { appHome } from '~/config';
 import type { ScheduledTask } from '~/db/schema';
-import { PERSONA_LIST } from '~/lib/ai/prompts/chat/presets';
+import { personas } from '~/lib/ai/prompts/chat/presets';
 
 function buildTaskBlock(task: ScheduledTask) {
   const destination =
@@ -102,10 +102,10 @@ export function buildHomeView(
         })
       ),
       Blocks.Context().elements(
-        `Presets: ${PERSONA_LIST.map((p) => p.name).join(' · ')}`
+        `Presets: ${personas.map((p) => p.name).join(' · ')}`
       ),
       Blocks.Actions().elements(
-        ...PERSONA_LIST.map((p) =>
+        ...personas.map((p) =>
           Elements.Button({
             text: p.name,
             actionId: `home_set_preset_${p.id}`,

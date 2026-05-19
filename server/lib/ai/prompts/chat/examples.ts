@@ -39,24 +39,6 @@ export const examplesPrompt = `\
 </example>
 
 <example>
-<title>Recurring reminder should use scheduleTask</title>
-<user>Remind me every day at 6pm London time to submit my standup.</user>
-<workflow>
-<tool><name>scheduleTask</name><input>{ "task": "Send a reminder to submit your standup.", "cronExpression": "0 18 * * *", "timezone": "Europe/London", "destinationType": "dm" }</input></tool>
-<tool><name>reply</name><input>{ "content": ["Done — I scheduled a daily reminder for 6:00 PM Europe/London."] }</input></tool>
-</workflow>
-</example>
-
-<example>
-<title>One-time reminder should use scheduleReminder</title>
-<user>Remind me in 2 hours to send the invoice.</user>
-<workflow>
-<tool><name>scheduleReminder</name><input>{ "text": "Reminder: send the invoice.", "seconds": 7200 }</input></tool>
-<tool><name>reply</name><input>{ "content": ["Done — I'll remind you in 2 hours."] }</input></tool>
-</workflow>
-</example>
-
-<example>
 <title>Manage and cancel scheduled task</title>
 <user>Cancel my daily digest task.</user>
 <workflow>

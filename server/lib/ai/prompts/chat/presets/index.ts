@@ -8,9 +8,4 @@ export interface Persona {
   prompt: string;
 }
 
-export const PERSONAS: Record<string, Persona> = {
-  gork,
-  simba,
-};
-
-export const PERSONA_LIST: Persona[] = Object.values(PERSONAS);
+export const personas: Persona[] = [gork, simba];

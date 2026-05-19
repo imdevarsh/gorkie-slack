@@ -11,7 +11,7 @@ import {
   setUserCustomization,
 } from '~/db/queries/customizations';
 import { cancelScheduledTaskForUser } from '~/db/queries/scheduled-tasks';
-import { PERSONAS } from '~/lib/ai/prompts/chat/presets';
+import { personas } from '~/lib/ai/prompts/chat/presets';
 import logger from '~/lib/logger';
 import { toLogError } from '~/utils/error';
 import { buildPromptModal } from './view';
@@ -75,7 +75,7 @@ export function registerActions(
       await ack();
       const userId = body.user.id;
       const presetId = typeof action.value === 'string' ? action.value : '';
-      const preset = PERSONAS[presetId];
+      const preset = personas.find((p) => p.id === presetId);
       if (!preset) {
         return;
       }
