@@ -3,7 +3,7 @@ import { db } from '~/db';
 import { userCustomizations } from '~/db/schema';
 
 export interface UserCustomization {
-  prompt?: string;
+  prompt: string;
 }
 
 export async function getUserCustomization(
@@ -22,13 +22,12 @@ export async function setUserCustomization(
   userId: string,
   customization: UserCustomization
 ): Promise<void> {
-  const prompt = customization.prompt ?? '';
   await db
     .insert(userCustomizations)
-    .values({ userId, prompt })
+    .values({ userId, prompt: customization.prompt })
     .onConflictDoUpdate({
       target: userCustomizations.userId,
-      set: { prompt, updatedAt: new Date() },
+      set: { prompt: customization.prompt, updatedAt: new Date() },
     });
 }
 
