@@ -2,9 +2,10 @@ import { eq } from 'drizzle-orm';
 import { db } from '~/db';
 import { userCustomizations } from '~/db/schema';
 
-export interface UserCustomization {
-  prompt: string;
-}
+export type UserCustomization = Pick<
+  typeof userCustomizations.$inferSelect,
+  'prompt'
+>;
 
 export async function getUserCustomization(
   userId: string

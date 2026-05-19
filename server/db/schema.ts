@@ -12,8 +12,6 @@ export const userCustomizations = pgTable('user_customizations', {
     .$onUpdate(() => new Date()),
 });
 
-export type UserCustomization = typeof userCustomizations.$inferSelect;
-
 export const sandboxSessions = pgTable(
   'sandbox_sessions',
   {
