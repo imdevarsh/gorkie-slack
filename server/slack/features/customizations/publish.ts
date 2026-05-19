@@ -1,7 +1,24 @@
 import type { WebClient } from '@slack/web-api';
-import { getUserCustomization } from '~/db/queries/customizations';
+import {
+  clearUserCustomization,
+  getUserCustomization,
+  setUserCustomization,
+} from '~/db/queries/customizations';
 import { listScheduledTasksByUser } from '~/db/queries/scheduled-tasks';
-import { buildHomeView } from '~/slack/events/app-home-opened/view';
+import { buildHomeView } from './view';
+
+export async function applyPrompt(
+  client: WebClient,
+  userId: string,
+  prompt: string
+): Promise<void> {
+  if (prompt) {
+    await setUserCustomization(userId, { prompt });
+  } else {
+    await clearUserCustomization(userId);
+  }
+  await publishHome(client, userId);
+}
 
 export async function publishHome(
   client: WebClient,
@@ -11,7 +28,6 @@ export async function publishHome(
     listScheduledTasksByUser(userId),
     getUserCustomization(userId),
   ]);
-
   await client.views.publish({
     user_id: userId,
     view: buildHomeView(tasks, customization),

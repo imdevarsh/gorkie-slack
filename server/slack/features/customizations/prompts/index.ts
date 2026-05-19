@@ -1,30 +1,21 @@
-import {
-  execute as clearPromptExecute,
-  name as clearPromptName,
-} from './actions/clear-prompt';
-import {
-  execute as editPromptExecute,
-  name as editPromptName,
-} from './actions/edit-prompt';
-import {
-  execute as modalSetPresetExecute,
-  name as modalSetPresetName,
-} from './actions/modal-set-preset';
-import {
-  execute as setPresetExecute,
-  name as setPresetName,
-} from './actions/set-preset';
-import {
-  execute as savePromptExecute,
-  name as savePromptName,
-} from './views/save-prompt';
+import * as clearPrompt from './actions/clear-prompt';
+import * as editPrompt from './actions/edit-prompt';
+import * as modalLoadPreset from './actions/modal-load-preset';
+import * as modalTogglePresets from './actions/modal-toggle-presets';
+import * as setPreset from './actions/set-preset';
+import * as savePresetPrompt from './views/save-preset-prompt';
+import * as savePrompt from './views/save-prompt';
 
 export const prompts = {
   actions: [
-    { name: editPromptName, execute: editPromptExecute },
-    { name: clearPromptName, execute: clearPromptExecute },
-    { name: setPresetName, execute: setPresetExecute },
-    { name: modalSetPresetName, execute: modalSetPresetExecute },
+    { name: editPrompt.name, execute: editPrompt.execute },
+    { name: clearPrompt.name, execute: clearPrompt.execute },
+    { name: setPreset.name, execute: setPreset.execute },
+    { name: modalTogglePresets.name, execute: modalTogglePresets.execute },
+    { name: modalLoadPreset.name, execute: modalLoadPreset.execute },
   ],
-  views: [{ name: savePromptName, execute: savePromptExecute }],
+  views: [
+    { name: savePrompt.name, execute: savePrompt.execute },
+    { name: savePresetPrompt.name, execute: savePresetPrompt.execute },
+  ],
 };

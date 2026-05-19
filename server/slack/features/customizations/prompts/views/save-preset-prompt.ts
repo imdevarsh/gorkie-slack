@@ -11,7 +11,7 @@ import logger from '~/lib/logger';
 import { toLogError } from '~/utils/error';
 import { publishHome } from '../../publish';
 
-export const name = 'home_save_prompt';
+export const name = 'home_save_preset_prompt';
 
 export async function execute({
   ack,
@@ -20,7 +20,7 @@ export async function execute({
   client,
 }: SlackViewMiddlewareArgs<ViewSubmitAction> &
   AllMiddlewareArgs): Promise<void> {
-  await ack();
+  await ack({ response_action: 'clear' });
   const userId = body.user.id;
   const prompt =
     view.state.values.prompt_block?.prompt_input?.value?.trim() ?? '';
@@ -34,7 +34,7 @@ export async function execute({
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId },
-      'Failed to save custom prompt'
+      'Failed to save preset prompt'
     );
   }
 }

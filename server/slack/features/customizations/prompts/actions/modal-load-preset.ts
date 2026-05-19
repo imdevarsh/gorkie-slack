@@ -5,9 +5,9 @@ import type {
   SlackActionMiddlewareArgs,
 } from '@slack/bolt';
 import { personas } from '~/lib/ai/prompts/chat/presets';
-import { buildPromptModal } from '../view';
+import { buildPresetModal } from '../view';
 
-export const name = /^modal_set_preset_/;
+export const name = 'modal_load_preset';
 
 export async function execute({
   ack,
@@ -19,12 +19,11 @@ export async function execute({
   await ack();
   const presetId = typeof action.value === 'string' ? action.value : '';
   const preset = personas.find((p) => p.id === presetId);
-  const viewId = body.view?.id;
-  if (!(preset && viewId)) {
+  if (!preset) {
     return;
   }
-  await client.views.update({
-    view_id: viewId,
-    view: buildPromptModal(preset.prompt),
+  await client.views.push({
+    trigger_id: body.trigger_id,
+    view: buildPresetModal(preset),
   });
 }

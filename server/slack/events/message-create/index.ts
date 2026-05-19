@@ -5,6 +5,7 @@ import { getQueue } from '~/lib/queue';
 import type { MessageEventArgs } from '~/types';
 import { buildChatContext, getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
+import { handleInlineCommand } from '~/utils/inline-commands';
 import { logReply } from '~/utils/log';
 import { getTrigger } from '~/utils/triggers';
 import {
@@ -18,7 +19,8 @@ import { generateResponse } from './utils/respond';
 export const name = 'message';
 
 async function handleMessage(
-  messageContext: NonNullable<ReturnType<typeof toMessageContext>>
+  messageContext: NonNullable<ReturnType<typeof toMessageContext>>,
+  trigger: Awaited<ReturnType<typeof getTrigger>>
 ) {
   const event = messageContext.event;
   if (!shouldHandleMessage(event)) {
@@ -27,8 +29,6 @@ async function handleMessage(
   const { user: userId, text: messageText = '' } = event;
 
   const ctxId = getContextId(messageContext);
-  const trigger = await getTrigger(messageContext, messageContext.botUserId);
-
   const authorName = await getAuthorName(messageContext, ctxId);
   const content = messageText;
 
@@ -90,8 +90,22 @@ export async function execute(args: MessageEventArgs): Promise<void> {
   }
 
   const ctxId = getContextId(messageContext);
+  const trigger = await getTrigger(messageContext, messageContext.botUserId);
+
+  if (trigger.type === 'ping' || trigger.type === 'dm') {
+    const raw = messageContext.event.text ?? '';
+    const text =
+      trigger.type === 'ping'
+        ? raw.replace(/<@[A-Z0-9]+>/gi, '').trimStart()
+        : raw;
+    const inlineResult = await handleInlineCommand(messageContext, ctxId, text);
+    if (inlineResult === 'handled') {
+      return;
+    }
+  }
+
   await getQueue(ctxId)
-    .add(async () => handleMessage(messageContext))
+    .add(async () => handleMessage(messageContext, trigger))
     .catch((error: unknown) => {
       logger.error(
         { ...toLogError(error), ctxId },
