@@ -1,5 +1,6 @@
 import { Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
+import { personas } from '~/lib/ai/prompts/chat/presets';
 
 export function buildPromptModal(currentPrompt: string | null): SlackModalDto {
   return Modal({
@@ -10,11 +11,22 @@ export function buildPromptModal(currentPrompt: string | null): SlackModalDto {
   })
     .blocks(
       Blocks.Section({
-        text: 'Tell Gorkie how you want it to behave in every conversation - your preferred language, tone, name, or anything else.',
+        text: '*Presets*\nClick a preset to load it into the editor, then tweak as needed.',
       }),
+      Blocks.Actions().elements(
+        ...personas.map((p) =>
+          Elements.Button({
+            text: p.name,
+            actionId: `modal_set_preset_${p.id}`,
+            value: p.id,
+          })
+        )
+      ),
+      Blocks.Divider(),
       Blocks.Input({
         blockId: 'prompt_block',
         label: 'Your instructions',
+        hint: 'Gorkie follows these across every conversation. Use the Clear button on the home tab to remove.',
       }).element(
         Elements.TextInput({
           actionId: 'prompt_input',

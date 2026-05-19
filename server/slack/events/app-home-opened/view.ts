@@ -9,7 +9,6 @@ import {
 import type { SlackHomeTabDto } from 'slack-block-builder/dist/internal';
 import { appHome } from '~/config';
 import type { ScheduledTask } from '~/db/schema';
-import { personas } from '~/lib/ai/prompts/chat/presets';
 
 function buildTaskBlock(task: ScheduledTask) {
   const destination =
@@ -96,18 +95,6 @@ export function buildHomeView(
           text: userPrompt ? 'Edit' : 'Add',
           actionId: 'home_edit_prompt',
         })
-      ),
-      Blocks.Context().elements(
-        `Presets: ${personas.map((p) => p.name).join(' · ')}`
-      ),
-      Blocks.Actions().elements(
-        ...personas.map((p) =>
-          Elements.Button({
-            text: p.name,
-            actionId: `home_set_preset_${p.id}`,
-            value: p.id,
-          })
-        )
       ),
       setIfTruthy(
         userPrompt,

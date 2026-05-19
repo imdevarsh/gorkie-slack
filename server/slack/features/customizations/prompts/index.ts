@@ -7,6 +7,10 @@ import {
   name as editPromptName,
 } from './actions/edit-prompt';
 import {
+  execute as modalSetPresetExecute,
+  name as modalSetPresetName,
+} from './actions/modal-set-preset';
+import {
   execute as setPresetExecute,
   name as setPresetName,
 } from './actions/set-preset';
@@ -20,6 +24,7 @@ export const prompts = {
     { name: editPromptName, execute: editPromptExecute },
     { name: clearPromptName, execute: clearPromptExecute },
     { name: setPresetName, execute: setPresetExecute },
+    { name: modalSetPresetName, execute: modalSetPresetExecute },
   ],
   views: [{ name: savePromptName, execute: savePromptExecute }],
 };
