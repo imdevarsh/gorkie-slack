@@ -83,7 +83,7 @@ async function generateAndSetTopic(
 
   // Generate topic
   const { text: generatedTopic } = await generateText({
-    model: provider.languageModel('chat-model'),
+    model: provider.languageModel('summariser-model'),
     prompt: `Analyze the following Slack conversation transcript and provide a very brief, 5-10 word topic summarizing what is currently being discussed. Output ONLY the topic string, no quotes, no extra text.\n\nTranscript:\n${transcript}`,
     maxOutputTokens: 20,
   });

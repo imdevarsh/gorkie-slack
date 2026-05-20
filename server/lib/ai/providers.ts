@@ -53,13 +53,13 @@ const chatModel = createRetryable({
 });
 
 const summariserModel = createRetryable({
-  model: hackclub.languageModel('google/gemini-3-flash-preview'),
+  model: hackclub.languageModel('google/gemini-3.1-flash-lite'),
   retries: [
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3-flash-preview')
     ),
     hackclub.languageModel('openai/gpt-5-mini'),
-    openrouter.languageModel('google/gemini-3-flash-preview'),
+    openrouter.languageModel('google/gemini-3.1-flash-lite'),
     openrouter.languageModel('openai/gpt-5-nano'),
   ],
   onError: onModelError,
