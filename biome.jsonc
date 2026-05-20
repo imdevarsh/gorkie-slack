@@ -22,7 +22,9 @@
       "!.vercel",
       "!bun.lock",
       "!**/*.md",
-      "!**/*.mdx"
+      "!**/*.mdx",
+      "!**/.agents",
+      "!**/.claude"
     ]
   },
   "formatter": {
@@ -49,7 +51,8 @@
         "noExcessiveCognitiveComplexity": "off"
       },
       "performance": {
-        "noBarrelFile": "error"
+        "noBarrelFile": "error",
+        "noNamespaceImport": "off"
       },
       "suspicious": {
         "noEmptyBlockStatements": "error"

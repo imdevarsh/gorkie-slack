@@ -1,4 +1,5 @@
 import type { ModelMessage } from 'ai';
+import { getUserCustomization } from '~/db/queries/customizations';
 import { getConversationMessages } from '~/slack/conversations';
 import type { ChatRequestHints, SlackMessageContext } from '~/types';
 import { resolveChannelName, resolveServerName } from '~/utils/slack';
@@ -76,11 +77,16 @@ export async function buildChatContext(
   }
 
   if (!requestHints) {
-    const [channelName, serverName, botDetails] = await Promise.all([
-      resolveChannelName(ctx),
-      resolveServerName(ctx),
-      resolveBotDetails(ctx),
-    ]);
+    const userId = ctx.event.user;
+    const [channelName, serverName, botDetails, customization] =
+      await Promise.all([
+        resolveChannelName(ctx),
+        resolveServerName(ctx),
+        resolveBotDetails(ctx),
+        userId
+          ? getUserCustomization(userId).catch(() => null)
+          : Promise.resolve(null),
+      ]);
 
     requestHints = {
       channel: channelName,
@@ -89,6 +95,7 @@ export async function buildChatContext(
       joined: botDetails.joined,
       status: botDetails.status,
       activity: botDetails.activity,
+      customization: customization ?? undefined,
     };
   }
 

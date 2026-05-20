@@ -1,8 +1,9 @@
 import {
-  NoOutputGeneratedError,
   type ModelMessage,
+  NoOutputGeneratedError,
   type UserContent,
 } from 'ai';
+import { clearAbortController, createAbortController } from '~/lib/abort';
 import {
   consumeOrchestratorReasoningStream,
   orchestratorAgent,
@@ -10,7 +11,9 @@ import {
 } from '~/lib/ai/agents/orchestrator';
 import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '~/lib/ai/utils/stream';
+import { setConversationTitle } from '~/lib/ai/utils/title';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
 import { getErrorDetails } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
@@ -20,6 +23,8 @@ export async function generateResponse(
   messages: ModelMessage[],
   requestHints: ChatRequestHints
 ) {
+  const ctxId = getContextId(context);
+  const controller = createAbortController(ctxId);
   let stream: Stream | null = null;
 
   try {
@@ -43,6 +48,8 @@ export async function generateResponse(
 
     const userId = context.event.user;
     const messageText = context.event.text ?? '';
+
+    setConversationTitle(context, messageText).catch(() => undefined);
     const files = context.event.files;
     const authorName = userId
       ? await getSlackUserName(context.client, userId)
@@ -52,15 +59,13 @@ export async function generateResponse(
 
     const replyPrompt = `You are replying to the following message from ${authorName} (${userId}): ${messageText}`;
 
-    let currentMessageContent: UserContent;
-    if (imageContents.length > 0) {
-      currentMessageContent = [
-        { type: 'text' as const, text: replyPrompt },
-        ...imageContents,
-      ];
-    } else {
-      currentMessageContent = replyPrompt;
-    }
+    const currentMessageContent: UserContent =
+      imageContents.length > 0
+        ? ([
+            { type: 'text', text: replyPrompt },
+            ...imageContents,
+          ] as UserContent)
+        : replyPrompt;
 
     const agent = orchestratorAgent({
       context,
@@ -77,6 +82,7 @@ export async function generateResponse(
           content: currentMessageContent,
         },
       ],
+      abortSignal: controller.signal,
     });
     await consumeOrchestratorReasoningStream({
       context,
@@ -90,6 +96,21 @@ export async function generateResponse(
 
     return { success: true, toolCalls };
   } catch (error) {
+    if ((error as Error)?.name === 'AbortError') {
+      if (stream) {
+        await setPlanTitle(stream, 'Interrupted');
+        await resolveOrchestratorTask({
+          context,
+          stream,
+          title: 'Interrupted',
+          details: 'Stopped by user.',
+        });
+        await closeStream(stream);
+      }
+      await setStatus(context, { status: '' });
+      return { success: false };
+    }
+
     const errorDetails = getErrorDetails(error);
     const detailParts = [errorDetails.name];
     if (errorDetails.statusCode !== undefined) {
@@ -118,5 +139,7 @@ export async function generateResponse(
           ? 'Oops! Gorkie is out of credits right now. Please try again later.'
           : 'Oops! Something went wrong, try again later.',
     };
+  } finally {
+    clearAbortController(ctxId);
   }
 }

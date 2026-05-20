@@ -12,6 +12,7 @@ import type {
   RpcEventListener,
   RpcResponse,
   RpcSessionState,
+  RpcSlashCommand,
   ThinkingLevel,
 } from '~/types/sandbox/rpc';
 import { errorMessage } from '~/utils/error';
@@ -202,6 +203,23 @@ export class PiRpcClient {
     return this.getData(res);
   }
 
+  async fork(entryId: string): Promise<{ text: string; cancelled: boolean }> {
+    const res = await this.send({ type: 'fork', entryId });
+    return this.getData(res);
+  }
+
+  async getForkMessages(): Promise<Array<{ entryId: string; text: string }>> {
+    const res = await this.send({ type: 'get_fork_messages' });
+    return this.getData<{ messages: Array<{ entryId: string; text: string }> }>(
+      res
+    ).messages;
+  }
+
+  async getCommands(): Promise<RpcSlashCommand[]> {
+    const res = await this.send({ type: 'get_commands' });
+    return this.getData<{ commands: RpcSlashCommand[] }>(res).commands;
+  }
+
   async getSessionStats(): Promise<SessionStats> {
     const res = await this.send({ type: 'get_session_stats' });
     return this.getData(res);
@@ -258,32 +276,42 @@ export class PiRpcClient {
     );
   }
 
-  waitForIdle(): Promise<void> {
+  async waitForIdle(): Promise<void> {
     let off: () => void = () => undefined;
-    const idlePromise = new Promise<void>((resolve) => {
-      off = this.onEvent((event) => {
-        if (event.type === 'agent_end') {
-          resolve();
-        }
-      });
-    });
-    return Promise.race([idlePromise, this.exitPromise]).finally(() => off());
+    try {
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          off = this.onEvent((event) => {
+            if (event.type === 'agent_end') {
+              resolve();
+            }
+          });
+        }),
+        this.exitPromise,
+      ]);
+    } finally {
+      off();
+    }
   }
 
-  collectEvents(): Promise<AgentSessionEvent[]> {
+  async collectEvents(): Promise<AgentSessionEvent[]> {
     let off: () => void = () => undefined;
-    const collectPromise = new Promise<AgentSessionEvent[]>((resolve) => {
-      const events: AgentSessionEvent[] = [];
-      off = this.onEvent((event) => {
-        events.push(event);
-        if (event.type === 'agent_end') {
-          resolve(events);
-        }
-      });
-    });
-    return Promise.race([collectPromise, this.exitPromise]).finally(() =>
-      off()
-    );
+    try {
+      return await Promise.race([
+        new Promise<AgentSessionEvent[]>((resolve) => {
+          const events: AgentSessionEvent[] = [];
+          off = this.onEvent((event) => {
+            events.push(event);
+            if (event.type === 'agent_end') {
+              resolve(events);
+            }
+          });
+        }),
+        this.exitPromise,
+      ]);
+    } finally {
+      off();
+    }
   }
 
   async promptAndWait(

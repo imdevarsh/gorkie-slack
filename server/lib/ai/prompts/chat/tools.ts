@@ -37,6 +37,10 @@ Use it for past conversations, decisions, files, links, or any context outside t
 <tool>
 <name>scheduleReminder</name>
 <description>Schedule a reminder to be delivered to the current user at a future time.</description>
+<rules>
+- Use this only for one-time reminders.
+- If the user asks for daily/weekly/monthly/repeating/recurring behavior, do NOT use this tool. Use scheduleTask instead.
+</rules>
 </tool>
 
 <tool>

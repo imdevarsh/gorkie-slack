@@ -45,192 +45,50 @@ server/
   utils/                # Utility functions
 ```
 
-## Code Style Guidelines
+## Coding Guidelines
 
-### Formatting (Biome)
+### Inline over extract
+Prefer inlining over creating utility functions. Only extract to a named function when the logic is called in **multiple places** or is genuinely complex. A helper called exactly once is worse than the code it replaced.
 
-- 2 spaces for indentation (not tabs)
-- Single quotes for strings
-- Always include semicolons
+```ts
+// bad — one-shot helper
+function getFileExtension(mime: string) { return MAP[mime] ?? 'png'; }
+const ext = getFileExtension(image.mediaType);
 
-### TypeScript
-
-- Strict mode enabled with `noUncheckedIndexedAccess`, `noFallthroughCasesInSwitch`
-- Use `import type` for type-only imports (enforced by `verbatimModuleSyntax`)
-- Path alias: `~/` references files from `server/` directory
-
-### Imports
-
-```typescript
-// External packages first, then internal modules
-import { tool } from 'ai';
-import { z } from 'zod';
-import logger from '~/lib/logger';
-import type { SlackMessageContext } from '~/types';  // Use import type
+// good — just inline it
+const ext = EXTENSION[image.mediaType] ?? 'png';
 ```
 
-Unused imports are errors (Biome rule).
+### Dict params
+Functions with more than one parameter should take a single options object. Prefer this even for one-param functions when that parameter is logically a "config" rather than a plain value.
 
-### Naming Conventions
+```ts
+// bad
+logReply(ctxId, author, result, reason);
 
-- Files: `kebab-case` (`get-user-info.ts`)
-- Variables/functions: `camelCase` (`getUserInfo`)
-- Types/interfaces: `PascalCase` (`SlackMessageContext`)
-- Prefer named exports; exception: `logger` uses default export
-
-### Type Definitions
-
-Cast Slack event properties when accessing dynamic fields:
-
-```typescript
-const channelId = (ctx.event as { channel?: string }).channel;
-const userId = (ctx.event as { user?: string }).user;
+// good
+logReply({ ctxId, author, result, reason });
 ```
 
-### Error Handling
+### No `as const` on type discriminants
+When building objects that need a literal type for a discriminant field (e.g. `type: 'text'`), cast the whole expression to the SDK type instead of using `as const` on the property.
 
-Log errors with structured data, return structured error objects:
+```ts
+// bad
+{ type: 'text' as const, text }
 
-```typescript
-logger.error({ error, channel: channelId }, 'Failed to send message');
-return {
-  success: false,
-  error: error instanceof Error ? error.message : String(error),
-};
+// good — use the SDK's UserContent type
+[{ type: 'text', text }, ...images] as UserContent
 ```
 
-### AI Tools Pattern
+### No comments explaining what code does
+Only add a comment when the **why** is non-obvious — a hidden constraint, a workaround for a specific bug, or behaviour that would genuinely surprise a reader. Never describe what the code already says.
 
-Tools needing context use a factory pattern:
+### No JSDoc / docstrings
+No multi-line block comments on functions. Self-documenting names are enough.
 
-```typescript
-export const toolName = ({ context }: { context: SlackMessageContext }) =>
-  tool({
-    description: 'Tool description',
-    inputSchema: z.object({ /* ... */ }),
-    execute: async (params) => {
-      return { success: true, data: /* ... */ };
-    },
-  });
-```
+### Config for tuneable values
+Anything that could reasonably change per deployment (thresholds, message lists, locale) belongs in `server/config.ts`, not hardcoded at the call site.
 
-Stateless tools are simple exports:
-
-```typescript
-export const searchWeb = tool({
-  description: 'Search the web',
-  inputSchema: z.object({ query: z.string() }),
-  execute: async ({ query }) => { /* ... */ },
-});
-```
-
-### Environment Variables
-
-- Define all env vars in `server/env.ts` using @t3-oss/env-core with Zod
-- Access via `env.VARIABLE_NAME` (not `process.env`)
-
-### Logging
-
-Use the pino-based logger from `~/lib/logger` with structured context:
-
-```typescript
-logger.info({ channel, type }, 'Sent message');
-logger.error({ error, userId }, 'Failed to fetch user');
-```
-
-Log levels: `debug`, `info`, `warn`, `error`
-
-### Async Patterns
-
-- Use `async/await` consistently
-- Use `Promise.all` for parallel operations
-- Use `void` prefix for fire-and-forget promises: `void main().catch(...)`
-
-### Slack API Patterns
-
-- Always check for undefined when accessing Slack event properties
-- Use `WebClient` from the context for API calls
-- Handle rate limiting via Redis in `lib/kv.ts`
-
-### Core Principles
-
-Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
-
-#### Type Safety & Explicitness
-
-- Use explicit types for function parameters and return values when they enhance clarity
-- Prefer `unknown` over `any` when the type is genuinely unknown
-- Use const assertions (`as const`) for immutable values and literal types
-- Leverage TypeScript's type narrowing instead of type assertions
-- Use meaningful variable names instead of magic numbers - extract constants with descriptive names
-
-#### Modern JavaScript/TypeScript
-
-- Use arrow functions for callbacks and short functions
-- Prefer `for...of` loops over `.forEach()` and indexed `for` loops
-- Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
-- Prefer template literals over string concatenation
-- Use destructuring for object and array assignments
-- Use `const` by default, `let` only when reassignment is needed, never `var`
-
-#### Async & Promises
-
-- Always `await` promises in async functions - don't forget to use the return value
-- Use `async/await` syntax instead of promise chains for better readability
-- Handle errors appropriately in async code with try-catch blocks
-- Don't use async functions as Promise executors
-
-#### Error Handling & Debugging
-
-- Remove `console.log`, `debugger`, and `alert` statements from production code
-- Throw `Error` objects with descriptive messages, not strings or other values
-- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
-- Prefer early returns over nested conditionals for error cases
-
-#### Code Organization
-
-- Keep functions focused and under reasonable cognitive complexity limits
-- Extract complex conditions into well-named boolean variables
-- Use early returns to reduce nesting
-- Prefer simple conditionals over nested ternary operators
-- Group related code together and separate concerns
-
-#### Security
-
-- Validate and sanitize user input
-- Don't use `eval()` or assign directly to `document.cookie`
-- All bot responses must be SFW - this is enforced at multiple levels
-
-#### Performance
-
-- Avoid spread syntax in accumulators within loops
-- Use top-level regex literals instead of creating them in loops
-- Prefer specific imports over namespace imports
-- Avoid barrel files (index files that re-export everything)
-
-### Testing
-
-- Write assertions inside `it()` or `test()` blocks
-- Avoid done callbacks in async tests - use async/await instead
-- Don't use `.only` or `.skip` in committed code
-- Keep test suites reasonably flat - avoid excessive `describe` nesting
-
-### When Biome Can't Help
-
-Biome's linter will catch most issues automatically. Focus your attention on:
-
-1. **Business logic correctness** - Biome can't validate your algorithms
-2. **Meaningful naming** - Use descriptive names for functions, variables, and types
-3. **Architecture decisions** - Component structure, data flow, and API design
-4. **Edge cases** - Handle boundary conditions and error states
-5. **Documentation** - Add comments for complex logic, but prefer self-documenting code
-
-Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.
-
-## Key Dependencies
-
-- `ai`: Vercel AI SDK for model interactions
-- `@slack/bolt`: Slack app framework
-- `zod`: Schema validation
-- `pino`: Logging
-- `bun`: Runtime (use `RedisClient` from bun for Redis)
+### Feature-enclosed architecture
+Features live under `server/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts`. Each command file exports `name`, `help: CommandHelp`, and `execute`. The single registry is `server/slack/commands/subcommands.ts`.

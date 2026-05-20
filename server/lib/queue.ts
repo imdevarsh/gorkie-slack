@@ -11,3 +11,7 @@ export function getQueue(ctxId: string) {
   }
   return queue;
 }
+
+export function clearQueue(ctxId: string): void {
+  queues.get(ctxId)?.clear();
+}

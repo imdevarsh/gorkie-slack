@@ -3,7 +3,6 @@ import logger from '~/lib/logger';
 import type { ConversationOptions, SlackConversationMessage } from '~/types';
 import { toLogError } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
-import { isUsableMessage } from '~/utils/messages';
 
 interface CachedUser {
   displayName: string;
@@ -79,7 +78,7 @@ function filterMessages(
     if (!message.ts) {
       return false;
     }
-    if (!isUsableMessage(message.text || '')) {
+    if (message.text?.startsWith('##')) {
       return false;
     }
     const messageTs = Number(message.ts);
@@ -172,31 +171,15 @@ async function toModelMessage(
   const formattedText = `${author} (${authorId}): ${textContent}`;
 
   if (isAssistantMessage) {
-    return {
-      role: 'assistant' as const,
-      content: formattedText,
-    };
+    return { role: 'assistant', content: formattedText };
   }
 
-  const imageContents = await processSlackFiles(message.files);
-  if (imageContents.length > 0) {
-    const contentParts: UserContent = [
-      {
-        type: 'text' as const,
-        text: formattedText,
-      },
-      ...imageContents,
-    ];
-
-    return {
-      role: 'user' as const,
-      content: contentParts,
-    };
-  }
-
+  const images = await processSlackFiles(message.files);
   return {
-    role: 'user' as const,
-    content: formattedText,
+    role: 'user',
+    content: (images.length
+      ? [{ type: 'text', text: formattedText }, ...images]
+      : formattedText) as UserContent,
   };
 }
 

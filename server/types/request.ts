@@ -1,3 +1,5 @@
+import type { UserCustomization } from '~/db/queries/customizations';
+
 interface BaseHints {
   channel: string;
   server: string;
@@ -6,6 +8,7 @@ interface BaseHints {
 
 export interface ChatRequestHints extends BaseHints {
   activity: string;
+  customization?: UserCustomization;
   joined: number;
   status: string;
 }

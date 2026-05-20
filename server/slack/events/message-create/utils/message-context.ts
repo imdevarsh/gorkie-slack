@@ -1,4 +1,3 @@
-import { isUserAllowed } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
 import type {
   MessageEventArgs,
@@ -8,7 +7,6 @@ import type {
   SlackRawMessageEvent,
 } from '~/types';
 import { toLogError } from '~/utils/error';
-import { isUsableMessage } from '~/utils/messages';
 import { asRecord } from '~/utils/record';
 
 function isSlackFile(value: unknown): value is SlackFile {
@@ -17,8 +15,8 @@ function isSlackFile(value: unknown): value is SlackFile {
 
 function normalizeEvent(event: SlackRawMessageEvent): SlackMessageEvent | null {
   const record = asRecord(event);
-  const channel = typeof event.channel === 'string' ? event.channel : undefined;
-  const ts = typeof event.ts === 'string' ? event.ts : undefined;
+  const channel = typeof record?.channel === 'string' ? record.channel : null;
+  const ts = typeof record?.ts === 'string' ? record.ts : null;
   const eventTs = typeof record?.event_ts === 'string' ? record.event_ts : ts;
   if (!(channel && ts && eventTs)) {
     return null;
@@ -61,10 +59,10 @@ export function toMessageContext(
   args: MessageEventArgs
 ): SlackMessageContext | null {
   const { event, context, client, body } = args;
+  const eventRecord = asRecord(event);
+  const bodyRecord = asRecord(body);
   const userId =
-    typeof (event as { user?: unknown }).user === 'string'
-      ? (event as { user: string }).user
-      : undefined;
+    typeof eventRecord?.user === 'string' ? eventRecord.user : undefined;
 
   if (!hasSupportedSubtype(args)) {
     return null;
@@ -93,8 +91,8 @@ export function toMessageContext(
     botUserId: context.botUserId,
     teamId:
       context.teamId ??
-      (typeof body === 'object' && body
-        ? (body as { team_id?: string }).team_id
+      (typeof bodyRecord?.team_id === 'string'
+        ? bodyRecord.team_id
         : undefined),
   } satisfies SlackMessageContext;
 }
@@ -103,11 +101,7 @@ export function shouldHandleMessage(
   event: SlackMessageEvent
 ): event is SlackMessageEvent & { user: string } {
   const messageText = event.text ?? '';
-  return Boolean(event.user) && isUsableMessage(messageText);
-}
-
-export function canUseBot(userId: string): boolean {
-  return isUserAllowed(userId);
+  return Boolean(event.user) && !messageText.startsWith('##');
 }
 
 export async function getAuthorName(

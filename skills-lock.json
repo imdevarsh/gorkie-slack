@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "slack-agent": {
+      "source": "vercel-labs/slack-agent-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "c40b751775659892fa9f3eb28f77d570243e07c85c575b24ee0fb19dc824f43f"
+    }
+  }
+}

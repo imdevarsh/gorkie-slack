@@ -1,24 +1,25 @@
 import logger from '~/lib/logger';
 
-export function logReply(
-  ctxId: string,
-  author: string,
+export function logReply({
+  ctxId,
+  author,
+  result,
+  reason,
+}: {
+  ctxId: string;
+  author: string;
   result: {
     success?: boolean;
-    response?: string;
     error?: string;
     toolCalls?: Array<{ toolName?: string }>;
-  },
-  reason?: string
-) {
+  };
+  reason?: string;
+}) {
   if (result.success) {
-    const tools = result.toolCalls
-      ?.map((call) => call.toolName)
-      .filter(Boolean);
+    const tools = result.toolCalls?.map((c) => c.toolName).filter(Boolean);
     const summary = tools?.length
       ? tools.join(', ')
       : 'Completed tool execution';
-
     logger.info(
       { ctxId },
       `-> ${author}${reason ? ` (${reason})` : ''}: ${summary}`
