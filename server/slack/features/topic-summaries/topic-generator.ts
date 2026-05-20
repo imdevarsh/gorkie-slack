@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { getTopicSummaryEnabled } from '~/db/queries/topic-summaries';
+import { getTopicSummaryConfig } from '~/db/queries/topic-summaries';
 import { provider } from '~/lib/ai/providers';
 import { redis } from '~/lib/kv';
 import logger from '~/lib/logger';
@@ -25,7 +25,8 @@ export async function processTopicSummaryHeuristic(
     if (cached === '1' || cached === '0') {
       enabled = cached === '1';
     } else {
-      enabled = await getTopicSummaryEnabled(channelId);
+      const config = await getTopicSummaryConfig(channelId);
+      enabled = config?.enabled ?? false;
       await redis.set(cacheKey, enabled ? '1' : '0');
     }
 
@@ -87,10 +88,20 @@ async function generateAndSetTopic(
     maxOutputTokens: 20,
   });
 
-  const topic = generatedTopic.trim().replace(QUOTES_RE, '$1');
+  let topic = generatedTopic.trim().replace(QUOTES_RE, '$1');
 
   if (!topic) {
     return;
+  }
+
+  // Apply prefix/postfix
+  const config = await getTopicSummaryConfig(channelId);
+
+  if (config?.prefix) {
+    topic = `${config.prefix} ${topic}`;
+  }
+  if (config?.postfix) {
+    topic = `${topic} ${config.postfix}`;
   }
 
   await context.client.conversations.setTopic({
