@@ -1,5 +1,19 @@
 import { boolean, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
+export const channelTopicSummaries = pgTable('channel_topic_summaries', {
+  channelId: text('channel_id').primaryKey(),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export type ChannelTopicSummary = typeof channelTopicSummaries.$inferSelect;
+
 export const userCustomizations = pgTable('user_customizations', {
   userId: text('user_id').primaryKey(),
   prompt: text('prompt').notNull(),
