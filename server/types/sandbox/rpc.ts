@@ -1,8 +1,8 @@
-import type { AgentSessionEvent } from '@mariozechner/pi-coding-agent';
+import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 import type {
   RpcCommand,
   RpcResponse,
-} from '@mariozechner/pi-coding-agent/rpc';
+} from '@earendil-works/pi-coding-agent/rpc';
 
 export type {
   AgentEvent,
@@ -12,13 +12,13 @@ export type {
 export type {
   AgentSessionEvent,
   CompactionResult,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 export type {
   RpcCommand,
   RpcResponse,
   RpcSessionState,
   RpcSlashCommand,
-} from '@mariozechner/pi-coding-agent/rpc';
+} from '@earendil-works/pi-coding-agent/rpc';
 
 type DistributiveOmit<T, K extends keyof T> = T extends unknown
   ? Omit<T, K>

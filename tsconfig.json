@@ -31,10 +31,11 @@
     "forceConsistentCasingInFileNames": true,
     "rootDir": "server",
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "~/*": ["server/*"],
-      "@mariozechner/pi-coding-agent/rpc": [
-        "node_modules/@mariozechner/pi-coding-agent/dist/modes/rpc/rpc-types.d.ts"
+      "@earendil-works/pi-coding-agent/rpc": [
+        "node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-types.d.ts"
       ]
     }
   },

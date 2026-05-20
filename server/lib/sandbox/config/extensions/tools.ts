@@ -4,7 +4,7 @@ import type {
   AgentToolResult,
   AgentToolUpdateCallback,
   ExtensionAPI,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 import {
   createBashTool,
   createEditTool,
@@ -13,7 +13,7 @@ import {
   createLsTool,
   createReadTool,
   createWriteTool,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 import { type Static, type TSchema, Type } from '@sinclair/typebox';
 
 const statusSchema = Type.Object({
@@ -131,8 +131,8 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
       ...rawArgs,
       timeout:
         typeof rawArgs.timeout === 'number' &&
-        Number.isFinite(rawArgs.timeout) &&
-        rawArgs.timeout > 0
+          Number.isFinite(rawArgs.timeout) &&
+          rawArgs.timeout > 0
           ? rawArgs.timeout
           : 600,
     })),
