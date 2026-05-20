@@ -67,7 +67,7 @@ async function main(): Promise<void> {
         'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"',
         'python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip',
         'python3 -m pip install --no-cache-dir --break-system-packages pillow matplotlib numpy pandas requests agentmail',
-        'npm install -g @mariozechner/pi-coding-agent',
+        'npm install -g @earendil-works/pi-coding-agent',
         'npm install -g agent-browser',
         'bash -lc "yes | agent-browser install --with-deps"',
         'npx --yes skills add vercel-labs/agent-browser --skill agent-browser --yes',

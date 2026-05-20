@@ -21,10 +21,11 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.75",
     "@ai-sdk/openai": "^3.0.64",
     "@e2b/code-interpreter": "^2.3.3",
+    "@earendil-works/pi-coding-agent": "^0.75.4",
     "@langfuse/otel": "^4.6.1",
-    "@mariozechner/pi-coding-agent": "0.54.0",
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "@opentelemetry/sdk-node": "^0.212.0",
     "@sinclair/typebox": "^0.34.48",

@@ -24,7 +24,7 @@ export const assistantThread = {
 };
 
 export const sandbox = {
-  template: 'gorkie-sandbox:2.0',
+  template: 'gorkie-sandbox:2.1',
   timeoutMs: 10 * 60 * 1000,
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
   janitorIntervalMs: 60 * 1000,
