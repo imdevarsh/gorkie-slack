@@ -1,6 +1,8 @@
 {
   "display_information": {
-    "name": "gorkie"
+    "name": "gorkie",
+    "description": "gork's more serious sibling",
+    "background_color": "#000000"
   },
   "features": {
     "app_home": {
@@ -12,6 +14,14 @@
       "display_name": "gorkie",
       "always_online": true
     },
+    "slash_commands": [
+      {
+        "command": "/gorkie",
+        "description": "Interact with Gorkie (try /gorkie help)",
+        "usage_hint": "help | topic-summaries",
+        "should_escape": false
+      }
+    ],
     "assistant_view": {
       "assistant_description": "I can help you!",
       "suggested_prompts": [
@@ -28,7 +38,7 @@
           "message": "Is AI sentient?"
         },
         {
-          "title": "Chatting",
+          "title": "Yapping",
           "message": "Hi there gorkie!"
         }
       ]
@@ -37,7 +47,9 @@
   "oauth_config": {
     "scopes": {
       "bot": [
+        "commands",
         "app_mentions:read",
+        "assistant:write",
         "channels:history",
         "channels:join",
         "channels:manage",
@@ -61,10 +73,10 @@
         "search:read.users",
         "team:read",
         "users.profile:read",
-        "users:read",
-        "assistant:write"
+        "users:read"
       ]
-    }
+    },
+    "pkce_enabled": false
   },
   "settings": {
     "event_subscriptions": {
@@ -86,6 +98,7 @@
     },
     "org_deploy_enabled": false,
     "socket_mode_enabled": true,
-    "token_rotation_enabled": false
+    "token_rotation_enabled": false,
+    "is_mcp_enabled": false
   }
 }
