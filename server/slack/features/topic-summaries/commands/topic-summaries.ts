@@ -83,7 +83,7 @@ export async function execute({
   }
 
   await respond({
-    text: 'Invalid action. Usage: `/gorkie topic-summaries <enable|disable|status>`',
+    text: `Invalid action. Usage: \`${command.command} topic-summaries <enable|disable|status>\``,
     response_type: 'ephemeral',
   });
 }
