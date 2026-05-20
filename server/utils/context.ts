@@ -83,7 +83,9 @@ export async function buildChatContext(
         resolveChannelName(ctx),
         resolveServerName(ctx),
         resolveBotDetails(ctx),
-        userId ? getUserCustomization(userId) : Promise.resolve(null),
+        userId
+          ? getUserCustomization(userId).catch(() => null)
+          : Promise.resolve(null),
       ]);
 
     requestHints = {
