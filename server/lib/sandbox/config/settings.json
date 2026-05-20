@@ -1,5 +1,5 @@
 {
-  "defaultProvider": "openrouter",
+  "defaultProvider": "hackclub",
   "defaultModel": "google/gemini-3-flash-preview",
   "retry": {
     "enabled": true,

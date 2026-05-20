@@ -131,8 +131,8 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
       ...rawArgs,
       timeout:
         typeof rawArgs.timeout === 'number' &&
-          Number.isFinite(rawArgs.timeout) &&
-          rawArgs.timeout > 0
+        Number.isFinite(rawArgs.timeout) &&
+        rawArgs.timeout > 0
           ? rawArgs.timeout
           : 600,
     })),

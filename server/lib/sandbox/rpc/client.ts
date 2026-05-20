@@ -164,6 +164,15 @@ export class PiRpcClient {
     return this.getData(res);
   }
 
+  async cycleModel(): Promise<{
+    model: { provider: string; id: string };
+    thinkingLevel: ThinkingLevel;
+    isScoped: boolean;
+  } | null> {
+    const res = await this.send({ type: 'cycle_model' });
+    return this.getData(res);
+  }
+
   async setSteeringMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
     await this.send({ type: 'set_steering_mode', mode });
   }
@@ -200,6 +209,11 @@ export class PiRpcClient {
 
   async switchSession(sessionPath: string): Promise<{ cancelled: boolean }> {
     const res = await this.send({ type: 'switch_session', sessionPath });
+    return this.getData(res);
+  }
+
+  async clone(): Promise<{ cancelled: boolean }> {
+    const res = await this.send({ type: 'clone' });
     return this.getData(res);
   }
 
@@ -249,66 +263,97 @@ export class PiRpcClient {
     const attemptMs = 5000;
     const retryDelayMs = 500;
     let attempt = 0;
-    let lastError: Error | undefined;
 
     while (Date.now() < deadline) {
       attempt++;
       try {
-        await this.send(
-          { type: 'get_state' },
-          Math.min(attemptMs, deadline - Date.now())
-        );
+        await Promise.race([
+          this.send(
+            { type: 'get_state' },
+            Math.min(attemptMs, deadline - Date.now())
+          ),
+          this.exitPromise,
+        ]);
         if (attempt > 1) {
           logger.info({ attempt }, '[pi-rpc] Pi ready after retries');
         }
         return;
       } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
+        if (this.exited) {
+          throw err instanceof Error ? err : new Error(String(err));
+        }
         await new Promise<void>((resolve) => setTimeout(resolve, retryDelayMs));
       }
     }
 
-    throw (
-      lastError ??
-      new Error(
-        `[pi-rpc] Startup timed out after ${config.rpc.startupTimeoutMs}ms`
-      )
+    throw new Error(
+      `[pi-rpc] Startup timed out after ${config.rpc.startupTimeoutMs}ms`
     );
   }
 
-  async waitForIdle(): Promise<void> {
+  async waitForIdle(timeoutMs?: number): Promise<void> {
     let off: () => void = () => undefined;
+    const races: Promise<void>[] = [
+      new Promise<void>((resolve) => {
+        off = this.onEvent((event) => {
+          if (event.type === 'agent_end' && !event.willRetry) {
+            resolve();
+          }
+        });
+      }),
+      this.exitPromise,
+    ];
+    if (timeoutMs !== undefined) {
+      races.push(
+        new Promise<void>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(`[pi-rpc] waitForIdle timed out after ${timeoutMs}ms`)
+              ),
+            timeoutMs
+          )
+        )
+      );
+    }
     try {
-      await Promise.race([
-        new Promise<void>((resolve) => {
-          off = this.onEvent((event) => {
-            if (event.type === 'agent_end') {
-              resolve();
-            }
-          });
-        }),
-        this.exitPromise,
-      ]);
+      await Promise.race(races);
     } finally {
       off();
     }
   }
 
-  async collectEvents(): Promise<AgentSessionEvent[]> {
+  async collectEvents(timeoutMs?: number): Promise<AgentSessionEvent[]> {
     let off: () => void = () => undefined;
+    const races: Promise<AgentSessionEvent[]>[] = [
+      new Promise<AgentSessionEvent[]>((resolve) => {
+        const events: AgentSessionEvent[] = [];
+        off = this.onEvent((event) => {
+          events.push(event);
+          if (event.type === 'agent_end' && !event.willRetry) {
+            resolve(events);
+          }
+        });
+      }),
+      this.exitPromise,
+    ];
+    if (timeoutMs !== undefined) {
+      races.push(
+        new Promise<AgentSessionEvent[]>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `[pi-rpc] collectEvents timed out after ${timeoutMs}ms`
+                )
+              ),
+            timeoutMs
+          )
+        )
+      );
+    }
     try {
-      return await Promise.race([
-        new Promise<AgentSessionEvent[]>((resolve) => {
-          const events: AgentSessionEvent[] = [];
-          off = this.onEvent((event) => {
-            events.push(event);
-            if (event.type === 'agent_end') {
-              resolve(events);
-            }
-          });
-        }),
-        this.exitPromise,
-      ]);
+      return await Promise.race(races);
     } finally {
       off();
     }

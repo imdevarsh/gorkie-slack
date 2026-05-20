@@ -5,11 +5,6 @@ import type {
 } from '@earendil-works/pi-coding-agent/rpc';
 
 export type {
-  AgentEvent,
-  AgentMessage,
-  ThinkingLevel,
-} from '@mariozechner/pi-agent-core';
-export type {
   AgentSessionEvent,
   CompactionResult,
 } from '@earendil-works/pi-coding-agent';
@@ -19,6 +14,11 @@ export type {
   RpcSessionState,
   RpcSlashCommand,
 } from '@earendil-works/pi-coding-agent/rpc';
+export type {
+  AgentEvent,
+  AgentMessage,
+  ThinkingLevel,
+} from '@mariozechner/pi-agent-core';
 
 type DistributiveOmit<T, K extends keyof T> = T extends unknown
   ? Omit<T, K>

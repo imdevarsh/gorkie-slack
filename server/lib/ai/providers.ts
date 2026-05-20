@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { customProvider, wrapProvider } from 'ai';
 import { createRetryable } from 'ai-retry';
@@ -28,6 +28,10 @@ const hackclub = wrapProvider({
   },
 });
 
+const google = env.GOOGLE_GENERATIVE_AI_API_KEY
+  ? createGoogleGenerativeAI({ apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY })
+  : null;
+
 const onModelError = (context: {
   current: { model: { provider: string; modelId: string } };
 }) => {
@@ -46,7 +50,9 @@ const chatModel = createRetryable({
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3-flash-preview')
     ),
-    requestNotRetryable(google.languageModel('gemini-3-flash-preview')),
+    ...(google
+      ? [requestNotRetryable(google('gemini-3-flash-preview'))]
+      : []),
     hackclub.languageModel('openai/gpt-5-mini'),
     openrouter.languageModel('google/gemini-3-flash-preview'),
     openrouter.languageModel('openai/gpt-5-mini'),
@@ -60,7 +66,9 @@ const summariserModel = createRetryable({
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3.1-flash-lite-preview')
     ),
-    requestNotRetryable(google.languageModel('gemini-3.1-flash-lite-preview')),
+    ...(google
+      ? [requestNotRetryable(google('gemini-3.1-flash-lite-preview'))]
+      : []),
     hackclub.languageModel('openai/gpt-5-nano'),
     openrouter.languageModel('google/gemini-3.1-flash-lite-preview'),
     openrouter.languageModel('openai/gpt-5-nano'),

@@ -133,8 +133,8 @@ export const orchestratorAgent = ({
       google: {
         thinkingConfig: {
           thinkingLevel: 'medium',
-          includeThoughts: true
-        }
+          includeThoughts: true,
+        },
       },
     },
     toolChoice: 'required',

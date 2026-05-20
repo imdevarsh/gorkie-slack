@@ -22,11 +22,12 @@ export const env = createEnv({
     // Redis
     REDIS_URL: z.string().min(1),
     // Database
-    DATABASE_URL: z.string().url(),
+    DATABASE_URL: z.url(),
     // AI
     HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
     OPENROUTER_API_KEY: z.string().min(1).startsWith('sk-'),
-    OPENROUTER_BASE_URL: z.string().url().optional(),
+    OPENROUTER_BASE_URL: z.url().optional(),
+    GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
     // Logging
     LOG_DIRECTORY: z.string().optional().default('logs'),
     LOG_LEVEL: z

@@ -25,6 +25,12 @@ export const assistantThread = {
 
 export const sandbox = {
   template: 'gorkie-sandbox:2.1',
+  modelChain: [
+    { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
+    { provider: 'hackclub', modelId: 'openai/gpt-5-mini' },
+    { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
+    { provider: 'openrouter', modelId: 'openai/gpt-5-mini' },
+  ],
   timeoutMs: 10 * 60 * 1000,
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
   janitorIntervalMs: 60 * 1000,
