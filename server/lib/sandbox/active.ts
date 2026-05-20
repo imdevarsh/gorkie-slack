@@ -1,7 +1,5 @@
 import type { PiRpcClient } from './rpc/client';
 
-const GRACEFUL_STOP_TIMEOUT_MS = 60_000;
-
 const active = new Map<string, PiRpcClient>();
 
 export function setActiveSandboxClient(
@@ -16,16 +14,8 @@ export function clearActiveSandboxClient(ctxId: string): void {
 }
 
 export async function abortActiveSandbox(ctxId: string): Promise<void> {
-  const client = active.get(ctxId);
-  if (!client) {
-    return;
-  }
-  const idle = client.waitForIdle();
-  await client.abort().catch(() => null);
-  await Promise.race([
-    idle,
-    new Promise<void>((resolve) =>
-      setTimeout(resolve, GRACEFUL_STOP_TIMEOUT_MS)
-    ),
-  ]).catch(() => null);
+  await active
+    .get(ctxId)
+    ?.abort()
+    .catch(() => null);
 }
