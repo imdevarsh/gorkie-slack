@@ -130,6 +130,12 @@ export const orchestratorAgent = ({
       openrouter: {
         reasoning: { enabled: true, exclude: false, effort: 'medium' },
       },
+      google: {
+        thinkingConfig: {
+          thinkingLevel: 'medium',
+          includeThoughts: true
+        }
+      },
     },
     toolChoice: 'required',
     tools: {
