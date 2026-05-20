@@ -1,6 +1,7 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { customProvider, wrapProvider } from 'ai';
 import { createRetryable } from 'ai-retry';
+import { requestNotRetryable } from 'ai-retry/retryables';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 
@@ -41,15 +42,12 @@ const onModelError = (context: {
 const chatModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3-flash-preview'),
   retries: [
-    hackclub.languageModel('google/gemini-2.5-flash'),
+    requestNotRetryable(
+      openrouter.languageModel('google/gemini-3-flash-preview')
+    ),
     hackclub.languageModel('openai/gpt-5-mini'),
-    ...(openrouter
-      ? [
-          openrouter.languageModel('google/gemini-3-flash-preview'),
-          openrouter.languageModel('google/gemini-2.5-flash'),
-          openrouter.languageModel('openai/gpt-5-mini'),
-        ]
-      : []),
+    openrouter.languageModel('google/gemini-3-flash-preview'),
+    openrouter.languageModel('openai/gpt-5-mini'),
   ],
   onError: onModelError,
 });
@@ -57,15 +55,12 @@ const chatModel = createRetryable({
 const summariserModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3-flash-preview'),
   retries: [
-    hackclub.languageModel('google/gemini-2.5-flash'),
+    requestNotRetryable(
+      openrouter.languageModel('google/gemini-3-flash-preview')
+    ),
     hackclub.languageModel('openai/gpt-5-mini'),
-    ...(openrouter
-      ? [
-          openrouter.languageModel('google/gemini-3-flash-preview'),
-          openrouter.languageModel('google/gemini-2.5-flash'),
-          openrouter.languageModel('openai/gpt-5-nano'),
-        ]
-      : []),
+    openrouter.languageModel('google/gemini-3-flash-preview'),
+    openrouter.languageModel('openai/gpt-5-nano'),
   ],
   onError: onModelError,
 });
