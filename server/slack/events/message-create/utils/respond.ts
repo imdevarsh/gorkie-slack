@@ -1,4 +1,5 @@
 import type { ModelMessage, UserContent } from 'ai';
+import { clearAbortController, createAbortController } from '~/lib/abort';
 import {
   consumeOrchestratorReasoningStream,
   orchestratorAgent,
@@ -8,6 +9,7 @@ import { setStatus } from '~/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '~/lib/ai/utils/stream';
 import { setConversationTitle } from '~/lib/ai/utils/title';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '~/types';
+import { getContextId } from '~/utils/context';
 import { getErrorDetails } from '~/utils/error';
 import { processSlackFiles } from '~/utils/images';
 import { getSlackUserName } from '~/utils/users';
@@ -17,6 +19,8 @@ export async function generateResponse(
   messages: ModelMessage[],
   requestHints: ChatRequestHints
 ) {
+  const ctxId = getContextId(context);
+  const controller = createAbortController(ctxId);
   let stream: Stream | null = null;
 
   try {
@@ -74,6 +78,7 @@ export async function generateResponse(
           content: currentMessageContent,
         },
       ],
+      abortSignal: controller.signal,
     });
     await consumeOrchestratorReasoningStream({
       context,
@@ -87,6 +92,21 @@ export async function generateResponse(
 
     return { success: true, toolCalls };
   } catch (error) {
+    if ((error as Error)?.name === 'AbortError') {
+      if (stream) {
+        await setPlanTitle(stream, 'Interrupted');
+        await resolveOrchestratorTask({
+          context,
+          stream,
+          title: 'Interrupted',
+          details: 'Stopped by user.',
+        });
+        await closeStream(stream);
+      }
+      await setStatus(context, { status: '' });
+      return { success: false };
+    }
+
     const errorDetails = getErrorDetails(error);
     const detailParts = [errorDetails.name];
     if (errorDetails.statusCode !== undefined) {
@@ -112,5 +132,7 @@ export async function generateResponse(
       success: false,
       error: 'Oops! Something went wrong, try again later.',
     };
+  } finally {
+    clearAbortController(ctxId);
   }
 }
