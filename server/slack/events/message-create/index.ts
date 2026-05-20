@@ -70,6 +70,32 @@ async function handleMessage(
       });
     }
 
+    if (
+      result.success &&
+      requestHints.customization?.prompt &&
+      event.channel &&
+      event.channel_type !== 'im'
+    ) {
+      await messageContext.client.chat
+        .postMessage({
+          channel: event.channel,
+          thread_ts: event.thread_ts ?? event.ts,
+          blocks: [
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: "_Gorkie's responses are shaped by this user's personal instructions_",
+                },
+              ],
+            },
+          ],
+          text: "Gorkie's responses are shaped by this user's personal instructions",
+        })
+        .catch(() => null);
+    }
+
     logReply({ ctxId, author: authorName, result, reason: 'trigger' });
     return;
   }
