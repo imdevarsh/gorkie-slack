@@ -2,14 +2,11 @@ import type { PiRpcClient } from './rpc/client';
 
 const active = new Map<string, PiRpcClient>();
 
-export function setActiveSandboxClient(
-  ctxId: string,
-  client: PiRpcClient
-): void {
+export function setSandboxClient(ctxId: string, client: PiRpcClient): void {
   active.set(ctxId, client);
 }
 
-export function clearActiveSandboxClient(ctxId: string): void {
+export function clearSandboxClient(ctxId: string): void {
   active.delete(ctxId);
 }
 

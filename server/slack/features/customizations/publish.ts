@@ -17,7 +17,7 @@ export async function publishHome(
   ]);
   await client.views.publish({
     user_id: userId,
-    view: buildHomeView(tasks, customization),
+    view: buildHomeView({ tasks, customization }),
   });
 }
 

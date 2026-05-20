@@ -68,6 +68,12 @@
     "zcard",
     "zremrangebyscore",
     "zrangebyscore",
-    "zrem"
+    "zrem",
+    "behaviour",
+    "docstrings",
+    "healthcheck",
+    "isready",
+    "hostnames",
+    "thonk"
   ]
 }

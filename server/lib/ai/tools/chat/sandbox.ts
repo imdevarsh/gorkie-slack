@@ -5,10 +5,7 @@ import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import { createTask, finishTask, updateTask } from '~/lib/ai/utils/task';
 import logger from '~/lib/logger';
-import {
-  clearActiveSandboxClient,
-  setActiveSandboxClient,
-} from '~/lib/sandbox/active';
+import { clearSandboxClient, setSandboxClient } from '~/lib/sandbox/active';
 import { syncAttachments } from '~/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '~/lib/sandbox/events';
 import { pauseSession, resolveSession } from '~/lib/sandbox/session';
@@ -75,7 +72,7 @@ export const sandbox = ({
           throw new Error('[sandbox] Failed to resolve runtime session');
         }
         const session = runtime;
-        setActiveSandboxClient(ctxId, session.client);
+        setSandboxClient(ctxId, session.client);
         const uploads = await syncAttachments(session.sandbox, context, files);
         const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
         const keepSandboxAlive = () =>
@@ -207,7 +204,7 @@ export const sandbox = ({
 
         return { success: false, error: message, task };
       } finally {
-        clearActiveSandboxClient(ctxId);
+        clearSandboxClient(ctxId);
         if (runtime) {
           await runtime.client.disconnect().catch((error: unknown) => {
             logger.debug(

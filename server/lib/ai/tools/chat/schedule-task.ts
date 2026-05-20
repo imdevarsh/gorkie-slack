@@ -60,10 +60,6 @@ export const scheduleTask = ({
         ),
     }),
     onInputStart: async ({ toolCallId }) => {
-      logger.info(
-        { ctxId: getContextId(context), toolCallId },
-        'scheduleTask tool invoked'
-      );
       await createTask(stream, {
         taskId: toolCallId,
         title: 'Scheduling recurring task',

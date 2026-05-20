@@ -4,10 +4,13 @@ import type { ScheduledTask } from '~/db/schema';
 import { customInstructionsBlocks } from './_components/custom-instructions';
 import { scheduledTasksBlocks } from './_components/scheduled-tasks';
 
-export function buildHomeView(
-  tasks: ScheduledTask[],
-  customization: { prompt?: string } | null
-): SlackHomeTabDto {
+export function buildHomeView({
+  tasks,
+  customization,
+}: {
+  tasks: ScheduledTask[];
+  customization: { prompt?: string } | null;
+}): SlackHomeTabDto {
   return HomeTab()
     .blocks(
       Blocks.Header({ text: 'Gorkie' }),

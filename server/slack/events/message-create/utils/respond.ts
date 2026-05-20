@@ -49,7 +49,9 @@ export async function generateResponse(
     const userId = context.event.user;
     const messageText = context.event.text ?? '';
 
-    setConversationTitle(context, messageText).catch(() => undefined);
+    if (messages.length === 0) {
+      setConversationTitle(context, messageText).catch(() => undefined);
+    }
     const files = context.event.files;
     const authorName = userId
       ? await getSlackUserName(context.client, userId)
