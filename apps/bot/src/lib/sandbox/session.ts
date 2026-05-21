@@ -2,8 +2,11 @@ import { Sandbox } from "@e2b/code-interpreter";
 import { systemPrompt } from "@repo/ai/prompts";
 import {
   clearDestroyed,
+  deleteExpiredProxyTokens,
   getByThread,
+  issueProxyToken,
   markActivity,
+  revokeProxyToken,
   updateRuntime,
   updateStatus,
   upsert,
@@ -15,7 +18,6 @@ import logger from "@/lib/logger";
 import type { ResolvedSandboxSession, SlackMessageContext } from "@/types";
 import { getContextId } from "@/utils/context";
 import { configureAgent } from "./config";
-import { issueProxyToken, revokeProxyToken } from "./proxy-client";
 import { boot } from "./rpc/boot";
 
 function isMissingSandboxError(error: unknown): boolean {
@@ -55,6 +57,19 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
   });
 }
 
+async function issueSessionProxyToken({
+  sandboxId,
+}: {
+  sandboxId: string;
+}): Promise<string> {
+  await deleteExpiredProxyTokens();
+  const { token } = await issueProxyToken({
+    sandboxId,
+    ttlMs: config.timeoutMs,
+  });
+  return token;
+}
+
 async function createSandbox(
   context: SlackMessageContext,
   threadId: string
@@ -72,7 +87,7 @@ async function createSandbox(
   await sandbox.setTimeout(config.timeoutMs);
 
   try {
-    const { token: proxyToken } = await issueProxyToken({
+    const proxyToken = await issueSessionProxyToken({
       sandboxId: sandbox.sandboxId,
     });
     await configureAgent(sandbox, systemPrompt({ agent: "sandbox", context }));
@@ -114,7 +129,7 @@ async function resumeSandbox(
 
   await sandbox.setTimeout(config.timeoutMs);
 
-  const { token: proxyToken } = await issueProxyToken({
+  const proxyToken = await issueSessionProxyToken({
     sandboxId: sandbox.sandboxId,
   });
   const client = await boot({ sandbox, sessionId, proxyToken }).catch(

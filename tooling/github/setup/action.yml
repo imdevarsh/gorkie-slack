@@ -43,7 +43,6 @@ runs:
         E2B_API_KEY="e2b-your-e2b-api-key"
         AGENTMAIL_API_KEY="am_your_agentmail_api_key"
         PROXY_BASE_URL="http://localhost:3001"
-        PROXY_API_KEY="proxy-api-key"
         VERCEL_TOKEN="your-vercel-oidc-token"
         VERCEL_PROJECT_ID="prj_abc"
         EOF
@@ -53,8 +52,6 @@ runs:
         DATABASE_URL="postgres://postgres:postgres@localhost:5432/gorkie"
         PORT=3001
         CORS_ORIGIN="http://localhost:3000"
-        PROXY_API_KEY="proxy-api-key"
-        PROXY_TOKEN_TTL_MS=600000
         HACKCLUB_API_KEY="sk-hc-your-hackclub-api-key"
         OPENROUTER_API_KEY="sk-or-your-openrouter-api-key"
         LOG_DIRECTORY="logs"

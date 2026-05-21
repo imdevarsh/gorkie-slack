@@ -22,7 +22,6 @@ export const env = createEnv({
     E2B_API_KEY: z.string().min(1),
     AGENTMAIL_API_KEY: z.string().min(1).startsWith("am_"),
     PROXY_BASE_URL: z.url(),
-    PROXY_API_KEY: z.string().min(1),
     LANGFUSE_BASEURL: z.url().optional(),
     LANGFUSE_PUBLIC_KEY: z.string().min(1).optional(),
     LANGFUSE_SECRET_KEY: z.string().min(1).optional(),

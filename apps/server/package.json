@@ -10,7 +10,6 @@
     "start": "bun run dist/index.mjs"
   },
   "dependencies": {
-    "@hono/zod-validator": "catalog:",
     "@repo/db": "workspace:*",
     "@repo/logging": "workspace:*",
     "@t3-oss/env-core": "catalog:",

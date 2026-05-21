@@ -26,7 +26,7 @@ Gorkie is a helpful AI Slack bot built with Bun, TypeScript, Vercel AI SDK, and 
 | `apps/bot` | Slack bot runtime and bot-owned integrations |
 | `apps/server` | Independent Hono proxy/API server |
 
-The bot does not start or import the proxy server. It calls `apps/server` through `PROXY_BASE_URL` and `PROXY_API_KEY` to issue short-lived DB-backed sandbox proxy tokens.
+The bot does not start or import the proxy server. It writes short-lived DB-backed sandbox proxy tokens directly, then passes `PROXY_BASE_URL` and the scoped token into the sandbox. Provider keys stay in `apps/server`.
 
 ## Packages
 

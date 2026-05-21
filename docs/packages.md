@@ -39,4 +39,4 @@ Use app-local env for variables consumed by exactly one app. Use package env onl
 - Logging env belongs to `@repo/logging` because both apps create loggers.
 - AI provider env belongs to `@repo/ai` because the AI package owns provider construction.
 - Langfuse/OpenTelemetry env stays in `apps/bot` because current telemetry is for AI SDK traces, not generic service telemetry.
-- Proxy env stays split: bot needs `PROXY_BASE_URL` and `PROXY_API_KEY`; server needs `PROXY_API_KEY`, token TTL, CORS, and provider keys.
+- Proxy env stays split: bot needs `PROXY_BASE_URL`; server needs CORS and provider keys. Proxy tokens are issued through the shared database package, so there is no internal proxy admin key.
