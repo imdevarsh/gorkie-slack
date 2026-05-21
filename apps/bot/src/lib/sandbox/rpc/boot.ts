@@ -2,7 +2,6 @@ import type { Sandbox } from "@e2b/code-interpreter";
 import { sandbox as config } from "@/config";
 import { env } from "@/env";
 import logger from "@/lib/logger";
-import { issueToken } from "@/lib/sandbox/proxy/tokens";
 import type { PtyLike } from "@/types/sandbox/rpc";
 import { PiRpcClient } from "./client";
 
@@ -19,7 +18,7 @@ export async function boot(
   let client: PiRpcClient | null = null;
 
   const sandboxEnvs: Record<string, string> = {
-    GORKIE_SESSION_TOKEN: await issueToken({ sandboxId: sandbox.sandboxId }),
+    GORKIE_SESSION_TOKEN: env.PROXY_API_KEY ?? "",
     AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
     HOME: config.runtime.workdir,
     TERM: PTY_TERM,

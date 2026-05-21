@@ -1,12 +1,15 @@
 import "dotenv/config";
-import { keys as core } from "@repo/env/keys/core";
-import { keys as database } from "@repo/env/keys/database";
+import { keys as database } from "@repo/db/keys";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 export const env = createEnv({
-  extends: [core(), database()],
+  extends: [database()],
   server: {
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
+    PORT: z.coerce.number().default(3001),
     CORS_ORIGIN: z.url(),
   },
   runtimeEnv: process.env,

@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@repo/db": "workspace:*",
-    "@repo/env": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",
     "hono": "^4.8.2",

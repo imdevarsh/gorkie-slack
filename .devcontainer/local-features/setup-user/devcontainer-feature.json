@@ -1,0 +1,14 @@
+{
+  "id": "setup-user",
+  "name": "Setup user configs",
+  "containerEnv": {
+    "NODE_ROOT": "/home/coder/nvm",
+    "PYTHON_ROOT": "/home/coder/.python",
+    "PYTHONIOENCODING": "UTF-8",
+    "NPM_GLOBAL": "/home/coder/.npm-global"
+  },
+  "install": {
+    "app": "",
+    "file": "install.sh"
+  }
+}

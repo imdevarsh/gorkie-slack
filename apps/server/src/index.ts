@@ -16,4 +16,7 @@ app.use(
 
 app.get("/", (c) => c.text("OK"));
 
-export default app;
+export default {
+  fetch: app.fetch,
+  port: env.PORT,
+};

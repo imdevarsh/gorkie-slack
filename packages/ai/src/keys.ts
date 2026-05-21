@@ -9,6 +9,11 @@ export const keys = () =>
       OPENROUTER_BASE_URL: z.url().optional(),
       GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
     },
-    runtimeEnv: process.env,
+    runtimeEnv: {
+      HACKCLUB_API_KEY: process.env.HACKCLUB_API_KEY,
+      OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+      OPENROUTER_BASE_URL: process.env.OPENROUTER_BASE_URL,
+      GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+    },
     emptyStringAsUndefined: true,
   });

@@ -6,6 +6,8 @@ interface PackageJson {
   name: string;
 }
 
+const REPO_PREFIX_REGEX = /^@repo\//;
+
 export default function generator(plop: PlopTypes.NodePlopAPI): void {
   plop.setGenerator("package", {
     description: "Generate a new internal package",
@@ -26,7 +28,7 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
     actions: [
       (answers) => {
         if ("name" in answers && typeof answers.name === "string") {
-          answers.name = answers.name.replace(/^@repo\//, "");
+          answers.name = answers.name.replace(REPO_PREFIX_REGEX, "");
         }
         return "Sanitized name";
       },

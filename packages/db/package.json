@@ -5,19 +5,24 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./keys": {
+      "default": "./src/keys.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }
   },
   "scripts": {
+    "build": "tsc -b",
+    "check-types": "tsc -b --noEmit",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@repo/env": "workspace:*",
     "@neondatabase/serverless": "^1.0.2",
+    "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",
     "zod": "catalog:"

@@ -1,6 +1,6 @@
+import { type Persona, personas } from "@repo/ai/prompts/chat/presets";
 import { Blocks, Elements, Modal } from "slack-block-builder";
 import type { SlackModalDto } from "slack-block-builder/dist/internal";
-import { type Persona, personas } from "@repo/ai/prompts/chat/presets";
 
 export interface ModalState {
   presetsOpen: boolean;

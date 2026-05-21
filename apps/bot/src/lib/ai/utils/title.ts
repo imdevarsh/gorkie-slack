@@ -1,5 +1,5 @@
+import { provider } from "@repo/ai/providers";
 import { generateText } from "ai";
-import { provider } from "@/lib/ai/providers";
 import logger from "@/lib/logger";
 import type { SlackMessageContext } from "@/types";
 import { toLogError } from "@/utils/error";

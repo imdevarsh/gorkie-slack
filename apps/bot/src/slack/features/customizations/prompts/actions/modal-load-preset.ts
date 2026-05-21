@@ -1,10 +1,10 @@
+import { personas } from "@repo/ai/prompts/chat/presets";
 import type {
   AllMiddlewareArgs,
   BlockAction,
   ButtonAction,
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
-import { personas } from "@repo/ai/prompts/chat/presets";
 import { buildPresetModal } from "../view";
 
 export const name = "modal_load_preset";

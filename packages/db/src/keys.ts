@@ -4,10 +4,10 @@ import { z } from "zod";
 export const keys = () =>
   createEnv({
     server: {
-      NODE_ENV: z
-        .enum(["development", "production", "test"])
-        .default("development"),
+      DATABASE_URL: z.url(),
     },
-    runtimeEnv: process.env,
+    runtimeEnv: {
+      DATABASE_URL: process.env.DATABASE_URL,
+    },
     emptyStringAsUndefined: true,
   });

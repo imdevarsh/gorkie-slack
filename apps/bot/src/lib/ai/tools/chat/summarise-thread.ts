@@ -1,7 +1,7 @@
+import { summariseThreadPrompt } from "@repo/ai/prompts/chat/tasks";
+import { provider } from "@repo/ai/providers";
 import { generateText, tool } from "ai";
 import { z } from "zod";
-import { summariseThreadPrompt } from "@repo/ai/prompts/chat/tasks";
-import { provider } from "@/lib/ai/providers";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
 import logger from "@/lib/logger";
 import { getConversationMessages } from "@/slack/conversations";

@@ -30,14 +30,19 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
+    "typecheck": "turbo run check-types",
     "dev:server": "turbo run dev --filter=server",
     "dev:bot": "turbo run dev --filter=bot",
     "db:push": "turbo run db:push --filter=@repo/db",
     "db:studio": "turbo run db:studio --filter=@repo/db",
     "db:generate": "turbo run db:generate --filter=@repo/db",
     "db:migrate": "turbo run db:migrate --filter=@repo/db",
-    "check": "ultracite check",
-    "fix": "ultracite fix"
+    "check": "ultracite check .",
+    "check:spelling": "cspell -c .cspell.jsonc --no-progress --no-summary --no-must-find-files --unique --cache .",
+    "check:unsafe": "ultracite fix --unsafe true .",
+    "check:write": "ultracite fix .",
+    "fix": "ultracite fix .",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",

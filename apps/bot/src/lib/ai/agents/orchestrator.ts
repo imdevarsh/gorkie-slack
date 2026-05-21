@@ -1,23 +1,7 @@
-import { stepCountIs, ToolLoopAgent } from "ai";
 import { systemPrompt } from "@repo/ai/prompts";
-import { provider } from "@/lib/ai/providers";
-import { cancelScheduledTask } from "@/lib/ai/tools/chat/cancel-scheduled-task";
-import { generateImageTool } from "@/lib/ai/tools/chat/generate-image";
-import { getUserInfo } from "@/lib/ai/tools/chat/get-user-info";
-import { getWeather } from "@/lib/ai/tools/chat/get-weather";
-import { leaveChannel } from "@/lib/ai/tools/chat/leave-channel";
-import { listScheduledTasks } from "@/lib/ai/tools/chat/list-scheduled-tasks";
-import { mermaid } from "@/lib/ai/tools/chat/mermaid";
-import { react } from "@/lib/ai/tools/chat/react";
-import { readConversationHistory } from "@/lib/ai/tools/chat/read-conversation-history";
-import { reply } from "@/lib/ai/tools/chat/reply";
-import { sandbox } from "@/lib/ai/tools/chat/sandbox";
-import { scheduleReminder } from "@/lib/ai/tools/chat/schedule-reminder";
-import { scheduleTask } from "@/lib/ai/tools/chat/schedule-task";
-import { searchSlack } from "@/lib/ai/tools/chat/search-slack";
-import { searchWeb } from "@/lib/ai/tools/chat/search-web";
-import { skip } from "@/lib/ai/tools/chat/skip";
-import { summariseThread } from "@/lib/ai/tools/chat/summarise-thread";
+import { provider } from "@repo/ai/providers";
+import { stepCountIs, ToolLoopAgent } from "ai";
+import { createToolset } from "@/lib/ai/tools";
 import { successToolCall } from "@/lib/ai/utils";
 import logger from "@/lib/logger";
 import type {
@@ -138,25 +122,7 @@ export const orchestratorAgent = ({
       },
     },
     toolChoice: "required",
-    tools: {
-      getWeather: getWeather({ context, stream }),
-      generateImage: generateImageTool({ context, files, stream }),
-      searchWeb: searchWeb({ context, stream }),
-      searchSlack: searchSlack({ context, stream }),
-      getUserInfo: getUserInfo({ context, stream }),
-      listScheduledTasks: listScheduledTasks({ context, stream }),
-      cancelScheduledTask: cancelScheduledTask({ context, stream }),
-      leaveChannel: leaveChannel({ context, stream }),
-      scheduleReminder: scheduleReminder({ context, stream }),
-      scheduleTask: scheduleTask({ context, stream }),
-      summariseThread: summariseThread({ context, stream }),
-      sandbox: sandbox({ context, files, stream }),
-      mermaid: mermaid({ context, stream }),
-      react: react({ context, stream }),
-      readConversationHistory: readConversationHistory({ context, stream }),
-      reply: reply({ context, stream }),
-      skip: skip({ context, stream }),
-    },
+    tools: createToolset({ context, files, stream }),
     stopWhen: [
       stepCountIs(40),
       successToolCall("leaveChannel"),
@@ -172,18 +138,6 @@ export const orchestratorAgent = ({
       });
       taskMap.set(context.event.event_ts, task);
       return {};
-    },
-    async experimental_onToolCallStart() {
-      const taskId = taskMap.get(context.event.event_ts);
-      if (taskId) {
-        await resolveOrchestratorTask({ context, stream });
-        return;
-      }
-
-      logger.warn(
-        { eventTs: context.event.event_ts },
-        "No taskId found in taskMap"
-      );
     },
     async onStepFinish() {
       const taskId = taskMap.get(context.event.event_ts);

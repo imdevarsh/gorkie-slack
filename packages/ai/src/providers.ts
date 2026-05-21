@@ -1,9 +1,10 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { keys } from "@repo/env/keys/ai";
-import { customProvider, wrapProvider } from "ai";
+import { customProvider, type Provider, wrapProvider } from "ai";
 import { createRetryable } from "ai-retry";
 import { requestNotRetryable } from "ai-retry/retryables";
+
+import { keys } from "./keys";
 
 const env = keys();
 
@@ -75,7 +76,7 @@ const summariserModel = createRetryable({
   onError: onModelError,
 });
 
-export const provider = customProvider({
+export const provider: Provider = customProvider({
   languageModels: {
     "chat-model": chatModel,
     "summariser-model": summariserModel,

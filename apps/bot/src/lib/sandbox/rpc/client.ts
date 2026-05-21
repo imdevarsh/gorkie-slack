@@ -1,4 +1,4 @@
-import type { ImageContent } from "@mariozechner/pi-ai";
+import type { ImageContent } from "@earendil-works/pi-ai";
 import { sandbox as config } from "@/config";
 import logger from "@/lib/logger";
 import type {

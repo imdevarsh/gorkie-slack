@@ -1,5 +1,5 @@
+import { provider } from "@repo/ai/providers";
 import { stepCountIs, ToolLoopAgent } from "ai";
-import { provider } from "@/lib/ai/providers";
 import { getUserInfo } from "@/lib/ai/tools/chat/get-user-info";
 import { getWeather } from "@/lib/ai/tools/chat/get-weather";
 import { readConversationHistory } from "@/lib/ai/tools/chat/read-conversation-history";

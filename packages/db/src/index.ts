@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
-import { env } from "@repo/env/server";
 import { drizzle } from "drizzle-orm/neon-http";
 
+import { env } from "./env";
 import * as schema from "./schema";
 
 export function createDb() {

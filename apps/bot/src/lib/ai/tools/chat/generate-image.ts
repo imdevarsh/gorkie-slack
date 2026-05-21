@@ -1,13 +1,37 @@
+import { provider } from "@repo/ai/providers";
 import { generateImage, tool } from "ai";
 import { extension as getExtension } from "mime-types";
 import { z } from "zod";
-import { provider } from "@/lib/ai/providers";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
 import logger from "@/lib/logger";
 import type { SlackFile, SlackMessageContext, Stream } from "@/types";
 import { getContextId } from "@/utils/context";
 import { errorMessage, toLogError } from "@/utils/error";
 import { processSlackFiles } from "@/utils/images";
+
+type SourceImage = string | Uint8Array | ArrayBuffer | Buffer;
+
+function isSourceImage(image: unknown): image is SourceImage {
+  return (
+    typeof image === "string" ||
+    image instanceof Uint8Array ||
+    image instanceof ArrayBuffer ||
+    image instanceof Buffer
+  );
+}
+
+async function getImagePrompt(prompt: string, files?: SlackFile[]) {
+  const inputImages = await processSlackFiles(files);
+  const sourceImages = inputImages
+    .map((item) => item.image)
+    .filter(isSourceImage);
+
+  return {
+    imagePrompt:
+      sourceImages.length > 0 ? { text: prompt, images: sourceImages } : prompt,
+    sourceImageCount: sourceImages.length,
+  };
+}
 
 export const generateImageTool = ({
   context,
@@ -89,20 +113,10 @@ export const generateImageTool = ({
       });
 
       try {
-        const inputImages = await processSlackFiles(files);
-        const sourceImages = inputImages
-          .map((item) => item.image)
-          .filter(
-            (image): image is string | Uint8Array | ArrayBuffer | Buffer =>
-              typeof image === "string" ||
-              image instanceof Uint8Array ||
-              image instanceof ArrayBuffer ||
-              image instanceof Buffer
-          );
-        const imagePrompt =
-          sourceImages.length > 0
-            ? { text: prompt, images: sourceImages }
-            : prompt;
+        const { imagePrompt, sourceImageCount } = await getImagePrompt(
+          prompt,
+          files
+        );
 
         const result = await generateImage({
           model: provider.imageModel("image-model"),
@@ -154,7 +168,7 @@ export const generateImageTool = ({
 
         return {
           success: true,
-          content: `Generated ${result.images.length} image(s)${sourceImages.length > 0 ? " from attachment(s)" : ""}`,
+          content: `Generated ${result.images.length} image(s)${sourceImageCount > 0 ? " from attachment(s)" : ""}`,
         };
       } catch (error) {
         logger.error(

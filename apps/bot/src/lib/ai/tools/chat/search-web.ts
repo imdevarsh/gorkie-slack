@@ -52,7 +52,7 @@ export const searchWeb = ({
           .map((item) => {
             const url = item.url?.trim();
             if (!url) {
-              return;
+              return null;
             }
 
             return {
