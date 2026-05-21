@@ -15,6 +15,10 @@ import logger from "@/lib/logger";
 import type { ResolvedSandboxSession, SlackMessageContext } from "@/types";
 import { getContextId } from "@/utils/context";
 import { configureAgent } from "./config";
+import {
+  issueSandboxProxyToken,
+  revokeSandboxProxyToken,
+} from "./proxy-client";
 import { boot } from "./rpc/boot";
 
 function isMissingSandboxError(error: unknown): boolean {
@@ -71,8 +75,11 @@ async function createSandbox(
   await sandbox.setTimeout(config.timeoutMs);
 
   try {
+    const { token: proxyToken } = await issueSandboxProxyToken(
+      sandbox.sandboxId
+    );
     await configureAgent(sandbox, systemPrompt({ agent: "sandbox", context }));
-    const client = await boot(sandbox);
+    const client = await boot(sandbox, undefined, proxyToken);
     const { sessionId } = await client.getState();
 
     await upsert({
@@ -88,6 +95,7 @@ async function createSandbox(
 
     return { client, sandbox };
   } catch (error) {
+    await revokeSandboxProxyToken(sandbox.sandboxId).catch(() => null);
     await Sandbox.kill(sandbox.sandboxId, { apiKey: env.E2B_API_KEY }).catch(
       () => null
     );
@@ -109,7 +117,13 @@ async function resumeSandbox(
 
   await sandbox.setTimeout(config.timeoutMs);
 
-  const client = await boot(sandbox, sessionId);
+  const { token: proxyToken } = await issueSandboxProxyToken(sandbox.sandboxId);
+  const client = await boot(sandbox, sessionId, proxyToken).catch(
+    async (error: unknown) => {
+      await revokeSandboxProxyToken(sandbox.sandboxId).catch(() => null);
+      throw error;
+    }
+  );
 
   const state = await client.getState();
   logger.debug(
@@ -176,4 +190,8 @@ export async function pauseSession(
       "[sandbox] Failed to pause sandbox"
     );
   }
+}
+
+export function revokeSessionProxyToken(sandboxId: string): Promise<void> {
+  return revokeSandboxProxyToken(sandboxId);
 }

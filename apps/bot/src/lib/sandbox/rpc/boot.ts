@@ -11,14 +11,15 @@ const PTY_TERM = "dumb";
 
 export async function boot(
   sandbox: Sandbox,
-  sessionId?: string
+  sessionId: string | undefined,
+  proxyToken: string
 ): Promise<PiRpcClient> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let client: PiRpcClient | null = null;
 
   const sandboxEnvs: Record<string, string> = {
-    GORKIE_SESSION_TOKEN: env.PROXY_API_KEY ?? "",
+    GORKIE_SESSION_TOKEN: proxyToken,
     AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
     HOME: config.runtime.workdir,
     TERM: PTY_TERM,

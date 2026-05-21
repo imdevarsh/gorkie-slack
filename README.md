@@ -67,8 +67,9 @@ See `.env.example` at the repo root for a full annotated list. The most importan
 | `E2B_API_KEY` | Code sandbox via E2B |
 | `AGENTMAIL_API_KEY` | AgentMail API key (`am_…`) |
 | `PROXY_BASE_URL` | Public URL for the independent proxy/server app |
+| `PROXY_API_KEY` | Shared internal key used by bot to ask the server for short-lived sandbox proxy tokens |
 
-The bot does not start or own the proxy server. Proxy/API work belongs in `apps/server`; the bot only receives `PROXY_BASE_URL` and optional `PROXY_API_KEY` so sandbox code can call the independent service.
+The bot does not start or own the proxy server. Proxy/API work belongs in `apps/server`; the bot uses `PROXY_BASE_URL` and `PROXY_API_KEY` to request short-lived DB-backed sandbox proxy tokens. E2B sandboxes receive only those scoped tokens, never the real AI provider keys or the internal proxy key.
 
 ## Available Scripts
 

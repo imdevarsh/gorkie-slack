@@ -12,6 +12,16 @@ export const env = createEnv({
       .default("development"),
     PORT: z.coerce.number().default(3001),
     CORS_ORIGIN: z.url(),
+    PROXY_API_KEY: z.string().min(1),
+    PROXY_TOKEN_TTL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(10 * 60 * 1000),
+    HACKCLUB_API_KEY: z.string().min(1).startsWith("sk-hc-"),
+    OPENROUTER_API_KEY: z.string().min(1).optional(),
+    OPENROUTER_BASE_URL: z.url().optional(),
+    GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

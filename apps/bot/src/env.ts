@@ -22,7 +22,7 @@ export const env = createEnv({
     E2B_API_KEY: z.string().min(1),
     AGENTMAIL_API_KEY: z.string().min(1).startsWith("am_"),
     PROXY_BASE_URL: z.url(),
-    PROXY_API_KEY: z.string().min(1).optional(),
+    PROXY_API_KEY: z.string().min(1),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

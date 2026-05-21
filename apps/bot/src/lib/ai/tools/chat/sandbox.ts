@@ -10,7 +10,11 @@ import { clearSandboxClient, setSandboxClient } from "@/lib/sandbox/active";
 import { syncAttachments } from "@/lib/sandbox/attachments";
 import { getResponse, subscribeEvents } from "@/lib/sandbox/events";
 import { runWithModelRetry } from "@/lib/sandbox/model-retry";
-import { pauseSession, resolveSession } from "@/lib/sandbox/session";
+import {
+  pauseSession,
+  resolveSession,
+  revokeSessionProxyToken,
+} from "@/lib/sandbox/session";
 import { extendSandboxTimeout } from "@/lib/sandbox/timeout";
 import { getToolTaskEnd, getToolTaskStart } from "@/lib/sandbox/tools";
 import type { SlackFile, SlackMessageContext, Stream } from "@/types";
@@ -225,6 +229,14 @@ export const sandbox = ({
               "[sandbox] Failed to disconnect Pi client"
             );
           });
+          await revokeSessionProxyToken(runtime.sandbox.sandboxId).catch(
+            (error: unknown) => {
+              logger.debug(
+                { ...toLogError(error), ctxId },
+                "[sandbox] Failed to revoke proxy token"
+              );
+            }
+          );
           if (env.NODE_ENV === "production") {
             // Only pause in development to allow inspection
             await pauseSession(context, runtime.sandbox.sandboxId).catch(
