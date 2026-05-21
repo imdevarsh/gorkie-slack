@@ -1,7 +1,7 @@
 import path from "node:path";
 import { createLogger, type Logger } from "@repo/observability/log";
 
-import { env } from "../env";
+import { env } from "./env";
 
 const root =
   process.env.TURBO_ROOT ?? path.resolve(import.meta.dir, "../../..");

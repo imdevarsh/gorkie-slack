@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
-import { env } from "../env";
+import { env } from "./env";
 import logger from "./logger";
 
 const app = new Hono();
