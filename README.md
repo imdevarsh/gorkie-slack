@@ -61,7 +61,6 @@ See `.env.example` at the repo root for a full annotated list. The most importan
 | `SLACK_APP_TOKEN` | App-level token for Socket Mode (`xapp-…`) |
 | `SLACK_SOCKET_MODE` | Set to `true` to use Socket Mode |
 | `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection string |
 | `HACKCLUB_API_KEY` | Primary AI inference key (`sk-hc-…`) |
 | `OPENROUTER_API_KEY` | Fallback AI inference key (`sk-or-…`) |
 | `EXA_API_KEY` | Web search via Exa |
