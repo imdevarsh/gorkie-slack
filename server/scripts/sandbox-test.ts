@@ -53,13 +53,6 @@ async function main(): Promise<void> {
     const unsubscribe = client.onEvent((event) => {
       events.push(event);
 
-      if (
-        event.type !== 'message_update' &&
-        event.type !== 'tool_execution_update'
-      ) {
-        logger.debug({ event }, '[sandbox-test] event');
-      }
-
       if (event.type === 'tool_execution_start') {
         logger.info(
           { tool: event.toolName, args: event.args },

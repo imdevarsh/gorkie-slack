@@ -14,7 +14,7 @@ import {
   createReadTool,
   createWriteTool,
 } from '@earendil-works/pi-coding-agent';
-import { type Static, type TSchema, Type } from '@sinclair/typebox';
+import { type Static, type TSchema, Type } from 'typebox';
 
 const statusSchema = Type.Object({
   status: Type.Optional(
@@ -25,7 +25,7 @@ const statusSchema = Type.Object({
   ),
 });
 
-// biome-ignore lint/suspicious/noExplicitAny: pi bundles its own typebox version; TSchema from each is nominally incompatible despite being structurally equivalent
+// biome-ignore lint/suspicious/noExplicitAny: pi-agent-core's Tool<T> constrains T against @sinclair/typebox's TSchema while pi-coding-agent uses typebox@1.x; structurally equivalent but nominally incompatible
 const withStatus = (schema: any) =>
   Type.Intersect([schema as TSchema, statusSchema]);
 
@@ -55,7 +55,7 @@ function passthrough<TParams extends TSchema, TDetails>(
 
 export default function registerToolsExtension(pi: ExtensionAPI): void {
   const cwd = process.cwd();
-  // biome-ignore lint/suspicious/noExplicitAny: pi bundles its own typebox version; TSchema from each is nominally incompatible
+  // biome-ignore lint/suspicious/noExplicitAny: same pi dual-typebox issue — AgentTool<TObject_v1> can't satisfy Tool<TParams extends TSchema_sinclair>
   const register = (def: any) => pi.registerTool(def);
 
   const read = createReadTool(cwd);
@@ -115,7 +115,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const bash = createBashTool(cwd);
   const bashParams = withStatus(
     Type.Intersect([
-      // biome-ignore lint/suspicious/noExplicitAny: pi-bundled typebox TObject is not assignable to local TObject
+      // biome-ignore lint/suspicious/noExplicitAny: pi dual-typebox issue
       Type.Omit(bash.parameters as any, ['timeout']),
       Type.Object({
         timeout: Type.Optional(
@@ -142,19 +142,23 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
     })),
   });
 
-  const showFileParams = withStatus(
-    Type.Object({
-      path: Type.String({
+  const showFileParams = Type.Object({
+    path: Type.String({
+      description:
+        'Absolute path to the file in sandbox, e.g. /home/user/output/result.png',
+    }),
+    title: Type.Optional(
+      Type.String({
+        description: 'Optional title to display in Slack',
+      })
+    ),
+    status: Type.Optional(
+      Type.String({
         description:
-          'Absolute path to the file in sandbox, e.g. /home/user/output/result.png',
-      }),
-      title: Type.Optional(
-        Type.String({
-          description: 'Optional title to display in Slack',
-        })
-      ),
-    })
-  );
+          "Required brief operation status in present-progressive form, e.g. 'uploading file'.",
+      })
+    ),
+  });
 
   register({
     name: 'showFile',
@@ -162,8 +166,8 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
     description:
       'Signal the host to upload a sandbox file to Slack once it is ready.',
     parameters: showFileParams,
-    execute: (_toolCallId, params) => {
-      const { path, title } = params as Static<typeof showFileParams>;
+    execute: (_toolCallId: string, params: Static<typeof showFileParams>) => {
+      const { path, title } = params;
 
       if (!nodePath.isAbsolute(path)) {
         throw new Error('showFile.path must be absolute');
