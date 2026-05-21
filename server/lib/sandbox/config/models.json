@@ -19,6 +19,13 @@
         { "id": "google/gemini-3-flash-preview" },
         { "id": "openai/gpt-5-mini" }
       ]
+    },
+    "gemini": {
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "api": "openai-completions",
+      "apiKey": "GOOGLE_GENERATIVE_AI_API_KEY",
+      "authHeader": true,
+      "models": [{ "id": "gemini-2.0-flash" }, { "id": "gemini-1.5-flash" }]
     }
   }
 }

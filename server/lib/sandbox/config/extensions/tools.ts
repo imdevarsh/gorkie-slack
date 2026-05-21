@@ -25,8 +25,9 @@ const statusSchema = Type.Object({
   ),
 });
 
-const withStatus = <T extends TSchema>(schema: T) =>
-  Type.Intersect([schema, statusSchema]);
+// biome-ignore lint/suspicious/noExplicitAny: pi bundles its own typebox version; TSchema from each is nominally incompatible despite being structurally equivalent
+const withStatus = (schema: any) =>
+  Type.Intersect([schema as TSchema, statusSchema]);
 
 function passthrough<TParams extends TSchema, TDetails>(
   tool: {
@@ -54,10 +55,12 @@ function passthrough<TParams extends TSchema, TDetails>(
 
 export default function registerToolsExtension(pi: ExtensionAPI): void {
   const cwd = process.cwd();
+  // biome-ignore lint/suspicious/noExplicitAny: pi bundles its own typebox version; TSchema from each is nominally incompatible
+  const register = (def: any) => pi.registerTool(def);
 
   const read = createReadTool(cwd);
   const readParams = withStatus(read.parameters);
-  pi.registerTool({
+  register({
     ...read,
     name: 'read',
     parameters: readParams,
@@ -66,7 +69,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
 
   const edit = createEditTool(cwd);
   const editParams = withStatus(edit.parameters);
-  pi.registerTool({
+  register({
     ...edit,
     name: 'edit',
     parameters: editParams,
@@ -75,7 +78,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
 
   const write = createWriteTool(cwd);
   const writeParams = withStatus(write.parameters);
-  pi.registerTool({
+  register({
     ...write,
     name: 'write',
     parameters: writeParams,
@@ -84,7 +87,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
 
   const find = createFindTool(cwd);
   const findParams = withStatus(find.parameters);
-  pi.registerTool({
+  register({
     ...find,
     name: 'find',
     parameters: findParams,
@@ -93,7 +96,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
 
   const grep = createGrepTool(cwd);
   const grepParams = withStatus(grep.parameters);
-  pi.registerTool({
+  register({
     ...grep,
     name: 'grep',
     parameters: grepParams,
@@ -102,7 +105,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
 
   const ls = createLsTool(cwd);
   const lsParams = withStatus(ls.parameters);
-  pi.registerTool({
+  register({
     ...ls,
     name: 'ls',
     parameters: lsParams,
@@ -112,7 +115,8 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const bash = createBashTool(cwd);
   const bashParams = withStatus(
     Type.Intersect([
-      Type.Omit(bash.parameters, ['timeout']),
+      // biome-ignore lint/suspicious/noExplicitAny: pi-bundled typebox TObject is not assignable to local TObject
+      Type.Omit(bash.parameters as any, ['timeout']),
       Type.Object({
         timeout: Type.Optional(
           Type.Number({
@@ -123,7 +127,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
       }),
     ])
   );
-  pi.registerTool({
+  register({
     ...bash,
     name: 'bash',
     parameters: bashParams,
@@ -152,7 +156,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
     })
   );
 
-  pi.registerTool({
+  register({
     name: 'showFile',
     label: 'showFile',
     description:

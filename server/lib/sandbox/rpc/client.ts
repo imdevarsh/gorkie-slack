@@ -30,6 +30,11 @@ type ModelInfo = Extract<
   RpcResponse,
   { command: 'get_available_models'; success: true }
 >['data']['models'][number];
+interface CycleModelResult {
+  isScoped: boolean;
+  model: { provider: string; id: string };
+  thinkingLevel: ThinkingLevel;
+}
 
 export class PiRpcClient {
   private buffer = '';
@@ -49,22 +54,20 @@ export class PiRpcClient {
     this.exitPromise.catch(() => null);
   }
 
+  // --- I/O handlers (called by the sandbox layer) ---
+
   handleProcessExit(result: { exitCode?: number; error?: string }): void {
     if (this.exited) {
       return;
     }
-
     const detail = result.error ?? `exit code ${result.exitCode ?? 'unknown'}`;
-    const error = new Error(
-      `[pi-rpc] Pi process exited unexpectedly (${detail})`
-    );
-
     logger.warn(
       { exitCode: result.exitCode, error: result.error },
       '[pi-rpc] Pi process exited unexpectedly'
     );
-
-    this.finishWithError(error);
+    this.finishWithError(
+      new Error(`[pi-rpc] Pi process exited unexpectedly (${detail})`)
+    );
   }
 
   handleStdout(chunk: string): void {
@@ -81,6 +84,7 @@ export class PiRpcClient {
       try {
         parsed = JSON.parse(trimmed);
       } catch {
+        logger.debug({ line: trimmed }, '[pi-rpc] stdout');
         continue;
       }
       const obj = parsed as { type?: unknown; id?: unknown };
@@ -99,22 +103,14 @@ export class PiRpcClient {
     }
   }
 
-  private emit(event: AgentSessionEvent): void {
-    for (const listener of this.listeners) {
-      try {
-        listener(event);
-      } catch (err) {
-        logger.warn({ err }, '[pi-rpc] Event listener threw');
-      }
-    }
-  }
+  // --- event subscription ---
 
   onEvent(listener: RpcEventListener): () => void {
     this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return () => this.listeners.delete(listener);
   }
+
+  // --- prompting ---
 
   async prompt(message: string, images?: ImageContent[]): Promise<void> {
     await this.send({ type: 'prompt', message, images });
@@ -128,135 +124,151 @@ export class PiRpcClient {
     await this.send({ type: 'follow_up', message, images });
   }
 
+  async promptAndWait(
+    message: string,
+    images?: ImageContent[]
+  ): Promise<AgentSessionEvent[]> {
+    const eventsPromise = this.collectEvents();
+    await this.prompt(message, images);
+    return eventsPromise;
+  }
+
+  // --- agent control ---
+
   async abort(): Promise<void> {
-    await this.send({ type: 'abort' });
-  }
-
-  async newSession(parentSession?: string): Promise<{ cancelled: boolean }> {
-    const res = await this.send({ type: 'new_session', parentSession });
-    return this.getData(res);
-  }
-
-  async getState(): Promise<RpcSessionState> {
-    const res = await this.send({ type: 'get_state' });
-    return this.getData(res);
-  }
-
-  async setModel(
-    provider: string,
-    modelId: string
-  ): Promise<{ provider: string; id: string }> {
-    const res = await this.send({ type: 'set_model', provider, modelId });
-    return this.getData(res);
-  }
-
-  async getAvailableModels(): Promise<ModelInfo[]> {
-    const res = await this.send({ type: 'get_available_models' });
-    return this.getData<{ models: ModelInfo[] }>(res).models;
-  }
-
-  async setThinkingLevel(level: ThinkingLevel): Promise<void> {
-    await this.send({ type: 'set_thinking_level', level });
-  }
-
-  async cycleThinkingLevel(): Promise<{ level: ThinkingLevel } | null> {
-    const res = await this.send({ type: 'cycle_thinking_level' });
-    return this.getData(res);
-  }
-
-  async cycleModel(): Promise<{
-    model: { provider: string; id: string };
-    thinkingLevel: ThinkingLevel;
-    isScoped: boolean;
-  } | null> {
-    const res = await this.send({ type: 'cycle_model' });
-    return this.getData(res);
-  }
-
-  async setSteeringMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
-    await this.send({ type: 'set_steering_mode', mode });
-  }
-
-  async setFollowUpMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
-    await this.send({ type: 'set_follow_up_mode', mode });
-  }
-
-  async compact(customInstructions?: string): Promise<CompactionResult> {
-    const res = await this.send({ type: 'compact', customInstructions });
-    return this.getData(res);
-  }
-
-  async setAutoCompaction(enabled: boolean): Promise<void> {
-    await this.send({ type: 'set_auto_compaction', enabled });
-  }
-
-  async setAutoRetry(enabled: boolean): Promise<void> {
-    await this.send({ type: 'set_auto_retry', enabled });
+    await this.cmd({ type: 'abort' });
   }
 
   async abortRetry(): Promise<void> {
-    await this.send({ type: 'abort_retry' });
-  }
-
-  async bash(command: string): Promise<BashResult> {
-    const res = await this.send({ type: 'bash', command });
-    return this.getData(res);
+    await this.cmd({ type: 'abort_retry' });
   }
 
   async abortBash(): Promise<void> {
-    await this.send({ type: 'abort_bash' });
+    await this.cmd({ type: 'abort_bash' });
   }
 
-  async switchSession(sessionPath: string): Promise<{ cancelled: boolean }> {
-    const res = await this.send({ type: 'switch_session', sessionPath });
-    return this.getData(res);
+  // --- session ---
+
+  getState(): Promise<RpcSessionState> {
+    return this.cmd({ type: 'get_state' });
   }
 
-  async clone(): Promise<{ cancelled: boolean }> {
-    const res = await this.send({ type: 'clone' });
-    return this.getData(res);
+  newSession(parentSession?: string): Promise<{ cancelled: boolean }> {
+    return this.cmd({ type: 'new_session', parentSession });
   }
 
-  async fork(entryId: string): Promise<{ text: string; cancelled: boolean }> {
-    const res = await this.send({ type: 'fork', entryId });
-    return this.getData(res);
+  switchSession(sessionPath: string): Promise<{ cancelled: boolean }> {
+    return this.cmd({ type: 'switch_session', sessionPath });
+  }
+
+  clone(): Promise<{ cancelled: boolean }> {
+    return this.cmd({ type: 'clone' });
+  }
+
+  fork(entryId: string): Promise<{ text: string; cancelled: boolean }> {
+    return this.cmd({ type: 'fork', entryId });
   }
 
   async getForkMessages(): Promise<Array<{ entryId: string; text: string }>> {
-    const res = await this.send({ type: 'get_fork_messages' });
-    return this.getData<{ messages: Array<{ entryId: string; text: string }> }>(
-      res
+    return (
+      await this.cmd<{ messages: Array<{ entryId: string; text: string }> }>({
+        type: 'get_fork_messages',
+      })
+    ).messages;
+  }
+
+  async setSessionName(name: string): Promise<void> {
+    await this.cmd({ type: 'set_session_name', name });
+  }
+
+  getSessionStats(): Promise<SessionStats> {
+    return this.cmd({ type: 'get_session_stats' });
+  }
+
+  exportHtml(outputPath?: string): Promise<{ path: string }> {
+    return this.cmd({ type: 'export_html', outputPath });
+  }
+
+  async getLastAssistantText(): Promise<string | null> {
+    return (
+      await this.cmd<{ text: string | null }>({
+        type: 'get_last_assistant_text',
+      })
+    ).text;
+  }
+
+  async getMessages(): Promise<AgentMessage[]> {
+    return (
+      await this.cmd<{ messages: AgentMessage[] }>({ type: 'get_messages' })
     ).messages;
   }
 
   async getCommands(): Promise<RpcSlashCommand[]> {
-    const res = await this.send({ type: 'get_commands' });
-    return this.getData<{ commands: RpcSlashCommand[] }>(res).commands;
+    return (
+      await this.cmd<{ commands: RpcSlashCommand[] }>({ type: 'get_commands' })
+    ).commands;
   }
 
-  async getSessionStats(): Promise<SessionStats> {
-    const res = await this.send({ type: 'get_session_stats' });
-    return this.getData(res);
+  // --- model ---
+
+  setModel(
+    provider: string,
+    modelId: string
+  ): Promise<{ provider: string; id: string }> {
+    return this.cmd({ type: 'set_model', provider, modelId });
   }
 
-  async exportHtml(outputPath?: string): Promise<{ path: string }> {
-    const res = await this.send({ type: 'export_html', outputPath });
-    return this.getData(res);
+  cycleModel(): Promise<CycleModelResult | null> {
+    return this.cmd({ type: 'cycle_model' });
   }
 
-  async getLastAssistantText(): Promise<string | null> {
-    const res = await this.send({ type: 'get_last_assistant_text' });
-    return this.getData<{ text: string | null }>(res).text;
+  async getAvailableModels(): Promise<ModelInfo[]> {
+    return (
+      await this.cmd<{ models: ModelInfo[] }>({ type: 'get_available_models' })
+    ).models;
   }
 
-  async getMessages(): Promise<AgentMessage[]> {
-    const res = await this.send({ type: 'get_messages' });
-    return this.getData<{ messages: AgentMessage[] }>(res).messages;
+  // --- thinking ---
+
+  async setThinkingLevel(level: ThinkingLevel): Promise<void> {
+    await this.cmd({ type: 'set_thinking_level', level });
   }
 
-  async setSessionName(name: string): Promise<void> {
-    await this.send({ type: 'set_session_name', name });
+  cycleThinkingLevel(): Promise<{ level: ThinkingLevel } | null> {
+    return this.cmd({ type: 'cycle_thinking_level' });
   }
+
+  // --- steering / follow-up modes ---
+
+  async setSteeringMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
+    await this.cmd({ type: 'set_steering_mode', mode });
+  }
+
+  async setFollowUpMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
+    await this.cmd({ type: 'set_follow_up_mode', mode });
+  }
+
+  // --- compaction / retry ---
+
+  compact(customInstructions?: string): Promise<CompactionResult> {
+    return this.cmd({ type: 'compact', customInstructions });
+  }
+
+  async setAutoCompaction(enabled: boolean): Promise<void> {
+    await this.cmd({ type: 'set_auto_compaction', enabled });
+  }
+
+  async setAutoRetry(enabled: boolean): Promise<void> {
+    await this.cmd({ type: 'set_auto_retry', enabled });
+  }
+
+  // --- bash ---
+
+  bash(command: string): Promise<BashResult> {
+    return this.cmd({ type: 'bash', command });
+  }
+
+  // --- lifecycle ---
 
   async waitUntilReady(): Promise<void> {
     const deadline = Date.now() + config.rpc.startupTimeoutMs;
@@ -293,31 +305,20 @@ export class PiRpcClient {
 
   async waitForIdle(timeoutMs?: number): Promise<void> {
     let off: () => void = () => undefined;
-    const races: Promise<void>[] = [
-      new Promise<void>((resolve) => {
-        off = this.onEvent((event) => {
-          if (event.type === 'agent_end' && !event.willRetry) {
-            resolve();
-          }
-        });
-      }),
-      this.exitPromise,
-    ];
-    if (timeoutMs !== undefined) {
-      races.push(
-        new Promise<void>((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                new Error(`[pi-rpc] waitForIdle timed out after ${timeoutMs}ms`)
-              ),
-            timeoutMs
-          )
-        )
-      );
-    }
     try {
-      await Promise.race(races);
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          off = this.onEvent((event) => {
+            if (event.type === 'agent_end' && !event.willRetry) {
+              resolve();
+            }
+          });
+        }),
+        this.exitPromise,
+        ...(timeoutMs !== undefined
+          ? [this.timeoutReject<void>(timeoutMs, 'waitForIdle')]
+          : []),
+      ]);
     } finally {
       off();
     }
@@ -325,47 +326,30 @@ export class PiRpcClient {
 
   async collectEvents(timeoutMs?: number): Promise<AgentSessionEvent[]> {
     let off: () => void = () => undefined;
-    const races: Promise<AgentSessionEvent[]>[] = [
-      new Promise<AgentSessionEvent[]>((resolve) => {
-        const events: AgentSessionEvent[] = [];
-        off = this.onEvent((event) => {
-          events.push(event);
-          if (event.type === 'agent_end' && !event.willRetry) {
-            resolve(events);
-          }
-        });
-      }),
-      this.exitPromise,
-    ];
-    if (timeoutMs !== undefined) {
-      races.push(
-        new Promise<AgentSessionEvent[]>((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  `[pi-rpc] collectEvents timed out after ${timeoutMs}ms`
-                )
-              ),
-            timeoutMs
-          )
-        )
-      );
-    }
     try {
-      return await Promise.race(races);
+      return await Promise.race([
+        new Promise<AgentSessionEvent[]>((resolve) => {
+          const events: AgentSessionEvent[] = [];
+          off = this.onEvent((event) => {
+            events.push(event);
+            if (event.type === 'agent_end' && !event.willRetry) {
+              resolve(events);
+            }
+          });
+        }),
+        this.exitPromise,
+        ...(timeoutMs !== undefined
+          ? [
+              this.timeoutReject<AgentSessionEvent[]>(
+                timeoutMs,
+                'collectEvents'
+              ),
+            ]
+          : []),
+      ]);
     } finally {
       off();
     }
-  }
-
-  async promptAndWait(
-    message: string,
-    images?: ImageContent[]
-  ): Promise<AgentSessionEvent[]> {
-    const eventsPromise = this.collectEvents();
-    await this.prompt(message, images);
-    return eventsPromise;
   }
 
   async disconnect(): Promise<void> {
@@ -374,6 +358,31 @@ export class PiRpcClient {
     );
     await this.pty.kill().catch(() => null);
     await this.pty.disconnect().catch(() => null);
+  }
+
+  // --- private ---
+
+  private emit(event: AgentSessionEvent): void {
+    for (const listener of this.listeners) {
+      try {
+        listener(event);
+      } catch (err) {
+        logger.warn({ err }, '[pi-rpc] Event listener threw');
+      }
+    }
+  }
+
+  private async cmd<T = undefined>(payload: RpcCommandBody): Promise<T> {
+    return this.getData<T>(await this.send(payload));
+  }
+
+  private timeoutReject<T>(ms: number, label: string): Promise<T> {
+    return new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`[pi-rpc] ${label} timed out after ${ms}ms`)),
+        ms
+      )
+    );
   }
 
   private send(
@@ -414,32 +423,24 @@ export class PiRpcClient {
     });
   }
 
-  private rejectPending(error: Error): void {
-    for (const [id, request] of this.pending.entries()) {
-      this.pending.delete(id);
-      request.reject(error);
-    }
-  }
-
   private finishWithError(error: Error): void {
     if (this.exited) {
       return;
     }
     this.exited = true;
     this.rejectExit(error);
-    this.rejectPending(error);
+    for (const req of this.pending.values()) {
+      req.reject(error);
+    }
+    this.pending.clear();
   }
 
-  private getData<T = unknown>(response: RpcResponse): T {
+  private getData<T = undefined>(response: RpcResponse): T {
     if (!response.success) {
-      const message = errorMessage(response.error);
       throw new Error(
-        `[pi-rpc] Command "${response.command}" failed: ${message}`
+        `[pi-rpc] Command "${response.command}" failed: ${errorMessage(response.error)}`
       );
     }
-    if (!('data' in response)) {
-      return undefined as T;
-    }
-    return response.data as T;
+    return ('data' in response ? response.data : undefined) as T;
   }
 }

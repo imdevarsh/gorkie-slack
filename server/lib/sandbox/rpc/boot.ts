@@ -25,6 +25,9 @@ export async function boot(
       HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
       OPENROUTER_API_KEY: env.OPENROUTER_API_KEY,
       AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
+      ...(env.GOOGLE_GENERATIVE_AI_API_KEY
+        ? { GOOGLE_GENERATIVE_AI_API_KEY: env.GOOGLE_GENERATIVE_AI_API_KEY }
+        : {}),
       HOME: config.runtime.workdir,
       TERM: PTY_TERM,
     },

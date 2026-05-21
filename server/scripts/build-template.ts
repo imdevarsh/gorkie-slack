@@ -62,12 +62,15 @@ async function main(): Promise<void> {
       )
       .runCmd([
         'if command -v fdfind >/dev/null 2>&1; then ln -sf "$(command -v fdfind)" /usr/local/bin/fd; fi',
+        'apt-get purge -y nodejs nodejs-doc || true',
+        'apt-get autoremove -y || true',
         'curl -fsSL https://deb.nodesource.com/setup_24.x | bash -',
         'apt-get install -y nodejs',
-        'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"',
+        'ln -sf /usr/bin/node /usr/local/bin/node && ln -sf /usr/bin/npm /usr/local/bin/npm && ln -sf /usr/bin/npx /usr/local/bin/npx',
+        'node --version | grep -E "^v2[4-9]" || (echo "ERROR: Node 24+ required, got $(node --version)" && exit 1)',
         'python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip',
         'python3 -m pip install --no-cache-dir --break-system-packages pillow matplotlib numpy pandas requests agentmail',
-        'npm install -g @earendil-works/pi-coding-agent',
+        'npm install -g @earendil-works/pi-coding-agent@0.75.4',
         'npm install -g agent-browser',
         'bash -lc "yes | agent-browser install --with-deps"',
         'npx --yes skills add vercel-labs/agent-browser --skill agent-browser --yes',
