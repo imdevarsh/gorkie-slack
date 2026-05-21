@@ -73,9 +73,9 @@ bun run check:spelling
 
 ## Environment
 
-`apps/bot/.env.example` contains bot-owned variables: Slack tokens, AI keys, Exa, E2B, AgentMail, database, logging, and the proxy client settings.
+`apps/bot/.env.example` contains bot-owned variables: Slack tokens, AI keys, Exa, E2B, AgentMail, database, logging, and the sandbox proxy URL.
 
-`apps/server/.env.example` contains proxy-owned variables: database, CORS, proxy internal auth, token TTL, logging, and upstream provider keys.
+`apps/server/.env.example` contains proxy-owned variables: database, CORS, logging, and upstream provider keys.
 
 ## Docs
 

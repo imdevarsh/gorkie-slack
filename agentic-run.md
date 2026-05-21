@@ -7,7 +7,7 @@ Port the Gorkie Slack bot into this Turborepo cleanly, with the bot runnable fro
 ## Active Scope
 
 - Polish the Hono proxy using route modules, route chaining, Hono auth middleware, and exported `AppType`.
-- Keep the Slack bot decoupled from the proxy server. The bot may call the proxy over `PROXY_BASE_URL`, but must not import or start it.
+- Keep the Slack bot decoupled from the proxy server. The bot may configure sandboxes with `PROXY_BASE_URL`, but must not import or start the server.
 - Move AI-specific Langfuse/OpenTelemetry startup out of the shared logging package.
 - Keep env validation local to the app or package that owns the variable. Shared env packages should only exist for genuinely shared services such as database and logging.
 - Evaluate Better-T-Stack/Turborepo package patterns before changing compiled/JIT package strategy.

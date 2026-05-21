@@ -6,6 +6,7 @@ This repo uses packages for real shared ownership, not as a default extraction t
 
 - `@repo/ai`: shared AI provider config, tool metadata, and prompts used by the bot.
 - `@repo/db`: Drizzle schema, PostgreSQL client, and query modules shared by the bot and server.
+- `@repo/kv`: Redis env and client factory, ready for features that need shared KV/cache access.
 - `@repo/logging`: shared Pino logger factory and logging env keys.
 - `@repo/utils`: framework-agnostic helpers.
 - `@repo/validators`: shared Zod schemas.
@@ -20,7 +21,7 @@ Turborepo supports both patterns:
 - Just-in-Time packages export source files and rely on the consuming app's bundler/runtime to compile TypeScript.
 - Compiled packages produce build output and declarations, which is safer when the package is a runtime library consumed by more than one app or by tooling that may not compile TypeScript for dependencies.
 
-This repo currently keeps shared runtime packages compiled with `tsc -b`. App builds still consume source exports during local development, but `tsc -b` gives package-level graph validation and declaration output for CI. That is a good fit for `@repo/db`, `@repo/ai`, `@repo/logging`, `@repo/utils`, and `@repo/validators`.
+This repo currently keeps shared runtime packages compiled with `tsc -b`. App builds still consume source exports during local development, but `tsc -b` gives package-level graph validation and declaration output for CI. That is a good fit for `@repo/db`, `@repo/ai`, `@repo/kv`, `@repo/logging`, `@repo/utils`, and `@repo/validators`.
 
 Better-T-Stack commonly uses a lightweight config package plus source-exported UI/app packages, while its publishable CLI packages compile with `tsdown`. That supports the same conclusion: use JIT for toolchain-friendly app packages, and compile packages with reusable runtime or publishable boundaries.
 

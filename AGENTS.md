@@ -43,7 +43,7 @@ tooling/
 
 The Slack bot must not start or import the proxy server. Proxy/runtime API work belongs in `apps/server`; `apps/bot` should only call it through configured URLs.
 
-Hono routes should be written as route modules with chained route values where practical. Use `zValidator` for request validation, Hono middleware such as `bearerAuth` for auth parsing, and export the chained `AppType` when it could be used by a typed client.
+Hono routes should be written as route modules with chained route values where practical. Use Hono middleware such as `bearerAuth` for auth parsing, use schema validation when a route accepts structured input, and export the chained `AppType` when it could be used by a typed client.
 
 ## Coding Guidelines
 
