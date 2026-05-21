@@ -1,16 +1,1 @@
-import type { UserCustomization } from "@repo/db/queries";
-
-interface BaseHints {
-  channel: string;
-  server: string;
-  time: string;
-}
-
-export interface ChatRequestHints extends BaseHints {
-  activity: string;
-  customization?: UserCustomization;
-  joined: number;
-  status: string;
-}
-
-export interface SandboxRequestHints extends BaseHints {}
+export type { ChatRequestHints, SandboxRequestHints } from "@repo/ai/types";

@@ -1,4 +1,4 @@
-import type { ChatRequestHints, SlackMessageContext } from "@/types";
+import type { ChatRequestHints, SlackMessageContext } from "../../types";
 import { attachmentsPrompt } from "./attachments";
 import { corePrompt } from "./core";
 import { examplesPrompt } from "./examples";

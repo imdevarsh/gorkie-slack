@@ -1,4 +1,4 @@
-import type { SlackMessageContext } from "@/types";
+import type { SlackMessageContext } from "../../types";
 
 const ATTACHMENTS_DIR = "attachments";
 

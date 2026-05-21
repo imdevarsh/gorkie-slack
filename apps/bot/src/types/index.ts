@@ -1,5 +1,4 @@
 export * from "./activity";
-export * from "./ai/prompt";
 export * from "./ai/status";
 export * from "./ai/task";
 export * from "./request";

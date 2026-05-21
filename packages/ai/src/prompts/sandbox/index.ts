@@ -1,4 +1,4 @@
-import type { SandboxPromptOptions } from "@/types";
+import type { SandboxPromptOptions } from "../../types";
 import { contextPrompt } from "./context";
 import { corePrompt } from "./core";
 import { environmentPrompt } from "./environment";

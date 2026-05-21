@@ -9,8 +9,10 @@
     "./prompts": "./src/prompts/index.ts",
     "./prompts/chat": "./src/prompts/chat/index.ts",
     "./prompts/chat/presets": "./src/prompts/chat/presets/index.ts",
+    "./prompts/chat/presets/*": "./src/prompts/chat/presets/*.ts",
+    "./prompts/chat/*": "./src/prompts/chat/*.ts",
     "./prompts/sandbox": "./src/prompts/sandbox/index.ts",
-    "./prompts/*": "./src/prompts/*.ts",
+    "./prompts/sandbox/*": "./src/prompts/sandbox/*.ts",
     "./types": "./src/types.ts",
     "./*": "./src/*.ts"
   },

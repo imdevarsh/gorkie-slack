@@ -2,7 +2,7 @@ import type {
   ChatRequestHints,
   SandboxRequestHints,
   SlackMessageContext,
-} from "@/types";
+} from "../types";
 import { chatPrompt } from "./chat";
 import { sandboxPrompt } from "./sandbox";
 

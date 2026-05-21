@@ -9,7 +9,6 @@
     ],
     "catalog": {
       "@ai-sdk/google": "^3.0.78",
-      "@ai-sdk/openai": "^3.0.64",
       "@commitlint/cli": "^21.0.1",
       "@commitlint/config-conventional": "^21.0.1",
       "@commitlint/types": "^21.0.1",

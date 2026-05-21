@@ -1,4 +1,4 @@
-import type { ContextPromptOptions } from "@/types";
+import type { ContextPromptOptions } from "../../types";
 
 export function contextPrompt({
   context,

@@ -9,14 +9,11 @@
     "start": "bun run dist/index.mjs"
   },
   "dependencies": {
-    "@ai-sdk/google": "catalog:",
-    "@ai-sdk/openai": "catalog:",
     "@e2b/code-interpreter": "^2.4.2",
     "@earendil-works/pi-agent-core": "^0.75.4",
     "@earendil-works/pi-ai": "^0.75.4",
     "@earendil-works/pi-coding-agent": "^0.75.4",
     "@langfuse/otel": "^5.3.0",
-    "@openrouter/ai-sdk-provider": "catalog:",
     "@opentelemetry/sdk-node": "^0.218.0",
     "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
@@ -27,7 +24,6 @@
     "@slack/web-api": "^7.12.1",
     "@t3-oss/env-core": "catalog:",
     "ai": "catalog:",
-    "ai-retry": "catalog:",
     "cron-parser": "^5.5.0",
     "date-fns": "^4.2.1",
     "dotenv": "catalog:",
