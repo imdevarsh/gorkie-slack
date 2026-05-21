@@ -1,12 +1,12 @@
 import "dotenv/config";
-import { keys as aiKeys } from "@repo/ai/keys";
-import { keys as databaseKeys } from "@repo/db/keys";
-import { keys as observabilityKeys } from "@repo/observability/keys";
+import { keys as ai } from "@repo/ai/keys";
+import { keys as database } from "@repo/db/keys";
+import { keys as logging } from "@repo/logging/keys";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 export const env = createEnv({
-  extends: [aiKeys(), databaseKeys(), observabilityKeys()],
+  extends: [ai(), database(), logging()],
   server: {
     NODE_ENV: z
       .enum(["development", "production", "test"])
@@ -23,6 +23,9 @@ export const env = createEnv({
     AGENTMAIL_API_KEY: z.string().min(1).startsWith("am_"),
     PROXY_BASE_URL: z.url(),
     PROXY_API_KEY: z.string().min(1),
+    LANGFUSE_BASEURL: z.url().optional(),
+    LANGFUSE_PUBLIC_KEY: z.string().min(1).optional(),
+    LANGFUSE_SECRET_KEY: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

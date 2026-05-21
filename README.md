@@ -1,87 +1,83 @@
-# gorkie-slack
+<div align="center">
+  <img alt="Gorkie banner" src="./.github/banner.png" />
+  <h1>Gorkie for Slack</h1>
+</div>
 
-A Slack AI assistant bot — monorepo rewrite using Turborepo.
+Gorkie is a helpful AI Slack bot built with Bun, TypeScript, Vercel AI SDK, and Slack Bolt SDK. It responds to mentions, DMs, and thread replies with AI-generated responses, web search, code sandbox work, image generation, scheduled tasks, and Slack-aware tools.
 
-Gorkie is a helpful AI bot that responds to mentions, DMs, and thread replies in Slack with AI-generated responses. It supports web search, code sandboxes, image generation, scheduled tasks, and more.
+## Tech Stack
+
+| Area | Details |
+| --- | --- |
+| Slack bot | Slack Bolt SDK, Socket Mode or HTTP receiver |
+| AI | Vercel AI SDK, Hack Club AI, OpenRouter fallback, Gemini fallback |
+| Sandbox | E2B sandboxes running Pi agent tooling |
+| Search | Exa web search |
+| Data | PostgreSQL with Drizzle ORM |
+| Cache/KV | Redis client package ready under `@repo/kv` |
+| Proxy | Hono server for sandbox provider-key proxying |
+| Runtime | Bun |
+| Quality | Ultracite/Biome, cspell, lefthook, GitHub Actions |
 
 ## Apps
 
 | App | Description |
 | --- | --- |
-| `apps/bot` | The Slack bot (Bun + Slack Bolt SDK + Vercel AI SDK) |
-| `apps/server` | Independent Hono server for proxy/API work |
+| `apps/bot` | Slack bot runtime and bot-owned integrations |
+| `apps/server` | Independent Hono proxy/API server |
+
+The bot does not start or import the proxy server. It calls `apps/server` through `PROXY_BASE_URL` and `PROXY_API_KEY` to issue short-lived DB-backed sandbox proxy tokens.
 
 ## Packages
 
 | Package | Description |
 | --- | --- |
-| `@repo/ai` | AI providers, model config, and system prompts |
-| `@repo/db` | Drizzle ORM schema, queries, and Postgres client |
-| `@repo/observability` | Shared Pino logger factory and logging env keys |
-| `@repo/utils` | Shared framework-agnostic utility helpers |
+| `@repo/ai` | AI providers, model config, prompt builders, tool metadata |
+| `@repo/db` | Drizzle schema, PostgreSQL client, query modules |
+| `@repo/kv` | Redis env and client factory |
+| `@repo/logging` | Shared Pino logger factory and logging env keys |
+| `@repo/utils` | Shared framework-agnostic helpers |
 | `@repo/validators` | Shared Zod schemas |
+| `tooling/*` | Shared TypeScript, cspell, and GitHub Action config |
 
-## Tooling
-
-| Package | Description |
-| --- | --- |
-| `@repo/tsconfig` | Shared TypeScript configs (`base.json`, `compiled-package.json`) |
-| `@repo/cspell-config` | Shared spell-check config (cspell + dictionaries) |
-| `@repo/github` | Reusable GitHub Actions setup action |
-
-## Getting Started
+## Setup
 
 ```bash
 bun install
-```
-
-Copy the example env files and fill in your secrets:
-
-```bash
-cp .env.example apps/bot/.env
-# edit apps/bot/.env with your credentials
-
+cp apps/bot/.env.example apps/bot/.env
 cp apps/server/.env.example apps/server/.env
 ```
 
-Then start all apps in development mode:
+Fill the env files, then push the database schema:
+
+```bash
+bun run db:push
+```
+
+Run both apps:
 
 ```bash
 bun dev
 ```
 
-## Key Environment Variables
+Useful focused commands:
 
-See `.env.example` at the repo root for a full annotated list. The most important ones for `apps/bot`:
+```bash
+bun run dev:bot
+bun run dev:server
+bun run build
+bun run check
+bun run check-types
+bun run check:spelling
+```
 
-| Variable | Description |
-| --- | --- |
-| `SLACK_BOT_TOKEN` | Bot User OAuth Token (`xoxb-…`) |
-| `SLACK_SIGNING_SECRET` | Signing secret from Slack app settings |
-| `SLACK_APP_TOKEN` | App-level token for Socket Mode (`xapp-…`) |
-| `SLACK_SOCKET_MODE` | Set to `true` to use Socket Mode |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `HACKCLUB_API_KEY` | Primary AI inference key (`sk-hc-…`) |
-| `OPENROUTER_API_KEY` | Fallback AI inference key (`sk-or-…`) |
-| `EXA_API_KEY` | Web search via Exa |
-| `E2B_API_KEY` | Code sandbox via E2B |
-| `AGENTMAIL_API_KEY` | AgentMail API key (`am_…`) |
-| `PROXY_BASE_URL` | Public URL for the independent proxy/server app |
-| `PROXY_API_KEY` | Shared internal key used by bot to ask the server for short-lived sandbox proxy tokens |
+## Environment
 
-The bot does not start or own the proxy server. Proxy/API work belongs in `apps/server`; the bot uses `PROXY_BASE_URL` and `PROXY_API_KEY` to request short-lived DB-backed sandbox proxy tokens. E2B sandboxes receive only those scoped tokens, never the real AI provider keys or the internal proxy key.
+`apps/bot/.env.example` contains bot-owned variables: Slack tokens, AI keys, Exa, E2B, AgentMail, database, logging, and the proxy client settings.
 
-## Available Scripts
+`apps/server/.env.example` contains proxy-owned variables: database, CORS, proxy internal auth, token TTL, logging, and upstream provider keys.
 
-| Script | Description |
-| --- | --- |
-| `bun dev` | Start all apps in watch mode |
-| `bun build` | Build all apps and packages |
-| `bun typecheck` | Type-check the entire monorepo |
-| `bun check` | Lint and format check (Ultracite) |
-| `bun fix` | Auto-fix lint and formatting issues |
-| `bun run check:spelling` | Spell-check with cspell |
-| `bun run db:push` | Push schema to database |
-| `bun run db:generate` | Generate Drizzle migrations |
-| `bun run db:migrate` | Run pending migrations |
-| `bun run db:studio` | Open Drizzle Studio |
+## Docs
+
+- [Sandbox proxy](./docs/proxy.md)
+- [Package strategy](./docs/packages.md)

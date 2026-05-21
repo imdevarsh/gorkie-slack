@@ -15,10 +15,7 @@ import logger from "@/lib/logger";
 import type { ResolvedSandboxSession, SlackMessageContext } from "@/types";
 import { getContextId } from "@/utils/context";
 import { configureAgent } from "./config";
-import {
-  issueSandboxProxyToken,
-  revokeSandboxProxyToken,
-} from "./proxy-client";
+import { issueProxyToken, revokeProxyToken } from "./proxy-client";
 import { boot } from "./rpc/boot";
 
 function isMissingSandboxError(error: unknown): boolean {
@@ -75,11 +72,11 @@ async function createSandbox(
   await sandbox.setTimeout(config.timeoutMs);
 
   try {
-    const { token: proxyToken } = await issueSandboxProxyToken(
-      sandbox.sandboxId
-    );
+    const { token: proxyToken } = await issueProxyToken({
+      sandboxId: sandbox.sandboxId,
+    });
     await configureAgent(sandbox, systemPrompt({ agent: "sandbox", context }));
-    const client = await boot(sandbox, undefined, proxyToken);
+    const client = await boot({ sandbox, proxyToken });
     const { sessionId } = await client.getState();
 
     await upsert({
@@ -95,7 +92,7 @@ async function createSandbox(
 
     return { client, sandbox };
   } catch (error) {
-    await revokeSandboxProxyToken(sandbox.sandboxId).catch(() => null);
+    await revokeProxyToken({ sandboxId: sandbox.sandboxId }).catch(() => null);
     await Sandbox.kill(sandbox.sandboxId, { apiKey: env.E2B_API_KEY }).catch(
       () => null
     );
@@ -117,10 +114,14 @@ async function resumeSandbox(
 
   await sandbox.setTimeout(config.timeoutMs);
 
-  const { token: proxyToken } = await issueSandboxProxyToken(sandbox.sandboxId);
-  const client = await boot(sandbox, sessionId, proxyToken).catch(
+  const { token: proxyToken } = await issueProxyToken({
+    sandboxId: sandbox.sandboxId,
+  });
+  const client = await boot({ sandbox, sessionId, proxyToken }).catch(
     async (error: unknown) => {
-      await revokeSandboxProxyToken(sandbox.sandboxId).catch(() => null);
+      await revokeProxyToken({ sandboxId: sandbox.sandboxId }).catch(
+        () => null
+      );
       throw error;
     }
   );
@@ -193,5 +194,5 @@ export async function pauseSession(
 }
 
 export function revokeSessionProxyToken(sandboxId: string): Promise<void> {
-  return revokeSandboxProxyToken(sandboxId);
+  return revokeProxyToken({ sandboxId });
 }

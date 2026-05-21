@@ -1,6 +1,6 @@
-# Gorkie Slack — Turborepo Monorepo
+# Gorkie Slack
 
-A helpful AI Slack Bot built with AI SDK. This repo is a Turborepo monorepo rewrite of [gorkie-slack](https://github.com/techwithanirudh/gorkie-slack).
+A helpful AI Slack Bot built with AI SDK.
 
 ## Project Overview
 
@@ -20,9 +20,9 @@ bun run check:spelling  # Spell-check with cspell
 bun run db:push      # Push schema changes to database
 ```
 
-There are no tests in this project currently.
+There is no committed test suite for the sandbox proxy yet. Use temporary local scripts or direct app requests for validation, then delete those artifacts.
 
-## Monorepo Structure
+## Project Structure
 
 ```
 apps/
@@ -31,7 +31,8 @@ apps/
 packages/
   ai/               # AI providers, model config, and system prompts
   db/               # Drizzle ORM schema, queries, Postgres client
-  observability/    # Pino logger factory
+  kv/               # Redis env and client factory
+  logging/          # Pino logger factory
   utils/            # Shared framework-agnostic utility helpers
   validators/       # Shared Zod schemas
 tooling/
@@ -41,6 +42,8 @@ tooling/
 ```
 
 The Slack bot must not start or import the proxy server. Proxy/runtime API work belongs in `apps/server`; `apps/bot` should only call it through configured URLs.
+
+Hono routes should be written as route modules with chained route values where practical. Use `zValidator` for request validation, Hono middleware such as `bearerAuth` for auth parsing, and export the chained `AppType` when it could be used by a typed client.
 
 ## Coding Guidelines
 
@@ -86,6 +89,9 @@ No multi-line block comments on functions. Self-documenting names are enough.
 
 ### Config for tuneable values
 Anything that could reasonably change per deployment (thresholds, message lists, locale) belongs in `apps/bot/src/config.ts`, not hardcoded at the call site.
+
+### Feature-enclosed architecture
+Slack features live under `apps/bot/src/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts` when applicable. Keep feature-specific UI/actions near the feature that owns them.
 
 ## Formatting and Linting (Ultracite)
 

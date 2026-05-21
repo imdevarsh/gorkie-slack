@@ -17,9 +17,11 @@ function proxyHeaders(): Record<string, string> {
   };
 }
 
-export async function issueSandboxProxyToken(
-  sandboxId: string
-): Promise<IssueProxyTokenResponse> {
+export async function issueProxyToken({
+  sandboxId,
+}: {
+  sandboxId: string;
+}): Promise<IssueProxyTokenResponse> {
   const response = await fetch(proxyUrl("/internal/tokens"), {
     body: JSON.stringify({ sandboxId }),
     headers: proxyHeaders(),
@@ -35,9 +37,11 @@ export async function issueSandboxProxyToken(
   return response.json() as Promise<IssueProxyTokenResponse>;
 }
 
-export async function revokeSandboxProxyToken(
-  sandboxId: string
-): Promise<void> {
+export async function revokeProxyToken({
+  sandboxId,
+}: {
+  sandboxId: string;
+}): Promise<void> {
   const response = await fetch(proxyUrl(`/internal/tokens/${sandboxId}`), {
     headers: proxyHeaders(),
     method: "DELETE",

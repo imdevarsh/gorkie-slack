@@ -1,5 +1,5 @@
 import path from "node:path";
-import { createLogger, type Logger } from "@repo/observability/log";
+import { createLogger, type Logger } from "@repo/logging/log";
 
 import { env } from "./env";
 

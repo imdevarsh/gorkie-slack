@@ -1,5 +1,5 @@
-import { startTelemetry } from "@repo/observability/telemetry";
 import { env } from "@/env";
+import { startTelemetry } from "@/lib/ai/telemetry";
 import logger from "@/lib/logger";
 import { startSandboxJanitor } from "@/lib/sandbox/janitor";
 import { startScheduledTaskRunner } from "@/lib/tasks/runner";

@@ -1,5 +1,5 @@
 {
-  "name": "@repo/observability",
+  "name": "@repo/logging",
   "private": true,
   "type": "module",
   "exports": {
@@ -7,7 +7,6 @@
     "./keys": "./src/keys.ts",
     "./log": "./src/log.ts",
     "./logger": "./src/logger.ts",
-    "./telemetry": "./src/telemetry.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {
@@ -15,8 +14,6 @@
     "check-types": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@langfuse/otel": "^5.3.0",
-    "@opentelemetry/sdk-node": "^0.218.0",
     "@t3-oss/env-core": "catalog:",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",

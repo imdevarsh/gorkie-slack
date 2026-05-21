@@ -1,6 +1,7 @@
 import { LangfuseSpanProcessor } from "@langfuse/otel";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import type { Logger } from "./logger";
+import type { Logger } from "@repo/logging/log";
+import { env } from "@/env";
 
 interface StartTelemetryOptions {
   logger?: Logger;
@@ -11,9 +12,7 @@ interface Telemetry {
 }
 
 function hasLangfuseCredentials(): boolean {
-  return Boolean(
-    process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY
-  );
+  return Boolean(env.LANGFUSE_PUBLIC_KEY && env.LANGFUSE_SECRET_KEY);
 }
 
 export function startTelemetry({

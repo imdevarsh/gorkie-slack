@@ -9,11 +9,15 @@ const PTY_COLS = 220;
 const PTY_ROWS = 24;
 const PTY_TERM = "dumb";
 
-export async function boot(
-  sandbox: Sandbox,
-  sessionId: string | undefined,
-  proxyToken: string
-): Promise<PiRpcClient> {
+export async function boot({
+  sandbox,
+  sessionId,
+  proxyToken,
+}: {
+  sandbox: Sandbox;
+  sessionId?: string;
+  proxyToken: string;
+}): Promise<PiRpcClient> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let client: PiRpcClient | null = null;
