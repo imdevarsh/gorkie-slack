@@ -1,0 +1,10 @@
+# Lefthook configuration
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint
+      run: bun x ultracite check
+    - name: check-types
+      run: bun run check-types

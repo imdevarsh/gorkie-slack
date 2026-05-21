@@ -12,6 +12,7 @@
     "@repo/db": "workspace:*",
     "@repo/env": "workspace:*",
     "@slack/bolt": "^4.4.0",
+    "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },

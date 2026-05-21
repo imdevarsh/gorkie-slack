@@ -1,5 +1,5 @@
-import { env } from "@repo/env/server";
 import { App } from "@slack/bolt";
+import { env } from "../env";
 
 const app = new App({
   token: env.SLACK_BOT_TOKEN,

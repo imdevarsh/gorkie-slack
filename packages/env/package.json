@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./server": "./src/server.ts"
+    "./keys/core": "./src/keys/core.ts",
+    "./keys/database": "./src/keys/database.ts",
+    "./keys/slack": "./src/keys/slack.ts"
   },
   "dependencies": {
     "@t3-oss/env-core": "^0.13.1",

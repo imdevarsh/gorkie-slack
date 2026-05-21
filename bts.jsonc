@@ -19,7 +19,7 @@
   "backend": "hono",
   "runtime": "bun",
   "frontend": [],
-  "addons": ["mcp", "skills", "turborepo", "ultracite"],
+  "addons": ["mcp", "skills", "turborepo", "ultracite", "lefthook"],
   "examples": [],
   "auth": "none",
   "payments": "none",
