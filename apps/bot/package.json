@@ -13,8 +13,6 @@
     "@earendil-works/pi-agent-core": "^0.75.4",
     "@earendil-works/pi-ai": "^0.75.4",
     "@earendil-works/pi-coding-agent": "^0.75.4",
-    "@langfuse/otel": "^5.3.0",
-    "@opentelemetry/sdk-node": "^0.218.0",
     "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/observability": "workspace:*",
