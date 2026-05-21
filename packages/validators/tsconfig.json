@@ -1,9 +1,4 @@
 {
-  "extends": "@repo/config/tsconfig.base.json",
-  "compilerOptions": {
-    "composite": true,
-    "outDir": "dist",
-    "rootDir": "src"
-  },
+  "extends": "@repo/tsconfig/compiled-package.json",
   "include": ["src"]
 }

@@ -1,62 +1,86 @@
 # gorkie-slack
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Hono, and more.
+A Slack AI assistant bot — monorepo rewrite using Turborepo.
 
-## Features
+Gorkie is a helpful AI bot that responds to mentions, DMs, and thread replies in Slack with AI-generated responses. It supports web search, code sandboxes, image generation, scheduled tasks, and more.
 
-- **TypeScript** - For type safety and improved developer experience
-- **Hono** - Lightweight, performant server framework
-- **Bun** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Turborepo** - Optimized monorepo build system
+## Apps
+
+| App | Description |
+| --- | --- |
+| `apps/bot` | The Slack bot (Bun + Slack Bolt SDK + Vercel AI SDK) |
+| `apps/server` | Independent Hono server for proxy/API work |
+
+## Packages
+
+| Package | Description |
+| --- | --- |
+| `@repo/ai` | AI providers, model config, and system prompts |
+| `@repo/db` | Drizzle ORM schema, queries, and Postgres client |
+| `@repo/observability` | Shared Pino logger factory and logging env keys |
+| `@repo/validators` | Shared Zod schemas |
+
+## Tooling
+
+| Package | Description |
+| --- | --- |
+| `@repo/tsconfig` | Shared TypeScript configs (`base.json`, `compiled-package.json`) |
+| `@repo/cspell-config` | Shared spell-check config (cspell + dictionaries) |
+| `@repo/github` | Reusable GitHub Actions setup action |
 
 ## Getting Started
-
-First, install the dependencies:
 
 ```bash
 bun install
 ```
 
-## Database Setup
-
-This project uses PostgreSQL with Drizzle ORM.
-
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/server/.env` file with your PostgreSQL connection details.
-
-3. Apply the schema to your database:
+Copy the example env files and fill in your secrets:
 
 ```bash
-bun run db:push
+cp .env.example apps/bot/.env
+# edit apps/bot/.env with your credentials
+
+cp apps/server/.env.example apps/server/.env
 ```
 
-Then, run the development server:
+Then start all apps in development mode:
 
 ```bash
-bun run dev
+bun dev
 ```
 
-The API is running at [http://localhost:3000](http://localhost:3000).
+## Key Environment Variables
 
-## Project Structure
+See `.env.example` at the repo root for a full annotated list. The most important ones for `apps/bot`:
 
-```
-gorkie-turbo/
-├── apps/
-│   └── server/      # Backend API (Hono)
-├── packages/
-│   └── db/          # Database schema & queries
-```
+| Variable | Description |
+| --- | --- |
+| `SLACK_BOT_TOKEN` | Bot User OAuth Token (`xoxb-…`) |
+| `SLACK_SIGNING_SECRET` | Signing secret from Slack app settings |
+| `SLACK_APP_TOKEN` | App-level token for Socket Mode (`xapp-…`) |
+| `SLACK_SOCKET_MODE` | Set to `true` to use Socket Mode |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `REDIS_URL` | Redis connection string |
+| `HACKCLUB_API_KEY` | Primary AI inference key (`sk-hc-…`) |
+| `OPENROUTER_API_KEY` | Fallback AI inference key (`sk-or-…`) |
+| `EXA_API_KEY` | Web search via Exa |
+| `E2B_API_KEY` | Code sandbox via E2B |
+| `AGENTMAIL_API_KEY` | AgentMail API key (`am_…`) |
+| `PROXY_BASE_URL` | Public URL for the independent proxy/server app |
+
+The bot does not start or own the proxy server. Proxy/API work belongs in `apps/server`; the bot only receives `PROXY_BASE_URL` and optional `PROXY_API_KEY` so sandbox code can call the independent service.
 
 ## Available Scripts
 
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:server`: Start only the server
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
-- `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
-- `bun run db:studio`: Open database studio UI
+| Script | Description |
+| --- | --- |
+| `bun dev` | Start all apps in watch mode |
+| `bun build` | Build all apps and packages |
+| `bun typecheck` | Type-check the entire monorepo |
+| `bun check` | Lint and format check (Ultracite) |
+| `bun fix` | Auto-fix lint and formatting issues |
+| `bun run check:spelling` | Spell-check with cspell |
+| `bun run db:push` | Push schema to database |
+| `bun run db:generate` | Generate Drizzle migrations |
+| `bun run db:migrate` | Run pending migrations |
+| `bun run db:studio` | Open Drizzle Studio |

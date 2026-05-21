@@ -7,11 +7,10 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "check-types": "tsc -b",
-    "dev": "tsc -b --watch"
+    "check-types": "tsc -b --noEmit"
   },
   "devDependencies": {
-    "@repo/config": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@types/bun": "catalog:",
     "typescript": "catalog:"
   }

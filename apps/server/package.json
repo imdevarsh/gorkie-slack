@@ -11,13 +11,14 @@
   },
   "dependencies": {
     "@repo/db": "workspace:*",
+    "@repo/observability": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",
     "hono": "^4.8.2",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@repo/config": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@types/bun": "catalog:",
     "tsdown": "^0.21.9",
     "typescript": "catalog:"

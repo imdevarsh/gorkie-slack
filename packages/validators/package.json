@@ -3,29 +3,19 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
-    }
+    ".": "./src/index.ts"
   },
   "license": "MIT",
   "scripts": {
     "build": "tsc -b",
-    "check-types": "tsc -b --noEmit",
-    "check:spelling": "cspell -c ../../.cspell.jsonc --no-progress --no-summary --no-must-find-files --cache --cache-location .cache/.cspellcache --unique .",
-    "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "dev": "tsc -b --watch",
-    "format": "ultracite fix .",
-    "lint": "ultracite check .",
-    "typecheck": "tsc -b --noEmit"
+    "check-types": "tsc -b --noEmit"
   },
   "dependencies": {
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@repo/config": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@types/bun": "catalog:",
-    "cspell": "catalog:",
     "typescript": "catalog:"
   }
 }

@@ -1,12 +1,7 @@
 {
-  "extends": "@repo/config/tsconfig.base.json",
+  "extends": "@repo/tsconfig/compiled-package.json",
   "compilerOptions": {
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "dist",
-    "rootDir": ".",
-    "sourceMap": true
+    "rootDir": "."
   },
   "include": ["index.ts"]
 }

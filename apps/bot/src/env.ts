@@ -1,11 +1,12 @@
 import "dotenv/config";
 import { keys as aiKeys } from "@repo/ai/keys";
 import { keys as databaseKeys } from "@repo/db/keys";
+import { keys as observabilityKeys } from "@repo/observability/keys";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 export const env = createEnv({
-  extends: [aiKeys(), databaseKeys()],
+  extends: [aiKeys(), databaseKeys(), observabilityKeys()],
   server: {
     NODE_ENV: z
       .enum(["development", "production", "test"])
@@ -18,11 +19,6 @@ export const env = createEnv({
     AUTO_ADD_CHANNEL: z.string().optional(),
     OPT_IN_CHANNEL: z.string().optional(),
     REDIS_URL: z.string().min(1),
-    LOG_DIRECTORY: z.string().optional().default("logs"),
-    LOG_LEVEL: z
-      .enum(["debug", "info", "warn", "error"])
-      .optional()
-      .default("info"),
     EXA_API_KEY: z.string().min(1),
     E2B_API_KEY: z.string().min(1),
     AGENTMAIL_API_KEY: z.string().min(1).startsWith("am_"),

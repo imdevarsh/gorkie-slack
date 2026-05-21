@@ -50,7 +50,7 @@
     "@commitlint/cli": "catalog:",
     "@commitlint/config-conventional": "catalog:",
     "@commitlint/types": "catalog:",
-    "@repo/config": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@repo/cspell-config": "workspace:*",
     "@turbo/gen": "^2.8.12",
     "@types/bun": "catalog:",

@@ -42,7 +42,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@repo/config": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@types/bun": "catalog:",
     "@types/mime-types": "^3.0.1",
     "@types/pako": "^2.0.4",

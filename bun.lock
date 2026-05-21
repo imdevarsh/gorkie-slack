@@ -9,8 +9,8 @@
         "@commitlint/cli": "catalog:",
         "@commitlint/config-conventional": "catalog:",
         "@commitlint/types": "catalog:",
-        "@repo/config": "workspace:*",
         "@repo/cspell-config": "workspace:*",
+        "@repo/tsconfig": "workspace:*",
         "@turbo/gen": "^2.8.12",
         "@types/bun": "catalog:",
         "cspell": "catalog:",
@@ -56,7 +56,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@repo/config": "workspace:*",
+        "@repo/tsconfig": "workspace:*",
         "@types/bun": "catalog:",
         "@types/mime-types": "^3.0.1",
         "@types/pako": "^2.0.4",
@@ -68,13 +68,14 @@
       "name": "server",
       "dependencies": {
         "@repo/db": "workspace:*",
+        "@repo/observability": "workspace:*",
         "@t3-oss/env-core": "catalog:",
         "dotenv": "catalog:",
         "hono": "^4.8.2",
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@repo/config": "workspace:*",
+        "@repo/tsconfig": "workspace:*",
         "@types/bun": "catalog:",
         "tsdown": "^0.21.9",
         "typescript": "catalog:",
@@ -91,14 +92,10 @@
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@repo/config": "workspace:*",
+        "@repo/tsconfig": "workspace:*",
         "@types/bun": "catalog:",
         "typescript": "catalog:",
       },
-    },
-    "packages/config": {
-      "name": "@repo/config",
-      "version": "0.0.0",
     },
     "packages/db": {
       "name": "@repo/db",
@@ -110,7 +107,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@repo/config": "workspace:*",
+        "@repo/tsconfig": "workspace:*",
         "@types/pg": "^8.16.0",
         "drizzle-kit": "^0.31.8",
         "typescript": "catalog:",
@@ -119,11 +116,13 @@
     "packages/observability": {
       "name": "@repo/observability",
       "dependencies": {
+        "@t3-oss/env-core": "catalog:",
         "pino": "^10.3.1",
         "pino-pretty": "^13.1.3",
+        "zod": "catalog:",
       },
       "devDependencies": {
-        "@repo/config": "workspace:*",
+        "@repo/tsconfig": "workspace:*",
         "@types/bun": "catalog:",
         "typescript": "catalog:",
       },
@@ -134,9 +133,8 @@
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@repo/config": "workspace:*",
+        "@repo/tsconfig": "workspace:*",
         "@types/bun": "catalog:",
-        "cspell": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -150,13 +148,16 @@
         "cspell": "catalog:",
       },
       "devDependencies": {
-        "@repo/config": "workspace:*",
+        "@repo/tsconfig": "workspace:*",
         "@types/bun": "catalog:",
         "typescript": "catalog:",
       },
     },
     "tooling/github": {
       "name": "@repo/github",
+    },
+    "tooling/typescript": {
+      "name": "@repo/tsconfig",
     },
   },
   "catalog": {
@@ -712,8 +713,6 @@
 
     "@repo/ai": ["@repo/ai@workspace:packages/ai"],
 
-    "@repo/config": ["@repo/config@workspace:packages/config"],
-
     "@repo/cspell-config": ["@repo/cspell-config@workspace:tooling/cspell"],
 
     "@repo/db": ["@repo/db@workspace:packages/db"],
@@ -721,6 +720,8 @@
     "@repo/github": ["@repo/github@workspace:tooling/github"],
 
     "@repo/observability": ["@repo/observability@workspace:packages/observability"],
+
+    "@repo/tsconfig": ["@repo/tsconfig@workspace:tooling/typescript"],
 
     "@repo/validators": ["@repo/validators@workspace:packages/validators"],
 
