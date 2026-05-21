@@ -1,5 +1,14 @@
 {
   "name": "@repo/config",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./cspell": "./cspell.ts"
+  },
+  "dependencies": {
+    "@cspell/cspell-types": "^9.0.0",
+    "@cspell/dict-bash": "catalog:"
+  }
 }

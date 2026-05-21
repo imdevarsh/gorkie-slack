@@ -1,10 +1,9 @@
-# Lefthook configuration
-# https://github.com/evilmartians/lefthook
+post-merge:
+  commands:
+    install-deps:
+      run: bun install
 
-pre-commit:
-  parallel: true
-  jobs:
-    - name: lint
-      run: bun x ultracite check
-    - name: check-types
-      run: bun run check-types
+commit-msg:
+  commands:
+    "lint commit message":
+      run: bun commitlint --edit {1}

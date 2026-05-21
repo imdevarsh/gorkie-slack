@@ -7,41 +7,51 @@
       "packages/*"
     ],
     "catalog": {
+      "@ai-sdk/google": "^3.0.78",
+      "@ai-sdk/openai": "^3.0.64",
+      "@commitlint/cli": "^21.0.1",
+      "@commitlint/config-conventional": "^21.0.1",
+      "@commitlint/types": "^21.0.1",
+      "@cspell/dict-bash": "^4.2.2",
+      "@openrouter/ai-sdk-provider": "^2.9.0",
       "@t3-oss/env-core": "^0.13.1",
       "@types/bun": "^1.3.4",
+      "ai": "^6.0.188",
+      "ai-retry": "^1.7.4",
+      "cspell": "^10.0.0",
       "dotenv": "^17.2.2",
+      "lefthook": "^2.0.13",
       "typescript": "^6",
       "zod": "^4.1.13"
     }
   },
   "type": "module",
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "check-types": "turbo check-types",
-    "dev:server": "turbo -F server dev",
-    "dev:bot": "turbo -F bot dev",
-    "db:push": "turbo -F @repo/db db:push",
-    "db:studio": "turbo -F @repo/db db:studio",
-    "db:generate": "turbo -F @repo/db db:generate",
-    "db:migrate": "turbo -F @repo/db db:migrate",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "dev:server": "turbo run dev --filter=server",
+    "dev:bot": "turbo run dev --filter=bot",
+    "db:push": "turbo run db:push --filter=@repo/db",
+    "db:studio": "turbo run db:studio --filter=@repo/db",
+    "db:generate": "turbo run db:generate --filter=@repo/db",
+    "db:migrate": "turbo run db:migrate --filter=@repo/db",
     "check": "ultracite check",
     "fix": "ultracite fix"
   },
-  "dependencies": {
-    "@repo/env": "workspace:*",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
-  },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "@commitlint/types": "catalog:",
     "@repo/config": "workspace:*",
     "@turbo/gen": "^2.8.12",
     "@types/bun": "catalog:",
+    "cspell": "catalog:",
+    "lefthook": "catalog:",
     "turbo": "^2.8.12",
     "typescript": "catalog:",
-    "ultracite": "7.7.0",
-    "lefthook": "^2.0.13"
+    "ultracite": "7.7.0"
   },
   "packageManager": "bun@1.3.14"
 }

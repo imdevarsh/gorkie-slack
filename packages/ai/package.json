@@ -1,0 +1,26 @@
+{
+  "name": "@repo/ai",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers": "./src/providers.ts",
+    "./prompts": "./src/prompts/index.ts",
+    "./prompts/chat": "./src/prompts/chat/index.ts",
+    "./prompts/sandbox": "./src/prompts/sandbox/index.ts",
+    "./types": "./src/types.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "catalog:",
+    "@openrouter/ai-sdk-provider": "catalog:",
+    "@repo/env": "workspace:*",
+    "ai": "catalog:",
+    "ai-retry": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

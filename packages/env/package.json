@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./keys/ai": "./src/keys/ai.ts",
     "./keys/core": "./src/keys/core.ts",
     "./keys/database": "./src/keys/database.ts",
     "./keys/slack": "./src/keys/slack.ts"

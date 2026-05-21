@@ -1,0 +1,95 @@
+import { tool } from "ai";
+import { z } from "zod";
+import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
+import logger from "@/lib/logger";
+import type { SlackMessageContext, Stream } from "@/types";
+import { getContextId } from "@/utils/context";
+import { errorMessage, toLogError } from "@/utils/error";
+export const react = ({
+  context,
+  stream,
+}: {
+  context: SlackMessageContext;
+  stream: Stream;
+}) =>
+  tool({
+    description:
+      "Add emoji reactions to the current Slack message. Provide emoji names without surrounding colons.",
+    inputSchema: z.object({
+      emojis: z
+        .array(z.string().min(1))
+        .nonempty()
+        .describe("Emoji names to react with (unicode or custom names)."),
+    }),
+    onInputStart: async ({ toolCallId }) => {
+      await createTask(stream, {
+        taskId: toolCallId,
+        title: "Adding reaction",
+        status: "pending",
+      });
+    },
+    execute: async ({ emojis }, { toolCallId }) => {
+      const ctxId = getContextId(context);
+      const channelId = context.event.channel;
+      const messageTs = context.event.ts;
+
+      if (!(channelId && messageTs)) {
+        logger.warn(
+          { ctxId, channel: channelId, messageTs, emojis },
+          "Failed to add Slack reactions: missing channel or message id"
+        );
+        return { success: false, error: "Missing Slack channel or message id" };
+      }
+
+      const task = await updateTask(stream, {
+        taskId: toolCallId,
+        title: "Adding reaction",
+        details: emojis.join(", "),
+        status: "in_progress",
+      });
+
+      try {
+        for (const emoji of emojis) {
+          await context.client.reactions.add({
+            channel: channelId,
+            name: emoji.replace(/:/g, ""),
+            timestamp: messageTs,
+          });
+        }
+
+        logger.info(
+          { ctxId, channel: channelId, messageTs, emojis },
+          "Added reactions"
+        );
+        await finishTask(stream, {
+          status: "complete",
+          taskId: task,
+          output: `Added: ${emojis.join(", ")}`,
+        });
+        return {
+          success: true,
+          content: `Added reactions: ${emojis.join(", ")}`,
+        };
+      } catch (error) {
+        logger.error(
+          {
+            ...toLogError(error),
+            ctxId,
+            channel: channelId,
+            messageTs,
+            emojis,
+          },
+          "Failed to add Slack reactions"
+        );
+        await finishTask(stream, {
+          status: "error",
+          taskId: task,
+          output: errorMessage(error),
+        });
+        return {
+          success: false,
+          error: errorMessage(error),
+        };
+      }
+    },
+  });
