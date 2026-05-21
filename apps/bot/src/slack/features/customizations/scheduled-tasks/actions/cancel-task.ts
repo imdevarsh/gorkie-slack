@@ -1,4 +1,4 @@
-import { cancelScheduledTaskForUser } from "@repo/db/queries/scheduled-tasks";
+import { cancelScheduledTaskForUser } from "@repo/db/queries";
 import type {
   AllMiddlewareArgs,
   BlockAction,

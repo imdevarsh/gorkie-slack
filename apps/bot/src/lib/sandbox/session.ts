@@ -7,7 +7,7 @@ import {
   updateRuntime,
   updateStatus,
   upsert,
-} from "@repo/db/queries/sandbox";
+} from "@repo/db/queries";
 import { sandbox as config } from "@/config";
 import { env } from "@/env";
 import logger from "@/lib/logger";

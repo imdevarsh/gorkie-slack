@@ -5,8 +5,14 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./client": {
+      "default": "./src/client.ts"
+    },
     "./keys": {
       "default": "./src/keys.ts"
+    },
+    "./queries": {
+      "default": "./src/queries/index.ts"
     },
     "./queries/*": {
       "default": "./src/queries/*.ts"

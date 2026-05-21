@@ -1,7 +1,7 @@
 import {
   countEnabledScheduledTasksByUser,
   createScheduledTask,
-} from "@repo/db/queries/scheduled-tasks";
+} from "@repo/db/queries";
 import { tool } from "ai";
 import { z } from "zod";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";

@@ -3,7 +3,7 @@ import {
   completeScheduledTaskRun,
   disableScheduledTask,
   listDueScheduledTasks,
-} from "@repo/db/queries/scheduled-tasks";
+} from "@repo/db/queries";
 import type { ScheduledTask } from "@repo/db/schema";
 import type { WebClient } from "@slack/web-api";
 import { scheduledTaskAgent } from "@/lib/ai/agents/scheduled-task";

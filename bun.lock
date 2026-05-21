@@ -10,6 +10,7 @@
         "@commitlint/config-conventional": "catalog:",
         "@commitlint/types": "catalog:",
         "@repo/config": "workspace:*",
+        "@repo/cspell-config": "workspace:*",
         "@turbo/gen": "^2.8.12",
         "@types/bun": "catalog:",
         "cspell": "catalog:",
@@ -33,6 +34,7 @@
         "@opentelemetry/sdk-node": "^0.218.0",
         "@repo/ai": "workspace:*",
         "@repo/db": "workspace:*",
+        "@repo/observability": "workspace:*",
         "@repo/validators": "workspace:*",
         "@slack/bolt": "^4.7.2",
         "@slack/web-api": "^7.12.1",
@@ -47,8 +49,6 @@
         "mime-types": "^3.0.2",
         "p-queue": "^9.3.0",
         "pako": "^2.1.0",
-        "pino": "^10.3.1",
-        "pino-pretty": "^13.1.3",
         "sanitize-filename": "^1.6.4",
         "slack-block-builder": "^2.8.0",
         "strip-ansi": "^7.2.0",
@@ -99,10 +99,6 @@
     "packages/config": {
       "name": "@repo/config",
       "version": "0.0.0",
-      "dependencies": {
-        "@cspell/cspell-types": "^9.0.0",
-        "@cspell/dict-bash": "catalog:",
-      },
     },
     "packages/db": {
       "name": "@repo/db",
@@ -120,6 +116,18 @@
         "typescript": "catalog:",
       },
     },
+    "packages/observability": {
+      "name": "@repo/observability",
+      "dependencies": {
+        "pino": "^10.3.1",
+        "pino-pretty": "^13.1.3",
+      },
+      "devDependencies": {
+        "@repo/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/validators": {
       "name": "@repo/validators",
       "dependencies": {
@@ -131,6 +139,24 @@
         "cspell": "catalog:",
         "typescript": "catalog:",
       },
+    },
+    "tooling/cspell": {
+      "name": "@repo/cspell-config",
+      "dependencies": {
+        "@cspell/cspell-types": "^9.0.0",
+        "@cspell/dict-bash": "catalog:",
+        "@cspell/dict-npm": "^5.2.38",
+        "@cspell/dict-redis": "^1.0.0",
+        "cspell": "catalog:",
+      },
+      "devDependencies": {
+        "@repo/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "tooling/github": {
+      "name": "@repo/github",
     },
   },
   "catalog": {
@@ -401,6 +427,8 @@
     "@cspell/dict-python": ["@cspell/dict-python@4.2.26", "", { "dependencies": { "@cspell/dict-data-science": "^2.0.13" } }, "sha512-hbjN6BjlSgZOG2dA2DtvYNGBM5Aq0i0dHaZjMOI9K/9vRicVvKbcCiBSSrR3b+jwjhQL5ff7HwG5xFaaci0GQA=="],
 
     "@cspell/dict-r": ["@cspell/dict-r@2.1.1", "", {}, "sha512-71Ka+yKfG4ZHEMEmDxc6+blFkeTTvgKbKAbwiwQAuKl3zpqs1Y0vUtwW2N4b3LgmSPhV3ODVY0y4m5ofqDuKMw=="],
+
+    "@cspell/dict-redis": ["@cspell/dict-redis@1.0.7", "", {}, "sha512-e/OJCgx39X68DxYGXHMt1etGi2D+L62xZgiSPfUF9mk9LICPMWI4QaXfRv5p42Ldo1sFFZAw0qGVCBGRHEtAUw=="],
 
     "@cspell/dict-ruby": ["@cspell/dict-ruby@5.1.1", "", {}, "sha512-LHrp84oEV6q1ZxPPyj4z+FdKyq1XAKYPtmGptrd+uwHbrF/Ns5+fy6gtSi7pS+uc0zk3JdO9w/tPK+8N1/7WUA=="],
 
@@ -686,7 +714,13 @@
 
     "@repo/config": ["@repo/config@workspace:packages/config"],
 
+    "@repo/cspell-config": ["@repo/cspell-config@workspace:tooling/cspell"],
+
     "@repo/db": ["@repo/db@workspace:packages/db"],
+
+    "@repo/github": ["@repo/github@workspace:tooling/github"],
+
+    "@repo/observability": ["@repo/observability@workspace:packages/observability"],
 
     "@repo/validators": ["@repo/validators@workspace:packages/validators"],
 

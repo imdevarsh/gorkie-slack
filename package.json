@@ -4,7 +4,8 @@
   "workspaces": {
     "packages": [
       "apps/*",
-      "packages/*"
+      "packages/*",
+      "tooling/*"
     ],
     "catalog": {
       "@ai-sdk/google": "^3.0.78",
@@ -50,6 +51,7 @@
     "@commitlint/config-conventional": "catalog:",
     "@commitlint/types": "catalog:",
     "@repo/config": "workspace:*",
+    "@repo/cspell-config": "workspace:*",
     "@turbo/gen": "^2.8.12",
     "@types/bun": "catalog:",
     "cspell": "catalog:",

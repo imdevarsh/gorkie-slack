@@ -1,4 +1,4 @@
-import { getUserCustomization } from "@repo/db/queries/customizations";
+import { getUserCustomization } from "@repo/db/queries";
 import type {
   AllMiddlewareArgs,
   BlockAction,

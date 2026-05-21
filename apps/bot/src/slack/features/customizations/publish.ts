@@ -1,9 +1,9 @@
 import {
   clearUserCustomization,
   getUserCustomization,
+  listScheduledTasksByUser,
   setUserCustomization,
-} from "@repo/db/queries/customizations";
-import { listScheduledTasksByUser } from "@repo/db/queries/scheduled-tasks";
+} from "@repo/db/queries";
 import type { WebClient } from "@slack/web-api";
 import { buildHomeView } from "./view";
 
