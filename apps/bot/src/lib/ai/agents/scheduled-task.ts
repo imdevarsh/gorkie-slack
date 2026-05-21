@@ -1,4 +1,5 @@
 import { provider } from "@repo/ai/providers";
+import { successToolCall } from "@repo/ai/tools";
 import { getTime } from "@repo/utils/time";
 import { stepCountIs, ToolLoopAgent } from "ai";
 import { getUserInfo } from "@/lib/ai/tools/chat/get-user-info";
@@ -8,7 +9,6 @@ import { sandbox } from "@/lib/ai/tools/chat/sandbox";
 import { searchWeb } from "@/lib/ai/tools/chat/search-web";
 import { skip } from "@/lib/ai/tools/chat/skip";
 import { sendScheduledMessage } from "@/lib/ai/tools/tasks/send-scheduled-message";
-import { successToolCall } from "@/lib/ai/utils";
 import type { SlackMessageContext, Stream } from "@/types";
 
 export function scheduledTaskAgent({

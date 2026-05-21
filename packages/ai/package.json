@@ -6,6 +6,7 @@
     ".": "./src/index.ts",
     "./keys": "./src/keys.ts",
     "./providers": "./src/providers.ts",
+    "./tools": "./src/tools.ts",
     "./prompts": "./src/prompts/index.ts",
     "./prompts/chat": "./src/prompts/chat/index.ts",
     "./prompts/chat/presets": "./src/prompts/chat/presets/index.ts",

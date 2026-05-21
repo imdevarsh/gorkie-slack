@@ -1,8 +1,8 @@
 import { systemPrompt } from "@repo/ai/prompts";
 import { provider } from "@repo/ai/providers";
+import { successToolCall } from "@repo/ai/tools";
 import { stepCountIs, ToolLoopAgent } from "ai";
 import { createToolset } from "@/lib/ai/tools";
-import { successToolCall } from "@/lib/ai/utils";
 import logger from "@/lib/logger";
 import type {
   ChatRequestHints,
