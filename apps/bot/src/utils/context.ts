@@ -1,9 +1,9 @@
 import { getUserCustomization } from "@repo/db/queries";
+import { getTime } from "@repo/utils/time";
 import type { ModelMessage } from "ai";
 import { getConversationMessages } from "@/slack/conversations";
 import type { ChatRequestHints, SlackMessageContext } from "@/types";
 import { resolveChannelName, resolveServerName } from "@/utils/slack";
-import { getTime } from "@/utils/time";
 
 export function getContextId(context: SlackMessageContext): string {
   const channel = context.event.channel ?? "unknown-channel";

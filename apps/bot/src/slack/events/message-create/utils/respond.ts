@@ -1,3 +1,4 @@
+import { getErrorDetails } from "@repo/utils/error";
 import {
   type ModelMessage,
   NoOutputGeneratedError,
@@ -14,7 +15,6 @@ import { closeStream, initStream, setPlanTitle } from "@/lib/ai/utils/stream";
 import { setConversationTitle } from "@/lib/ai/utils/title";
 import type { ChatRequestHints, SlackMessageContext, Stream } from "@/types";
 import { getContextId } from "@/utils/context";
-import { getErrorDetails } from "@/utils/error";
 import { processSlackFiles } from "@/utils/images";
 import { getSlackUserName } from "@/utils/users";
 

@@ -1,4 +1,5 @@
 import { cancelScheduledTaskForUser } from "@repo/db/queries";
+import { toLogError } from "@repo/utils/error";
 import type {
   AllMiddlewareArgs,
   BlockAction,
@@ -6,7 +7,6 @@ import type {
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
 import logger from "@/lib/logger";
-import { toLogError } from "@/utils/error";
 import { publishHome } from "../../publish";
 
 export const name = "home_cancel_task";

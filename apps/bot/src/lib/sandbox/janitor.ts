@@ -5,10 +5,10 @@ import {
   listExpired,
   updateStatus,
 } from "@repo/db/queries";
+import { toLogError } from "@repo/utils/error";
 import { sandbox as config } from "@/config";
 import { env } from "@/env";
 import logger from "@/lib/logger";
-import { toLogError } from "@/utils/error";
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;

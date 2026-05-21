@@ -1,7 +1,7 @@
 import type { Sandbox } from "@e2b/code-interpreter";
+import { toLogError } from "@repo/utils/error";
 import { sandbox as config } from "@/config";
 import logger from "@/lib/logger";
-import { toLogError } from "@/utils/error";
 
 function resolveEndAtMs(endAt: unknown): number {
   if (endAt instanceof Date) {

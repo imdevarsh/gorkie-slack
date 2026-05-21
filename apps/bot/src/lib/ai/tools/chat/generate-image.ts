@@ -1,4 +1,5 @@
 import { provider } from "@repo/ai/providers";
+import { errorMessage, toLogError } from "@repo/utils/error";
 import { generateImage, tool } from "ai";
 import { extension as getExtension } from "mime-types";
 import { z } from "zod";
@@ -6,7 +7,6 @@ import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
 import logger from "@/lib/logger";
 import type { SlackFile, SlackMessageContext, Stream } from "@/types";
 import { getContextId } from "@/utils/context";
-import { errorMessage, toLogError } from "@/utils/error";
 import { processSlackFiles } from "@/utils/images";
 
 type SourceImage = string | Uint8Array | ArrayBuffer | Buffer;

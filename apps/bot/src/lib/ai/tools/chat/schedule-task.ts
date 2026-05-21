@@ -2,6 +2,7 @@ import {
   countEnabledScheduledTasksByUser,
   createScheduledTask,
 } from "@repo/db/queries";
+import { errorMessage, toLogError } from "@repo/utils/error";
 import { tool } from "ai";
 import { z } from "zod";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
@@ -9,7 +10,6 @@ import logger from "@/lib/logger";
 import { getNextRunAt, validateTimezone } from "@/lib/tasks/cron";
 import type { SlackMessageContext, Stream } from "@/types";
 import { getContextId } from "@/utils/context";
-import { errorMessage, toLogError } from "@/utils/error";
 
 const MAX_ENABLED_TASKS_PER_USER = 20;
 const MIN_TASK_INTERVAL_MS = 30 * 60 * 1000;

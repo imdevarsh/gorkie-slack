@@ -1,3 +1,4 @@
+import { toLogError } from "@repo/utils/error";
 import type {
   AllMiddlewareArgs,
   BlockAction,
@@ -5,7 +6,6 @@ import type {
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
 import logger from "@/lib/logger";
-import { toLogError } from "@/utils/error";
 import { applyPrompt } from "../../publish";
 
 export const name = "home_clear_prompt";

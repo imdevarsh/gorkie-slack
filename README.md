@@ -18,6 +18,7 @@ Gorkie is a helpful AI bot that responds to mentions, DMs, and thread replies in
 | `@repo/ai` | AI providers, model config, and system prompts |
 | `@repo/db` | Drizzle ORM schema, queries, and Postgres client |
 | `@repo/observability` | Shared Pino logger factory and logging env keys |
+| `@repo/utils` | Shared framework-agnostic utility helpers |
 | `@repo/validators` | Shared Zod schemas |
 
 ## Tooling

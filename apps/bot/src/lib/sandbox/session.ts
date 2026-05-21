@@ -8,12 +8,12 @@ import {
   updateStatus,
   upsert,
 } from "@repo/db/queries";
+import { toLogError } from "@repo/utils/error";
 import { sandbox as config } from "@/config";
 import { env } from "@/env";
 import logger from "@/lib/logger";
 import type { ResolvedSandboxSession, SlackMessageContext } from "@/types";
 import { getContextId } from "@/utils/context";
-import { toLogError } from "@/utils/error";
 import { configureAgent } from "./config";
 import { boot } from "./rpc/boot";
 

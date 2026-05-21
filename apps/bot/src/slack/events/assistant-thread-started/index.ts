@@ -1,7 +1,7 @@
+import { toLogError } from "@repo/utils/error";
 import type { App } from "@slack/bolt";
 import { assistantThread } from "@/config";
 import logger from "@/lib/logger";
-import { toLogError } from "@/utils/error";
 
 export function register(app: App): void {
   app.event("assistant_thread_started", async ({ event, client }) => {

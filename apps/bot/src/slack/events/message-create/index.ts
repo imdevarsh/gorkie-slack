@@ -1,10 +1,10 @@
+import { toLogError } from "@repo/utils/error";
 import { env } from "@/env";
 import { isUserAllowed } from "@/lib/allowed-users";
 import logger from "@/lib/logger";
 import { getQueue } from "@/lib/queue";
 import type { MessageEventArgs } from "@/types";
 import { buildChatContext, getContextId } from "@/utils/context";
-import { toLogError } from "@/utils/error";
 import { handleInlineCommand } from "@/utils/inline-commands";
 import { logReply } from "@/utils/log";
 import { getTrigger } from "@/utils/triggers";

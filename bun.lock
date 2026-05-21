@@ -35,6 +35,7 @@
         "@repo/ai": "workspace:*",
         "@repo/db": "workspace:*",
         "@repo/observability": "workspace:*",
+        "@repo/utils": "workspace:*",
         "@repo/validators": "workspace:*",
         "@slack/bolt": "^4.7.2",
         "@slack/web-api": "^7.12.1",
@@ -51,7 +52,6 @@
         "pako": "^2.1.0",
         "sanitize-filename": "^1.6.4",
         "slack-block-builder": "^2.8.0",
-        "strip-ansi": "^7.2.0",
         "typebox": "1.1.38",
         "zod": "catalog:",
       },
@@ -120,6 +120,17 @@
         "pino": "^10.3.1",
         "pino-pretty": "^13.1.3",
         "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@repo/tsconfig": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/utils": {
+      "name": "@repo/utils",
+      "dependencies": {
+        "strip-ansi": "^7.2.0",
       },
       "devDependencies": {
         "@repo/tsconfig": "workspace:*",
@@ -722,6 +733,8 @@
     "@repo/observability": ["@repo/observability@workspace:packages/observability"],
 
     "@repo/tsconfig": ["@repo/tsconfig@workspace:tooling/typescript"],
+
+    "@repo/utils": ["@repo/utils@workspace:packages/utils"],
 
     "@repo/validators": ["@repo/validators@workspace:packages/validators"],
 

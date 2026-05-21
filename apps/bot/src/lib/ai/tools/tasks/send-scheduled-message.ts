@@ -1,10 +1,10 @@
+import { errorMessage, toLogError } from "@repo/utils/error";
 import type { WebClient } from "@slack/web-api";
 import { tool } from "ai";
 import { z } from "zod";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
 import logger from "@/lib/logger";
 import type { Stream } from "@/types";
-import { errorMessage, toLogError } from "@/utils/error";
 
 export const sendScheduledMessage = ({
   client,

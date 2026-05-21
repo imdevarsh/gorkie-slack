@@ -1,3 +1,5 @@
+import { toLogError } from "@repo/utils/error";
+import { asRecord } from "@repo/utils/record";
 import logger from "@/lib/logger";
 import type {
   MessageEventArgs,
@@ -6,8 +8,6 @@ import type {
   SlackMessageEvent,
   SlackRawMessageEvent,
 } from "@/types";
-import { toLogError } from "@/utils/error";
-import { asRecord } from "@/utils/record";
 
 function isSlackFile(value: unknown): value is SlackFile {
   return Boolean(asRecord(value));

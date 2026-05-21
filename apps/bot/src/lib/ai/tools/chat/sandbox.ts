@@ -1,3 +1,4 @@
+import { errorMessage, toLogError } from "@repo/utils/error";
 import { tool } from "ai";
 import PQueue from "p-queue";
 import { z } from "zod";
@@ -15,7 +16,6 @@ import { getToolTaskEnd, getToolTaskStart } from "@/lib/sandbox/tools";
 import type { SlackFile, SlackMessageContext, Stream } from "@/types";
 import type { AgentSessionEvent } from "@/types/sandbox/rpc";
 import { getContextId } from "@/utils/context";
-import { errorMessage, toLogError } from "@/utils/error";
 
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
 const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;

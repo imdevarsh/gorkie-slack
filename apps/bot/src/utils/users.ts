@@ -1,6 +1,6 @@
+import { toLogError } from "@repo/utils/error";
 import type { WebClient } from "@slack/web-api";
 import logger from "@/lib/logger";
-import { toLogError } from "@/utils/error";
 
 const userNameCache = new Map<string, string>();
 

@@ -1,11 +1,11 @@
 import nodePath from "node:path";
+import { errorMessage, toLogError } from "@repo/utils/error";
 import logger from "@/lib/logger";
 import type {
   ResolvedSandboxSession,
   ShowFileInput,
   SlackMessageContext,
 } from "@/types";
-import { errorMessage, toLogError } from "@/utils/error";
 
 async function postThreadError(
   context: SlackMessageContext,

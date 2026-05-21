@@ -1,7 +1,7 @@
+import { toLogError } from "@repo/utils/error";
 import type { ModelMessage, UserContent } from "ai";
 import logger from "@/lib/logger";
 import type { ConversationOptions, SlackConversationMessage } from "@/types";
-import { toLogError } from "@/utils/error";
 import { processSlackFiles } from "@/utils/images";
 
 interface CachedUser {

@@ -1,6 +1,6 @@
+import { toLogError } from "@repo/utils/error";
 import type { App } from "@slack/bolt";
 import { env } from "@/env";
-import { toLogError } from "@/utils/error";
 import logger from "./logger";
 
 const allowedUsers = new Set<string>();

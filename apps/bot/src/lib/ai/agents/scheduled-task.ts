@@ -1,4 +1,5 @@
 import { provider } from "@repo/ai/providers";
+import { getTime } from "@repo/utils/time";
 import { stepCountIs, ToolLoopAgent } from "ai";
 import { getUserInfo } from "@/lib/ai/tools/chat/get-user-info";
 import { getWeather } from "@/lib/ai/tools/chat/get-weather";
@@ -9,7 +10,6 @@ import { skip } from "@/lib/ai/tools/chat/skip";
 import { sendScheduledMessage } from "@/lib/ai/tools/tasks/send-scheduled-message";
 import { successToolCall } from "@/lib/ai/utils";
 import type { SlackMessageContext, Stream } from "@/types";
-import { getTime } from "@/utils/time";
 
 export function scheduledTaskAgent({
   context,

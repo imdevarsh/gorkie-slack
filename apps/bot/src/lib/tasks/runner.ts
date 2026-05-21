@@ -5,12 +5,12 @@ import {
   listDueScheduledTasks,
 } from "@repo/db/queries";
 import type { ScheduledTask } from "@repo/db/schema";
+import { errorMessage, toLogError } from "@repo/utils/error";
 import type { WebClient } from "@slack/web-api";
 import { scheduledTaskAgent } from "@/lib/ai/agents/scheduled-task";
 import { isUserAllowed } from "@/lib/allowed-users";
 import logger from "@/lib/logger";
 import type { SlackMessageContext, Stream } from "@/types";
-import { errorMessage, toLogError } from "@/utils/error";
 import { getNextRunAt } from "./cron";
 
 const RUNNER_INTERVAL_MS = 30_000;

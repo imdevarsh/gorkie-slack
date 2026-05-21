@@ -1,4 +1,5 @@
 import { getUserCustomization } from "@repo/db/queries";
+import { toLogError } from "@repo/utils/error";
 import type {
   AllMiddlewareArgs,
   BlockAction,
@@ -6,7 +7,6 @@ import type {
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
 import logger from "@/lib/logger";
-import { toLogError } from "@/utils/error";
 import { buildPromptModal } from "../view";
 
 export const name = "home_edit_prompt";

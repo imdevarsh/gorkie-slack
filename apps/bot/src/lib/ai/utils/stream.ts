@@ -1,3 +1,4 @@
+import { toLogError } from "@repo/utils/error";
 import type {
   ChatAppendStreamArguments,
   ChatStartStreamArguments,
@@ -11,7 +12,6 @@ import type {
   TaskChunk,
 } from "@/types";
 import { getContextId } from "@/utils/context";
-import { toLogError } from "@/utils/error";
 import { setStatus } from "./status";
 
 export async function initStream(

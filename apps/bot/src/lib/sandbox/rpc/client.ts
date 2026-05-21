@@ -1,4 +1,6 @@
 import type { ImageContent } from "@earendil-works/pi-ai";
+import { errorMessage } from "@repo/utils/error";
+import { cleanTerminalText } from "@repo/utils/text";
 import { sandbox as config } from "@/config";
 import logger from "@/lib/logger";
 import type {
@@ -15,8 +17,6 @@ import type {
   RpcSlashCommand,
   ThinkingLevel,
 } from "@/types/sandbox/rpc";
-import { errorMessage } from "@/utils/error";
-import { cleanTerminalText } from "@/utils/text";
 
 type BashResult = Extract<
   RpcResponse,

@@ -1,10 +1,10 @@
+import { asRecord } from "@repo/utils/record";
 import { tool } from "ai";
 import { z } from "zod";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
 import logger from "@/lib/logger";
 import type { SlackMessageContext, SlackSearchResponse, Stream } from "@/types";
 import { getContextId } from "@/utils/context";
-import { asRecord } from "@/utils/record";
 
 function getActionToken(event: unknown): string | undefined {
   const assistantThread = asRecord(asRecord(event)?.assistant_thread);

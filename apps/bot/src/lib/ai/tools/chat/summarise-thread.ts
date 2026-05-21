@@ -1,5 +1,6 @@
 import { summariseThreadPrompt } from "@repo/ai/prompts/chat/tasks";
 import { provider } from "@repo/ai/providers";
+import { errorMessage, toLogError } from "@repo/utils/error";
 import { generateText, tool } from "ai";
 import { z } from "zod";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
@@ -7,7 +8,6 @@ import logger from "@/lib/logger";
 import { getConversationMessages } from "@/slack/conversations";
 import type { SlackMessageContext, Stream } from "@/types";
 import { getContextId } from "@/utils/context";
-import { errorMessage, toLogError } from "@/utils/error";
 
 export const summariseThread = ({
   context,

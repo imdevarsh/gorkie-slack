@@ -1,3 +1,4 @@
+import { trimmed } from "@repo/utils/text";
 import { showFileInputSchema } from "@repo/validators";
 import logger from "@/lib/logger";
 import type {
@@ -6,7 +7,6 @@ import type {
   SubscribeEventsParams,
 } from "@/types";
 import type { AgentSessionEvent } from "@/types/sandbox/rpc";
-import { trimmed } from "@/utils/text";
 import { showFile } from "./show-file";
 
 function handleShowFileTool(params: {

@@ -1,0 +1,25 @@
+{
+  "name": "@repo/utils",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./error": "./src/error.ts",
+    "./record": "./src/record.ts",
+    "./text": "./src/text.ts",
+    "./time": "./src/time.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "check-types": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "strip-ansi": "^7.2.0"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

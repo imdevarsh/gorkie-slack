@@ -21,6 +21,7 @@
     "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@repo/utils": "workspace:*",
     "@repo/validators": "workspace:*",
     "@slack/bolt": "^4.7.2",
     "@slack/web-api": "^7.12.1",
@@ -37,7 +38,6 @@
     "pako": "^2.1.0",
     "sanitize-filename": "^1.6.4",
     "slack-block-builder": "^2.8.0",
-    "strip-ansi": "^7.2.0",
     "typebox": "1.1.38",
     "zod": "catalog:"
   },

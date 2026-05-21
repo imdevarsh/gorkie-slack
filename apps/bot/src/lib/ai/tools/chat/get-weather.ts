@@ -1,9 +1,9 @@
+import { toLogError } from "@repo/utils/error";
 import { tool } from "ai";
 import { z } from "zod";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
 import logger from "@/lib/logger";
 import type { SlackMessageContext, Stream } from "@/types";
-import { toLogError } from "@/utils/error";
 
 export const getWeather = ({
   stream,

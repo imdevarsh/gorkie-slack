@@ -1,9 +1,9 @@
 import { provider } from "@repo/ai/providers";
+import { toLogError } from "@repo/utils/error";
+import { cleanText, trimmed } from "@repo/utils/text";
 import { generateText } from "ai";
 import logger from "@/lib/logger";
 import type { SlackMessageContext } from "@/types";
-import { toLogError } from "@/utils/error";
-import { cleanText, trimmed } from "@/utils/text";
 
 export async function setConversationTitle(
   context: SlackMessageContext,

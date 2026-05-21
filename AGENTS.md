@@ -32,6 +32,7 @@ packages/
   ai/               # AI providers, model config, and system prompts
   db/               # Drizzle ORM schema, queries, Postgres client
   observability/    # Pino logger factory
+  utils/            # Shared framework-agnostic utility helpers
   validators/       # Shared Zod schemas
 tooling/
   cspell/           # @repo/cspell-config — spell-check dictionaries

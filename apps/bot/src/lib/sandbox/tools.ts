@@ -1,6 +1,6 @@
+import { clampText } from "@repo/utils/text";
 import { sandbox as config } from "@/config";
 import type { ToolEndInput, ToolStartInput } from "@/types";
-import { clampText } from "@/utils/text";
 import {
   asRecord,
   asString,
