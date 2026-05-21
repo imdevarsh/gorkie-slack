@@ -2,6 +2,7 @@ import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
 import { env } from '~/env';
 import logger from '~/lib/logger';
+import { issueToken } from '~/lib/sandbox/proxy/tokens';
 import type { PtyLike } from '~/types/sandbox/rpc';
 import { PiRpcClient } from './client';
 
@@ -9,28 +10,23 @@ const PTY_COLS = 220;
 const PTY_ROWS = 24;
 const PTY_TERM = 'dumb';
 
-export async function boot(
-  sandbox: Sandbox,
-  sessionId?: string
-): Promise<PiRpcClient> {
+export async function boot(sandbox: Sandbox, sessionId?: string): Promise<PiRpcClient> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let client: PiRpcClient | null = null;
+
+  const sandboxEnvs: Record<string, string> = {
+    GORKIE_SESSION_TOKEN: await issueToken({ sandboxId: sandbox.sandboxId }),
+    AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
+    HOME: config.runtime.workdir,
+    TERM: PTY_TERM,
+  };
 
   const terminal = await sandbox.pty.create({
     cols: PTY_COLS,
     rows: PTY_ROWS,
     cwd: config.runtime.workdir,
-    envs: {
-      HACKCLUB_API_KEY: env.HACKCLUB_API_KEY,
-      OPENROUTER_API_KEY: env.OPENROUTER_API_KEY,
-      AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
-      ...(env.GOOGLE_GENERATIVE_AI_API_KEY
-        ? { GOOGLE_GENERATIVE_AI_API_KEY: env.GOOGLE_GENERATIVE_AI_API_KEY }
-        : {}),
-      HOME: config.runtime.workdir,
-      TERM: PTY_TERM,
-    },
+    envs: sandboxEnvs,
     timeoutMs: 0,
     onData: (data: Uint8Array) => {
       if (!client) {
@@ -58,9 +54,7 @@ export async function boot(
       piClient.handleProcessExit({ exitCode });
     });
 
-  const piCmd = sessionId
-    ? `pi --mode rpc --session ${sessionId}`
-    : 'pi --mode rpc';
+  const piCmd = sessionId ? `pi --mode rpc --session ${sessionId}` : 'pi --mode rpc';
   await pty.sendInput(`stty -echo; exec ${piCmd}\n`);
   await client.waitUntilReady();
 

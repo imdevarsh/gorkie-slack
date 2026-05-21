@@ -15,6 +15,7 @@ import type { ResolvedSandboxSession, SlackMessageContext } from '~/types';
 import { getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
 import { configureAgent } from './config';
+import { revokeToken } from './proxy/tokens';
 import { boot } from './rpc/boot';
 
 function isMissingSandboxError(error: unknown): boolean {
@@ -88,6 +89,7 @@ async function createSandbox(
 
     return { client, sandbox };
   } catch (error) {
+    await revokeToken({ sandboxId: sandbox.sandboxId }).catch(() => null);
     await Sandbox.kill(sandbox.sandboxId, { apiKey: env.E2B_API_KEY }).catch(
       () => null
     );
@@ -165,6 +167,8 @@ export async function pauseSession(
   sandboxId: string
 ): Promise<void> {
   const threadId = getContextId(context);
+
+  await revokeToken({ sandboxId }).catch(() => null);
 
   try {
     await Sandbox.betaPause(sandboxId, { apiKey: env.E2B_API_KEY });

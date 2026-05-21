@@ -112,7 +112,7 @@ export const generateImageTool = ({
           ...(aspectRatio
             ? { aspectRatio: aspectRatio as `${number}:${number}` }
             : {}),
-          ...(seed !== undefined ? { seed } : {}),
+          ...(seed === undefined ? {} : { seed }),
         });
 
         for (const [index, image] of result.images.entries()) {

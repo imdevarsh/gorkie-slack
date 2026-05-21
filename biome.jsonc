@@ -39,7 +39,8 @@
       "quoteStyle": "single",
       "jsxQuoteStyle": "single",
       "semicolons": "always"
-    }
+    },
+    "globals": ["Bun"]
   },
   "linter": {
     "enabled": true,

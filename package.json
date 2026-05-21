@@ -9,6 +9,7 @@
     "start": "bun run server/index.ts",
     "sandbox:build": "bun run server/scripts/build-template.ts",
     "sandbox:test": "bun run server/scripts/sandbox-test.ts",
+    "proxy:test": "bun run server/scripts/proxy-test.ts",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",

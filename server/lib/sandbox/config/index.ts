@@ -2,6 +2,7 @@ import { readFile, readFileSync } from 'node:fs';
 import { promisify } from 'node:util';
 import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '~/config';
+import { env } from '~/env';
 import type { SandboxBootstrapFile } from '~/types';
 
 const readFileAsync = promisify(readFile);
@@ -10,7 +11,22 @@ function readTemplate(path: string): Promise<string> {
   return readFileAsync(new URL(path, import.meta.url), 'utf8');
 }
 
-function buildModelsJson(proxyBaseUrl: string): string {
+function buildProxyAuthJson(): string {
+  const seen = new Set<string>();
+  const auth: Record<string, { type: string; key: string }> = {};
+
+  for (const { provider } of config.modelChain) {
+    if (seen.has(provider)) {
+      continue;
+    }
+    seen.add(provider);
+    auth[provider] = { type: 'api_key', key: 'GORKIE_SESSION_TOKEN' };
+  }
+
+  return JSON.stringify(auth, null, 2);
+}
+
+function buildModelsJson(): string {
   const staticModels = JSON.parse(
     readFileSync(new URL('./models.json', import.meta.url), 'utf8').toString()
   ) as {
@@ -36,7 +52,7 @@ function buildModelsJson(proxyBaseUrl: string): string {
     const existing = staticModels.providers[provider] ?? {};
     providers[provider] = {
       ...existing,
-      baseUrl: `${proxyBaseUrl}/${provider}`,
+      baseUrl: `${env.PROXY_BASE_URL}/${provider}`,
       apiKey: 'GORKIE_SESSION_TOKEN',
       authHeader: true,
     };
@@ -45,10 +61,7 @@ function buildModelsJson(proxyBaseUrl: string): string {
   return JSON.stringify({ providers }, null, 2);
 }
 
-export async function buildConfig(
-  prompt: string,
-  proxyBaseUrl?: string
-): Promise<{
+export async function buildConfig(prompt: string): Promise<{
   paths: string[];
   files: SandboxBootstrapFile[];
 }> {
@@ -58,10 +71,8 @@ export async function buildConfig(
 
   const [settings, models, auth, toolsExtension] = await Promise.all([
     readTemplate('./settings.json'),
-    proxyBaseUrl
-      ? Promise.resolve(buildModelsJson(proxyBaseUrl))
-      : readTemplate('./models.json'),
-    readTemplate('./auth.json'),
+    Promise.resolve(buildModelsJson()),
+    Promise.resolve(buildProxyAuthJson()),
     readTemplate('./extensions/tools.ts'),
   ]);
 
@@ -79,10 +90,9 @@ export async function buildConfig(
 
 export async function configureAgent(
   sandbox: Sandbox,
-  prompt: string,
-  proxyBaseUrl?: string
+  prompt: string
 ): Promise<void> {
-  const bootstrap = await buildConfig(prompt, proxyBaseUrl);
+  const bootstrap = await buildConfig(prompt);
 
   for (const path of bootstrap.paths) {
     await sandbox.files.makeDir(path).catch(() => undefined);

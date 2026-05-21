@@ -9,6 +9,7 @@ import {
 import { env } from '~/env';
 import logger from '~/lib/logger';
 import { toLogError } from '~/utils/error';
+import { revokeToken } from './proxy/tokens';
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
@@ -31,6 +32,7 @@ async function cleanup(): Promise<void> {
       }
 
       try {
+        await revokeToken({ sandboxId: session.sandboxId }).catch(() => null);
         await Sandbox.kill(session.sandboxId, { apiKey: env.E2B_API_KEY });
         await clearDestroyed(session.threadId);
         logger.info(

@@ -38,6 +38,9 @@ export const env = createEnv({
     EXA_API_KEY: z.string().min(1),
     // E2B
     E2B_API_KEY: z.string().min(1),
+    // Proxy
+    PROXY_BASE_URL: z.url(),
+    PROXY_PORT: z.coerce.number().optional().default(3001),
     // Sandbox
     AGENTMAIL_API_KEY: z.string().min(1).startsWith('am_'),
   },

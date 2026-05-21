@@ -1,4 +1,10 @@
-import { boolean, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
 
 export const userCustomizations = pgTable('user_customizations', {
   userId: text('user_id').primaryKey(),
@@ -74,3 +80,13 @@ export const scheduledTasks = pgTable(
 
 export type ScheduledTask = typeof scheduledTasks.$inferSelect;
 export type NewScheduledTask = typeof scheduledTasks.$inferInsert;
+
+export const proxyTokens = pgTable(
+  'proxy_tokens',
+  {
+    token: text('token').primaryKey(),
+    sandboxId: text('sandbox_id').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [index('proxy_tokens_sandbox_idx').on(table.sandboxId)]
+);

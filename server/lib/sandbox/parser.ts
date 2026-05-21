@@ -10,7 +10,7 @@ export function asRecord(value: unknown): Record<string, unknown> | null {
 
 export function asString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
-    return undefined;
+    return;
   }
 
   return trimmed(cleanText(value));
@@ -23,7 +23,7 @@ export function getArg(args: unknown, key: string, fallback: string): string {
 export function extractTextResult(result: unknown): string | undefined {
   const content = asRecord(result)?.content;
   if (!Array.isArray(content)) {
-    return undefined;
+    return;
   }
 
   const chunks: string[] = [];
@@ -46,7 +46,7 @@ export function extractTextResult(result: unknown): string | undefined {
 export function extractErrorResult(result: unknown): string | undefined {
   const error = asRecord(result)?.error;
   if (!error) {
-    return undefined;
+    return;
   }
 
   if (typeof error === 'string') {
@@ -60,5 +60,5 @@ export function extractErrorResult(result: unknown): string | undefined {
     }
   }
 
-  return undefined;
+  return;
 }

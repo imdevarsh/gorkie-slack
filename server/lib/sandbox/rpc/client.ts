@@ -315,9 +315,9 @@ export class PiRpcClient {
           });
         }),
         this.exitPromise,
-        ...(timeoutMs !== undefined
-          ? [this.timeoutReject<void>(timeoutMs, 'waitForIdle')]
-          : []),
+        ...(timeoutMs === undefined
+          ? []
+          : [this.timeoutReject<void>(timeoutMs, 'waitForIdle')]),
       ]);
     } finally {
       off();
@@ -338,14 +338,14 @@ export class PiRpcClient {
           });
         }),
         this.exitPromise,
-        ...(timeoutMs !== undefined
-          ? [
+        ...(timeoutMs === undefined
+          ? []
+          : [
               this.timeoutReject<AgentSessionEvent[]>(
                 timeoutMs,
                 'collectEvents'
               ),
-            ]
-          : []),
+            ]),
       ]);
     } finally {
       off();

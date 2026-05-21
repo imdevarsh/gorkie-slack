@@ -3,6 +3,7 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { env } from '~/env';
 import logger from '~/lib/logger';
 import { startSandboxJanitor } from '~/lib/sandbox/janitor';
+import { startProxyServer } from '~/lib/sandbox/proxy/server';
 import { startScheduledTaskRunner } from '~/lib/tasks/runner';
 import { createSlackApp } from '~/slack/app';
 
@@ -32,6 +33,7 @@ process.on('uncaughtException', (error) => {
 });
 
 async function main() {
+  startProxyServer(env.PROXY_PORT);
   startSandboxJanitor();
   const { app, socketMode } = createSlackApp();
   startScheduledTaskRunner(app.client);
