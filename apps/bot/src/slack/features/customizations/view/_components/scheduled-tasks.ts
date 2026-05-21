@@ -1,7 +1,7 @@
+import type { ScheduledTask } from "@repo/db/schema";
 import { formatDistanceToNowStrict, isPast } from "date-fns";
 import { Bits, Blocks, Elements, setIfTruthy } from "slack-block-builder";
 import { appHome } from "@/config";
-import type { ScheduledTask } from "@/db/schema";
 
 function buildTaskBlock(task: ScheduledTask) {
   const destination =

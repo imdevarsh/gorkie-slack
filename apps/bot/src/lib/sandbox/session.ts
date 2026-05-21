@@ -1,6 +1,5 @@
 import { Sandbox } from "@e2b/code-interpreter";
 import { systemPrompt } from "@repo/ai/prompts";
-import { sandbox as config } from "@/config";
 import {
   clearDestroyed,
   getByThread,
@@ -8,7 +7,8 @@ import {
   updateRuntime,
   updateStatus,
   upsert,
-} from "@/db/queries/sandbox";
+} from "@repo/db/queries/sandbox";
+import { sandbox as config } from "@/config";
 import { env } from "@/env";
 import logger from "@/lib/logger";
 import type { ResolvedSandboxSession, SlackMessageContext } from "@/types";

@@ -1,10 +1,10 @@
-import type { WebClient } from "@slack/web-api";
 import {
   clearUserCustomization,
   getUserCustomization,
   setUserCustomization,
-} from "@/db/queries/customizations";
-import { listScheduledTasksByUser } from "@/db/queries/scheduled-tasks";
+} from "@repo/db/queries/customizations";
+import { listScheduledTasksByUser } from "@repo/db/queries/scheduled-tasks";
+import type { WebClient } from "@slack/web-api";
 import { buildHomeView } from "./view";
 
 export async function publishHome(

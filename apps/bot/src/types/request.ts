@@ -1,4 +1,4 @@
-import type { UserCustomization } from "@/db/queries/customizations";
+import type { UserCustomization } from "@repo/db/queries/customizations";
 
 interface BaseHints {
   channel: string;

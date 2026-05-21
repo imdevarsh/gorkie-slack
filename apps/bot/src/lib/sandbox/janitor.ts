@@ -1,11 +1,11 @@
 import { Sandbox } from "@e2b/code-interpreter";
-import { sandbox as config } from "@/config";
 import {
   claimExpired,
   clearDestroyed,
   listExpired,
   updateStatus,
-} from "@/db/queries/sandbox";
+} from "@repo/db/queries/sandbox";
+import { sandbox as config } from "@/config";
 import { env } from "@/env";
 import logger from "@/lib/logger";
 import { toLogError } from "@/utils/error";

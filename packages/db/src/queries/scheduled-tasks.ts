@@ -1,10 +1,10 @@
 import { and, asc, desc, eq, isNull, lte, sql } from "drizzle-orm";
-import { db } from "@/db";
+import { db } from "../index";
 import {
   type NewScheduledTask,
   type ScheduledTask,
   scheduledTasks,
-} from "@/db/schema";
+} from "../schema";
 
 export async function createScheduledTask(task: NewScheduledTask) {
   const rows = await db.insert(scheduledTasks).values(task).returning();

@@ -1,6 +1,6 @@
+import { listScheduledTasksByUser } from "@repo/db/queries/scheduled-tasks";
 import { tool } from "ai";
 import { z } from "zod";
-import { listScheduledTasksByUser } from "@/db/queries/scheduled-tasks";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
 import type { SlackMessageContext, Stream } from "@/types";
 

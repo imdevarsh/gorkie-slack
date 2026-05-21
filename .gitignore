@@ -6,6 +6,8 @@ node_modules
 # Build outputs
 dist
 build
+out
+.output
 *.tsbuildinfo
 
 # Environment variables
@@ -26,7 +28,9 @@ build
 
 # Logs
 logs
+_.log
 *.log
+report.[0-9]_.*.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -40,12 +44,21 @@ lerna-debug.log*
 # Better-T-Stack
 .alchemy
 
+# Caches
+.cspellcache
+.eslintcache
+
 # Testing
 coverage
+*.lcov
 .nyc_output
 
 # Misc
 *.tgz
 .cache
+.data
+.nitro
+.vercel
 tmp
 temp
+.claude/settings.local.json

@@ -1,10 +1,10 @@
 import { and, eq, isNull, lt, notInArray } from "drizzle-orm";
-import { db } from "@/db";
+import { db } from "../index";
 import {
   type NewSandboxSession,
   type SandboxSession,
   sandboxSessions,
-} from "@/db/schema";
+} from "../schema";
 
 export async function getByThread(
   threadId: string

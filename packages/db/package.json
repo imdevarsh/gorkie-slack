@@ -8,6 +8,12 @@
     "./keys": {
       "default": "./src/keys.ts"
     },
+    "./queries/*": {
+      "default": "./src/queries/*.ts"
+    },
+    "./schema": {
+      "default": "./src/schema/index.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }
@@ -21,14 +27,15 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.2",
     "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",
+    "pg": "^8.21.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/config": "workspace:*",
+    "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.8",
     "typescript": "catalog:"
   }

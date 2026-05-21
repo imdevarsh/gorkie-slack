@@ -1,10 +1,10 @@
+import { getUserCustomization } from "@repo/db/queries/customizations";
 import type {
   AllMiddlewareArgs,
   BlockAction,
   ButtonAction,
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
-import { getUserCustomization } from "@/db/queries/customizations";
 import logger from "@/lib/logger";
 import { toLogError } from "@/utils/error";
 import { buildPromptModal } from "../view";

@@ -1,9 +1,9 @@
-import { tool } from "ai";
-import { z } from "zod";
 import {
   cancelScheduledTaskForUser,
   getScheduledTaskByIdForUser,
-} from "@/db/queries/scheduled-tasks";
+} from "@repo/db/queries/scheduled-tasks";
+import { tool } from "ai";
+import { z } from "zod";
 import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
 import logger from "@/lib/logger";
 import type { SlackMessageContext, Stream } from "@/types";

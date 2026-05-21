@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { userCustomizations } from "@/db/schema";
+import { db } from "../index";
+import { userCustomizations } from "../schema";
 
 export type UserCustomization = Pick<
   typeof userCustomizations.$inferSelect,

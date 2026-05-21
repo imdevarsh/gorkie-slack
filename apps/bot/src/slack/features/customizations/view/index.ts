@@ -1,6 +1,6 @@
+import type { ScheduledTask } from "@repo/db/schema";
 import { Blocks, HomeTab } from "slack-block-builder";
 import type { SlackHomeTabDto } from "slack-block-builder/dist/internal";
-import type { ScheduledTask } from "@/db/schema";
 import { customInstructionsBlocks } from "./_components/custom-instructions";
 import { scheduledTasksBlocks } from "./_components/scheduled-tasks";
 

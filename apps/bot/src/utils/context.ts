@@ -1,5 +1,5 @@
+import { getUserCustomization } from "@repo/db/queries/customizations";
 import type { ModelMessage } from "ai";
-import { getUserCustomization } from "@/db/queries/customizations";
 import { getConversationMessages } from "@/slack/conversations";
 import type { ChatRequestHints, SlackMessageContext } from "@/types";
 import { resolveChannelName, resolveServerName } from "@/utils/slack";
