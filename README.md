@@ -51,6 +51,7 @@ cp apps/server/.env.example apps/server/.env
 Fill the env files, then push the database schema:
 
 ```bash
+bun run services:up
 bun run db:push
 ```
 
@@ -69,6 +70,7 @@ bun run build
 bun run check
 bun run check-types
 bun run check:spelling
+bun run services:down
 ```
 
 ## Environment

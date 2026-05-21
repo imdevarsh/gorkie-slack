@@ -30,7 +30,7 @@ Tokens are stored in PostgreSQL in `proxy_tokens` with an expiry timestamp. The 
 
 ## Local Test Path
 
-1. Start PostgreSQL and Redis locally if they are not already running.
+1. Start PostgreSQL and Redis locally with `bun run services:up` if they are not already running.
 2. Copy `apps/server/.env.example` to `apps/server/.env` and fill `DATABASE_URL` and at least one provider key.
 3. Run `bun run db:push`.
 4. Validate with a temporary local script or direct `proxyApp.request()` calls based on the original `gorkie-slack/server/scripts/proxy-test.ts`.
