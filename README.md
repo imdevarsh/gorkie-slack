@@ -55,6 +55,8 @@ bun run services:up
 bun run db:push
 ```
 
+If Docker-in-Docker reports `unsafe procfs detected` inside the devcontainer, rebuild the devcontainer so its `"privileged": true` setting is applied.
+
 Run both apps:
 
 ```bash
