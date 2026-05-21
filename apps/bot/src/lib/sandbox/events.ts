@@ -1,5 +1,5 @@
+import { showFileInputSchema } from "@repo/validators";
 import logger from "@/lib/logger";
-import { showFileInputSchema } from "@/lib/validators/sandbox";
 import type {
   ResolvedSandboxSession,
   SlackMessageContext,
