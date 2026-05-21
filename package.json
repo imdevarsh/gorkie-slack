@@ -19,6 +19,7 @@
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:server": "turbo -F server dev",
+    "dev:bot": "turbo -F bot dev",
     "db:push": "turbo -F @repo/db db:push",
     "db:studio": "turbo -F @repo/db db:studio",
     "db:generate": "turbo -F @repo/db db:generate",
