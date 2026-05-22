@@ -64,7 +64,3 @@ coverage
 tmp
 temp
 .claude/settings.local.json
-
-# Local reference scaffolds
-my-app
-my-better-t-app

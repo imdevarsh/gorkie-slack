@@ -1,5 +1,7 @@
 {
   "name": "gorkie-slack",
+  "license": "MIT",
+  "description": "A helpful AI Slack Bot built with AI SDK.",
   "private": true,
   "workspaces": {
     "packages": [

@@ -5,7 +5,3 @@ args = ["create-better-t-stack@latest", "mcp"]
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
-
-[mcp_servers.neon]
-type = "http"
-url = "https://mcp.neon.tech/mcp"
