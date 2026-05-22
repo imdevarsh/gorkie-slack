@@ -9,17 +9,13 @@ interface ProxyVariables {
   sandboxId: string;
 }
 
-function getForwardedIp(header: string | undefined): string | null {
-  const ip = header?.split(',')[0]?.trim();
-  return ip || null;
-}
-
 function getRequestIp(request: Request): string | null {
-  const headers = request.headers;
+  const h = request.headers;
   return (
-    headers.get('cf-connecting-ip') ||
-    headers.get('x-real-ip') ||
-    getForwardedIp(headers.get('x-forwarded-for') ?? undefined)
+    h.get('cf-connecting-ip') ||
+    h.get('x-real-ip') ||
+    h.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    null
   );
 }
 

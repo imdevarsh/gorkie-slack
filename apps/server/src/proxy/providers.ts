@@ -5,28 +5,26 @@ export interface ProviderEntry {
   baseUrl: string;
 }
 
-const STATIC_BASE_URLS = {
-  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
-  hackclub: 'https://ai.hackclub.com/proxy/v1',
-  openrouter: 'https://openrouter.ai/api/v1',
-} as const;
+type ProviderConfig = { apiKey: string | undefined; baseUrl: string };
+
+const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
+  gemini: {
+    apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+  },
+  hackclub: {
+    apiKey: env.HACKCLUB_API_KEY,
+    baseUrl: 'https://ai.hackclub.com/proxy/v1',
+  },
+  openrouter: {
+    apiKey: env.OPENROUTER_API_KEY,
+    baseUrl: env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1',
+  },
+};
 
 export const providers: Record<string, ProviderEntry> = Object.fromEntries(
-  Object.entries({
-    gemini: {
-      apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
-      baseUrl: STATIC_BASE_URLS.gemini,
-    },
-    hackclub: {
-      apiKey: env.HACKCLUB_API_KEY,
-      baseUrl: STATIC_BASE_URLS.hackclub,
-    },
-    openrouter: {
-      apiKey: env.OPENROUTER_API_KEY,
-      baseUrl: env.OPENROUTER_BASE_URL ?? STATIC_BASE_URLS.openrouter,
-    },
-  }).filter((entry): entry is [string, ProviderEntry] =>
-    Boolean(entry[1].apiKey && entry[1].baseUrl)
+  Object.entries(PROVIDER_CONFIGS).flatMap(([name, { apiKey, baseUrl }]) =>
+    apiKey ? [[name, { apiKey, baseUrl }]] : []
   )
 );
 
