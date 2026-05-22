@@ -12,8 +12,8 @@
   "dependencies": {
     "@cspell/cspell-types": "^9.0.0",
     "@cspell/dict-bash": "catalog:",
-    "@cspell/dict-npm": "^5.2.38",
-    "@cspell/dict-redis": "^1.0.0",
+    "@cspell/dict-npm": "catalog:",
+    "@cspell/dict-redis": "catalog:",
     "cspell": "catalog:"
   },
   "devDependencies": {

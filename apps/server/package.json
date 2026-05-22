@@ -14,8 +14,8 @@
     "@repo/logging": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",
-    "nitro": "latest",
-    "srvx": "latest",
+    "nitro": "catalog:",
+    "srvx": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

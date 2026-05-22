@@ -19,7 +19,7 @@ export interface SlackMessageContext {
 }
 
 export interface UserCustomization {
-  prompt: string | null;
+  prompt: string;
 }
 
 interface BaseHints {

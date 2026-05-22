@@ -64,6 +64,10 @@ export async function revokeProxyToken({
 
 export async function deleteExpiredProxyTokens(
   now = new Date()
-): Promise<void> {
-  await db.delete(proxyTokens).where(lt(proxyTokens.expiresAt, now));
+): Promise<number> {
+  const rows = await db
+    .delete(proxyTokens)
+    .where(lt(proxyTokens.expiresAt, now))
+    .returning({ token: proxyTokens.token });
+  return rows.length;
 }

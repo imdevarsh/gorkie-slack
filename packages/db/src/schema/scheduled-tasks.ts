@@ -1,9 +1,12 @@
+import { randomUUID } from 'node:crypto';
 import { boolean, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const scheduledTasks = pgTable(
   'scheduled_tasks',
   {
-    id: text('id').primaryKey(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
     creatorUserId: text('creator_user_id').notNull(),
     destinationType: text('destination_type').notNull(),
     destinationId: text('destination_id').notNull(),
