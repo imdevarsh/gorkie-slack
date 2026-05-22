@@ -4,9 +4,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./keys": "./src/keys.ts",
-    "./providers": "./src/providers.ts",
-    "./tools": "./src/tools.ts",
     "./prompts": "./src/prompts/index.ts",
     "./prompts/chat": "./src/prompts/chat/index.ts",
     "./prompts/chat/presets": "./src/prompts/chat/presets/index.ts",
@@ -14,7 +11,6 @@
     "./prompts/chat/*": "./src/prompts/chat/*.ts",
     "./prompts/sandbox": "./src/prompts/sandbox/index.ts",
     "./prompts/sandbox/*": "./src/prompts/sandbox/*.ts",
-    "./types": "./src/types.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {
@@ -23,6 +19,7 @@
   "dependencies": {
     "@ai-sdk/google": "catalog:",
     "@openrouter/ai-sdk-provider": "catalog:",
+    "@repo/logging": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "ai": "catalog:",
     "ai-retry": "catalog:",

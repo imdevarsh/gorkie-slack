@@ -1,17 +1,14 @@
 import { validateProxyToken } from '@repo/db/queries';
-import { defineHandler } from 'nitro';
+import { defineHandler, getRequestIP } from 'nitro/h3';
 import logger from '@/lib/logger';
 import { providers } from '@/proxy/providers';
-import { getRequestIp } from '@/utils/request';
-
-const BEARER_PREFIX = 'Bearer ';
 
 function getBearerToken(header: string | null): string | null {
-  if (!header?.startsWith(BEARER_PREFIX)) {
+  if (!header?.startsWith('Bearer ')) {
     return null;
   }
 
-  const token = header.slice(BEARER_PREFIX.length).trim();
+  const token = header.slice('Bearer '.length).trim();
   return token.length > 0 ? token : null;
 }
 
@@ -19,6 +16,7 @@ export default defineHandler(async (event) => {
   const provider = event.context.params?.provider;
   const entry = provider ? providers[provider] : undefined;
   if (!(provider && entry)) {
+    logger.warn({ provider }, '[proxy] unknown provider');
     event.res.status = 400;
     return {
       message: `Unknown provider: ${provider ?? 'unknown'}`,
@@ -26,10 +24,11 @@ export default defineHandler(async (event) => {
     };
   }
 
-  const requestIp = getRequestIp(event.req);
+  const requestIp = getRequestIP(event, { xForwardedFor: true }) ?? null;
   const token = getBearerToken(event.req.headers.get('authorization'));
   const session = token ? await validateProxyToken(token, requestIp) : null;
   if (!session) {
+    logger.warn({ provider, requestIp }, '[proxy] unauthorized request');
     event.res.status = 401;
     return { message: 'Unauthorized', status: 401 };
   }

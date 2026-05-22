@@ -1,10 +1,13 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { createLogger } from '@repo/logging/log';
 import { customProvider, type Provider, wrapProvider } from 'ai';
 import { createRetryable } from 'ai-retry';
 import { requestNotRetryable } from 'ai-retry/retryables';
 
 import { keys } from './keys';
+
+const logger = await createLogger({ fileLogging: false });
 
 const env = keys();
 
@@ -40,9 +43,13 @@ const onModelError = (context: {
   const { model } = context.current;
   const error = (context.current as { error?: { data?: { error?: unknown } } })
     .error;
-  console.error(
-    `error with model ${model.provider}/${model.modelId}, switching to next model`,
-    error?.data?.error
+  logger.warn(
+    {
+      provider: model.provider,
+      modelId: model.modelId,
+      err: error?.data?.error,
+    },
+    'model error, switching to next'
   );
 };
 

@@ -1,4 +1,5 @@
-import { defineHandler } from 'nitro/h3';
-import { getRequestIp } from '@/utils/request';
+import { defineHandler, getRequestIP } from 'nitro/h3';
 
-export default defineHandler((event) => ({ ip: getRequestIp(event.req) }));
+export default defineHandler((event) => ({
+  ip: getRequestIP(event, { xForwardedFor: true }) ?? null,
+}));

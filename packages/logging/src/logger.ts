@@ -2,7 +2,6 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import pino, {
   transport as createTransport,
-  type LoggerOptions,
   type Logger as PinoLogger,
   type TransportTargetOptions,
 } from 'pino';
@@ -17,48 +16,25 @@ interface CreateLoggerOptions {
   logLevel?: LogLevel;
 }
 
-async function createLogDirectory(logDirectory: string): Promise<boolean> {
-  try {
-    await mkdir(logDirectory, { recursive: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function createRunId(): string {
-  return new Date()
-    .toISOString()
-    .replace('T', '_')
-    .replace(/[:.]/g, '-')
-    .slice(0, 19);
-}
-
-function createBaseOptions(logLevel: LogLevel): LoggerOptions {
-  return {
-    level: logLevel,
-    timestamp: pino.stdTimeFunctions.isoTime,
-    serializers: { err: pino.stdSerializers.err },
-  };
-}
-
 export async function createLogger({
   fileLogging,
   isProduction = process.env.NODE_ENV === 'production',
   logDirectory = 'logs',
   logLevel = 'info',
 }: CreateLoggerOptions = {}): Promise<Logger> {
-  const options = createBaseOptions(logLevel);
-  const shouldLogToFile =
-    fileLogging ?? (isProduction && process.env.VERCEL !== '1');
+  const base = {
+    level: logLevel,
+    timestamp: pino.stdTimeFunctions.isoTime,
+    serializers: { err: pino.stdSerializers.err },
+  };
 
-  if (process.env.VERCEL === '1' || (isProduction && !shouldLogToFile)) {
-    return pino(options);
+  if (process.env.VERCEL === '1') {
+    return pino(base);
   }
 
   if (!isProduction) {
     return pino(
-      options,
+      base,
       createTransport({
         target: 'pino-pretty',
         options: {
@@ -71,23 +47,30 @@ export async function createLogger({
     );
   }
 
-  const targets: TransportTargetOptions[] = [
-    {
-      target: 'pino/file',
-      options: { destination: 1 },
-      level: logLevel,
-    },
-  ];
-
-  if (await createLogDirectory(logDirectory)) {
-    targets.unshift({
-      target: 'pino/file',
-      options: {
-        destination: path.join(logDirectory, `${createRunId()}.log`),
-      },
-      level: logLevel,
-    });
+  const shouldFile = fileLogging ?? true;
+  if (!shouldFile) {
+    return pino(base);
   }
 
-  return pino(options, createTransport({ targets }));
+  const targets: TransportTargetOptions[] = [
+    { target: 'pino/file', options: { destination: 1 }, level: logLevel },
+  ];
+
+  try {
+    await mkdir(logDirectory, { recursive: true });
+    const runId = new Date()
+      .toISOString()
+      .replace('T', '_')
+      .replace(/[:.]/g, '-')
+      .slice(0, 19);
+    targets.unshift({
+      target: 'pino/file',
+      options: { destination: path.join(logDirectory, `${runId}.log`) },
+      level: logLevel,
+    });
+  } catch {
+    // continue without file
+  }
+
+  return pino(base, createTransport({ targets }));
 }

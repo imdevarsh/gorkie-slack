@@ -9,6 +9,22 @@
     "./logger": "./src/logger.ts",
     "./*": "./src/*.ts"
   },
+  "typesVersions": {
+    "*": {
+      "keys": [
+        "./src/keys.ts"
+      ],
+      "log": [
+        "./src/log.ts"
+      ],
+      "logger": [
+        "./src/logger.ts"
+      ],
+      "*": [
+        "./src/*.ts"
+      ]
+    }
+  },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },

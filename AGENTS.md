@@ -27,7 +27,7 @@ There is no committed test suite for the sandbox proxy yet. Use temporary local 
 ```
 apps/
   bot/              # Slack bot (entry point: src/index.ts)
-  server/           # Independent Hono server for proxy/API work
+  server/           # Nitro proxy/API server for AI provider keys
 packages/
   ai/               # AI providers, model config, and system prompts
   db/               # Drizzle ORM schema, queries, Postgres client
@@ -41,9 +41,9 @@ tooling/
   typescript/       # @repo/tsconfig — shared TypeScript configs
 ```
 
-The Slack bot must not start or import the proxy server. Proxy/runtime API work belongs in `apps/server`; `apps/bot` should only call it through configured URLs.
+The Slack bot must not start or import the proxy server. Proxy/API work belongs in `apps/server`; `apps/bot` calls it through configured URLs only.
 
-Hono routes should be written as route modules with chained route values where practical. Use Hono middleware such as `bearerAuth` for auth parsing, use schema validation when a route accepts structured input, and export the chained `AppType` when it could be used by a typed client.
+`apps/server` uses Nitro with filesystem routing (`src/routes/`). Route handlers use `defineHandler` from `nitro/h3`. Middleware goes in `src/middleware/`. Plugins (startup hooks) go in `src/plugins/`.
 
 ## Coding Guidelines
 

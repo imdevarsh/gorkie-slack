@@ -11,8 +11,9 @@ out
 *.tsbuildinfo
 
 # Environment variables
-.env
-.env*.local
+.env*
+!.env.example
+.dev.vars
 
 # IDEs and editors
 .vscode/*
@@ -55,6 +56,7 @@ coverage
 
 # Misc
 *.tgz
+*.pem
 .cache
 .data
 .nitro

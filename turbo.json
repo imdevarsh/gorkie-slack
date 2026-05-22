@@ -6,8 +6,12 @@
     "NITRO_PRESET",
     "NITRO_PRESET_CLOUD",
     "NODE_ENV",
+    "TURBO_TEAM",
+    "TURBO_TOKEN",
     "VERCEL",
     "VERCEL_ENV",
+    "VERCEL_ORG_ID",
+    "VERCEL_PROJECT_ID",
     "VERCEL_URL"
   ],
   "tasks": {

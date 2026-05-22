@@ -1,83 +1,78 @@
 <div align="center">
   <img alt="Gorkie banner" src="./.github/banner.png" />
-  <h1>Gorkie for Slack</h1>
+  <h1>Gorkie (for Slack)</h1>
 </div>
 
-Gorkie is a helpful AI Slack bot built with Bun, TypeScript, Vercel AI SDK, and Slack Bolt SDK. It responds to mentions, DMs, and thread replies with AI-generated responses, web search, code sandbox work, image generation, scheduled tasks, and Slack-aware tools.
+## Introduction
+
+An AI assistant (called Gorkie) designed to help Slack users. Based on [Gork for Slack](https://github.com/techwithanirudh/gork-slack).
+
+Gorkie responds to mentions, DMs, and thread replies with AI-generated responses — including web search, code sandboxes, image generation, scheduled tasks, and Slack-aware tools.
 
 ## Tech Stack
 
-| Area | Details |
-| --- | --- |
-| Slack bot | Slack Bolt SDK, Socket Mode or HTTP receiver |
-| AI | Vercel AI SDK, Hack Club AI, OpenRouter fallback, Gemini fallback |
-| Sandbox | E2B sandboxes running Pi agent tooling |
-| Search | Exa web search |
-| Data | PostgreSQL with Drizzle ORM |
-| Cache/KV | Redis client package ready under `@repo/kv` |
-| Proxy | Hono server for sandbox provider-key proxying |
-| Runtime | Bun |
-| Quality | Ultracite/Biome, cspell, lefthook, GitHub Actions |
+- [Vercel AI SDK][ai-sdk]
+- [Slack Bolt SDK][slack-bolt]
+- [Exa][exa] — web search
+- [E2B][e2b] — code sandboxes
+- [PostgreSQL][postgres] + [Drizzle ORM][drizzle]
+- [Redis][redis]
+- [Bun][bun]
+- [Turborepo][turbo] monorepo
+- [Ultracite/Biome][biome] for code quality
 
-## Apps
+## Getting Started
 
-| App | Description |
-| --- | --- |
-| `apps/bot` | Slack bot runtime and bot-owned integrations |
-| `apps/server` | Independent Hono proxy/API server |
-
-The bot does not start or import the proxy server. It writes short-lived DB-backed sandbox proxy tokens directly, then passes `PROXY_BASE_URL` and the scoped token into the sandbox. Provider keys stay in `apps/server`.
-
-## Packages
-
-| Package | Description |
-| --- | --- |
-| `@repo/ai` | AI providers, model config, prompt builders, tool metadata |
-| `@repo/db` | Drizzle schema, PostgreSQL client, query modules |
-| `@repo/kv` | Redis env and client factory |
-| `@repo/logging` | Shared Pino logger factory and logging env keys |
-| `@repo/utils` | Shared framework-agnostic helpers |
-| `@repo/validators` | Shared Zod schemas |
-| `tooling/*` | Shared TypeScript, cspell, and GitHub Action config |
-
-## Setup
+Create a new [Slack App](https://api.slack.com/apps) using the [provided manifest](apps/bot/slack-manifest.json). You will also need [Git][git], [Bun][bun], a running [Redis][redis] instance, and a [PostgreSQL][postgres] database.
 
 ```bash
+# Clone this repository
+git clone https://github.com/imdevarsh/gorkie-slack.git
+
+# Install dependencies
 bun install
+
+# Copy and fill in your environment variables
 cp apps/bot/.env.example apps/bot/.env
 cp apps/server/.env.example apps/server/.env
-```
 
-Fill the env files, then push the database schema:
-
-```bash
+# Push the database schema
 bun run db:push
-```
 
-Run both apps:
-
-```bash
+# Start in development (watch mode)
 bun dev
 ```
 
-Useful focused commands:
+## Project Structure
 
-```bash
-bun run dev:bot
-bun run dev:server
-bun run build
-bun run check
-bun run typecheck
-bun run check:spelling
+```
+apps/
+  bot/              # Slack bot (entry: src/index.ts)
+  server/           # Nitro proxy for AI provider keys
+packages/
+  ai/               # AI providers, model config, prompts
+  db/               # Drizzle schema, PostgreSQL client, queries
+  kv/               # Redis env and client factory
+  logging/          # Pino logger factory
+  utils/            # Shared framework-agnostic helpers
+  validators/       # Shared Zod schemas
+tooling/            # Shared TypeScript, cspell, GitHub Action config
 ```
 
-## Environment
+The bot does not start or import the proxy server. It creates short-lived DB-backed tokens and passes `PROXY_BASE_URL` + the scoped token into the sandbox. Provider keys stay in `apps/server`.
 
-`apps/bot/.env.example` contains bot-owned variables: Slack tokens, AI keys, Exa, E2B, AgentMail, database, logging, and the sandbox proxy URL.
+## License
 
-`apps/server/.env.example` contains proxy-owned variables: database, CORS, logging, and upstream provider keys.
+This project is under the MIT license. See [LICENSE](LICENSE) for details.
 
-## Docs
-
-- [Sandbox proxy](./docs/proxy.md)
-- [Package strategy](./docs/packages.md)
+[git]: https://git-scm.com/
+[bun]: https://bun.sh/
+[slack-bolt]: https://docs.slack.dev/tools/bolt-js/
+[ai-sdk]: https://ai-sdk.dev/
+[exa]: https://exa.ai/
+[e2b]: https://e2b.dev/
+[postgres]: https://www.postgresql.org/
+[drizzle]: https://orm.drizzle.team/
+[redis]: https://redis.io/
+[turbo]: https://turbo.build/
+[biome]: https://biomejs.dev/
