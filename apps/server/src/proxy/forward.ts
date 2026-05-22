@@ -5,16 +5,33 @@ import logger from '../logger';
 import { providers } from './providers';
 
 interface ProxyVariables {
+  requestIp: string | null;
   sandboxId: string;
+}
+
+function getForwardedIp(header: string | undefined): string | null {
+  const ip = header?.split(',')[0]?.trim();
+  return ip || null;
+}
+
+function getRequestIp(request: Request): string | null {
+  const headers = request.headers;
+  return (
+    headers.get('cf-connecting-ip') ||
+    headers.get('x-real-ip') ||
+    getForwardedIp(headers.get('x-forwarded-for') ?? undefined)
+  );
 }
 
 const authSandbox = bearerAuth<{ Variables: ProxyVariables }>({
   verifyToken: async (token, c) => {
-    const session = await validateProxyToken(token);
+    const requestIp = getRequestIp(c.req.raw);
+    const session = await validateProxyToken(token, requestIp);
     if (!session) {
       return false;
     }
 
+    c.set('requestIp', requestIp);
     c.set('sandboxId', session.sandboxId);
     return true;
   },
@@ -68,6 +85,7 @@ export const forwardRoutes = new Hono<{ Variables: ProxyVariables }>().all(
       {
         path: upstreamPath,
         provider,
+        requestIp: c.var.requestIp,
         sandboxId: c.var.sandboxId,
         status: upstreamResponse.status,
       },

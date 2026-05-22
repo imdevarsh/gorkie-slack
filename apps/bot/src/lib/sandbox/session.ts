@@ -57,13 +57,42 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
   });
 }
 
+async function getSandboxOutboundIp(sandbox: Sandbox): Promise<string | null> {
+  const result = await sandbox.commands
+    .run(`curl -fsS --max-time 5 ${env.PROXY_BASE_URL}/ip`, {
+      timeoutMs: 10_000,
+    })
+    .catch((error: unknown) => {
+      logger.warn(
+        { ...toLogError(error), sandboxId: sandbox.sandboxId },
+        '[sandbox] Failed to resolve outbound IP'
+      );
+      return null;
+    });
+
+  if (!result || result.exitCode !== 0) {
+    return null;
+  }
+
+  try {
+    const { ip } = JSON.parse(result.stdout) as { ip: string | null };
+    return ip ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function issueSessionProxyToken({
+  sandbox,
   sandboxId,
 }: {
+  sandbox: Sandbox;
   sandboxId: string;
 }): Promise<string> {
   await deleteExpiredProxyTokens();
+  const allowedIp = await getSandboxOutboundIp(sandbox);
   const { token } = await issueProxyToken({
+    allowedIp,
     sandboxId,
     ttlMs: config.timeoutMs,
   });
@@ -88,6 +117,7 @@ async function createSandbox(
 
   try {
     const proxyToken = await issueSessionProxyToken({
+      sandbox,
       sandboxId: sandbox.sandboxId,
     });
     await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
@@ -130,6 +160,7 @@ async function resumeSandbox(
   await sandbox.setTimeout(config.timeoutMs);
 
   const proxyToken = await issueSessionProxyToken({
+    sandbox,
     sandboxId: sandbox.sandboxId,
   });
   const client = await boot({ sandbox, sessionId, proxyToken }).catch(

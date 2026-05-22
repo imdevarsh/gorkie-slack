@@ -28,6 +28,8 @@ The proxy token proves that traffic came from a Gorkie-managed sandbox session. 
 
 Tokens are stored in PostgreSQL in `proxy_tokens` with an expiry timestamp. The bot issues and revokes them through `@repo/db/queries`, so there is no internal proxy admin API key to leak. The table name is explicit because this is security-sensitive persistence; the source module is named `proxy` because tokens are an implementation detail of the proxy domain.
 
+When the bot can resolve the sandbox outbound IP, it stores that IP on the token as `allowed_ip`. The proxy then accepts the token only when the incoming request IP matches `allowed_ip`, using `cf-connecting-ip`, `x-real-ip`, or the first `x-forwarded-for` value. This is defense-in-depth for token exfiltration: a leaked token is still short-lived and revoked on session cleanup, and an IP-bound token cannot be replayed from a different network.
+
 ## Local Test Path
 
 1. Start PostgreSQL and Redis locally if they are not already running.

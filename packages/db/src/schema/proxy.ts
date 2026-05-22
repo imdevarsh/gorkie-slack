@@ -5,6 +5,7 @@ export const proxyTokens = pgTable(
   {
     token: text('token').primaryKey(),
     sandboxId: text('sandbox_id').notNull(),
+    allowedIp: text('allowed_ip'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

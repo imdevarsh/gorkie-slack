@@ -18,7 +18,7 @@ app.use(
   })
 );
 
-app.get('/', (c) => c.text('OK'));
+app.get('/', (c) => c.json({ ok: true }));
 app.route('/', proxyApp);
 
 app.onError((error, c) => {
