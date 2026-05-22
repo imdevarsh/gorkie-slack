@@ -41,12 +41,8 @@ Port the Gorkie Slack bot into this Turborepo cleanly, with the bot runnable fro
 - `bun run build` passes without the previous tsdown `noExternal` warning.
 - `bun run check:spelling` passes.
 - Direct `proxyApp.request()` smoke checks pass for `GET /health` and unauthenticated provider rejection.
-- A root `compose.yaml` and `services:*` scripts now define local PostgreSQL and Redis.
-- `bun run services:up` initially could not connect to `/var/run/docker.sock`.
-- After starting Docker with `sudo service docker start`, container startup is still blocked by the outer devcontainer privileges: `runc create failed: unsafe procfs detected`.
-- `.devcontainer/devcontainer.json` now requests `"privileged": true`; the current container must be rebuilt before Docker-in-Docker services can be validated here.
-- `bun run db:push` is blocked in this workspace because Docker is unavailable, native Postgres binaries are unavailable, and `pg_isready -h 127.0.0.1 -p 5432` reports no response.
-- Redis server validation is blocked in this workspace because Docker and `redis-server`/`redis-cli` are unavailable. `@repo/kv` client construction was smoke-tested without connecting.
+- A root `docker-compose.yml` and `services:*` scripts define internal local PostgreSQL and Redis.
+- DB-backed proxy validation should use `bun run services:up && bun run db:push` in an environment where local Docker services are expected to run.
 
 ## Notes For Continuation
 

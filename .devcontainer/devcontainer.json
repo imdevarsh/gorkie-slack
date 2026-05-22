@@ -3,7 +3,6 @@
     "dockerfile": "./Dockerfile",
     "context": "."
   },
-  "privileged": true,
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "username": "coder",
