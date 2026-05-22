@@ -28,7 +28,7 @@ export default defineHandler(async (event) => {
   const token = getBearerToken(event.req.headers.get('authorization'));
   const session = token ? await validateProxyToken(token, requestIp) : null;
   if (!session) {
-    logger.warn({ provider, requestIp }, '[proxy] unauthorized request');
+    logger.warn({ provider, ip: requestIp }, '[proxy] unauthorized request');
     event.res.status = 401;
     return { message: 'Unauthorized', status: 401 };
   }
@@ -40,24 +40,19 @@ export default defineHandler(async (event) => {
   headers.set('Accept-Encoding', 'identity');
   headers.delete('host');
 
-  const upstreamInit: RequestInit & { duplex?: 'half' } = {
-    body:
-      event.req.method === 'GET' || event.req.method === 'HEAD'
-        ? undefined
-        : event.req.body,
-    duplex: 'half',
-    headers,
-    method: event.req.method,
-  };
-
   const upstreamResponse = await fetch(
     `${entry.url}${upstreamPath}${requestUrl.search}`,
-    upstreamInit
+    {
+      body:
+        event.req.method === 'GET' || event.req.method === 'HEAD'
+          ? undefined
+          : event.req.body,
+      duplex: 'half',
+      headers,
+      method: event.req.method,
+    } as RequestInit & { duplex?: 'half' }
   ).catch((error: unknown) => {
-    logger.error(
-      { err: error, provider, sandboxId: session.sandboxId },
-      '[proxy] upstream fetch failed'
-    );
+    logger.error({ err: error, provider }, '[proxy] upstream fetch failed');
     return null;
   });
 
