@@ -41,8 +41,7 @@ Port the Gorkie Slack bot into this Turborepo cleanly, with the bot runnable fro
 - `bun run build` passes without the previous tsdown `noExternal` warning.
 - `bun run check:spelling` passes.
 - Direct `proxyApp.request()` smoke checks pass for `GET /health` and unauthenticated provider rejection.
-- A root `docker-compose.yml` and `services:*` scripts define internal local PostgreSQL and Redis.
-- DB-backed proxy validation should use `bun run services:up && bun run db:push` in an environment where local Docker services are expected to run.
+- Local PostgreSQL and Redis should be started directly in the container for validation; no Docker Compose scripts are tracked.
 
 ## Notes For Continuation
 
