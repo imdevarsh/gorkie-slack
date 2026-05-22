@@ -1,10 +1,10 @@
 import { validateProxyToken } from '@repo/db/queries';
 import { Hono } from 'hono';
 import { bearerAuth } from 'hono/bearer-auth';
-import logger from '@/lib/logger';
-import { providers } from './providers';
+import type { AppVariables } from '../types.js';
+import { providers } from './providers.js';
 
-interface ProxyVariables {
+interface ProxyVariables extends AppVariables {
   requestIp: string | null;
   sandboxId: string;
 }
@@ -66,11 +66,10 @@ export const forwardRoutes = new Hono<{ Variables: ProxyVariables }>().all(
         duplex: 'half',
       }
     ).catch((error: unknown) => {
-      logger.error('[proxy] upstream fetch failed', {
-        provider,
-        sandboxId: c.var.sandboxId,
-        error,
-      });
+      c.var.logger?.error(
+        { err: error, provider, sandboxId: c.var.sandboxId },
+        '[proxy] upstream fetch failed'
+      );
       return null;
     });
 

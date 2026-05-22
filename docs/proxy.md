@@ -38,3 +38,11 @@ When the bot can resolve the sandbox outbound IP, it stores that IP on the token
 4. Validate with a temporary local script or direct `proxyApp.request()` calls based on the original `gorkie-slack/server/scripts/proxy-test.ts`.
 
 Do not keep proxy tests checked in yet. The current migration target is to prove the sandbox proxy works locally, then delete any temporary validation script.
+
+## Production Topology
+
+Deploy `apps/server` to Vercel as the public Hono proxy. Hono's Vercel target expects the app to default-export from `src/index.ts`, so do not add an `api/index.ts` shim that imports `dist`.
+
+Keep `apps/server` runtime imports Node-compatible with explicit `.js` relative specifiers. Vercel emits ESM JavaScript and preserves relative import strings, so extensionless imports such as `./env` can fail at runtime with `ERR_MODULE_NOT_FOUND`.
+
+Run the bot separately on the Bun host that owns Slack connectivity. Set `apps/bot` `PROXY_BASE_URL` to the deployed Vercel proxy URL, not `localhost`, because E2B sandboxes must be able to reach it publicly.

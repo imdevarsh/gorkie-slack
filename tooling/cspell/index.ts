@@ -51,6 +51,7 @@ export default defineConfig({
     'agentmail',
     'automations',
     'autoremove',
+    'untun',
     'behaviour',
     'commitlint',
     'cynicist',

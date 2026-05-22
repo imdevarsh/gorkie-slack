@@ -2,12 +2,17 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { logger as honoLogger } from 'hono/logger';
-import { env } from './env';
-import logger from './lib/logger';
-import { proxyApp } from './proxy/app';
+import { env } from './env.js';
+import logger from './lib/logger.js';
+import { proxyApp } from './proxy/app.js';
+import type { AppVariables } from './types.js';
 
-const app = new Hono();
+const app = new Hono<{ Variables: AppVariables }>();
 
+app.use(async (c, next) => {
+  c.set('logger', logger);
+  await next();
+});
 app.use(honoLogger((message) => logger.info(message)));
 app.use(
   '/*',
@@ -25,7 +30,7 @@ app.onError((error, c) => {
   if (error instanceof HTTPException) {
     return error.getResponse();
   }
-  logger.error({ path: c.req.path, error }, 'unhandled error');
+  logger.error({ err: error, path: c.req.path }, 'unhandled error');
   return c.json({ message: 'Internal Server Error', status: 500 }, 500);
 });
 

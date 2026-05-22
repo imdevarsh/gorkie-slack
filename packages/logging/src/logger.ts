@@ -1,8 +1,8 @@
-import { constants } from 'node:fs';
-import { access, mkdir } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import pino, {
   transport as createTransport,
+  type LoggerOptions,
   type Logger as PinoLogger,
   type TransportTargetOptions,
 } from 'pino';
@@ -16,9 +16,9 @@ interface CreateLoggerOptions {
   logLevel?: LogLevel;
 }
 
-async function exists(targetPath: string): Promise<boolean> {
+async function createLogDirectory(logDirectory: string): Promise<boolean> {
   try {
-    await access(targetPath, constants.F_OK);
+    await mkdir(logDirectory, { recursive: true });
     return true;
   } catch {
     return false;
@@ -33,61 +33,57 @@ function createRunId(): string {
     .slice(0, 19);
 }
 
+function createBaseOptions(logLevel: LogLevel): LoggerOptions {
+  return {
+    level: logLevel,
+    timestamp: pino.stdTimeFunctions.isoTime,
+    serializers: { err: pino.stdSerializers.err },
+  };
+}
+
 export async function createLogger({
   isProduction = process.env.NODE_ENV === 'production',
   logDirectory = 'logs',
   logLevel = 'info',
 }: CreateLoggerOptions = {}): Promise<Logger> {
-  const isVercel = process.env.VERCEL === '1';
+  const options = createBaseOptions(logLevel);
 
-  let canWriteToFile =
-    isProduction && !isVercel && (await exists(logDirectory));
-  if (!canWriteToFile && isProduction && !isVercel) {
-    try {
-      await mkdir(logDirectory, { recursive: true });
-      canWriteToFile = true;
-    } catch {
-      canWriteToFile = false;
-    }
+  if (process.env.VERCEL === '1') {
+    return pino(options);
   }
 
-  const targets: TransportTargetOptions[] = canWriteToFile
-    ? [
-        {
-          target: 'pino/file',
-          options: {
-            destination: path.join(logDirectory, `${createRunId()}.log`),
-          },
-          level: logLevel,
+  if (!isProduction) {
+    return pino(
+      options,
+      createTransport({
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
+          ignore: 'pid,hostname,ctxId',
+          messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
         },
-      ]
-    : [];
+      })
+    );
+  }
 
-  if (isProduction || isVercel) {
-    targets.push({
+  const targets: TransportTargetOptions[] = [
+    {
       target: 'pino/file',
       options: { destination: 1 },
       level: logLevel,
-    });
-  } else {
-    targets.push({
-      target: 'pino-pretty',
+    },
+  ];
+
+  if (await createLogDirectory(logDirectory)) {
+    targets.unshift({
+      target: 'pino/file',
       options: {
-        colorize: true,
-        translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
-        ignore: 'pid,hostname,ctxId',
-        messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
+        destination: path.join(logDirectory, `${createRunId()}.log`),
       },
       level: logLevel,
     });
   }
 
-  return pino(
-    {
-      level: logLevel,
-      timestamp: pino.stdTimeFunctions.isoTime,
-      serializers: { err: pino.stdSerializers.err },
-    },
-    createTransport({ targets })
-  );
+  return pino(options, createTransport({ targets }));
 }

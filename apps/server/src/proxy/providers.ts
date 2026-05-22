@@ -1,11 +1,14 @@
-import { env } from '../env';
+import { env } from '../env.js';
 
 export interface ProviderEntry {
   apiKey: string;
   baseUrl: string;
 }
 
-type ProviderConfig = { apiKey: string | undefined; baseUrl: string };
+interface ProviderConfig {
+  apiKey: string | undefined;
+  baseUrl: string;
+}
 
 const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   gemini: {
