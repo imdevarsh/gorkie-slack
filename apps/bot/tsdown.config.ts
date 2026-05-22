@@ -8,5 +8,6 @@ export default defineConfig({
   deps: {
     alwaysBundle: [/@repo\/.*/],
     onlyBundle: false,
+    neverBundle: ['pino', 'pino-pretty', 'thread-stream'],
   },
 });
