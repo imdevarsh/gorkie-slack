@@ -1,9 +1,8 @@
 import { defineHandler } from 'nitro/h3';
-import { listProviders } from '@/proxy/providers';
+import { providers } from '@/config';
 
 export default defineHandler(() => ({
   status: 'ok' as const,
-  message: 'Proxy server is running',
   timestamp: new Date().toISOString(),
-  providers: listProviders(),
+  providers: Object.keys(providers).sort(),
 }));

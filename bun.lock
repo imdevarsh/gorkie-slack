@@ -83,6 +83,7 @@
       "dependencies": {
         "@ai-sdk/google": "catalog:",
         "@openrouter/ai-sdk-provider": "catalog:",
+        "@repo/logging": "workspace:*",
         "@t3-oss/env-core": "catalog:",
         "ai": "catalog:",
         "ai-retry": "catalog:",

@@ -1,7 +1,7 @@
 import { validateProxyToken } from '@repo/db/queries';
 import { defineHandler, getRequestIP } from 'nitro/h3';
-import logger from '@/lib/logger';
-import { providers } from '@/proxy/providers';
+import { providers } from '@/config';
+import logger from '@/utils/logger';
 
 function getBearerToken(header: string | null): string | null {
   if (!header?.startsWith('Bearer ')) {
@@ -51,7 +51,7 @@ export default defineHandler(async (event) => {
   };
 
   const upstreamResponse = await fetch(
-    `${entry.baseUrl}${upstreamPath}${requestUrl.search}`,
+    `${entry.url}${upstreamPath}${requestUrl.search}`,
     upstreamInit
   ).catch((error: unknown) => {
     logger.error(
