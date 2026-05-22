@@ -10,7 +10,9 @@ export default defineHandler((event) => {
   event.res.headers.set('Access-Control-Allow-Credentials', 'true');
   event.res.headers.set('Access-Control-Allow-Methods', ALLOW_METHODS);
 
-  const requestedHeaders = event.req.headers.get('access-control-request-headers');
+  const requestedHeaders = event.req.headers.get(
+    'access-control-request-headers'
+  );
   event.res.headers.set(
     'Access-Control-Allow-Headers',
     requestedHeaders ?? FALLBACK_ALLOW_HEADERS

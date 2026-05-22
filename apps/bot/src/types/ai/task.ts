@@ -5,6 +5,7 @@ export interface FinishTaskInput {
   sources?: TaskChunk['sources'];
   status: 'complete' | 'error';
   taskId: string;
+  title?: string;
 }
 
 export interface UpdateTaskInput {

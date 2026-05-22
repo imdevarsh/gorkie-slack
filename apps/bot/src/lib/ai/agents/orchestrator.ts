@@ -12,7 +12,7 @@ import type {
 } from '@/types';
 import { createTask, finishTask, updateTask } from '../utils/task';
 
-const taskMap = new Map<string, string>();
+const taskMap = new Map<string, { taskId: string; startTime: number }>();
 
 type ReasoningStreamPart =
   | { type: 'start-step' }
@@ -40,15 +40,18 @@ export async function resolveOrchestratorTask({
   details?: string;
 }): Promise<void> {
   const eventTs = context.event.event_ts;
-  const taskId = taskMap.get(eventTs);
-  if (!taskId) {
+  const entry = taskMap.get(eventTs);
+  if (!entry) {
     return;
   }
 
+  const elapsedSec = Math.round((Date.now() - entry.startTime) / 1000);
+  const resolvedTitle = title ?? `Thought for ${elapsedSec}s`;
+
   await finishTask(stream, {
-    taskId,
+    taskId: entry.taskId,
     status: 'complete',
-    ...(title ? { title } : {}),
+    title: resolvedTitle,
     ...(details ? { details } : {}),
   });
 }
@@ -78,14 +81,14 @@ export async function consumeOrchestratorReasoningStream({
       continue;
     }
 
-    const taskId = taskMap.get(eventTs);
-    if (!taskId) {
+    const entry = taskMap.get(eventTs);
+    if (!entry) {
       logger.warn({ eventTs }, 'No taskId found in taskMap');
       continue;
     }
 
     await updateTask(stream, {
-      taskId,
+      taskId: entry.taskId,
       status: 'in_progress',
       output: `\n${reasoningSummary}`,
     });
@@ -131,17 +134,17 @@ export const orchestratorAgent = ({
     ],
     async prepareStep() {
       const taskId = crypto.randomUUID();
-      const task = await createTask(stream, {
+      await createTask(stream, {
         taskId,
-        title: 'Thinking',
+        title: 'Thinking…',
         status: 'in_progress',
       });
-      taskMap.set(context.event.event_ts, task);
+      taskMap.set(context.event.event_ts, { taskId, startTime: Date.now() });
       return {};
     },
     async onStepFinish() {
-      const taskId = taskMap.get(context.event.event_ts);
-      if (taskId) {
+      const entry = taskMap.get(context.event.event_ts);
+      if (entry) {
         await resolveOrchestratorTask({ context, stream });
         return;
       }
