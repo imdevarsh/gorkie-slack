@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { listProviders } from './providers.js';
+import { listProviders } from './providers';
 
 function getClientIp(req: Request): string | null {
   return (

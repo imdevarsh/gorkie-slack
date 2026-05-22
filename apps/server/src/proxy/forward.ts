@@ -1,8 +1,8 @@
 import { validateProxyToken } from '@repo/db/queries';
 import { Hono } from 'hono';
 import { bearerAuth } from 'hono/bearer-auth';
-import type { AppVariables } from '../types.js';
-import { providers } from './providers.js';
+import type { AppVariables } from '../types';
+import { providers } from './providers';
 
 interface ProxyVariables extends AppVariables {
   requestIp: string | null;
