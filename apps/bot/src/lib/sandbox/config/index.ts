@@ -12,53 +12,35 @@ function readTemplate(path: string): Promise<string> {
 }
 
 function buildProxyAuthJson(): string {
-  const seen = new Set<string>();
-  const auth: Record<string, { type: string; key: string }> = {};
-
-  for (const { provider } of config.modelChain) {
-    if (seen.has(provider)) {
-      continue;
-    }
-    seen.add(provider);
-    auth[provider] = { type: 'api_key', key: 'GORKIE_SESSION_TOKEN' };
-  }
-
-  return JSON.stringify(auth, null, 2);
+  const { provider } = config.model;
+  return JSON.stringify(
+    { [provider]: { type: 'api_key', key: 'GORKIE_SESSION_TOKEN' } },
+    null,
+    2
+  );
 }
 
 function buildModelsJson(): string {
+  const { provider } = config.model;
   const staticModels = JSON.parse(
     readFileSync(new URL('./models.json', import.meta.url), 'utf8').toString()
-  ) as {
-    providers: Record<
-      string,
-      {
-        models?: unknown[];
-        baseUrl?: string;
-        api?: string;
-        authHeader?: boolean;
-      }
-    >;
-  };
+  ) as { providers: Record<string, unknown> };
 
-  const providers: Record<string, unknown> = {};
-  const seen = new Set<string>();
-
-  for (const { provider } of config.modelChain) {
-    if (seen.has(provider)) {
-      continue;
-    }
-    seen.add(provider);
-    const existing = staticModels.providers[provider] ?? {};
-    providers[provider] = {
-      ...existing,
-      baseUrl: `${env.PROXY_BASE_URL}/${provider}`,
-      apiKey: 'GORKIE_SESSION_TOKEN',
-      authHeader: true,
-    };
-  }
-
-  return JSON.stringify({ providers }, null, 2);
+  const existing = staticModels.providers[provider] ?? {};
+  return JSON.stringify(
+    {
+      providers: {
+        [provider]: {
+          ...existing,
+          baseUrl: `${env.PROXY_BASE_URL}/${provider}`,
+          apiKey: 'GORKIE_SESSION_TOKEN',
+          authHeader: true,
+        },
+      },
+    },
+    null,
+    2
+  );
 }
 
 export async function buildConfig(prompt: string): Promise<{

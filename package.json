@@ -30,7 +30,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
-    "dev:server": "turbo run dev --filter=server",
+    "dev:proxy": "turbo run dev --filter=proxy",
     "dev:bot": "turbo run dev --filter=bot",
     "db:push": "turbo run db:push --filter=@repo/db",
     "db:studio": "turbo run db:studio --filter=@repo/db",

@@ -9,7 +9,6 @@ import logger from '@/lib/logger';
 import { clearSandboxClient, setSandboxClient } from '@/lib/sandbox/active';
 import { syncAttachments } from '@/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '@/lib/sandbox/events';
-import { runWithModelRetry } from '@/lib/sandbox/model-retry';
 import {
   pauseSession,
   resolveSession,
@@ -184,21 +183,8 @@ export const sandbox = ({
         });
 
         try {
-          await runWithModelRetry({
-            client: session.client,
-            prompt,
-            timeoutPromise,
-            ctxId,
-            onModelSwitch: (attempt, total) => {
-              enqueue(() =>
-                updateTask(stream, {
-                  taskId,
-                  status: 'in_progress',
-                  details: `Model failed, retrying with fallback (${attempt}/${total})...`,
-                })
-              );
-            },
-          });
+          await session.client.prompt(prompt);
+          await Promise.race([session.client.waitForIdle(), timeoutPromise]);
         } catch (error) {
           await session.client.abort().catch(() => null);
           throw error;

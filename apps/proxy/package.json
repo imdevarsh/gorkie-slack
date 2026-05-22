@@ -1,5 +1,5 @@
 {
-  "name": "server",
+  "name": "proxy",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
@@ -7,7 +7,7 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
     "start": "bun run dist/index.mjs",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@repo/db": "workspace:*",
