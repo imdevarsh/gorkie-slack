@@ -1,15 +1,10 @@
-import { createLogger, type Logger } from '@repo/logging/log';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { logger as honoLogger } from 'hono/logger';
 import { env } from './env';
+import logger from './lib/logger';
 import { proxyApp } from './proxy/app';
-
-const logger: Logger = await createLogger({
-  logLevel: env.LOG_LEVEL,
-  logDirectory: env.LOG_DIRECTORY,
-});
 
 const app = new Hono();
 
