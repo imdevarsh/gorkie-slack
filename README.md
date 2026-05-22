@@ -36,6 +36,9 @@ bun install
 cp apps/bot/.env.example apps/bot/.env
 cp apps/server/.env.example apps/server/.env
 
+# For sandbox runs, expose apps/server and set PROXY_BASE_URL in apps/bot/.env
+npx untun@latest tunnel http://localhost:3001
+
 # Push the database schema
 bun run db:push
 
@@ -60,6 +63,8 @@ tooling/            # Shared TypeScript, cspell, GitHub Action config
 ```
 
 The bot does not start or import the proxy server. It creates short-lived DB-backed tokens and passes `PROXY_BASE_URL` + the scoped token into the sandbox. Provider keys stay in `apps/server`.
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the local proxy tunnel flow and environment setup details.
 
 ## License
 
