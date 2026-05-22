@@ -4,7 +4,7 @@ import { defineConfig } from 'drizzle-kit';
 import { keys } from './src/keys';
 
 dotenv.config({
-  path: '../../apps/proxy/.env',
+  path: '../../apps/server/.env',
 });
 
 const env = keys();

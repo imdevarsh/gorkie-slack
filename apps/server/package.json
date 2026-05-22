@@ -1,5 +1,5 @@
 {
-  "name": "proxy",
+  "name": "server",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
@@ -15,6 +15,7 @@
     "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",
     "hono": "^4.8.2",
+    "pino": "^10.3.1",
     "zod": "catalog:"
   },
   "devDependencies": {
