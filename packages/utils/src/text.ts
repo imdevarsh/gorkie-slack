@@ -1,12 +1,12 @@
-import stripAnsi from "strip-ansi";
+import stripAnsi from 'strip-ansi';
 
 export function cleanTerminalText(text: string): string {
-  return stripAnsi(text).replace(/\r/g, "");
+  return stripAnsi(text).replace(/\r/g, '');
 }
 
 export function cleanText(text: string): string {
   const withoutAnsi = cleanTerminalText(text);
-  let output = "";
+  let output = '';
 
   for (const char of withoutAnsi) {
     const code = char.charCodeAt(0);
@@ -27,9 +27,9 @@ export function cleanText(text: string): string {
 }
 
 export function clampText(text: string, maxLength: number): string {
-  const normalized = text.replace(/\s+/g, " ").trim();
+  const normalized = text.replace(/\s+/g, ' ').trim();
   if (maxLength <= 0) {
-    return "";
+    return '';
   }
   if (normalized.length <= maxLength) {
     return normalized;
@@ -41,7 +41,7 @@ export function clampText(text: string, maxLength: number): string {
 }
 
 export function trimmed(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim().length > 0
+  return typeof value === 'string' && value.trim().length > 0
     ? value.trim()
     : undefined;
 }

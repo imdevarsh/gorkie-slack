@@ -1,11 +1,11 @@
-import { errorMessage, toLogError } from "@repo/utils/error";
-import { tool } from "ai";
-import { deflate } from "pako";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import type { SlackMessageContext, Stream } from "@/types";
-import { getContextId } from "@/utils/context";
+import { errorMessage, toLogError } from '@repo/utils/error';
+import { tool } from 'ai';
+import { deflate } from 'pako';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import type { SlackMessageContext, Stream } from '@/types';
+import { getContextId } from '@/utils/context';
 
 const PLUS_REGEX = /\+/g;
 const SLASH_REGEX = /\//g;
@@ -22,7 +22,7 @@ function getMermaidImageUrl(code: string) {
 
   const compressed = deflate(utf8Bytes);
 
-  let binary = "";
+  let binary = '';
   const bytes = new Uint8Array(compressed);
   for (const byte of bytes) {
     binary += String.fromCharCode(byte ?? 0);
@@ -30,9 +30,9 @@ function getMermaidImageUrl(code: string) {
   let base64 = btoa(binary);
 
   base64 = base64
-    .replace(PLUS_REGEX, "-")
-    .replace(SLASH_REGEX, "_")
-    .replace(EQUALS_REGEX, "");
+    .replace(PLUS_REGEX, '-')
+    .replace(SLASH_REGEX, '_')
+    .replace(EQUALS_REGEX, '');
 
   return `https://mermaid.ink/img/pako:${base64}?type=png`;
 }
@@ -46,23 +46,23 @@ export const mermaid = ({
 }) =>
   tool({
     description:
-      "Generate a Mermaid diagram and share it as an image in Slack. Use for visualizing workflows, architectures, sequences, or relationships.",
+      'Generate a Mermaid diagram and share it as an image in Slack. Use for visualizing workflows, architectures, sequences, or relationships.',
     inputSchema: z.object({
       code: z
         .string()
         .describe(
-          "Valid Mermaid diagram code (flowchart, sequence, classDiagram, etc.)"
+          'Valid Mermaid diagram code (flowchart, sequence, classDiagram, etc.)'
         ),
       title: z
         .string()
         .optional()
-        .describe("Optional title/alt text for the diagram"),
+        .describe('Optional title/alt text for the diagram'),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Creating diagram",
-        status: "pending",
+        title: 'Creating diagram',
+        status: 'pending',
       });
     },
     execute: async ({ code, title }, { toolCallId }) => {
@@ -74,16 +74,16 @@ export const mermaid = ({
       if (!channelId) {
         logger.warn(
           { ctxId, title },
-          "Failed to create Mermaid diagram: missing channel"
+          'Failed to create Mermaid diagram: missing channel'
         );
-        return { success: false, error: "Missing Slack channel" };
+        return { success: false, error: 'Missing Slack channel' };
       }
 
       const task = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Creating diagram",
-        details: title ?? code.split("\n")[0],
-        status: "in_progress",
+        title: 'Creating diagram',
+        details: title ?? code.split('\n')[0],
+        status: 'in_progress',
       });
 
       try {
@@ -100,30 +100,30 @@ export const mermaid = ({
           channel_id: channelId,
           thread_ts: threadTs ?? messageTs ?? context.event.ts,
           file: Buffer.from(imageBuffer),
-          filename: "diagram.png",
-          title: title ?? "Mermaid Diagram",
+          filename: 'diagram.png',
+          title: title ?? 'Mermaid Diagram',
         });
 
         logger.info(
           { ctxId, channel: channelId, title },
-          "Uploaded Mermaid diagram"
+          'Uploaded Mermaid diagram'
         );
         await finishTask(stream, {
-          status: "complete",
+          status: 'complete',
           taskId: task,
-          output: "Diagram uploaded",
+          output: 'Diagram uploaded',
         });
         return {
           success: true,
-          content: "Mermaid diagram uploaded to Slack and sent",
+          content: 'Mermaid diagram uploaded to Slack and sent',
         };
       } catch (error) {
         logger.error(
           { ...toLogError(error), ctxId, channel: channelId },
-          "Failed to create Mermaid diagram"
+          'Failed to create Mermaid diagram'
         );
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId: task,
           output: errorMessage(error),
         });

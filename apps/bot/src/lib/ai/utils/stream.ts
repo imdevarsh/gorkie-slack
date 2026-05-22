@@ -1,18 +1,18 @@
-import { toLogError } from "@repo/utils/error";
+import { toLogError } from '@repo/utils/error';
 import type {
   ChatAppendStreamArguments,
   ChatStartStreamArguments,
   ChatStopStreamArguments,
-} from "@slack/web-api";
-import logger from "@/lib/logger";
+} from '@slack/web-api';
+import logger from '@/lib/logger';
 import type {
   PlanChunk,
   SlackMessageContext,
   Stream,
   TaskChunk,
-} from "@/types";
-import { getContextId } from "@/utils/context";
-import { setStatus } from "./status";
+} from '@/types';
+import { getContextId } from '@/utils/context';
+import { setStatus } from './status';
 
 export async function initStream(
   context: SlackMessageContext
@@ -21,10 +21,10 @@ export async function initStream(
   const ctxId = getContextId(context);
 
   if (!channelId) {
-    logger.warn({ ctxId }, "Cannot init stream: missing channel ID");
+    logger.warn({ ctxId }, 'Cannot init stream: missing channel ID');
     return {
-      channel: "",
-      ts: "",
+      channel: '',
+      ts: '',
       client: context.client,
       tasks: new Map(),
       thought: false,
@@ -42,19 +42,19 @@ export async function initStream(
       thread_ts: threadTs,
       recipient_team_id: context.teamId,
       recipient_user_id: userId,
-      task_display_mode: "plan",
+      task_display_mode: 'plan',
     } as unknown as ChatStartStreamArguments);
 
     if (!response.ts) {
-      throw new Error("chat.startStream returned no ts");
+      throw new Error('chat.startStream returned no ts');
     }
 
     ts = response.ts;
   } catch (error) {
-    logger.error({ ...toLogError(error), ctxId }, "Failed to start stream");
+    logger.error({ ...toLogError(error), ctxId }, 'Failed to start stream');
     return {
       channel: channelId,
-      ts: "",
+      ts: '',
       client: context.client,
       tasks: new Map(),
       thought: false,
@@ -70,7 +70,7 @@ export async function initStream(
     thought: false,
   };
 
-  await setStatus(context, { status: "" });
+  await setStatus(context, { status: '' });
 
   return stream;
 }
@@ -89,7 +89,7 @@ export async function closeStream(stream: Stream): Promise<void> {
     if (!isStreamExpired(error)) {
       logger.warn(
         { ...toLogError(error), channel: stream.channel },
-        "Failed to close stream"
+        'Failed to close stream'
       );
     }
   }
@@ -99,7 +99,7 @@ export async function setPlanTitle(
   stream: Stream,
   title: string
 ): Promise<void> {
-  await safeAppend(stream, [{ type: "plan_update", title }]);
+  await safeAppend(stream, [{ type: 'plan_update', title }]);
 }
 
 export async function safeAppend(
@@ -122,7 +122,7 @@ export async function safeAppend(
     }
     logger.warn(
       { ...toLogError(error), channel: stream.channel },
-      "Failed to append to stream"
+      'Failed to append to stream'
     );
   }
 }
@@ -130,6 +130,6 @@ export async function safeAppend(
 function isStreamExpired(error: unknown): boolean {
   return (
     (error as { data?: { error?: string } })?.data?.error ===
-    "message_not_in_streaming_state"
+    'message_not_in_streaming_state'
   );
 }

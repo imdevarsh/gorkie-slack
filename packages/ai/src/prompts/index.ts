@@ -2,30 +2,30 @@ import type {
   ChatRequestHints,
   SandboxRequestHints,
   SlackMessageContext,
-} from "../types";
-import { chatPrompt } from "./chat";
-import { sandboxPrompt } from "./sandbox";
+} from '../types';
+import { chatPrompt } from './chat';
+import { sandboxPrompt } from './sandbox';
 
 export function systemPrompt(
   opts:
     | {
-        agent: "chat";
+        agent: 'chat';
         requestHints: ChatRequestHints;
         context: SlackMessageContext;
       }
     | {
-        agent: "sandbox";
+        agent: 'sandbox';
         context?: SlackMessageContext;
         requestHints?: SandboxRequestHints;
       }
 ): string {
   switch (opts.agent) {
-    case "chat":
+    case 'chat':
       return chatPrompt({
         requestHints: opts.requestHints,
         context: opts.context,
       });
-    case "sandbox":
+    case 'sandbox':
       return sandboxPrompt({
         context: opts.context,
         requestHints: opts.requestHints,

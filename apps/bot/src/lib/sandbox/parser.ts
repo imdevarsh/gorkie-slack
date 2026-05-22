@@ -1,7 +1,7 @@
-import { cleanText, trimmed } from "@repo/utils/text";
+import { cleanText, trimmed } from '@repo/utils/text';
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== 'object') {
     return null;
   }
 
@@ -9,7 +9,7 @@ export function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 export function asString(value: unknown): string | undefined {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return;
   }
 
@@ -29,7 +29,7 @@ export function extractTextResult(result: unknown): string | undefined {
   const chunks: string[] = [];
   for (const item of content) {
     const part = asRecord(item);
-    if (part?.type !== "text") {
+    if (part?.type !== 'text') {
       continue;
     }
 
@@ -39,7 +39,7 @@ export function extractTextResult(result: unknown): string | undefined {
     }
   }
 
-  const joined = chunks.join("\n").trim();
+  const joined = chunks.join('\n').trim();
   return joined.length > 0 ? joined : undefined;
 }
 
@@ -49,11 +49,11 @@ export function extractErrorResult(result: unknown): string | undefined {
     return;
   }
 
-  if (typeof error === "string") {
+  if (typeof error === 'string') {
     return asString(error);
   }
 
-  if (typeof error === "object") {
+  if (typeof error === 'object') {
     const message = asString(asRecord(error)?.message);
     if (message) {
       return message;

@@ -1,10 +1,10 @@
-import { and, asc, desc, eq, isNull, lte, sql } from "drizzle-orm";
-import { db } from "../index";
+import { and, asc, desc, eq, isNull, lte, sql } from 'drizzle-orm';
+import { db } from '../index';
 import {
   type NewScheduledTask,
   type ScheduledTask,
   scheduledTasks,
-} from "../schema";
+} from '../schema';
 
 export async function createScheduledTask(task: NewScheduledTask) {
   const rows = await db.insert(scheduledTasks).values(task).returning();
@@ -69,7 +69,7 @@ export async function claimScheduledTaskRun(taskId: string, now: Date) {
     .update(scheduledTasks)
     .set({
       runningAt: now,
-      lastStatus: "running",
+      lastStatus: 'running',
       lastError: null,
       updatedAt: now,
     })
@@ -90,7 +90,7 @@ export async function completeScheduledTaskRun(
   taskId: string,
   opts: {
     nextRunAt: Date;
-    status: "success" | "error";
+    status: 'success' | 'error';
     error?: string;
     runAt?: Date;
   }
@@ -119,7 +119,7 @@ export async function disableScheduledTask(
     .set({
       enabled: false,
       runningAt: null,
-      lastStatus: "error",
+      lastStatus: 'error',
       lastError: error,
       updatedAt: now,
       lastRunAt: now,
@@ -137,7 +137,7 @@ export async function cancelScheduledTaskForUser(
     .set({
       enabled: false,
       runningAt: null,
-      lastStatus: "cancelled",
+      lastStatus: 'cancelled',
       lastError: null,
       updatedAt: now,
     })

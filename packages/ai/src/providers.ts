@@ -1,16 +1,16 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { customProvider, type Provider, wrapProvider } from "ai";
-import { createRetryable } from "ai-retry";
-import { requestNotRetryable } from "ai-retry/retryables";
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { customProvider, type Provider, wrapProvider } from 'ai';
+import { createRetryable } from 'ai-retry';
+import { requestNotRetryable } from 'ai-retry/retryables';
 
-import { keys } from "./keys";
+import { keys } from './keys';
 
 const env = keys();
 
 const hackclubBase = createOpenRouter({
   apiKey: env.HACKCLUB_API_KEY,
-  baseURL: "https://ai.hackclub.com/proxy/v1",
+  baseURL: 'https://ai.hackclub.com/proxy/v1',
 });
 
 const openrouter = createOpenRouter({
@@ -21,12 +21,12 @@ const openrouter = createOpenRouter({
 const hackclub = wrapProvider({
   provider: hackclubBase,
   languageModelMiddleware: {
-    specificationVersion: "v3",
-    overrideProvider: () => "hackclub",
+    specificationVersion: 'v3',
+    overrideProvider: () => 'hackclub',
   },
   imageModelMiddleware: {
-    specificationVersion: "v3",
-    overrideProvider: () => "hackclub",
+    specificationVersion: 'v3',
+    overrideProvider: () => 'hackclub',
   },
 });
 
@@ -47,41 +47,41 @@ const onModelError = (context: {
 };
 
 const chatModel = createRetryable({
-  model: hackclub.languageModel("google/gemini-3-flash-preview"),
+  model: hackclub.languageModel('google/gemini-3-flash-preview'),
   retries: [
     requestNotRetryable(
-      openrouter.languageModel("google/gemini-3-flash-preview")
+      openrouter.languageModel('google/gemini-3-flash-preview')
     ),
-    ...(google ? [requestNotRetryable(google("gemini-3-flash-preview"))] : []),
-    hackclub.languageModel("openai/gpt-5-mini"),
-    openrouter.languageModel("google/gemini-3-flash-preview"),
-    openrouter.languageModel("openai/gpt-5-mini"),
+    ...(google ? [requestNotRetryable(google('gemini-3-flash-preview'))] : []),
+    hackclub.languageModel('openai/gpt-5-mini'),
+    openrouter.languageModel('google/gemini-3-flash-preview'),
+    openrouter.languageModel('openai/gpt-5-mini'),
   ],
   onError: onModelError,
 });
 
 const summariserModel = createRetryable({
-  model: hackclub.languageModel("google/gemini-3.1-flash-lite-preview"),
+  model: hackclub.languageModel('google/gemini-3.1-flash-lite-preview'),
   retries: [
     requestNotRetryable(
-      openrouter.languageModel("google/gemini-3.1-flash-lite-preview")
+      openrouter.languageModel('google/gemini-3.1-flash-lite-preview')
     ),
     ...(google
-      ? [requestNotRetryable(google("gemini-3.1-flash-lite-preview"))]
+      ? [requestNotRetryable(google('gemini-3.1-flash-lite-preview'))]
       : []),
-    hackclub.languageModel("openai/gpt-5-nano"),
-    openrouter.languageModel("google/gemini-3.1-flash-lite-preview"),
-    openrouter.languageModel("openai/gpt-5-nano"),
+    hackclub.languageModel('openai/gpt-5-nano'),
+    openrouter.languageModel('google/gemini-3.1-flash-lite-preview'),
+    openrouter.languageModel('openai/gpt-5-nano'),
   ],
   onError: onModelError,
 });
 
 export const provider: Provider = customProvider({
   languageModels: {
-    "chat-model": chatModel,
-    "summariser-model": summariserModel,
+    'chat-model': chatModel,
+    'summariser-model': summariserModel,
   },
   imageModels: {
-    "image-model": hackclub.imageModel("google/gemini-3.1-flash-image-preview"),
+    'image-model': hackclub.imageModel('google/gemini-3.1-flash-image-preview'),
   },
 });

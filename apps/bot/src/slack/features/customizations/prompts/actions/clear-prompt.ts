@@ -1,14 +1,14 @@
-import { toLogError } from "@repo/utils/error";
+import { toLogError } from '@repo/utils/error';
 import type {
   AllMiddlewareArgs,
   BlockAction,
   ButtonAction,
   SlackActionMiddlewareArgs,
-} from "@slack/bolt";
-import logger from "@/lib/logger";
-import { applyPrompt } from "../../publish";
+} from '@slack/bolt';
+import logger from '@/lib/logger';
+import { applyPrompt } from '../../publish';
 
-export const name = "home_clear_prompt";
+export const name = 'home_clear_prompt';
 
 export async function execute({
   ack,
@@ -19,8 +19,8 @@ export async function execute({
   await ack();
   const userId = body.user.id;
   try {
-    await applyPrompt(client, userId, "");
+    await applyPrompt(client, userId, '');
   } catch (error) {
-    logger.warn({ ...toLogError(error), userId }, "Failed to clear prompt");
+    logger.warn({ ...toLogError(error), userId }, 'Failed to clear prompt');
   }
 }

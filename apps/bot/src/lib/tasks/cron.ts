@@ -1,8 +1,8 @@
-import { CronExpressionParser } from "cron-parser";
+import { CronExpressionParser } from 'cron-parser';
 
 export function validateTimezone(timezone: string): void {
   // Intl throws on unknown IANA timezone names.
-  new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+  new Intl.DateTimeFormat('en-US', { timeZone: timezone });
 }
 
 export function getNextRunAt(

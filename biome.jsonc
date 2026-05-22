@@ -37,8 +37,8 @@
   "javascript": {
     "formatter": {
       "enabled": true,
-      "quoteStyle": "double",
-      "jsxQuoteStyle": "double",
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "single",
       "semicolons": "always"
     },
     "globals": ["Bun"]

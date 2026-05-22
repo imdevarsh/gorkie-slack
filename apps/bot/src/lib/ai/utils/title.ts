@@ -1,9 +1,9 @@
-import { provider } from "@repo/ai/providers";
-import { toLogError } from "@repo/utils/error";
-import { cleanText, trimmed } from "@repo/utils/text";
-import { generateText } from "ai";
-import logger from "@/lib/logger";
-import type { SlackMessageContext } from "@/types";
+import { provider } from '@repo/ai/providers';
+import { toLogError } from '@repo/utils/error';
+import { cleanText, trimmed } from '@repo/utils/text';
+import { generateText } from 'ai';
+import logger from '@/lib/logger';
+import type { SlackMessageContext } from '@/types';
 
 export async function setConversationTitle(
   context: SlackMessageContext,
@@ -11,7 +11,7 @@ export async function setConversationTitle(
 ): Promise<void> {
   const { event, client } = context;
 
-  if (event.channel_type !== "im") {
+  if (event.channel_type !== 'im') {
     return;
   }
 
@@ -27,7 +27,7 @@ export async function setConversationTitle(
 
   try {
     const { text } = await generateText({
-      model: provider.languageModel("summariser-model"),
+      model: provider.languageModel('summariser-model'),
       prompt: `Write a short Slack conversation title for the opening message below.
 
 Rules:
@@ -55,7 +55,7 @@ ${prompt}`,
   } catch (error) {
     logger.warn(
       { ...toLogError(error), channel: event.channel },
-      "Failed to set conversation title"
+      'Failed to set conversation title'
     );
   }
 }

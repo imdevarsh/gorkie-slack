@@ -10,6 +10,6 @@ export const summariseThreadPrompt = (instructions?: string) => `\
 Summarise this Slack thread concisely.
 Focus on key points, decisions made, action items, and any unresolved questions.
 Keep the summary brief but comprehensive.
-${instructions ? `\nAdditional instructions: ${instructions}` : ""}
+${instructions ? `\nAdditional instructions: ${instructions}` : ''}
 </task>
 `;

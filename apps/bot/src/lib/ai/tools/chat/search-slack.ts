@@ -1,15 +1,15 @@
-import { asRecord } from "@repo/utils/record";
-import { tool } from "ai";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import type { SlackMessageContext, SlackSearchResponse, Stream } from "@/types";
-import { getContextId } from "@/utils/context";
+import { asRecord } from '@repo/utils/record';
+import { tool } from 'ai';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import type { SlackMessageContext, SlackSearchResponse, Stream } from '@/types';
+import { getContextId } from '@/utils/context';
 
 function getActionToken(event: unknown): string | undefined {
   const assistantThread = asRecord(asRecord(event)?.assistant_thread);
   const actionToken = assistantThread?.action_token;
-  return typeof actionToken === "string" ? actionToken : undefined;
+  return typeof actionToken === 'string' ? actionToken : undefined;
 }
 
 export const searchSlack = ({
@@ -20,15 +20,15 @@ export const searchSlack = ({
   stream: Stream;
 }) =>
   tool({
-    description: "Use this to search the Slack workspace for information",
+    description: 'Use this to search the Slack workspace for information',
     inputSchema: z.object({
       query: z.string(),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Searching Slack",
-        status: "pending",
+        title: 'Searching Slack',
+        status: 'pending',
       });
     },
     execute: async ({ query }, { toolCallId }) => {
@@ -37,9 +37,9 @@ export const searchSlack = ({
 
       if (!actionToken) {
         const pingMessage =
-          "The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.";
+          'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.';
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId: toolCallId,
           output: pingMessage,
         });
@@ -51,18 +51,18 @@ export const searchSlack = ({
 
       const task = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Searching Slack",
+        title: 'Searching Slack',
         details: query,
-        status: "in_progress",
+        status: 'in_progress',
       });
 
       const response = await fetch(
-        "https://slack.com/api/assistant.search.context",
+        'https://slack.com/api/assistant.search.context',
         {
-          method: "POST",
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${context.client.token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ query, action_token: actionToken }),
         }
@@ -71,18 +71,18 @@ export const searchSlack = ({
       const res = (await response.json()) as SlackSearchResponse;
 
       if (!(res.ok && res.results?.messages)) {
-        const error = res.error ?? "unknown";
+        const error = res.error ?? 'unknown';
         const isMissingActionToken = error
           .toLowerCase()
-          .includes("action_token");
+          .includes('action_token');
 
-        logger.error({ ctxId, res }, "Failed to search");
+        logger.error({ ctxId, res }, 'Failed to search');
 
         if (isMissingActionToken) {
           const pingMessage =
-            "The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.";
+            'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.';
           await finishTask(stream, {
-            status: "error",
+            status: 'error',
             taskId: task,
             output: pingMessage,
           });
@@ -93,7 +93,7 @@ export const searchSlack = ({
         }
 
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId: task,
           output: `Search failed: ${error}`,
         });
@@ -105,10 +105,10 @@ export const searchSlack = ({
 
       logger.debug(
         { ctxId, query, count: res.results.messages.length },
-        "Search Slack complete"
+        'Search Slack complete'
       );
       await finishTask(stream, {
-        status: "complete",
+        status: 'complete',
         taskId: task,
         output: `${(res.results?.messages ?? []).length} result(s)`,
       });

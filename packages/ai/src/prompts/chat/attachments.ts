@@ -1,20 +1,20 @@
-import type { SlackMessageContext } from "../../types";
+import type { SlackMessageContext } from '../../types';
 
-const ATTACHMENTS_DIR = "attachments";
+const ATTACHMENTS_DIR = 'attachments';
 
 export function attachmentsPrompt(context: SlackMessageContext): string {
   const files = context.event.files;
   if (!files || files.length === 0) {
-    return "";
+    return '';
   }
 
   const dir = ATTACHMENTS_DIR;
   const listing = files
     .map(
       (f) =>
-        `  - ${dir}/${f.name} (${f.mimetype ?? "application/octet-stream"})`
+        `  - ${dir}/${f.name} (${f.mimetype ?? 'application/octet-stream'})`
     )
-    .join("\n");
+    .join('\n');
 
   return `\
 <attachments>

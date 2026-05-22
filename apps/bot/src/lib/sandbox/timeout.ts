@@ -1,14 +1,14 @@
-import type { Sandbox } from "@e2b/code-interpreter";
-import { toLogError } from "@repo/utils/error";
-import { sandbox as config } from "@/config";
-import logger from "@/lib/logger";
+import type { Sandbox } from '@e2b/code-interpreter';
+import { toLogError } from '@repo/utils/error';
+import { sandbox as config } from '@/config';
+import logger from '@/lib/logger';
 
 function resolveEndAtMs(endAt: unknown): number {
   if (endAt instanceof Date) {
     return endAt.getTime();
   }
 
-  if (typeof endAt === "string" || typeof endAt === "number") {
+  if (typeof endAt === 'string' || typeof endAt === 'number') {
     const parsed = new Date(endAt).getTime();
     return Number.isFinite(parsed) ? parsed : 0;
   }
@@ -38,7 +38,7 @@ export async function extendSandboxTimeout(
   } catch (error) {
     logger.warn(
       { ...toLogError(error), requiredRemainingMs },
-      "[sandbox] Failed to extend timeout"
+      '[sandbox] Failed to extend timeout'
     );
   }
 }

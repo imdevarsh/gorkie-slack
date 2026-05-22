@@ -1,4 +1,4 @@
-import type { PiRpcClient } from "./rpc/client";
+import type { PiRpcClient } from './rpc/client';
 
 const active = new Map<string, PiRpcClient>();
 

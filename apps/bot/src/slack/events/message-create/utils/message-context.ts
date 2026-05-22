@@ -1,13 +1,13 @@
-import { toLogError } from "@repo/utils/error";
-import { asRecord } from "@repo/utils/record";
-import logger from "@/lib/logger";
+import { toLogError } from '@repo/utils/error';
+import { asRecord } from '@repo/utils/record';
+import logger from '@/lib/logger';
 import type {
   MessageEventArgs,
   SlackFile,
   SlackMessageContext,
   SlackMessageEvent,
   SlackRawMessageEvent,
-} from "@/types";
+} from '@/types';
 
 function isSlackFile(value: unknown): value is SlackFile {
   return Boolean(asRecord(value));
@@ -15,9 +15,9 @@ function isSlackFile(value: unknown): value is SlackFile {
 
 function normalizeEvent(event: SlackRawMessageEvent): SlackMessageEvent | null {
   const record = asRecord(event);
-  const channel = typeof record?.channel === "string" ? record.channel : null;
-  const ts = typeof record?.ts === "string" ? record.ts : null;
-  const eventTs = typeof record?.event_ts === "string" ? record.event_ts : ts;
+  const channel = typeof record?.channel === 'string' ? record.channel : null;
+  const ts = typeof record?.ts === 'string' ? record.ts : null;
+  const eventTs = typeof record?.event_ts === 'string' ? record.event_ts : ts;
   if (!(channel && ts && eventTs)) {
     return null;
   }
@@ -32,19 +32,19 @@ function normalizeEvent(event: SlackRawMessageEvent): SlackMessageEvent | null {
     channel,
     ts,
     event_ts: eventTs,
-    text: typeof record?.text === "string" ? record.text : undefined,
-    user: typeof record?.user === "string" ? record.user : undefined,
+    text: typeof record?.text === 'string' ? record.text : undefined,
+    user: typeof record?.user === 'string' ? record.user : undefined,
     thread_ts:
-      typeof record?.thread_ts === "string" ? record.thread_ts : undefined,
+      typeof record?.thread_ts === 'string' ? record.thread_ts : undefined,
     channel_type:
-      typeof record?.channel_type === "string"
+      typeof record?.channel_type === 'string'
         ? record.channel_type
         : undefined,
-    subtype: typeof record?.subtype === "string" ? record.subtype : undefined,
-    bot_id: typeof record?.bot_id === "string" ? record.bot_id : undefined,
+    subtype: typeof record?.subtype === 'string' ? record.subtype : undefined,
+    bot_id: typeof record?.bot_id === 'string' ? record.bot_id : undefined,
     files,
     assistant_thread:
-      typeof assistantThread?.action_token === "string"
+      typeof assistantThread?.action_token === 'string'
         ? { action_token: assistantThread.action_token }
         : undefined,
   };
@@ -52,7 +52,7 @@ function normalizeEvent(event: SlackRawMessageEvent): SlackMessageEvent | null {
 
 export function hasSupportedSubtype(args: MessageEventArgs): boolean {
   const subtype = args.event.subtype;
-  return !subtype || subtype === "thread_broadcast" || subtype === "file_share";
+  return !subtype || subtype === 'thread_broadcast' || subtype === 'file_share';
 }
 
 export function toMessageContext(
@@ -62,13 +62,13 @@ export function toMessageContext(
   const eventRecord = asRecord(event);
   const bodyRecord = asRecord(body);
   const userId =
-    typeof eventRecord?.user === "string" ? eventRecord.user : undefined;
+    typeof eventRecord?.user === 'string' ? eventRecord.user : undefined;
 
   if (!hasSupportedSubtype(args)) {
     return null;
   }
 
-  if ("bot_id" in event && event.bot_id) {
+  if ('bot_id' in event && event.bot_id) {
     return null;
   }
 
@@ -76,7 +76,7 @@ export function toMessageContext(
     return null;
   }
 
-  if (!("text" in event)) {
+  if (!('text' in event)) {
     return null;
   }
 
@@ -91,7 +91,7 @@ export function toMessageContext(
     botUserId: context.botUserId,
     teamId:
       context.teamId ??
-      (typeof bodyRecord?.team_id === "string"
+      (typeof bodyRecord?.team_id === 'string'
         ? bodyRecord.team_id
         : undefined),
   } satisfies SlackMessageContext;
@@ -100,8 +100,8 @@ export function toMessageContext(
 export function shouldHandleMessage(
   event: SlackMessageEvent
 ): event is SlackMessageEvent & { user: string } {
-  const messageText = event.text ?? "";
-  return Boolean(event.user) && !messageText.startsWith("##");
+  const messageText = event.text ?? '';
+  return Boolean(event.user) && !messageText.startsWith('##');
 }
 
 export async function getAuthorName(
@@ -110,7 +110,7 @@ export async function getAuthorName(
 ): Promise<string> {
   const userId = ctx.event.user;
   if (!userId) {
-    return "unknown";
+    return 'unknown';
   }
 
   try {
@@ -124,7 +124,7 @@ export async function getAuthorName(
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId, ctxId },
-      "Failed to fetch user info for logging"
+      'Failed to fetch user info for logging'
     );
     return userId;
   }

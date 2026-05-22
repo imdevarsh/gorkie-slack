@@ -3,10 +3,10 @@ import type {
   BlockAction,
   ButtonAction,
   SlackActionMiddlewareArgs,
-} from "@slack/bolt";
-import { buildPromptModal, parseModalState } from "../view";
+} from '@slack/bolt';
+import { buildPromptModal, parseModalState } from '../view';
 
-export const name = "modal_toggle_presets";
+export const name = 'modal_toggle_presets';
 
 export async function execute({
   ack,

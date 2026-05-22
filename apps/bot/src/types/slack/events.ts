@@ -1,4 +1,4 @@
-import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
+import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from '@slack/bolt';
 
-export type MessageEventArgs = SlackEventMiddlewareArgs<"message"> &
+export type MessageEventArgs = SlackEventMiddlewareArgs<'message'> &
   AllMiddlewareArgs;

@@ -1,7 +1,7 @@
-import { LangfuseSpanProcessor } from "@langfuse/otel";
-import { NodeSDK } from "@opentelemetry/sdk-node";
-import type { Logger } from "@repo/logging/log";
-import { env } from "@/env";
+import { LangfuseSpanProcessor } from '@langfuse/otel';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import type { Logger } from '@repo/logging/log';
+import { env } from '@/env';
 
 interface StartTelemetryOptions {
   logger?: Logger;
@@ -15,7 +15,7 @@ export function startTelemetry({
   logger,
 }: StartTelemetryOptions = {}): Telemetry {
   if (!(env.LANGFUSE_PUBLIC_KEY && env.LANGFUSE_SECRET_KEY)) {
-    logger?.debug("Telemetry disabled; missing Langfuse credentials");
+    logger?.debug('Telemetry disabled; missing Langfuse credentials');
     return {
       shutdown: async () => undefined,
     };
@@ -26,7 +26,7 @@ export function startTelemetry({
   });
 
   sdk.start();
-  logger?.debug("Telemetry started");
+  logger?.debug('Telemetry started');
 
   return {
     shutdown: () => sdk.shutdown(),

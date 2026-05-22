@@ -1,15 +1,15 @@
-import { cancelScheduledTaskForUser } from "@repo/db/queries";
-import { toLogError } from "@repo/utils/error";
+import { cancelScheduledTaskForUser } from '@repo/db/queries';
+import { toLogError } from '@repo/utils/error';
 import type {
   AllMiddlewareArgs,
   BlockAction,
   ButtonAction,
   SlackActionMiddlewareArgs,
-} from "@slack/bolt";
-import logger from "@/lib/logger";
-import { publishHome } from "../../publish";
+} from '@slack/bolt';
+import logger from '@/lib/logger';
+import { publishHome } from '../../publish';
 
-export const name = "home_cancel_task";
+export const name = 'home_cancel_task';
 
 export async function execute({
   ack,
@@ -20,14 +20,14 @@ export async function execute({
   AllMiddlewareArgs): Promise<void> {
   await ack();
   const userId = body.user.id;
-  const taskId = typeof action.value === "string" ? action.value : "";
+  const taskId = typeof action.value === 'string' ? action.value : '';
   try {
     await cancelScheduledTaskForUser(taskId, userId);
     await publishHome(client, userId);
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId, taskId },
-      "Failed to cancel task"
+      'Failed to cancel task'
     );
   }
 }

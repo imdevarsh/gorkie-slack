@@ -1,8 +1,8 @@
-import { listScheduledTasksByUser } from "@repo/db/queries";
-import { tool } from "ai";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import type { SlackMessageContext, Stream } from "@/types";
+import { listScheduledTasksByUser } from '@repo/db/queries';
+import { tool } from 'ai';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import type { SlackMessageContext, Stream } from '@/types';
 
 export const listScheduledTasks = ({
   context,
@@ -13,25 +13,25 @@ export const listScheduledTasks = ({
 }) =>
   tool({
     description:
-      "List your scheduled recurring tasks so you can review or manage them.",
+      'List your scheduled recurring tasks so you can review or manage them.',
     inputSchema: z.object({
       includeDisabled: z
         .boolean()
         .default(false)
-        .describe("Include disabled/cancelled tasks in the results."),
+        .describe('Include disabled/cancelled tasks in the results.'),
       limit: z
         .number()
         .int()
         .min(1)
         .max(50)
         .default(20)
-        .describe("Maximum number of tasks to return."),
+        .describe('Maximum number of tasks to return.'),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Listing scheduled tasks",
-        status: "pending",
+        title: 'Listing scheduled tasks',
+        status: 'pending',
       });
     },
     execute: async ({ includeDisabled, limit }, { toolCallId }) => {
@@ -39,15 +39,15 @@ export const listScheduledTasks = ({
       if (!userId) {
         return {
           success: false,
-          error: "Could not identify the requesting user.",
+          error: 'Could not identify the requesting user.',
         };
       }
 
       const taskId = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Listing scheduled tasks",
-        details: includeDisabled ? "Including disabled tasks" : "Active tasks",
-        status: "in_progress",
+        title: 'Listing scheduled tasks',
+        details: includeDisabled ? 'Including disabled tasks' : 'Active tasks',
+        status: 'in_progress',
       });
 
       const tasks = await listScheduledTasksByUser(userId, {
@@ -56,7 +56,7 @@ export const listScheduledTasks = ({
       });
 
       await finishTask(stream, {
-        status: "complete",
+        status: 'complete',
         taskId,
         output: `${tasks.length} task(s) found`,
       });

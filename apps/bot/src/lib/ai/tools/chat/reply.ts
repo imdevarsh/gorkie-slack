@@ -1,11 +1,11 @@
-import { errorMessage, toLogError } from "@repo/utils/error";
-import { tool } from "ai";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import type { SlackHistoryMessage, SlackMessageContext, Stream } from "@/types";
-import { getContextId } from "@/utils/context";
-import { getSlackUserName } from "@/utils/users";
+import { errorMessage, toLogError } from '@repo/utils/error';
+import { tool } from 'ai';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import type { SlackHistoryMessage, SlackMessageContext, Stream } from '@/types';
+import { getContextId } from '@/utils/context';
+import { getSlackUserName } from '@/utils/users';
 
 async function resolveTargetMessage(
   ctx: SlackMessageContext,
@@ -34,13 +34,13 @@ async function resolveTargetMessage(
   });
 
   if (!history.messages) {
-    logger.error({ ctxId, res: history }, "Error fetching history");
+    logger.error({ ctxId, res: history }, 'Error fetching history');
   }
 
   const sorted: SlackHistoryMessage[] = (history.messages ?? [])
     .filter(
       (msg): msg is { thread_ts?: string; ts: string } =>
-        typeof msg.ts === "string"
+        typeof msg.ts === 'string'
     )
     .sort((a, b) => Number(b.ts) - Number(a.ts))
     .map((msg) => ({
@@ -84,23 +84,23 @@ export const reply = ({
         .min(0)
         .optional()
         .describe(
-          `Number of messages to go back from the triggering message. 0 or omitted means that you will reply to the message that you were triggered by. This would usually stay as 0. ${context.event.thread_ts ? "NOTE: YOU ARE IN A THREAD - THE OFFSET WILL RESPOND TO A DIFFERENT THREAD. Change the offset only if you are sure." : ""}`.trim()
+          `Number of messages to go back from the triggering message. 0 or omitted means that you will reply to the message that you were triggered by. This would usually stay as 0. ${context.event.thread_ts ? 'NOTE: YOU ARE IN A THREAD - THE OFFSET WILL RESPOND TO A DIFFERENT THREAD. Change the offset only if you are sure.' : ''}`.trim()
         ),
       content: z
         .array(z.string())
         .nonempty()
-        .describe("An array of lines of text to send. Send at most 4 lines.")
+        .describe('An array of lines of text to send. Send at most 4 lines.')
         .max(4),
       type: z
-        .enum(["reply", "message"])
-        .default("reply")
-        .describe("Reply in a thread or post directly in the channel."),
+        .enum(['reply', 'message'])
+        .default('reply')
+        .describe('Reply in a thread or post directly in the channel.'),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Sending reply",
-        status: "pending",
+        title: 'Sending reply',
+        status: 'pending',
       });
     },
     execute: async ({ offset = 0, content, type }, { toolCallId }) => {
@@ -113,22 +113,22 @@ export const reply = ({
       if (!(channelId && messageTs)) {
         logger.warn(
           { ctxId, channel: channelId, messageTs, type, offset },
-          "Failed to send Slack reply: missing channel or timestamp"
+          'Failed to send Slack reply: missing channel or timestamp'
         );
-        return { success: false, error: "Missing Slack channel or timestamp" };
+        return { success: false, error: 'Missing Slack channel or timestamp' };
       }
 
       const task = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Sending reply",
+        title: 'Sending reply',
         details: content[0],
-        status: "in_progress",
+        status: 'in_progress',
       });
 
       try {
         const target = await resolveTargetMessage(context, offset, ctxId);
         const threadTs =
-          type === "reply"
+          type === 'reply'
             ? resolveThreadTs(target, currentThread ?? messageTs)
             : undefined;
 
@@ -142,7 +142,7 @@ export const reply = ({
 
         const authorName = userId
           ? await getSlackUserName(context.client, userId)
-          : "unknown";
+          : 'unknown';
 
         logger.info(
           {
@@ -153,24 +153,24 @@ export const reply = ({
             author: authorName,
             content,
           },
-          "Sent Slack reply"
+          'Sent Slack reply'
         );
         await finishTask(stream, {
-          status: "complete",
+          status: 'complete',
           taskId: task,
           output: `Sent ${content.length} message(s)`,
         });
         return {
           success: true,
-          content: "Sent reply to Slack channel",
+          content: 'Sent reply to Slack channel',
         };
       } catch (error) {
         logger.error(
           { ...toLogError(error), ctxId, channel: channelId, type, offset },
-          "Failed to send Slack reply"
+          'Failed to send Slack reply'
         );
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId: task,
           output: errorMessage(error),
         });

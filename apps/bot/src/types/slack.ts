@@ -1,8 +1,8 @@
-import type { SlackEventMiddlewareArgs } from "@slack/bolt";
-import type { WebClient } from "@slack/web-api";
-import type { SlackFile } from "@/types/slack/file";
+import type { SlackEventMiddlewareArgs } from '@slack/bolt';
+import type { WebClient } from '@slack/web-api';
+import type { SlackFile } from '@/types/slack/file';
 
-export type SlackRawMessageEvent = SlackEventMiddlewareArgs<"message">["event"];
+export type SlackRawMessageEvent = SlackEventMiddlewareArgs<'message'>['event'];
 
 export interface SlackMessageEvent {
   assistant_thread?: { action_token?: string };

@@ -1,4 +1,4 @@
-import type { App, ExpressReceiver } from "@slack/bolt";
+import type { App, ExpressReceiver } from '@slack/bolt';
 
 export interface SlackApp {
   app: App;

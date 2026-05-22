@@ -1,22 +1,22 @@
-import { toLogError } from "@repo/utils/error";
-import { env } from "@/env";
-import { isUserAllowed } from "@/lib/allowed-users";
-import logger from "@/lib/logger";
-import { getQueue } from "@/lib/queue";
-import type { MessageEventArgs } from "@/types";
-import { buildChatContext, getContextId } from "@/utils/context";
-import { handleInlineCommand } from "@/utils/inline-commands";
-import { logReply } from "@/utils/log";
-import { getTrigger } from "@/utils/triggers";
+import { toLogError } from '@repo/utils/error';
+import { env } from '@/env';
+import { isUserAllowed } from '@/lib/allowed-users';
+import logger from '@/lib/logger';
+import { getQueue } from '@/lib/queue';
+import type { MessageEventArgs } from '@/types';
+import { buildChatContext, getContextId } from '@/utils/context';
+import { handleInlineCommand } from '@/utils/inline-commands';
+import { logReply } from '@/utils/log';
+import { getTrigger } from '@/utils/triggers';
 import {
   getAuthorName,
   hasSupportedSubtype,
   shouldHandleMessage,
   toMessageContext,
-} from "./utils/message-context";
-import { generateResponse } from "./utils/respond";
+} from './utils/message-context';
+import { generateResponse } from './utils/respond';
 
-export const name = "message";
+export const name = 'message';
 
 async function handleMessage(
   messageContext: NonNullable<ReturnType<typeof toMessageContext>>,
@@ -26,7 +26,7 @@ async function handleMessage(
   if (!shouldHandleMessage(event)) {
     return;
   }
-  const { user: userId, text: messageText = "" } = event;
+  const { user: userId, text: messageText = '' } = event;
 
   const ctxId = getContextId(messageContext);
   const authorName = await getAuthorName(messageContext, ctxId);
@@ -74,7 +74,7 @@ async function handleMessage(
       result.success &&
       requestHints.customization?.prompt &&
       event.channel &&
-      event.channel_type !== "im"
+      event.channel_type !== 'im'
     ) {
       await messageContext.client.chat
         .postMessage({
@@ -82,10 +82,10 @@ async function handleMessage(
           thread_ts: event.thread_ts ?? event.ts,
           blocks: [
             {
-              type: "context",
+              type: 'context',
               elements: [
                 {
-                  type: "mrkdwn",
+                  type: 'mrkdwn',
                   text: "_Gorkie's responses are shaped by this user's personal instructions_",
                 },
               ],
@@ -96,7 +96,7 @@ async function handleMessage(
         .catch(() => null);
     }
 
-    logReply({ ctxId, author: authorName, result, reason: "trigger" });
+    logReply({ ctxId, author: authorName, result, reason: 'trigger' });
     return;
   }
 
@@ -118,14 +118,14 @@ export async function execute(args: MessageEventArgs): Promise<void> {
   const ctxId = getContextId(messageContext);
   const trigger = await getTrigger(messageContext, messageContext.botUserId);
 
-  if (trigger.type === "ping" || trigger.type === "dm") {
-    const raw = messageContext.event.text ?? "";
+  if (trigger.type === 'ping' || trigger.type === 'dm') {
+    const raw = messageContext.event.text ?? '';
     const text =
-      trigger.type === "ping"
-        ? raw.replace(/<@[A-Z0-9]+>/gi, "").trimStart()
+      trigger.type === 'ping'
+        ? raw.replace(/<@[A-Z0-9]+>/gi, '').trimStart()
         : raw;
     const inlineResult = await handleInlineCommand(messageContext, ctxId, text);
-    if (inlineResult === "handled") {
+    if (inlineResult === 'handled') {
       return;
     }
   }
@@ -135,7 +135,7 @@ export async function execute(args: MessageEventArgs): Promise<void> {
     .catch((error: unknown) => {
       logger.error(
         { ...toLogError(error), ctxId },
-        "Failed to process queued message"
+        'Failed to process queued message'
       );
     });
 }

@@ -1,4 +1,4 @@
-import type { SetStatusParams, SlackMessageContext } from "@/types";
+import type { SetStatusParams, SlackMessageContext } from '@/types';
 
 export function setStatus(
   context: SlackMessageContext,

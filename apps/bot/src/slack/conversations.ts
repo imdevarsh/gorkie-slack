@@ -1,8 +1,8 @@
-import { toLogError } from "@repo/utils/error";
-import type { ModelMessage, UserContent } from "ai";
-import logger from "@/lib/logger";
-import type { ConversationOptions, SlackConversationMessage } from "@/types";
-import { processSlackFiles } from "@/utils/images";
+import { toLogError } from '@repo/utils/error';
+import type { ModelMessage, UserContent } from 'ai';
+import logger from '@/lib/logger';
+import type { ConversationOptions, SlackConversationMessage } from '@/types';
+import { processSlackFiles } from '@/utils/images';
 
 interface CachedUser {
   displayName: string;
@@ -12,16 +12,16 @@ interface CachedUser {
 }
 
 async function joinChannel(
-  client: ConversationOptions["client"],
+  client: ConversationOptions['client'],
   channel: string
 ): Promise<void> {
   try {
     // keep previous behavior: best-effort join and swallow failures
-    await fetch("https://slack.com/api/conversations.join", {
-      method: "POST",
+    await fetch('https://slack.com/api/conversations.join', {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${client.token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ channel }),
     });
@@ -78,7 +78,7 @@ function filterMessages(
     if (!message.ts) {
       return false;
     }
-    if (message.text?.startsWith("##")) {
+    if (message.text?.startsWith('##')) {
       return false;
     }
     const messageTs = Number(message.ts);
@@ -88,7 +88,7 @@ function filterMessages(
 }
 
 async function buildUserCache(
-  client: ConversationOptions["client"],
+  client: ConversationOptions['client'],
   messages: SlackConversationMessage[]
 ): Promise<Map<string, CachedUser>> {
   const userIds = new Set<string>();
@@ -117,7 +117,7 @@ async function buildUserCache(
       } catch (error) {
         logger.warn(
           { ...toLogError(error), userId },
-          "Failed to fetch Slack user info"
+          'Failed to fetch Slack user info'
         );
         userCache.set(userId, {
           id: userId,
@@ -135,12 +135,12 @@ function sortForModel(messages: SlackConversationMessage[]) {
     .filter(
       (message) =>
         !message.subtype ||
-        message.subtype === "file_share" ||
-        message.subtype === "bot_message"
+        message.subtype === 'file_share' ||
+        message.subtype === 'bot_message'
     )
     .sort((a, b) => {
-      const aTs = Number(a.ts ?? "0");
-      const bTs = Number(b.ts ?? "0");
+      const aTs = Number(a.ts ?? '0');
+      const bTs = Number(b.ts ?? '0');
       return aTs - bTs;
     });
 }
@@ -157,28 +157,28 @@ async function toModelMessage(
 
   const isAssistantMessage =
     message.user === botUserId || Boolean(message.bot_id);
-  const original = message.text ?? "";
+  const original = message.text ?? '';
   const cleaned = mentionRegex
-    ? original.replace(mentionRegex, "").trim()
+    ? original.replace(mentionRegex, '').trim()
     : original.trim();
   const textContent = cleaned.length > 0 ? cleaned : original;
 
   const author = message.user
     ? (userCache.get(message.user)?.displayName ?? message.user)
-    : (message.bot_id ?? "unknown");
-  const authorId = message.user ?? message.bot_id ?? "unknown";
+    : (message.bot_id ?? 'unknown');
+  const authorId = message.user ?? message.bot_id ?? 'unknown';
 
   const formattedText = `${author} (${authorId}): ${textContent}`;
 
   if (isAssistantMessage) {
-    return { role: "assistant", content: formattedText };
+    return { role: 'assistant', content: formattedText };
   }
 
   const images = await processSlackFiles(message.files);
   return {
-    role: "user",
+    role: 'user',
     content: (images.length
-      ? [{ type: "text", text: formattedText }, ...images]
+      ? [{ type: 'text', text: formattedText }, ...images]
       : formattedText) as UserContent,
   };
 }
@@ -194,7 +194,7 @@ export async function getConversationMessages({
   inclusive = false,
 }: ConversationOptions): Promise<ModelMessage[]> {
   try {
-    const mentionRegex = botUserId ? new RegExp(`<@${botUserId}>`, "gi") : null;
+    const mentionRegex = botUserId ? new RegExp(`<@${botUserId}>`, 'gi') : null;
     const messages = await fetchMessages({
       client,
       channel,
@@ -217,7 +217,7 @@ export async function getConversationMessages({
   } catch (error) {
     logger.error(
       { ...toLogError(error), channel, threadTs },
-      "Failed to fetch conversation history"
+      'Failed to fetch conversation history'
     );
     return [];
   }

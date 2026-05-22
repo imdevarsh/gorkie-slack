@@ -1,11 +1,11 @@
-import { errorMessage, toLogError } from "@repo/utils/error";
-import { tool } from "ai";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import { fetchMessages } from "@/slack/conversations";
-import type { SlackMessageContext, Stream } from "@/types";
-import { getContextId } from "@/utils/context";
+import { errorMessage, toLogError } from '@repo/utils/error';
+import { tool } from 'ai';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import { fetchMessages } from '@/slack/conversations';
+import type { SlackMessageContext, Stream } from '@/types';
+import { getContextId } from '@/utils/context';
 
 export const readConversationHistory = ({
   context,
@@ -16,17 +16,17 @@ export const readConversationHistory = ({
 }) =>
   tool({
     description:
-      "Read message history from a public Slack channel or thread using a channel ID and an optional thread timestamp.",
+      'Read message history from a public Slack channel or thread using a channel ID and an optional thread timestamp.',
     inputSchema: z.object({
       channelId: z
         .string()
-        .default(context.event.channel ?? "")
-        .describe("Target Slack channel ID."),
+        .default(context.event.channel ?? '')
+        .describe('Target Slack channel ID.'),
       threadTs: z
         .string()
         .optional()
         .describe(
-          "Optional thread timestamp. Use this to read a specific thread."
+          'Optional thread timestamp. Use this to read a specific thread.'
         ),
       limit: z
         .number()
@@ -34,27 +34,27 @@ export const readConversationHistory = ({
         .min(1)
         .max(200)
         .default(40)
-        .describe("Maximum number of messages to return (1-200)."),
+        .describe('Maximum number of messages to return (1-200).'),
       latest: z
         .string()
         .optional()
-        .describe("Optional upper timestamp bound for returned messages."),
+        .describe('Optional upper timestamp bound for returned messages.'),
       oldest: z
         .string()
         .optional()
-        .describe("Optional lower timestamp bound for returned messages."),
+        .describe('Optional lower timestamp bound for returned messages.'),
       inclusive: z
         .boolean()
         .default(false)
         .describe(
-          "When true, include messages exactly at latest/oldest boundaries."
+          'When true, include messages exactly at latest/oldest boundaries.'
         ),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Reading conversation history",
-        status: "pending",
+        title: 'Reading conversation history',
+        status: 'pending',
       });
     },
     execute: async (
@@ -66,15 +66,15 @@ export const readConversationHistory = ({
       if (!channelId) {
         return {
           success: false,
-          error: "Could not determine channel ID",
+          error: 'Could not determine channel ID',
         };
       }
 
       const task = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Reading conversation history",
+        title: 'Reading conversation history',
         details: threadTs ? `${channelId} (thread ${threadTs})` : channelId,
-        status: "in_progress",
+        status: 'in_progress',
       });
 
       try {
@@ -85,13 +85,13 @@ export const readConversationHistory = ({
 
         if (!channel) {
           await finishTask(stream, {
-            status: "error",
+            status: 'error',
             taskId: task,
-            output: "Channel not found",
+            output: 'Channel not found',
           });
           return {
             success: false,
-            error: "Channel not found",
+            error: 'Channel not found',
           };
         }
 
@@ -102,13 +102,13 @@ export const readConversationHistory = ({
           channel.is_group;
         if (isPrivateConversation) {
           const message =
-            "Reading private conversations is not allowed. Use a public channel instead.";
+            'Reading private conversations is not allowed. Use a public channel instead.';
           logger.warn(
             { ctxId, channelId },
-            "Blocked private conversation read"
+            'Blocked private conversation read'
           );
           await finishTask(stream, {
-            status: "error",
+            status: 'error',
             taskId: task,
             output: message,
           });
@@ -129,7 +129,7 @@ export const readConversationHistory = ({
         });
 
         await finishTask(stream, {
-          status: "complete",
+          status: 'complete',
           taskId: task,
           output: `${messages.length} message(s) read`,
         });
@@ -143,10 +143,10 @@ export const readConversationHistory = ({
       } catch (error) {
         logger.error(
           { ...toLogError(error), ctxId, channelId, threadTs },
-          "Failed to read conversation history"
+          'Failed to read conversation history'
         );
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId: task,
           output: errorMessage(error),
         });

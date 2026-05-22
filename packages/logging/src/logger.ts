@@ -1,14 +1,14 @@
-import { constants } from "node:fs";
-import { access, mkdir } from "node:fs/promises";
-import path from "node:path";
+import { constants } from 'node:fs';
+import { access, mkdir } from 'node:fs/promises';
+import path from 'node:path';
 import pino, {
   transport as createTransport,
   type Logger as PinoLogger,
   type TransportTargetOptions,
-} from "pino";
+} from 'pino';
 
 export type Logger = PinoLogger;
-export type LogLevel = "debug" | "info" | "warn" | "error";
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface CreateLoggerOptions {
   isProduction?: boolean;
@@ -28,15 +28,15 @@ async function exists(targetPath: string): Promise<boolean> {
 function createRunId(): string {
   return new Date()
     .toISOString()
-    .replace("T", "_")
-    .replace(/[:.]/g, "-")
+    .replace('T', '_')
+    .replace(/[:.]/g, '-')
     .slice(0, 19);
 }
 
 export async function createLogger({
-  isProduction = process.env.NODE_ENV === "production",
-  logDirectory = "logs",
-  logLevel = "info",
+  isProduction = process.env.NODE_ENV === 'production',
+  logDirectory = 'logs',
+  logLevel = 'info',
 }: CreateLoggerOptions = {}): Promise<Logger> {
   if (!(await exists(logDirectory))) {
     await mkdir(logDirectory, { recursive: true });
@@ -44,7 +44,7 @@ export async function createLogger({
 
   const targets: TransportTargetOptions[] = [
     {
-      target: "pino/file",
+      target: 'pino/file',
       options: { destination: path.join(logDirectory, `${createRunId()}.log`) },
       level: logLevel,
     },
@@ -52,18 +52,18 @@ export async function createLogger({
 
   if (isProduction) {
     targets.push({
-      target: "pino/file",
+      target: 'pino/file',
       options: { destination: 1 },
       level: logLevel,
     });
   } else {
     targets.push({
-      target: "pino-pretty",
+      target: 'pino-pretty',
       options: {
         colorize: true,
-        translateTime: "yyyy-mm-dd HH:MM:ss.l o",
-        ignore: "pid,hostname,ctxId",
-        messageFormat: "{if ctxId}[{ctxId}] {end}{msg}",
+        translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
+        ignore: 'pid,hostname,ctxId',
+        messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
       },
       level: logLevel,
     });

@@ -1,5 +1,5 @@
-import { Sandbox } from "@e2b/code-interpreter";
-import { systemPrompt } from "@repo/ai/prompts";
+import { Sandbox } from '@e2b/code-interpreter';
+import { systemPrompt } from '@repo/ai/prompts';
 import {
   clearDestroyed,
   deleteExpiredProxyTokens,
@@ -10,29 +10,29 @@ import {
   updateRuntime,
   updateStatus,
   upsert,
-} from "@repo/db/queries";
-import { toLogError } from "@repo/utils/error";
-import { sandbox as config } from "@/config";
-import { env } from "@/env";
-import logger from "@/lib/logger";
-import type { ResolvedSandboxSession, SlackMessageContext } from "@/types";
-import { getContextId } from "@/utils/context";
-import { configureAgent } from "./config";
-import { boot } from "./rpc/boot";
+} from '@repo/db/queries';
+import { toLogError } from '@repo/utils/error';
+import { sandbox as config } from '@/config';
+import { env } from '@/env';
+import logger from '@/lib/logger';
+import type { ResolvedSandboxSession, SlackMessageContext } from '@/types';
+import { getContextId } from '@/utils/context';
+import { configureAgent } from './config';
+import { boot } from './rpc/boot';
 
 function isMissingSandboxError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
   return (
-    message.includes("not found") ||
-    message.includes("404") ||
-    message.includes("does not exist")
+    message.includes('not found') ||
+    message.includes('404') ||
+    message.includes('does not exist')
   );
 }
 
 function getChannelId(context: SlackMessageContext): string {
   const channelId = context.event.channel;
-  if (!(typeof channelId === "string" && channelId.length > 0)) {
-    throw new Error("Missing Slack channel ID for sandbox session");
+  if (!(typeof channelId === 'string' && channelId.length > 0)) {
+    throw new Error('Missing Slack channel ID for sandbox session');
   }
   return channelId;
 }
@@ -41,7 +41,7 @@ function getSandboxMetadata(context: SlackMessageContext, threadId: string) {
   return {
     threadId,
     channelId: getChannelId(context),
-    app: "gorkie-slack",
+    app: 'gorkie-slack',
   } as const;
 }
 
@@ -90,7 +90,7 @@ async function createSandbox(
     const proxyToken = await issueSessionProxyToken({
       sandboxId: sandbox.sandboxId,
     });
-    await configureAgent(sandbox, systemPrompt({ agent: "sandbox", context }));
+    await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
     const client = await boot({ sandbox, proxyToken });
     const { sessionId } = await client.getState();
 
@@ -98,11 +98,11 @@ async function createSandbox(
       threadId,
       sandboxId: sandbox.sandboxId,
       sessionId,
-      status: "active",
+      status: 'active',
     });
     logger.info(
       { threadId, sandboxId: sandbox.sandboxId, sessionId, template },
-      "[sandbox] Created sandbox"
+      '[sandbox] Created sandbox'
     );
 
     return { client, sandbox };
@@ -144,13 +144,13 @@ async function resumeSandbox(
   const state = await client.getState();
   logger.debug(
     { threadId, sessionId: state.sessionId },
-    "[sandbox] Resumed session"
+    '[sandbox] Resumed session'
   );
 
   await updateRuntime(threadId, {
     sandboxId: sandbox.sandboxId,
     sessionId: state.sessionId,
-    status: "active",
+    status: 'active',
   });
   await markActivity(threadId);
 
@@ -167,7 +167,7 @@ export async function resolveSession(
     return createSandbox(context, threadId);
   }
 
-  await updateStatus(threadId, "resuming");
+  await updateStatus(threadId, 'resuming');
 
   try {
     return await resumeSandbox(
@@ -183,9 +183,9 @@ export async function resolveSession(
   } catch (error) {
     logger.warn(
       { ...toLogError(error), threadId },
-      "[sandbox] Failed to resume, creating new sandbox"
+      '[sandbox] Failed to resume, creating new sandbox'
     );
-    await updateStatus(threadId, "error");
+    await updateStatus(threadId, 'error');
     throw error;
   }
 }
@@ -198,12 +198,12 @@ export async function pauseSession(
 
   try {
     await Sandbox.betaPause(sandboxId, { apiKey: env.E2B_API_KEY });
-    await updateStatus(threadId, "paused");
-    logger.info({ threadId, sandboxId }, "[sandbox] Paused sandbox");
+    await updateStatus(threadId, 'paused');
+    logger.info({ threadId, sandboxId }, '[sandbox] Paused sandbox');
   } catch (error) {
     logger.warn(
       { ...toLogError(error), threadId, sandboxId },
-      "[sandbox] Failed to pause sandbox"
+      '[sandbox] Failed to pause sandbox'
     );
   }
 }

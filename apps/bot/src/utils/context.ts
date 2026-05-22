@@ -1,17 +1,17 @@
-import { getUserCustomization } from "@repo/db/queries";
-import { getTime } from "@repo/utils/time";
-import type { ModelMessage } from "ai";
-import { getConversationMessages } from "@/slack/conversations";
-import type { ChatRequestHints, SlackMessageContext } from "@/types";
-import { resolveChannelName, resolveServerName } from "@/utils/slack";
+import { getUserCustomization } from '@repo/db/queries';
+import { getTime } from '@repo/utils/time';
+import type { ModelMessage } from 'ai';
+import { getConversationMessages } from '@/slack/conversations';
+import type { ChatRequestHints, SlackMessageContext } from '@/types';
+import { resolveChannelName, resolveServerName } from '@/utils/slack';
 
 export function getContextId(context: SlackMessageContext): string {
-  const channel = context.event.channel ?? "unknown-channel";
+  const channel = context.event.channel ?? 'unknown-channel';
   const channelType = context.event.channel_type;
   const userId = context.event.user;
   const threadTs = context.event.thread_ts ?? context.event.ts;
 
-  if (channelType === "im" && userId) {
+  if (channelType === 'im' && userId) {
     return `dm:${userId}`;
   }
   return `${channel}:${threadTs}`;
@@ -22,7 +22,7 @@ async function resolveBotDetails(
 ): Promise<{ joined: number; status: string; activity: string }> {
   const botId = ctx.botUserId;
   if (!botId) {
-    return { joined: Date.now(), status: "active", activity: "none" };
+    return { joined: Date.now(), status: 'active', activity: 'none' };
   }
 
   try {
@@ -35,14 +35,14 @@ async function resolveBotDetails(
     const status =
       info.user?.profile?.status_text?.trim() ||
       info.user?.profile?.status_emoji?.trim() ||
-      "active";
+      'active';
     return {
       joined: joinedSeconds * 1000,
       status,
-      activity: info.user?.profile?.status_text?.trim() || "none",
+      activity: info.user?.profile?.status_text?.trim() || 'none',
     };
   } catch {
-    return { joined: Date.now(), status: "active", activity: "none" };
+    return { joined: Date.now(), status: 'active', activity: 'none' };
   }
 }
 
@@ -61,7 +61,7 @@ export async function buildChatContext(
   const messageTs = ctx.event.ts;
 
   if (!(channelId && messageTs)) {
-    throw new Error("Slack message missing channel or timestamp");
+    throw new Error('Slack message missing channel or timestamp');
   }
 
   if (!messages) {

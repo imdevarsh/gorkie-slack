@@ -1,7 +1,7 @@
-import { toLogError } from "@repo/utils/error";
-import type { App } from "@slack/bolt";
-import { env } from "@/env";
-import logger from "./logger";
+import { toLogError } from '@repo/utils/error';
+import type { App } from '@slack/bolt';
+import { env } from '@/env';
+import logger from './logger';
 
 const allowedUsers = new Set<string>();
 
@@ -11,7 +11,7 @@ export async function buildCache(app: App) {
   }
 
   // biome-ignore lint/suspicious/useAwait: await is not needed here
-  app.event("member_joined_channel", async ({ event }) => {
+  app.event('member_joined_channel', async ({ event }) => {
     if (event.channel !== env.OPT_IN_CHANNEL) {
       return;
     }
@@ -21,7 +21,7 @@ export async function buildCache(app: App) {
   });
 
   // biome-ignore lint/suspicious/useAwait: await is not needed here
-  app.event("member_left_channel", async ({ event }) => {
+  app.event('member_left_channel', async ({ event }) => {
     if (event.channel !== env.OPT_IN_CHANNEL) {
       return;
     }
@@ -32,7 +32,7 @@ export async function buildCache(app: App) {
 
   let cursor: string | undefined;
 
-  logger.info("Building opt-in user cache");
+  logger.info('Building opt-in user cache');
   do {
     const req = await app.client.conversations.members({
       channel: env.OPT_IN_CHANNEL,
@@ -42,9 +42,9 @@ export async function buildCache(app: App) {
     if (!req.ok) {
       logger.error(
         { ...toLogError(req.error), channelId: env.OPT_IN_CHANNEL },
-        "Error building opt-in cache"
+        'Error building opt-in cache'
       );
-      throw new Error("Failed to build opt-in cache");
+      throw new Error('Failed to build opt-in cache');
     }
     cursor = req.response_metadata?.next_cursor;
     if (!req.members) {

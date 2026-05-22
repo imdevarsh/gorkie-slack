@@ -6,31 +6,31 @@ export const appHome = {
 export const assistantThread = {
   suggestedPrompts: {
     dm: [
-      { title: "Search the web", message: "Search the web for " },
-      { title: "Write and run code", message: "Write and run code to " },
-      { title: "Generate an image", message: "Create an image of " },
-      { title: "Set a reminder", message: "Remind me to " },
+      { title: 'Search the web', message: 'Search the web for ' },
+      { title: 'Write and run code', message: 'Write and run code to ' },
+      { title: 'Generate an image', message: 'Create an image of ' },
+      { title: 'Set a reminder', message: 'Remind me to ' },
     ],
     channel: [
       {
-        title: "Summarize this channel",
-        message: "Please summarize recent activity in this channel.",
+        title: 'Summarize this channel',
+        message: 'Please summarize recent activity in this channel.',
       },
-      { title: "Search Slack", message: "Search for messages about " },
-      { title: "Write and run code", message: "Write and run code to " },
-      { title: "Generate an image", message: "Create an image of " },
+      { title: 'Search Slack', message: 'Search for messages about ' },
+      { title: 'Write and run code', message: 'Write and run code to ' },
+      { title: 'Generate an image', message: 'Create an image of ' },
     ],
   },
 };
 
 export const sandbox = {
-  template: "gorkie-sandbox:3.0",
+  template: 'gorkie-sandbox:3.0',
   modelChain: [
-    { provider: "hackclub", modelId: "google/gemini-3-flash-preview" },
-    { provider: "hackclub", modelId: "openai/gpt-5-mini" },
-    { provider: "openrouter", modelId: "google/gemini-3-flash-preview" },
-    { provider: "openrouter", modelId: "openai/gpt-5-mini" },
-    { provider: "gemini", modelId: "gemini-2.0-flash" },
+    { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
+    { provider: 'hackclub', modelId: 'openai/gpt-5-mini' },
+    { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
+    { provider: 'openrouter', modelId: 'openai/gpt-5-mini' },
+    { provider: 'gemini', modelId: 'gemini-2.0-flash' },
   ],
   timeoutMs: 10 * 60 * 1000,
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
@@ -45,7 +45,7 @@ export const sandbox = {
     outputMaxChars: 260,
   },
   runtime: {
-    workdir: "/home/user",
+    workdir: '/home/user',
     executionTimeoutMs: 20 * 60 * 1000,
   },
   attachments: {

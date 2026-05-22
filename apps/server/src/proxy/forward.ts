@@ -1,8 +1,8 @@
-import { validateProxyToken } from "@repo/db/queries";
-import { Hono } from "hono";
-import { bearerAuth } from "hono/bearer-auth";
-import logger from "../logger";
-import { providers } from "./providers";
+import { validateProxyToken } from '@repo/db/queries';
+import { Hono } from 'hono';
+import { bearerAuth } from 'hono/bearer-auth';
+import logger from '../logger';
+import { providers } from './providers';
 
 interface ProxyVariables {
   sandboxId: string;
@@ -15,16 +15,16 @@ const authSandbox = bearerAuth<{ Variables: ProxyVariables }>({
       return false;
     }
 
-    c.set("sandboxId", session.sandboxId);
+    c.set('sandboxId', session.sandboxId);
     return true;
   },
 });
 
 export const forwardRoutes = new Hono<{ Variables: ProxyVariables }>().all(
-  "/:provider/*",
+  '/:provider/*',
   authSandbox,
   async (c) => {
-    const provider = c.req.param("provider");
+    const provider = c.req.param('provider');
     const entry = providers[provider];
     if (!entry) {
       return c.json(
@@ -36,32 +36,32 @@ export const forwardRoutes = new Hono<{ Variables: ProxyVariables }>().all(
     const requestUrl = new URL(c.req.url);
     const upstreamPath = c.req.path.slice(1 + provider.length);
     const headers = new Headers(c.req.raw.headers);
-    headers.set("Authorization", `Bearer ${entry.apiKey}`);
-    headers.set("Accept-Encoding", "identity");
-    headers.delete("host");
+    headers.set('Authorization', `Bearer ${entry.apiKey}`);
+    headers.set('Accept-Encoding', 'identity');
+    headers.delete('host');
 
     const upstreamResponse = await fetch(
       `${entry.baseUrl}${upstreamPath}${requestUrl.search}`,
       {
         body:
-          c.req.method === "GET" || c.req.method === "HEAD"
+          c.req.method === 'GET' || c.req.method === 'HEAD'
             ? undefined
             : c.req.raw.body,
         headers,
         method: c.req.method,
         // Bun requires this when forwarding a streaming request body.
-        duplex: "half",
+        duplex: 'half',
       }
     ).catch((error: unknown) => {
       logger.error(
         { err: error, provider, sandboxId: c.var.sandboxId },
-        "[proxy]"
+        '[proxy]'
       );
       return null;
     });
 
     if (!upstreamResponse) {
-      return c.json({ message: "Upstream fetch failed", status: 502 }, 502);
+      return c.json({ message: 'Upstream fetch failed', status: 502 }, 502);
     }
 
     logger.debug(
@@ -71,7 +71,7 @@ export const forwardRoutes = new Hono<{ Variables: ProxyVariables }>().all(
         sandboxId: c.var.sandboxId,
         status: upstreamResponse.status,
       },
-      "[proxy] forwarded"
+      '[proxy] forwarded'
     );
 
     return new Response(upstreamResponse.body, {

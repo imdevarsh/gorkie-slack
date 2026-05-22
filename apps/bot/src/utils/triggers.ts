@@ -2,8 +2,8 @@ import type {
   SlackMessageContext,
   SlackMessageEvent,
   TriggerType,
-} from "@/types";
-import { primeSlackUserName } from "@/utils/users";
+} from '@/types';
+import { primeSlackUserName } from '@/utils/users';
 
 function isPlainMessage(
   event: SlackMessageEvent
@@ -12,9 +12,9 @@ function isPlainMessage(
   const text = event.text;
   const userId = event.user;
   return (
-    (!subtype || subtype === "thread_broadcast" || subtype === "file_share") &&
-    typeof text === "string" &&
-    typeof userId === "string"
+    (!subtype || subtype === 'thread_broadcast' || subtype === 'file_share') &&
+    typeof text === 'string' &&
+    typeof userId === 'string'
   );
 }
 
@@ -38,15 +38,15 @@ export async function getTrigger(
       if (displayName) {
         primeSlackUserName(botId, displayName);
       }
-      return { type: "ping", info: displayName ?? botId };
+      return { type: 'ping', info: displayName ?? botId };
     } catch {
-      return { type: "ping", info: botId };
+      return { type: 'ping', info: botId };
     }
   }
 
   const channelType = event.channel_type;
-  if (channelType === "im") {
-    return { type: "dm", info: event.user };
+  if (channelType === 'im') {
+    return { type: 'dm', info: event.user };
   }
 
   const channelId = message.event.channel;
@@ -56,8 +56,8 @@ export async function getTrigger(
     channelId &&
     threadTs &&
     (!message.event.subtype ||
-      message.event.subtype === "thread_broadcast" ||
-      message.event.subtype === "file_share")
+      message.event.subtype === 'thread_broadcast' ||
+      message.event.subtype === 'file_share')
   ) {
     try {
       const replies = await client.conversations.replies({
@@ -66,7 +66,7 @@ export async function getTrigger(
         limit: 1,
       });
       if (replies.messages?.[0]?.text?.includes(`<@${botId}>`)) {
-        return { type: "thread", info: event.user };
+        return { type: 'thread', info: event.user };
       }
     } catch {
       return { type: null, info: null };

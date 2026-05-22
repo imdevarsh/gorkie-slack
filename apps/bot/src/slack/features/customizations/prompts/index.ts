@@ -1,9 +1,9 @@
-import * as clearPrompt from "./actions/clear-prompt";
-import * as editPrompt from "./actions/edit-prompt";
-import * as modalLoadPreset from "./actions/modal-load-preset";
-import * as modalTogglePresets from "./actions/modal-toggle-presets";
-import * as savePresetPrompt from "./views/save-preset-prompt";
-import * as savePrompt from "./views/save-prompt";
+import * as clearPrompt from './actions/clear-prompt';
+import * as editPrompt from './actions/edit-prompt';
+import * as modalLoadPreset from './actions/modal-load-preset';
+import * as modalTogglePresets from './actions/modal-toggle-presets';
+import * as savePresetPrompt from './views/save-preset-prompt';
+import * as savePrompt from './views/save-prompt';
 
 export const prompts = {
   actions: [

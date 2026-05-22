@@ -1,13 +1,13 @@
-import { trimmed } from "@repo/utils/text";
-import { showFileInputSchema } from "@repo/validators";
-import logger from "@/lib/logger";
+import { trimmed } from '@repo/utils/text';
+import { showFileInputSchema } from '@repo/validators';
+import logger from '@/lib/logger';
 import type {
   ResolvedSandboxSession,
   SlackMessageContext,
   SubscribeEventsParams,
-} from "@/types";
-import type { AgentSessionEvent } from "@/types/sandbox/rpc";
-import { showFile } from "./show-file";
+} from '@/types';
+import type { AgentSessionEvent } from '@/types/sandbox/rpc';
+import { showFile } from './show-file';
 
 function handleShowFileTool(params: {
   result: unknown;
@@ -22,14 +22,14 @@ function handleShowFileTool(params: {
   if (!parsed.success) {
     logger.debug(
       { ctxId, result },
-      "[subagent] showFile handler skipped: invalid result payload"
+      '[subagent] showFile handler skipped: invalid result payload'
     );
     return;
   }
 
   showFile({ input: parsed.data, runtime, context, ctxId }).catch(
     (error: unknown) => {
-      logger.debug({ error, ctxId }, "[subagent] showFile handler failed");
+      logger.debug({ error, ctxId }, '[subagent] showFile handler failed');
     }
   );
 }
@@ -42,41 +42,41 @@ export function subscribeEvents(params: SubscribeEventsParams): () => void {
     try {
       events.push(event);
 
-      if (event.type === "auto_retry_start") {
+      if (event.type === 'auto_retry_start') {
         const { attempt, maxAttempts, delayMs, errorMessage } = event;
         logger.warn(
           { ctxId, attempt, maxAttempts, delayMs, errorMessage },
-          "[subagent] Auto-retry started"
+          '[subagent] Auto-retry started'
         );
         onRetry?.({ attempt, maxAttempts, delayMs, errorMessage });
         return;
       }
 
-      if (event.type === "tool_execution_start") {
+      if (event.type === 'tool_execution_start') {
         const { toolName, args, toolCallId } = event;
-        logger.info({ ctxId, tool: toolName, args }, "[subagent] Tool started");
+        logger.info({ ctxId, tool: toolName, args }, '[subagent] Tool started');
 
         const status = trimmed(args?.status)?.slice(0, 49);
         onToolStart?.({ toolName, toolCallId, args, status });
         return;
       }
 
-      if (event.type === "tool_execution_end") {
+      if (event.type === 'tool_execution_end') {
         const { toolName, result, isError, toolCallId } = event;
-        logger[isError ? "warn" : "info"](
+        logger[isError ? 'warn' : 'info'](
           { ctxId, tool: toolName, isError, result },
-          "[subagent] Tool completed"
+          '[subagent] Tool completed'
         );
         onToolEnd?.({ toolName, toolCallId, isError, result });
 
-        if (toolName === "showFile") {
+        if (toolName === 'showFile') {
           handleShowFileTool({ result, runtime, context, ctxId });
         }
       }
     } catch (error) {
       logger.warn(
         { error, ctxId },
-        "[subagent] Failed to process session event"
+        '[subagent] Failed to process session event'
       );
     }
   });
@@ -86,18 +86,18 @@ export function getResponse(events: AgentSessionEvent[]): string | undefined {
   const chunks: string[] = [];
 
   for (const event of events) {
-    if (event.type !== "message_update") {
+    if (event.type !== 'message_update') {
       continue;
     }
     const { assistantMessageEvent } = event;
     if (
-      assistantMessageEvent.type === "text_delta" &&
-      typeof assistantMessageEvent.delta === "string"
+      assistantMessageEvent.type === 'text_delta' &&
+      typeof assistantMessageEvent.delta === 'string'
     ) {
       chunks.push(assistantMessageEvent.delta);
     }
   }
 
-  const text = chunks.join("").trim();
+  const text = chunks.join('').trim();
   return text.length > 0 ? text : undefined;
 }

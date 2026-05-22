@@ -1,16 +1,16 @@
-import "dotenv/config";
-import { keys as ai } from "@repo/ai/keys";
-import { keys as database } from "@repo/db/keys";
-import { keys as logging } from "@repo/logging/keys";
-import { createEnv } from "@t3-oss/env-core";
-import { z } from "zod";
+import 'dotenv/config';
+import { keys as ai } from '@repo/ai/keys';
+import { keys as database } from '@repo/db/keys';
+import { keys as logging } from '@repo/logging/keys';
+import { createEnv } from '@t3-oss/env-core';
+import { z } from 'zod';
 
 export const env = createEnv({
   extends: [ai(), database(), logging()],
   server: {
     NODE_ENV: z
-      .enum(["development", "production", "test"])
-      .default("development"),
+      .enum(['development', 'production', 'test'])
+      .default('development'),
     SLACK_BOT_TOKEN: z.string().min(1),
     SLACK_SIGNING_SECRET: z.string().min(1),
     SLACK_APP_TOKEN: z.string().optional(),
@@ -20,7 +20,7 @@ export const env = createEnv({
     OPT_IN_CHANNEL: z.string().optional(),
     EXA_API_KEY: z.string().min(1),
     E2B_API_KEY: z.string().min(1),
-    AGENTMAIL_API_KEY: z.string().min(1).startsWith("am_"),
+    AGENTMAIL_API_KEY: z.string().min(1).startsWith('am_'),
     PROXY_BASE_URL: z.url(),
     LANGFUSE_BASEURL: z.url().optional(),
     LANGFUSE_PUBLIC_KEY: z.string().min(1).optional(),

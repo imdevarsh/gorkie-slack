@@ -1,1 +1,1 @@
-export type { ChatRequestHints, SandboxRequestHints } from "@repo/ai/types";
+export type { ChatRequestHints, SandboxRequestHints } from '@repo/ai/types';

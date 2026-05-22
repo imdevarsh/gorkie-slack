@@ -1,11 +1,11 @@
-import type { SlackMessageContext } from "@/types";
+import type { SlackMessageContext } from '@/types';
 
 export async function resolveChannelName(
   ctx: SlackMessageContext
 ): Promise<string> {
   const channelId = ctx.event.channel;
   if (!channelId) {
-    return "Unknown channel";
+    return 'Unknown channel';
   }
 
   try {
@@ -15,7 +15,7 @@ export async function resolveChannelName(
       return channelId;
     }
     if (channel.is_im) {
-      return "Direct Message";
+      return 'Direct Message';
     }
     return channel.name_normalized ?? channel.name ?? channelId;
   } catch {
@@ -28,8 +28,8 @@ export async function resolveServerName(
 ): Promise<string> {
   try {
     const info = await ctx.client.team.info();
-    return info.team?.name ?? "Slack Workspace";
+    return info.team?.name ?? 'Slack Workspace';
   } catch {
-    return "Slack Workspace";
+    return 'Slack Workspace';
   }
 }

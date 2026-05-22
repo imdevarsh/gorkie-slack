@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
-import { and, eq, gt, lt } from "drizzle-orm";
-import { db } from "../index";
-import { proxyTokens } from "../schema";
+import { randomBytes } from 'node:crypto';
+import { and, eq, gt, lt } from 'drizzle-orm';
+import { db } from '../index';
+import { proxyTokens } from '../schema';
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
 
@@ -12,7 +12,7 @@ export async function issueProxyToken({
   sandboxId: string;
   ttlMs?: number;
 }): Promise<{ expiresAt: Date; token: string }> {
-  const token = randomBytes(32).toString("hex");
+  const token = randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + ttlMs);
 
   await db.insert(proxyTokens).values({ token, sandboxId, expiresAt });

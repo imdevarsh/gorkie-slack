@@ -1,11 +1,11 @@
-import { Bits, Blocks, Elements, setIfTruthy } from "slack-block-builder";
-import { appHome } from "@/config";
+import { Bits, Blocks, Elements, setIfTruthy } from 'slack-block-builder';
+import { appHome } from '@/config';
 
 export function customInstructionsBlocks(
   customization: { prompt?: string } | null
 ) {
   const userPrompt = customization?.prompt ?? null;
-  let promptDisplay = "_No custom instructions set._";
+  let promptDisplay = '_No custom instructions set._';
   if (userPrompt) {
     promptDisplay =
       userPrompt.length > appHome.maxPromptDisplay
@@ -18,24 +18,24 @@ export function customInstructionsBlocks(
       text: `*Custom Instructions*\n${promptDisplay}`,
     }).accessory(
       Elements.Button({
-        text: userPrompt ? "Edit" : "Add",
-        actionId: "home_edit_prompt",
+        text: userPrompt ? 'Edit' : 'Add',
+        actionId: 'home_edit_prompt',
       })
     ),
     setIfTruthy(
       userPrompt,
       Blocks.Actions().elements(
         Elements.Button({
-          text: "Clear instructions",
-          actionId: "home_clear_prompt",
+          text: 'Clear instructions',
+          actionId: 'home_clear_prompt',
         })
           .danger()
           .confirm(
             Bits.ConfirmationDialog({
-              title: "Clear instructions?",
-              text: "Your custom instructions will be removed.",
-              confirm: "Clear",
-              deny: "Keep",
+              title: 'Clear instructions?',
+              text: 'Your custom instructions will be removed.',
+              confirm: 'Clear',
+              deny: 'Keep',
             })
           )
       )

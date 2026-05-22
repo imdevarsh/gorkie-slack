@@ -1,8 +1,8 @@
-import type { ImageContent } from "@earendil-works/pi-ai";
-import { errorMessage } from "@repo/utils/error";
-import { cleanTerminalText } from "@repo/utils/text";
-import { sandbox as config } from "@/config";
-import logger from "@/lib/logger";
+import type { ImageContent } from '@earendil-works/pi-ai';
+import { errorMessage } from '@repo/utils/error';
+import { cleanTerminalText } from '@repo/utils/text';
+import { sandbox as config } from '@/config';
+import logger from '@/lib/logger';
 import type {
   AgentMessage,
   AgentSessionEvent,
@@ -16,20 +16,20 @@ import type {
   RpcSessionState,
   RpcSlashCommand,
   ThinkingLevel,
-} from "@/types/sandbox/rpc";
+} from '@/types/sandbox/rpc';
 
 type BashResult = Extract<
   RpcResponse,
-  { command: "bash"; success: true }
->["data"];
+  { command: 'bash'; success: true }
+>['data'];
 type SessionStats = Extract<
   RpcResponse,
-  { command: "get_session_stats"; success: true }
->["data"];
+  { command: 'get_session_stats'; success: true }
+>['data'];
 type ModelInfo = Extract<
   RpcResponse,
-  { command: "get_available_models"; success: true }
->["data"]["models"][number];
+  { command: 'get_available_models'; success: true }
+>['data']['models'][number];
 interface CycleModelResult {
   isScoped: boolean;
   model: { provider: string; id: string };
@@ -37,7 +37,7 @@ interface CycleModelResult {
 }
 
 export class PiRpcClient {
-  private buffer = "";
+  private buffer = '';
   private exited = false;
   private readonly exitPromise: Promise<never>;
   private rejectExit!: (error: Error) => void;
@@ -60,10 +60,10 @@ export class PiRpcClient {
     if (this.exited) {
       return;
     }
-    const detail = result.error ?? `exit code ${result.exitCode ?? "unknown"}`;
+    const detail = result.error ?? `exit code ${result.exitCode ?? 'unknown'}`;
     logger.warn(
       { exitCode: result.exitCode, error: result.error },
-      "[pi-rpc] Pi process exited unexpectedly"
+      '[pi-rpc] Pi process exited unexpectedly'
     );
     this.finishWithError(
       new Error(`[pi-rpc] Pi process exited unexpectedly (${detail})`)
@@ -72,8 +72,8 @@ export class PiRpcClient {
 
   handleStdout(chunk: string): void {
     this.buffer += cleanTerminalText(chunk);
-    const lines = this.buffer.split("\n");
-    this.buffer = lines.pop() ?? "";
+    const lines = this.buffer.split('\n');
+    this.buffer = lines.pop() ?? '';
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -84,12 +84,12 @@ export class PiRpcClient {
       try {
         parsed = JSON.parse(trimmed);
       } catch {
-        logger.debug({ line: trimmed }, "[pi-rpc] stdout");
+        logger.debug({ line: trimmed }, '[pi-rpc] stdout');
         continue;
       }
       const obj = parsed as { type?: unknown; id?: unknown };
-      if (obj.type === "response") {
-        const id = typeof obj.id === "string" ? obj.id : undefined;
+      if (obj.type === 'response') {
+        const id = typeof obj.id === 'string' ? obj.id : undefined;
         if (id) {
           const req = this.pending.get(id);
           if (req) {
@@ -113,15 +113,15 @@ export class PiRpcClient {
   // --- prompting ---
 
   async prompt(message: string, images?: ImageContent[]): Promise<void> {
-    await this.send({ type: "prompt", message, images });
+    await this.send({ type: 'prompt', message, images });
   }
 
   async steer(message: string, images?: ImageContent[]): Promise<void> {
-    await this.send({ type: "steer", message, images });
+    await this.send({ type: 'steer', message, images });
   }
 
   async followUp(message: string, images?: ImageContent[]): Promise<void> {
-    await this.send({ type: "follow_up", message, images });
+    await this.send({ type: 'follow_up', message, images });
   }
 
   async promptAndWait(
@@ -136,76 +136,76 @@ export class PiRpcClient {
   // --- agent control ---
 
   async abort(): Promise<void> {
-    await this.cmd({ type: "abort" });
+    await this.cmd({ type: 'abort' });
   }
 
   async abortRetry(): Promise<void> {
-    await this.cmd({ type: "abort_retry" });
+    await this.cmd({ type: 'abort_retry' });
   }
 
   async abortBash(): Promise<void> {
-    await this.cmd({ type: "abort_bash" });
+    await this.cmd({ type: 'abort_bash' });
   }
 
   // --- session ---
 
   getState(): Promise<RpcSessionState> {
-    return this.cmd({ type: "get_state" });
+    return this.cmd({ type: 'get_state' });
   }
 
   newSession(parentSession?: string): Promise<{ cancelled: boolean }> {
-    return this.cmd({ type: "new_session", parentSession });
+    return this.cmd({ type: 'new_session', parentSession });
   }
 
   switchSession(sessionPath: string): Promise<{ cancelled: boolean }> {
-    return this.cmd({ type: "switch_session", sessionPath });
+    return this.cmd({ type: 'switch_session', sessionPath });
   }
 
   clone(): Promise<{ cancelled: boolean }> {
-    return this.cmd({ type: "clone" });
+    return this.cmd({ type: 'clone' });
   }
 
   fork(entryId: string): Promise<{ text: string; cancelled: boolean }> {
-    return this.cmd({ type: "fork", entryId });
+    return this.cmd({ type: 'fork', entryId });
   }
 
   async getForkMessages(): Promise<Array<{ entryId: string; text: string }>> {
     return (
       await this.cmd<{ messages: Array<{ entryId: string; text: string }> }>({
-        type: "get_fork_messages",
+        type: 'get_fork_messages',
       })
     ).messages;
   }
 
   async setSessionName(name: string): Promise<void> {
-    await this.cmd({ type: "set_session_name", name });
+    await this.cmd({ type: 'set_session_name', name });
   }
 
   getSessionStats(): Promise<SessionStats> {
-    return this.cmd({ type: "get_session_stats" });
+    return this.cmd({ type: 'get_session_stats' });
   }
 
   exportHtml(outputPath?: string): Promise<{ path: string }> {
-    return this.cmd({ type: "export_html", outputPath });
+    return this.cmd({ type: 'export_html', outputPath });
   }
 
   async getLastAssistantText(): Promise<string | null> {
     return (
       await this.cmd<{ text: string | null }>({
-        type: "get_last_assistant_text",
+        type: 'get_last_assistant_text',
       })
     ).text;
   }
 
   async getMessages(): Promise<AgentMessage[]> {
     return (
-      await this.cmd<{ messages: AgentMessage[] }>({ type: "get_messages" })
+      await this.cmd<{ messages: AgentMessage[] }>({ type: 'get_messages' })
     ).messages;
   }
 
   async getCommands(): Promise<RpcSlashCommand[]> {
     return (
-      await this.cmd<{ commands: RpcSlashCommand[] }>({ type: "get_commands" })
+      await this.cmd<{ commands: RpcSlashCommand[] }>({ type: 'get_commands' })
     ).commands;
   }
 
@@ -215,57 +215,57 @@ export class PiRpcClient {
     provider: string,
     modelId: string
   ): Promise<{ provider: string; id: string }> {
-    return this.cmd({ type: "set_model", provider, modelId });
+    return this.cmd({ type: 'set_model', provider, modelId });
   }
 
   cycleModel(): Promise<CycleModelResult | null> {
-    return this.cmd({ type: "cycle_model" });
+    return this.cmd({ type: 'cycle_model' });
   }
 
   async getAvailableModels(): Promise<ModelInfo[]> {
     return (
-      await this.cmd<{ models: ModelInfo[] }>({ type: "get_available_models" })
+      await this.cmd<{ models: ModelInfo[] }>({ type: 'get_available_models' })
     ).models;
   }
 
   // --- thinking ---
 
   async setThinkingLevel(level: ThinkingLevel): Promise<void> {
-    await this.cmd({ type: "set_thinking_level", level });
+    await this.cmd({ type: 'set_thinking_level', level });
   }
 
   cycleThinkingLevel(): Promise<{ level: ThinkingLevel } | null> {
-    return this.cmd({ type: "cycle_thinking_level" });
+    return this.cmd({ type: 'cycle_thinking_level' });
   }
 
   // --- steering / follow-up modes ---
 
-  async setSteeringMode(mode: "all" | "one-at-a-time"): Promise<void> {
-    await this.cmd({ type: "set_steering_mode", mode });
+  async setSteeringMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
+    await this.cmd({ type: 'set_steering_mode', mode });
   }
 
-  async setFollowUpMode(mode: "all" | "one-at-a-time"): Promise<void> {
-    await this.cmd({ type: "set_follow_up_mode", mode });
+  async setFollowUpMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
+    await this.cmd({ type: 'set_follow_up_mode', mode });
   }
 
   // --- compaction / retry ---
 
   compact(customInstructions?: string): Promise<CompactionResult> {
-    return this.cmd({ type: "compact", customInstructions });
+    return this.cmd({ type: 'compact', customInstructions });
   }
 
   async setAutoCompaction(enabled: boolean): Promise<void> {
-    await this.cmd({ type: "set_auto_compaction", enabled });
+    await this.cmd({ type: 'set_auto_compaction', enabled });
   }
 
   async setAutoRetry(enabled: boolean): Promise<void> {
-    await this.cmd({ type: "set_auto_retry", enabled });
+    await this.cmd({ type: 'set_auto_retry', enabled });
   }
 
   // --- bash ---
 
   bash(command: string): Promise<BashResult> {
-    return this.cmd({ type: "bash", command });
+    return this.cmd({ type: 'bash', command });
   }
 
   // --- lifecycle ---
@@ -281,13 +281,13 @@ export class PiRpcClient {
       try {
         await Promise.race([
           this.send(
-            { type: "get_state" },
+            { type: 'get_state' },
             Math.min(attemptMs, deadline - Date.now())
           ),
           this.exitPromise,
         ]);
         if (attempt > 1) {
-          logger.info({ attempt }, "[pi-rpc] Pi ready after retries");
+          logger.info({ attempt }, '[pi-rpc] Pi ready after retries');
         }
         return;
       } catch (err) {
@@ -309,7 +309,7 @@ export class PiRpcClient {
       await Promise.race([
         new Promise<void>((resolve) => {
           off = this.onEvent((event) => {
-            if (event.type === "agent_end" && !event.willRetry) {
+            if (event.type === 'agent_end' && !event.willRetry) {
               resolve();
             }
           });
@@ -317,7 +317,7 @@ export class PiRpcClient {
         this.exitPromise,
         ...(timeoutMs === undefined
           ? []
-          : [this.timeoutReject<void>(timeoutMs, "waitForIdle")]),
+          : [this.timeoutReject<void>(timeoutMs, 'waitForIdle')]),
       ]);
     } finally {
       off();
@@ -332,7 +332,7 @@ export class PiRpcClient {
           const events: AgentSessionEvent[] = [];
           off = this.onEvent((event) => {
             events.push(event);
-            if (event.type === "agent_end" && !event.willRetry) {
+            if (event.type === 'agent_end' && !event.willRetry) {
               resolve(events);
             }
           });
@@ -343,7 +343,7 @@ export class PiRpcClient {
           : [
               this.timeoutReject<AgentSessionEvent[]>(
                 timeoutMs,
-                "collectEvents"
+                'collectEvents'
               ),
             ]),
       ]);
@@ -354,7 +354,7 @@ export class PiRpcClient {
 
   async disconnect(): Promise<void> {
     this.finishWithError(
-      new Error("[pi-rpc] Client disconnected before response was received")
+      new Error('[pi-rpc] Client disconnected before response was received')
     );
     await this.pty.kill().catch(() => null);
     await this.pty.disconnect().catch(() => null);
@@ -367,7 +367,7 @@ export class PiRpcClient {
       try {
         listener(event);
       } catch (err) {
-        logger.warn({ err }, "[pi-rpc] Event listener threw");
+        logger.warn({ err }, '[pi-rpc] Event listener threw');
       }
     }
   }
@@ -441,6 +441,6 @@ export class PiRpcClient {
         `[pi-rpc] Command "${response.command}" failed: ${errorMessage(response.error)}`
       );
     }
-    return ("data" in response ? response.data : undefined) as T;
+    return ('data' in response ? response.data : undefined) as T;
   }
 }

@@ -1,14 +1,14 @@
-import { Sandbox } from "@e2b/code-interpreter";
+import { Sandbox } from '@e2b/code-interpreter';
 import {
   claimExpired,
   clearDestroyed,
   listExpired,
   updateStatus,
-} from "@repo/db/queries";
-import { toLogError } from "@repo/utils/error";
-import { sandbox as config } from "@/config";
-import { env } from "@/env";
-import logger from "@/lib/logger";
+} from '@repo/db/queries';
+import { toLogError } from '@repo/utils/error';
+import { sandbox as config } from '@/config';
+import { env } from '@/env';
+import logger from '@/lib/logger';
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
@@ -35,17 +35,17 @@ async function cleanup(): Promise<void> {
         await clearDestroyed(session.threadId);
         logger.info(
           { ctxId: session.threadId, sandboxId: session.sandboxId, cutoff },
-          "[sandbox-janitor] Deleted expired sandbox"
+          '[sandbox-janitor] Deleted expired sandbox'
         );
       } catch (error) {
-        await updateStatus(session.threadId, "paused");
+        await updateStatus(session.threadId, 'paused');
         logger.warn(
           {
             ...toLogError(error),
             ctxId: session.threadId,
             sandboxId: session.sandboxId,
           },
-          "[sandbox-janitor] Failed to delete expired sandbox"
+          '[sandbox-janitor] Failed to delete expired sandbox'
         );
       }
     }
@@ -63,11 +63,11 @@ export function startSandboxJanitor(): void {
     cleanup().catch((error) => {
       logger.error(
         { ...toLogError(error) },
-        "[sandbox-janitor] Unexpected error while running sweep"
+        '[sandbox-janitor] Unexpected error while running sweep'
       );
     });
   }, config.janitorIntervalMs);
   timer.unref();
 
-  logger.info("[sandbox-janitor] Started");
+  logger.info('[sandbox-janitor] Started');
 }

@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
-import { db } from "../index";
-import { userCustomizations } from "../schema";
+import { eq } from 'drizzle-orm';
+import { db } from '../index';
+import { userCustomizations } from '../schema';
 
 export type UserCustomization = Pick<
   typeof userCustomizations.$inferSelect,
-  "prompt"
+  'prompt'
 >;
 
 export async function getUserCustomization(

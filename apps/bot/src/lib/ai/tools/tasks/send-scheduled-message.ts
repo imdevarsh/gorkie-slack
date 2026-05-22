@@ -1,10 +1,10 @@
-import { errorMessage, toLogError } from "@repo/utils/error";
-import type { WebClient } from "@slack/web-api";
-import { tool } from "ai";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import type { Stream } from "@/types";
+import { errorMessage, toLogError } from '@repo/utils/error';
+import type { WebClient } from '@slack/web-api';
+import { tool } from 'ai';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import type { Stream } from '@/types';
 
 export const sendScheduledMessage = ({
   client,
@@ -21,23 +21,23 @@ export const sendScheduledMessage = ({
 }) =>
   tool({
     description:
-      "Send the final scheduled-task output to Slack. This should be the last tool call in a run.",
+      'Send the final scheduled-task output to Slack. This should be the last tool call in a run.',
     inputSchema: z.object({
-      content: z.string().describe("Final user-facing message to send."),
+      content: z.string().describe('Final user-facing message to send.'),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Sending scheduled task output",
-        status: "pending",
+        title: 'Sending scheduled task output',
+        status: 'pending',
       });
     },
     execute: async ({ content }, { toolCallId }) => {
       const task = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Sending scheduled task output",
+        title: 'Sending scheduled task output',
         details: content,
-        status: "in_progress",
+        status: 'in_progress',
       });
 
       try {
@@ -54,12 +54,12 @@ export const sendScheduledMessage = ({
             threadTs: destination.threadTs,
             messageCount: content.length,
           },
-          "Delivered scheduled task output"
+          'Delivered scheduled task output'
         );
         await finishTask(stream, {
-          status: "complete",
+          status: 'complete',
           taskId: task,
-          output: "Delivered message",
+          output: 'Delivered message',
         });
         return { success: true };
       } catch (error) {
@@ -71,10 +71,10 @@ export const sendScheduledMessage = ({
             channelId: destination.channelId,
             threadTs: destination.threadTs,
           },
-          "Failed to deliver scheduled task output"
+          'Failed to deliver scheduled task output'
         );
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId: task,
           output: message,
         });

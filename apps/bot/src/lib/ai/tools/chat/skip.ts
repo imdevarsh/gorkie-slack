@@ -1,10 +1,10 @@
-import { tool } from "ai";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import type { SlackMessageContext, Stream } from "@/types";
-import { getContextId } from "@/utils/context";
-import { getSlackUserName } from "@/utils/users";
+import { tool } from 'ai';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import type { SlackMessageContext, Stream } from '@/types';
+import { getContextId } from '@/utils/context';
+import { getSlackUserName } from '@/utils/users';
 
 export const skip = ({
   context,
@@ -14,41 +14,41 @@ export const skip = ({
   stream: Stream;
 }) =>
   tool({
-    description: "End without replying to the provided message.",
+    description: 'End without replying to the provided message.',
     inputSchema: z.object({
       reason: z
         .string()
         .optional()
-        .describe("Optional short reason for skipping"),
+        .describe('Optional short reason for skipping'),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Skipping",
-        status: "pending",
+        title: 'Skipping',
+        status: 'pending',
       });
     },
     execute: async ({ reason }, { toolCallId }) => {
       const ctxId = getContextId(context);
       const task = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Skipping",
+        title: 'Skipping',
         details: reason ?? undefined,
-        status: "in_progress",
+        status: 'in_progress',
       });
 
       if (reason) {
         const authorId = context.event.user;
-        const content = context.event.text ?? "";
+        const content = context.event.text ?? '';
         const author = authorId
           ? await getSlackUserName(context.client, authorId)
-          : "unknown";
+          : 'unknown';
         logger.info(
           { ctxId, reason, message: `${author}: ${content}` },
-          "Skipping reply"
+          'Skipping reply'
         );
       }
-      await finishTask(stream, { status: "complete", taskId: task });
+      await finishTask(stream, { status: 'complete', taskId: task });
       return {
         success: true,
       };

@@ -1,15 +1,15 @@
-import { getUserCustomization } from "@repo/db/queries";
-import { toLogError } from "@repo/utils/error";
+import { getUserCustomization } from '@repo/db/queries';
+import { toLogError } from '@repo/utils/error';
 import type {
   AllMiddlewareArgs,
   BlockAction,
   ButtonAction,
   SlackActionMiddlewareArgs,
-} from "@slack/bolt";
-import logger from "@/lib/logger";
-import { buildPromptModal } from "../view";
+} from '@slack/bolt';
+import logger from '@/lib/logger';
+import { buildPromptModal } from '../view';
 
-export const name = "home_edit_prompt";
+export const name = 'home_edit_prompt';
 
 export async function execute({
   ack,
@@ -23,7 +23,7 @@ export async function execute({
     (error) => {
       logger.warn(
         { ...toLogError(error), userId },
-        "Failed to fetch customization for modal"
+        'Failed to fetch customization for modal'
       );
       return null;
     }

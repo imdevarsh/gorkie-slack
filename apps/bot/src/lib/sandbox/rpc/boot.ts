@@ -1,13 +1,13 @@
-import type { Sandbox } from "@e2b/code-interpreter";
-import { sandbox as config } from "@/config";
-import { env } from "@/env";
-import logger from "@/lib/logger";
-import type { PtyLike } from "@/types/sandbox/rpc";
-import { PiRpcClient } from "./client";
+import type { Sandbox } from '@e2b/code-interpreter';
+import { sandbox as config } from '@/config';
+import { env } from '@/env';
+import logger from '@/lib/logger';
+import type { PtyLike } from '@/types/sandbox/rpc';
+import { PiRpcClient } from './client';
 
 const PTY_COLS = 220;
 const PTY_ROWS = 24;
-const PTY_TERM = "dumb";
+const PTY_TERM = 'dumb';
 
 export async function boot({
   sandbox,
@@ -63,10 +63,10 @@ export async function boot({
 
   const piCmd = sessionId
     ? `pi --mode rpc --session ${sessionId}`
-    : "pi --mode rpc";
+    : 'pi --mode rpc';
   await pty.sendInput(`stty -echo; exec ${piCmd}\n`);
   await client.waitUntilReady();
 
-  logger.debug({ sessionId }, "[pi-rpc] Pi process started");
+  logger.debug({ sessionId }, '[pi-rpc] Pi process started');
   return client;
 }

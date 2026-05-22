@@ -1,11 +1,11 @@
-import nodePath from "node:path";
-import { errorMessage, toLogError } from "@repo/utils/error";
-import logger from "@/lib/logger";
+import nodePath from 'node:path';
+import { errorMessage, toLogError } from '@repo/utils/error';
+import logger from '@/lib/logger';
 import type {
   ResolvedSandboxSession,
   ShowFileInput,
   SlackMessageContext,
-} from "@/types";
+} from '@/types';
 
 async function postThreadError(
   context: SlackMessageContext,
@@ -40,12 +40,12 @@ export async function showFile(params: {
   }
 
   const file = await runtime.sandbox.files
-    .read(input.path, { format: "bytes" })
+    .read(input.path, { format: 'bytes' })
     .catch(() => null);
   if (!file) {
     logger.warn(
       { path: input.path, ctxId },
-      "[subagent] showFile: file not found in sandbox"
+      '[subagent] showFile: file not found in sandbox'
     );
     await postThreadError(
       context,
@@ -57,7 +57,7 @@ export async function showFile(params: {
     return;
   }
 
-  const filename = nodePath.basename(input.path) || "artifact";
+  const filename = nodePath.basename(input.path) || 'artifact';
 
   try {
     await context.client.files.uploadV2({
@@ -69,13 +69,13 @@ export async function showFile(params: {
     });
     logger.info(
       { path: input.path, filename, ctxId },
-      "[subagent] showFile: uploaded to Slack"
+      '[subagent] showFile: uploaded to Slack'
     );
   } catch (error) {
     const cause = errorMessage(error).slice(0, 140);
     logger.warn(
       { ...toLogError(error), path: input.path, ctxId },
-      "[subagent] showFile: failed to upload to Slack"
+      '[subagent] showFile: failed to upload to Slack'
     );
     await postThreadError(
       context,

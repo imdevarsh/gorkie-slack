@@ -3,15 +3,15 @@ import {
   completeScheduledTaskRun,
   disableScheduledTask,
   listDueScheduledTasks,
-} from "@repo/db/queries";
-import type { ScheduledTask } from "@repo/db/schema";
-import { errorMessage, toLogError } from "@repo/utils/error";
-import type { WebClient } from "@slack/web-api";
-import { scheduledTaskAgent } from "@/lib/ai/agents/scheduled-task";
-import { isUserAllowed } from "@/lib/allowed-users";
-import logger from "@/lib/logger";
-import type { SlackMessageContext, Stream } from "@/types";
-import { getNextRunAt } from "./cron";
+} from '@repo/db/queries';
+import type { ScheduledTask } from '@repo/db/schema';
+import { errorMessage, toLogError } from '@repo/utils/error';
+import type { WebClient } from '@slack/web-api';
+import { scheduledTaskAgent } from '@/lib/ai/agents/scheduled-task';
+import { isUserAllowed } from '@/lib/allowed-users';
+import logger from '@/lib/logger';
+import type { SlackMessageContext, Stream } from '@/types';
+import { getNextRunAt } from './cron';
 
 const RUNNER_INTERVAL_MS = 30_000;
 const RUNNER_BATCH_SIZE = 20;
@@ -28,7 +28,7 @@ function makeSyntheticContext(
     client,
     event: {
       channel: task.destinationId,
-      channel_type: task.destinationType === "dm" ? "im" : "channel",
+      channel_type: task.destinationType === 'dm' ? 'im' : 'channel',
       event_ts: ts,
       ts,
       text: task.prompt,
@@ -42,7 +42,7 @@ function makeNoopStream(client: WebClient, channel: string): Stream {
   return {
     channel,
     client,
-    ts: "",
+    ts: '',
     tasks: new Map(),
     thought: false,
     noop: true,
@@ -63,20 +63,20 @@ async function sendFallbackFailureMessage(
   } catch (error) {
     logger.error(
       { ...toLogError(error), taskId: task.id, channel: task.destinationId },
-      "Failed to send scheduled task fallback error message"
+      'Failed to send scheduled task fallback error message'
     );
   }
 }
 
 async function runTask(client: WebClient, task: ScheduledTask): Promise<void> {
   const runAt = new Date();
-  let status: "success" | "error" = "success";
+  let status: 'success' | 'error' = 'success';
   let runError: string | undefined;
 
   if (!isUserAllowed(task.creatorUserId)) {
     await disableScheduledTask(
       task.id,
-      "Task disabled because the creator is no longer allowed to use the bot."
+      'Task disabled because the creator is no longer allowed to use the bot.'
     );
     return;
   }
@@ -96,28 +96,28 @@ async function runTask(client: WebClient, task: ScheduledTask): Promise<void> {
     });
 
     const streamResult = await agent.stream({
-      messages: [{ role: "user", content: task.prompt }],
+      messages: [{ role: 'user', content: task.prompt }],
     });
 
     const toolCalls = await streamResult.toolCalls;
     const delivered = Array.isArray(toolCalls)
       ? toolCalls.some(
           (call) =>
-            (call as { toolName?: string }).toolName === "sendScheduledMessage"
+            (call as { toolName?: string }).toolName === 'sendScheduledMessage'
         )
       : false;
 
     if (!delivered) {
       throw new Error(
-        "Scheduled task did not deliver output before the run stopped."
+        'Scheduled task did not deliver output before the run stopped.'
       );
     }
   } catch (error) {
-    status = "error";
+    status = 'error';
     runError = errorMessage(error);
     logger.error(
       { ...toLogError(error), taskId: task.id, cron: task.cronExpression },
-      "Scheduled task run failed"
+      'Scheduled task run failed'
     );
     await sendFallbackFailureMessage(client, task, runError);
   }
@@ -134,7 +134,7 @@ async function runTask(client: WebClient, task: ScheduledTask): Promise<void> {
     const message = `Disabling task due to invalid schedule configuration: ${errorMessage(error)}`;
     logger.error(
       { ...toLogError(error), taskId: task.id, cron: task.cronExpression },
-      "Failed to compute next scheduled run"
+      'Failed to compute next scheduled run'
     );
     await disableScheduledTask(task.id, message);
   }
@@ -170,11 +170,11 @@ export function startScheduledTaskRunner(client: WebClient): void {
     sweep(client).catch((error) => {
       logger.error(
         { ...toLogError(error) },
-        "[scheduled-task-runner] Unexpected error while running sweep"
+        '[scheduled-task-runner] Unexpected error while running sweep'
       );
     });
   }, RUNNER_INTERVAL_MS);
   timer.unref();
 
-  logger.info("[scheduled-task-runner] Started");
+  logger.info('[scheduled-task-runner] Started');
 }

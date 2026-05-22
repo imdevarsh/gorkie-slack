@@ -1,11 +1,11 @@
-import { errorMessage, toLogError } from "@repo/utils/error";
-import { tool } from "ai";
-import { formatDistanceToNow } from "date-fns";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import type { SlackMessageContext, Stream } from "@/types";
-import { getContextId } from "@/utils/context";
+import { errorMessage, toLogError } from '@repo/utils/error';
+import { tool } from 'ai';
+import { formatDistanceToNow } from 'date-fns';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import type { SlackMessageContext, Stream } from '@/types';
+import { getContextId } from '@/utils/context';
 
 export const scheduleReminder = ({
   context,
@@ -16,7 +16,7 @@ export const scheduleReminder = ({
 }) =>
   tool({
     description:
-      "Schedule a reminder to be sent to the user who sent the last message in the conversation.",
+      'Schedule a reminder to be sent to the user who sent the last message in the conversation.',
     inputSchema: z.object({
       text: z
         .string()
@@ -26,7 +26,7 @@ export const scheduleReminder = ({
       seconds: z
         .number()
         .describe(
-          "The number of seconds to wait before sending the reminder from the current time."
+          'The number of seconds to wait before sending the reminder from the current time.'
         )
         .max(
           // 120 days
@@ -36,8 +36,8 @@ export const scheduleReminder = ({
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Scheduling reminder",
-        status: "pending",
+        title: 'Scheduling reminder',
+        status: 'pending',
       });
     },
     execute: async ({ text, seconds }, { toolCallId }) => {
@@ -47,7 +47,7 @@ export const scheduleReminder = ({
       if (!userId) {
         return {
           success: false,
-          error: "Something went wrong.",
+          error: 'Something went wrong.',
         };
       }
 
@@ -58,9 +58,9 @@ export const scheduleReminder = ({
 
       const task = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Scheduling reminder",
+        title: 'Scheduling reminder',
         details: `${relativeTime}: ${text.slice(0, 60)}`,
-        status: "in_progress",
+        status: 'in_progress',
       });
 
       try {
@@ -76,10 +76,10 @@ export const scheduleReminder = ({
             userId,
             text,
           },
-          "Scheduled reminder"
+          'Scheduled reminder'
         );
         await finishTask(stream, {
-          status: "complete",
+          status: 'complete',
           taskId: task,
           output: `Scheduled for ${userId}`,
         });
@@ -90,10 +90,10 @@ export const scheduleReminder = ({
       } catch (error) {
         logger.error(
           { ...toLogError(error), ctxId, userId },
-          "Failed to schedule reminder"
+          'Failed to schedule reminder'
         );
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId: task,
           output: errorMessage(error),
         });

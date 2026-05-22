@@ -1,14 +1,14 @@
-import { readFile, readFileSync } from "node:fs";
-import { promisify } from "node:util";
-import type { Sandbox } from "@e2b/code-interpreter";
-import { sandbox as config } from "@/config";
-import { env } from "@/env";
-import type { SandboxBootstrapFile } from "@/types";
+import { readFile, readFileSync } from 'node:fs';
+import { promisify } from 'node:util';
+import type { Sandbox } from '@e2b/code-interpreter';
+import { sandbox as config } from '@/config';
+import { env } from '@/env';
+import type { SandboxBootstrapFile } from '@/types';
 
 const readFileAsync = promisify(readFile);
 
 function readTemplate(path: string): Promise<string> {
-  return readFileAsync(new URL(path, import.meta.url), "utf8");
+  return readFileAsync(new URL(path, import.meta.url), 'utf8');
 }
 
 function buildProxyAuthJson(): string {
@@ -20,7 +20,7 @@ function buildProxyAuthJson(): string {
       continue;
     }
     seen.add(provider);
-    auth[provider] = { type: "api_key", key: "GORKIE_SESSION_TOKEN" };
+    auth[provider] = { type: 'api_key', key: 'GORKIE_SESSION_TOKEN' };
   }
 
   return JSON.stringify(auth, null, 2);
@@ -28,7 +28,7 @@ function buildProxyAuthJson(): string {
 
 function buildModelsJson(): string {
   const staticModels = JSON.parse(
-    readFileSync(new URL("./models.json", import.meta.url), "utf8").toString()
+    readFileSync(new URL('./models.json', import.meta.url), 'utf8').toString()
   ) as {
     providers: Record<
       string,
@@ -53,7 +53,7 @@ function buildModelsJson(): string {
     providers[provider] = {
       ...existing,
       baseUrl: `${env.PROXY_BASE_URL}/${provider}`,
-      apiKey: "GORKIE_SESSION_TOKEN",
+      apiKey: 'GORKIE_SESSION_TOKEN',
       authHeader: true,
     };
   }
@@ -70,10 +70,10 @@ export async function buildConfig(prompt: string): Promise<{
   const extensionsDir = `${piDir}/extensions`;
 
   const [settings, models, auth, toolsExtension] = await Promise.all([
-    readTemplate("./settings.json"),
+    readTemplate('./settings.json'),
     Promise.resolve(buildModelsJson()),
     Promise.resolve(buildProxyAuthJson()),
-    readTemplate("./extensions/tools.ts"),
+    readTemplate('./extensions/tools.ts'),
   ]);
 
   return {

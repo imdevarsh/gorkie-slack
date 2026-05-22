@@ -1,6 +1,6 @@
-import { toLogError } from "@repo/utils/error";
-import type { WebClient } from "@slack/web-api";
-import logger from "@/lib/logger";
+import { toLogError } from '@repo/utils/error';
+import type { WebClient } from '@slack/web-api';
+import logger from '@/lib/logger';
 
 const userNameCache = new Map<string, string>();
 
@@ -9,7 +9,7 @@ export async function getSlackUserName(
   userId: string
 ): Promise<string> {
   if (!userId) {
-    return "unknown";
+    return 'unknown';
   }
 
   const cached = userNameCache.get(userId);
@@ -29,7 +29,7 @@ export async function getSlackUserName(
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId },
-      "Failed to fetch Slack user info"
+      'Failed to fetch Slack user info'
     );
     userNameCache.set(userId, userId);
     return userId;
@@ -44,5 +44,5 @@ export function primeSlackUserName(userId: string, name: string) {
 }
 
 export function normalizeSlackUserId(raw: string): string {
-  return raw.replace(/[<@>]/g, "").trim();
+  return raw.replace(/[<@>]/g, '').trim();
 }

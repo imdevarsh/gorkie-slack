@@ -1,10 +1,10 @@
-import type { ChatRequestHints, SlackMessageContext } from "../../types";
-import { attachmentsPrompt } from "./attachments";
-import { corePrompt } from "./core";
-import { examplesPrompt } from "./examples";
-import { personalityPrompt } from "./personality";
-import { replyPrompt } from "./tasks";
-import { toolsPrompt } from "./tools";
+import type { ChatRequestHints, SlackMessageContext } from '../../types';
+import { attachmentsPrompt } from './attachments';
+import { corePrompt } from './core';
+import { examplesPrompt } from './examples';
+import { personalityPrompt } from './personality';
+import { replyPrompt } from './tasks';
+import { toolsPrompt } from './tools';
 
 export function chatPrompt({
   requestHints,
@@ -37,6 +37,6 @@ ${requestHints.customization.prompt}
     attachmentsPrompt(context),
   ]
     .filter(Boolean)
-    .join("\n")
+    .join('\n')
     .trim();
 }

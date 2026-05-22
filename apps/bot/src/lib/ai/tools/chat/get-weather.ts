@@ -1,9 +1,9 @@
-import { toLogError } from "@repo/utils/error";
-import { tool } from "ai";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import type { SlackMessageContext, Stream } from "@/types";
+import { toLogError } from '@repo/utils/error';
+import { tool } from 'ai';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import type { SlackMessageContext, Stream } from '@/types';
 
 export const getWeather = ({
   stream,
@@ -12,7 +12,7 @@ export const getWeather = ({
   stream: Stream;
 }) =>
   tool({
-    description: "Get the current weather at a location",
+    description: 'Get the current weather at a location',
     inputSchema: z.object({
       latitude: z.number(),
       longitude: z.number(),
@@ -20,16 +20,16 @@ export const getWeather = ({
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Getting weather",
-        status: "pending",
+        title: 'Getting weather',
+        status: 'pending',
       });
     },
     execute: async ({ latitude, longitude }, { toolCallId }) => {
       const task = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Getting weather",
+        title: 'Getting weather',
         details: `${latitude}, ${longitude}`,
-        status: "in_progress",
+        status: 'in_progress',
       });
       try {
         const response = await fetch(
@@ -43,18 +43,18 @@ export const getWeather = ({
         }
 
         const weatherData: unknown = await response.json();
-        await finishTask(stream, { status: "complete", taskId: task });
+        await finishTask(stream, { status: 'complete', taskId: task });
         return weatherData;
       } catch (error) {
-        logger.error({ ...toLogError(error) }, "Error in getWeather");
+        logger.error({ ...toLogError(error) }, 'Error in getWeather');
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId: task,
-          output: "Failed to fetch weather",
+          output: 'Failed to fetch weather',
         });
         return {
           success: false,
-          error: "Failed to fetch weather",
+          error: 'Failed to fetch weather',
         };
       }
     },

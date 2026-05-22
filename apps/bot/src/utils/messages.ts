@@ -1,38 +1,38 @@
-import type { ModelMessage } from "ai";
+import type { ModelMessage } from 'ai';
 
 export function getMessageText(message: ModelMessage): string {
   const { content } = message;
 
-  if (typeof content === "string") {
+  if (typeof content === 'string') {
     return content;
   }
 
   if (Array.isArray(content)) {
     return content
       .map((part) => {
-        if (typeof part === "string") {
+        if (typeof part === 'string') {
           return part;
         }
-        if (typeof part === "object" && part) {
+        if (typeof part === 'object' && part) {
           const maybeText = (part as { text?: unknown }).text;
-          if (typeof maybeText === "string") {
+          if (typeof maybeText === 'string') {
             return maybeText;
           }
         }
-        return "";
+        return '';
       })
       .filter(Boolean)
-      .join("\n");
+      .join('\n');
   }
 
-  if (typeof content === "object" && content) {
+  if (typeof content === 'object' && content) {
     const maybeText = (content as { text?: unknown }).text;
-    if (typeof maybeText === "string") {
+    if (typeof maybeText === 'string') {
       return maybeText;
     }
   }
 
-  return "";
+  return '';
 }
 
 export function buildHistorySnippet(
@@ -43,5 +43,5 @@ export function buildHistorySnippet(
     .slice(-limit)
     .map((msg) => getMessageText(msg))
     .filter(Boolean)
-    .join("\n");
+    .join('\n');
 }

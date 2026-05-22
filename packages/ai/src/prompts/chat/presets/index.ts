@@ -1,5 +1,5 @@
-import { gork } from "./gork";
-import { simba } from "./simba";
+import { gork } from './gork';
+import { simba } from './simba';
 
 export interface Persona {
   description: string;

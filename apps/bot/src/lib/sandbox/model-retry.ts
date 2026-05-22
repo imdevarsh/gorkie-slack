@@ -1,6 +1,6 @@
-import { sandbox as config } from "@/config";
-import logger from "@/lib/logger";
-import type { PiRpcClient } from "@/lib/sandbox/rpc/client";
+import { sandbox as config } from '@/config';
+import logger from '@/lib/logger';
+import type { PiRpcClient } from '@/lib/sandbox/rpc/client';
 
 export async function runWithModelRetry({
   client,
@@ -19,7 +19,7 @@ export async function runWithModelRetry({
   let modelIdx = 0;
 
   const offModelFailure = client.onEvent((event) => {
-    if (event.type === "auto_retry_end" && !event.success) {
+    if (event.type === 'auto_retry_end' && !event.success) {
       modelFailed = true;
     }
   });
@@ -44,14 +44,14 @@ export async function runWithModelRetry({
           modelId: next.modelId,
           attempt: modelIdx,
         },
-        "[sandbox] Model exhausted retries, switching to fallback"
+        '[sandbox] Model exhausted retries, switching to fallback'
       );
       onModelSwitch(modelIdx, config.modelChain.length - 1);
 
       await client.setModel(next.provider, next.modelId);
       const retryIdle = client.waitForIdle();
       await client.followUp(
-        "The previous request failed due to an API error. Please retry."
+        'The previous request failed due to an API error. Please retry.'
       );
       await Promise.race([retryIdle, timeoutPromise]);
     }

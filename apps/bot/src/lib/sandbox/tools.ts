@@ -1,23 +1,23 @@
-import { clampText } from "@repo/utils/text";
-import { sandbox as config } from "@/config";
-import type { ToolEndInput, ToolStartInput } from "@/types";
+import { clampText } from '@repo/utils/text';
+import { sandbox as config } from '@/config';
+import type { ToolEndInput, ToolStartInput } from '@/types';
 import {
   asRecord,
   asString,
   extractErrorResult,
   extractTextResult,
   getArg,
-} from "./parser";
+} from './parser';
 
 const toolTitles = {
-  bash: "Run command",
-  read: "Read file",
-  write: "Write file",
-  edit: "Edit file",
-  grep: "Search text",
-  find: "Find files",
-  ls: "List files",
-  showFile: "Upload file",
+  bash: 'Run command',
+  read: 'Read file',
+  write: 'Write file',
+  edit: 'Edit file',
+  grep: 'Search text',
+  find: 'Find files',
+  ls: 'List files',
+  showFile: 'Upload file',
 } as const;
 
 function resolveTitle(toolName: string): string {
@@ -28,30 +28,30 @@ function resolveTitle(toolName: string): string {
 
 function resolveDetails(toolName: string, args: unknown): string {
   switch (toolName) {
-    case "bash":
-      return `input:\n\n${getArg(args, "command", "running command")}`;
-    case "read":
-      return `Reading ${getArg(args, "path", "file")}`;
-    case "write":
-      return `Writing ${getArg(args, "path", "file")}`;
-    case "edit":
-      return `Editing ${getArg(args, "path", "file")}`;
-    case "grep": {
+    case 'bash':
+      return `input:\n\n${getArg(args, 'command', 'running command')}`;
+    case 'read':
+      return `Reading ${getArg(args, 'path', 'file')}`;
+    case 'write':
+      return `Writing ${getArg(args, 'path', 'file')}`;
+    case 'edit':
+      return `Editing ${getArg(args, 'path', 'file')}`;
+    case 'grep': {
       const argObj = asRecord(args);
-      const pattern = asString(argObj?.pattern) ?? "<pattern>";
-      const path = asString(argObj?.path) ?? ".";
+      const pattern = asString(argObj?.pattern) ?? '<pattern>';
+      const path = asString(argObj?.path) ?? '.';
       return `Searching "${pattern}" in ${path}`;
     }
-    case "find": {
+    case 'find': {
       const argObj = asRecord(args);
-      const pattern = asString(argObj?.pattern) ?? "<pattern>";
-      const path = asString(argObj?.path) ?? ".";
+      const pattern = asString(argObj?.pattern) ?? '<pattern>';
+      const path = asString(argObj?.path) ?? '.';
       return `Finding "${pattern}" in ${path}`;
     }
-    case "ls":
-      return `Listing ${getArg(args, "path", ".")}`;
-    case "showFile":
-      return `Uploading ${getArg(args, "path", "file")}`;
+    case 'ls':
+      return `Listing ${getArg(args, 'path', '.')}`;
+    case 'showFile':
+      return `Uploading ${getArg(args, 'path', 'file')}`;
     default:
       return `Running ${toolName}`;
   }
@@ -74,7 +74,7 @@ export function getToolTaskStart(input: ToolStartInput) {
 export function getToolTaskEnd(input: ToolEndInput) {
   const { toolName, result, isError } = input;
 
-  if (toolName === "showFile") {
+  if (toolName === 'showFile') {
     const details = asRecord(result)?.details;
     const path = asString(asRecord(details)?.path);
     if (path) {
@@ -87,7 +87,7 @@ export function getToolTaskEnd(input: ToolEndInput) {
     }
   }
 
-  if (toolName === "bash") {
+  if (toolName === 'bash') {
     const text = extractTextResult(result);
     if (text) {
       return {
@@ -95,7 +95,7 @@ export function getToolTaskEnd(input: ToolEndInput) {
       };
     }
     return {
-      output: isError ? "output:\ncommand failed" : "output:\n",
+      output: isError ? 'output:\ncommand failed' : 'output:\n',
     };
   }
 
@@ -109,7 +109,7 @@ export function getToolTaskEnd(input: ToolEndInput) {
   if (isError) {
     return {
       output: clampText(
-        extractErrorResult(result) ?? "Tool execution failed",
+        extractErrorResult(result) ?? 'Tool execution failed',
         config.toolOutput.outputMaxChars
       ),
     };

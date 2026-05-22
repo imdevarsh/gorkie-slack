@@ -1,1 +1,1 @@
-export type TriggerType = "ping" | "dm" | "thread" | null;
+export type TriggerType = 'ping' | 'dm' | 'thread' | null;

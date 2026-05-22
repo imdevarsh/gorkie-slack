@@ -1,4 +1,4 @@
-import type { ContextPromptOptions } from "../../types";
+import type { ContextPromptOptions } from '../../types';
 
 export function contextPrompt({
   context,
@@ -6,7 +6,7 @@ export function contextPrompt({
 }: ContextPromptOptions): string {
   const messageTs = context?.event.ts;
   if (!(messageTs || requestHints)) {
-    return "";
+    return '';
   }
 
   const parts: string[] = [];
@@ -22,5 +22,5 @@ export function contextPrompt({
     );
   }
 
-  return `<context>\n${parts.join("\n")}\n</context>`;
+  return `<context>\n${parts.join('\n')}\n</context>`;
 }

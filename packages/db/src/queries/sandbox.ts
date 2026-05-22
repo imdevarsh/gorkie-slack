@@ -1,10 +1,10 @@
-import { and, eq, isNull, lt, notInArray } from "drizzle-orm";
-import { db } from "../index";
+import { and, eq, isNull, lt, notInArray } from 'drizzle-orm';
+import { db } from '../index';
 import {
   type NewSandboxSession,
   type SandboxSession,
   sandboxSessions,
-} from "../schema";
+} from '../schema';
 
 export async function getByThread(
   threadId: string
@@ -44,9 +44,9 @@ export async function updateStatus(
     .update(sandboxSessions)
     .set({
       status,
-      ...(status === "paused" && { pausedAt: new Date() }),
-      ...(status === "active" && { resumedAt: new Date() }),
-      ...(status === "destroyed" && { destroyedAt: new Date() }),
+      ...(status === 'paused' && { pausedAt: new Date() }),
+      ...(status === 'active' && { resumedAt: new Date() }),
+      ...(status === 'destroyed' && { destroyedAt: new Date() }),
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));
@@ -73,7 +73,7 @@ export async function updateRuntime(
       sandboxId: runtime.sandboxId,
       sessionId: runtime.sessionId,
       ...(runtime.status ? { status: runtime.status } : {}),
-      ...(runtime.status === "active" && { resumedAt: new Date() }),
+      ...(runtime.status === 'active' && { resumedAt: new Date() }),
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));
@@ -83,7 +83,7 @@ export async function clearDestroyed(threadId: string): Promise<void> {
   await db
     .update(sandboxSessions)
     .set({
-      status: "destroyed",
+      status: 'destroyed',
       destroyedAt: new Date(),
       updatedAt: new Date(),
     })
@@ -93,7 +93,7 @@ export async function clearDestroyed(threadId: string): Promise<void> {
 export function listExpired(
   cutoff: Date,
   limit = 50
-): Promise<Pick<SandboxSession, "threadId" | "sandboxId">[]> {
+): Promise<Pick<SandboxSession, 'threadId' | 'sandboxId'>[]> {
   return db
     .select({
       threadId: sandboxSessions.threadId,
@@ -102,7 +102,7 @@ export function listExpired(
     .from(sandboxSessions)
     .where(
       and(
-        notInArray(sandboxSessions.status, ["destroyed", "deleting"]),
+        notInArray(sandboxSessions.status, ['destroyed', 'deleting']),
         isNull(sandboxSessions.destroyedAt),
         lt(sandboxSessions.updatedAt, cutoff)
       )
@@ -114,13 +114,13 @@ export async function claimExpired(threadId: string): Promise<boolean> {
   const rows = await db
     .update(sandboxSessions)
     .set({
-      status: "deleting",
+      status: 'deleting',
       updatedAt: new Date(),
     })
     .where(
       and(
         eq(sandboxSessions.threadId, threadId),
-        notInArray(sandboxSessions.status, ["destroyed", "deleting"]),
+        notInArray(sandboxSessions.status, ['destroyed', 'deleting']),
         isNull(sandboxSessions.destroyedAt)
       )
     )

@@ -1,27 +1,27 @@
-import { toLogError } from "@repo/utils/error";
-import type { ImagePart } from "ai";
-import { env } from "@/env";
-import logger from "@/lib/logger";
-import type { SlackFile } from "@/types";
+import { toLogError } from '@repo/utils/error';
+import type { ImagePart } from 'ai';
+import { env } from '@/env';
+import logger from '@/lib/logger';
+import type { SlackFile } from '@/types';
 
 const SUPPORTED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
 ];
 
 export function isImageFile(file: SlackFile): boolean {
-  const mimetype = file.mimetype ?? "";
+  const mimetype = file.mimetype ?? '';
   return SUPPORTED_IMAGE_TYPES.includes(mimetype);
 }
 
 function getMimeType(file: SlackFile): string {
-  const mimetype = file.mimetype ?? "";
+  const mimetype = file.mimetype ?? '';
   if (SUPPORTED_IMAGE_TYPES.includes(mimetype)) {
     return mimetype;
   }
-  return "image/jpeg";
+  return 'image/jpeg';
 }
 
 export async function fetchSlackImageAsBase64(
@@ -29,7 +29,7 @@ export async function fetchSlackImageAsBase64(
 ): Promise<{ data: string; mimeType: string } | null> {
   const url = file.url_private ?? file.url_private_download;
   if (!url) {
-    logger.warn({ fileId: file.id }, "No private URL available for file");
+    logger.warn({ fileId: file.id }, 'No private URL available for file');
     return null;
   }
 
@@ -43,13 +43,13 @@ export async function fetchSlackImageAsBase64(
     if (!response.ok) {
       logger.error(
         { status: response.status, fileId: file.id },
-        "Failed to fetch Slack image"
+        'Failed to fetch Slack image'
       );
       return null;
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = getMimeType(file);
 
     return {
@@ -59,7 +59,7 @@ export async function fetchSlackImageAsBase64(
   } catch (error) {
     logger.error(
       { ...toLogError(error), fileId: file.id },
-      "Error fetching Slack image"
+      'Error fetching Slack image'
     );
     return null;
   }
@@ -84,7 +84,7 @@ export async function processSlackFiles(
         return null;
       }
       return {
-        type: "image" as const,
+        type: 'image' as const,
         image: result.data,
         mediaType: result.mimeType,
       };

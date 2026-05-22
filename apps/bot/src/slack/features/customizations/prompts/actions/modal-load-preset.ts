@@ -1,13 +1,13 @@
-import { personas } from "@repo/ai/prompts/chat/presets";
+import { personas } from '@repo/ai/prompts/chat/presets';
 import type {
   AllMiddlewareArgs,
   BlockAction,
   ButtonAction,
   SlackActionMiddlewareArgs,
-} from "@slack/bolt";
-import { buildPresetModal } from "../view";
+} from '@slack/bolt';
+import { buildPresetModal } from '../view';
 
-export const name = "modal_load_preset";
+export const name = 'modal_load_preset';
 
 export async function execute({
   ack,
@@ -17,7 +17,7 @@ export async function execute({
 }: SlackActionMiddlewareArgs<BlockAction<ButtonAction>> &
   AllMiddlewareArgs): Promise<void> {
   await ack();
-  const presetId = typeof action.value === "string" ? action.value : "";
+  const presetId = typeof action.value === 'string' ? action.value : '';
   const preset = personas.find((p) => p.id === presetId);
   if (!preset) {
     return;

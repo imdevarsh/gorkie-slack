@@ -1,10 +1,10 @@
-import type { SandboxPromptOptions } from "../../types";
-import { contextPrompt } from "./context";
-import { corePrompt } from "./core";
-import { environmentPrompt } from "./environment";
-import { examplesPrompt } from "./examples";
-import { skillsPrompt } from "./skills";
-import { workflowPrompt } from "./workflow";
+import type { SandboxPromptOptions } from '../../types';
+import { contextPrompt } from './context';
+import { corePrompt } from './core';
+import { environmentPrompt } from './environment';
+import { examplesPrompt } from './examples';
+import { skillsPrompt } from './skills';
+import { workflowPrompt } from './workflow';
 
 export function sandboxPrompt({
   context,
@@ -19,6 +19,6 @@ export function sandboxPrompt({
     examplesPrompt,
   ]
     .filter(Boolean)
-    .join("\n")
+    .join('\n')
     .trim();
 }

@@ -1,15 +1,15 @@
 import {
   countEnabledScheduledTasksByUser,
   createScheduledTask,
-} from "@repo/db/queries";
-import { errorMessage, toLogError } from "@repo/utils/error";
-import { tool } from "ai";
-import { z } from "zod";
-import { createTask, finishTask, updateTask } from "@/lib/ai/utils/task";
-import logger from "@/lib/logger";
-import { getNextRunAt, validateTimezone } from "@/lib/tasks/cron";
-import type { SlackMessageContext, Stream } from "@/types";
-import { getContextId } from "@/utils/context";
+} from '@repo/db/queries';
+import { errorMessage, toLogError } from '@repo/utils/error';
+import { tool } from 'ai';
+import { z } from 'zod';
+import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
+import logger from '@/lib/logger';
+import { getNextRunAt, validateTimezone } from '@/lib/tasks/cron';
+import type { SlackMessageContext, Stream } from '@/types';
+import { getContextId } from '@/utils/context';
 
 const MAX_ENABLED_TASKS_PER_USER = 20;
 const MIN_TASK_INTERVAL_MS = 30 * 60 * 1000;
@@ -23,13 +23,13 @@ export const scheduleTask = ({
 }) =>
   tool({
     description:
-      "Create a recurring cron-scheduled task. Use this for repeated automations that should run on a schedule and send output to a DM or channel.",
+      'Create a recurring cron-scheduled task. Use this for repeated automations that should run on a schedule and send output to a DM or channel.',
     inputSchema: z.object({
       task: z
         .string()
         .min(1)
         .max(2000)
-        .describe("Task instructions to run on each schedule execution."),
+        .describe('Task instructions to run on each schedule execution.'),
       cronExpression: z
         .string()
         .min(1)
@@ -43,9 +43,9 @@ export const scheduleTask = ({
         .max(120)
         .describe('IANA timezone name (for example, "America/Los_Angeles").'),
       destinationType: z
-        .enum(["dm", "channel"])
-        .default("dm")
-        .describe("Where run results should be delivered."),
+        .enum(['dm', 'channel'])
+        .default('dm')
+        .describe('Where run results should be delivered.'),
       channelId: z
         .string()
         .optional()
@@ -56,14 +56,14 @@ export const scheduleTask = ({
         .string()
         .optional()
         .describe(
-          "Optional thread timestamp for channel destination; outputs will post into this thread."
+          'Optional thread timestamp for channel destination; outputs will post into this thread.'
         ),
     }),
     onInputStart: async ({ toolCallId }) => {
       await createTask(stream, {
         taskId: toolCallId,
-        title: "Scheduling recurring task",
-        status: "pending",
+        title: 'Scheduling recurring task',
+        status: 'pending',
       });
     },
     execute: async (
@@ -76,15 +76,15 @@ export const scheduleTask = ({
       if (!userId) {
         return {
           success: false,
-          error: "Could not identify the requesting user.",
+          error: 'Could not identify the requesting user.',
         };
       }
 
       const taskId = await updateTask(stream, {
         taskId: toolCallId,
-        title: "Scheduling recurring task",
+        title: 'Scheduling recurring task',
         details: cronExpression,
-        status: "in_progress",
+        status: 'in_progress',
       });
 
       try {
@@ -94,7 +94,7 @@ export const scheduleTask = ({
         if (enabledCount >= MAX_ENABLED_TASKS_PER_USER) {
           const limitMessage = `You already have ${MAX_ENABLED_TASKS_PER_USER} active scheduled tasks. Please disable one before creating another.`;
           await finishTask(stream, {
-            status: "error",
+            status: 'error',
             taskId,
             output: limitMessage,
           });
@@ -105,15 +105,15 @@ export const scheduleTask = ({
         }
 
         const destinationId =
-          destinationType === "dm"
+          destinationType === 'dm'
             ? userId
             : (channelId ?? context.event.channel);
 
         if (!destinationId) {
           const missingMessage =
-            "A destination channel is required for channel delivery.";
+            'A destination channel is required for channel delivery.';
           await finishTask(stream, {
-            status: "error",
+            status: 'error',
             taskId,
             output: missingMessage,
           });
@@ -133,9 +133,9 @@ export const scheduleTask = ({
         const intervalMs = secondRunAt.getTime() - nextRunAt.getTime();
         if (intervalMs < MIN_TASK_INTERVAL_MS) {
           const cadenceMessage =
-            "Scheduled tasks must run at most once every 30 minutes.";
+            'Scheduled tasks must run at most once every 30 minutes.';
           await finishTask(stream, {
-            status: "error",
+            status: 'error',
             taskId,
             output: cadenceMessage,
           });
@@ -152,7 +152,7 @@ export const scheduleTask = ({
           creatorUserId: userId,
           destinationType,
           destinationId,
-          threadTs: destinationType === "channel" ? (threadTs ?? null) : null,
+          threadTs: destinationType === 'channel' ? (threadTs ?? null) : null,
           prompt: task,
           cronExpression,
           timezone,
@@ -160,7 +160,7 @@ export const scheduleTask = ({
           nextRunAt,
           runningAt: null,
           lastRunAt: null,
-          lastStatus: "scheduled",
+          lastStatus: 'scheduled',
           lastError: null,
         });
 
@@ -171,16 +171,16 @@ export const scheduleTask = ({
             creatorUserId: userId,
             destinationType,
             destinationId,
-            threadTs: destinationType === "channel" ? threadTs : undefined,
+            threadTs: destinationType === 'channel' ? threadTs : undefined,
             cronExpression,
             timezone,
             nextRunAt,
           },
-          "Created scheduled task"
+          'Created scheduled task'
         );
 
         await finishTask(stream, {
-          status: "complete",
+          status: 'complete',
           taskId,
           output: `Next run: ${nextRunAt.toISOString()}`,
         });
@@ -188,15 +188,15 @@ export const scheduleTask = ({
         return {
           success: true,
           taskId: createdTaskId,
-          content: `Scheduled recurring task to ${destinationType === "dm" ? "your DM" : destinationId}. Next run: ${nextRunAt.toISOString()} (${timezone}).`,
+          content: `Scheduled recurring task to ${destinationType === 'dm' ? 'your DM' : destinationId}. Next run: ${nextRunAt.toISOString()} (${timezone}).`,
         };
       } catch (error) {
         logger.error(
           { ...toLogError(error), ctxId, cronExpression, timezone },
-          "Failed to create scheduled task"
+          'Failed to create scheduled task'
         );
         await finishTask(stream, {
-          status: "error",
+          status: 'error',
           taskId,
           output: errorMessage(error),
         });

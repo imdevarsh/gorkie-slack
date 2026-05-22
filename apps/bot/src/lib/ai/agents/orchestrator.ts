@@ -1,31 +1,31 @@
-import { systemPrompt } from "@repo/ai/prompts";
-import { provider } from "@repo/ai/providers";
-import { successToolCall } from "@repo/ai/tools";
-import { stepCountIs, ToolLoopAgent } from "ai";
-import { createToolset } from "@/lib/ai/tools";
-import logger from "@/lib/logger";
+import { systemPrompt } from '@repo/ai/prompts';
+import { provider } from '@repo/ai/providers';
+import { successToolCall } from '@repo/ai/tools';
+import { stepCountIs, ToolLoopAgent } from 'ai';
+import { createToolset } from '@/lib/ai/tools';
+import logger from '@/lib/logger';
 import type {
   ChatRequestHints,
   SlackFile,
   SlackMessageContext,
   Stream,
-} from "@/types";
-import { createTask, finishTask, updateTask } from "../utils/task";
+} from '@/types';
+import { createTask, finishTask, updateTask } from '../utils/task';
 
 const taskMap = new Map<string, string>();
 
 type ReasoningStreamPart =
-  | { type: "start-step" }
-  | { type: "reasoning-delta"; text: string }
+  | { type: 'start-step' }
+  | { type: 'reasoning-delta'; text: string }
   | { type: string };
 
 function normalizeReasoning(reasoningText: unknown): string {
   return String(reasoningText)
     .trim()
-    .split("\n")
+    .split('\n')
     .filter(Boolean)
-    .filter((line) => line !== "[REDACTED]")
-    .join("\n");
+    .filter((line) => line !== '[REDACTED]')
+    .join('\n');
 }
 
 export async function resolveOrchestratorTask({
@@ -47,7 +47,7 @@ export async function resolveOrchestratorTask({
 
   await finishTask(stream, {
     taskId,
-    status: "complete",
+    status: 'complete',
     ...(title ? { title } : {}),
     ...(details ? { details } : {}),
   });
@@ -65,11 +65,11 @@ export async function consumeOrchestratorReasoningStream({
   const eventTs = context.event.event_ts;
 
   for await (const part of fullStream) {
-    if (part.type === "start-step") {
+    if (part.type === 'start-step') {
       continue;
     }
 
-    if (part.type !== "reasoning-delta" || !("text" in part)) {
+    if (part.type !== 'reasoning-delta' || !('text' in part)) {
       continue;
     }
 
@@ -80,13 +80,13 @@ export async function consumeOrchestratorReasoningStream({
 
     const taskId = taskMap.get(eventTs);
     if (!taskId) {
-      logger.warn({ eventTs }, "No taskId found in taskMap");
+      logger.warn({ eventTs }, 'No taskId found in taskMap');
       continue;
     }
 
     await updateTask(stream, {
       taskId,
-      status: "in_progress",
+      status: 'in_progress',
       output: `\n${reasoningSummary}`,
     });
   }
@@ -104,37 +104,37 @@ export const orchestratorAgent = ({
   stream: Stream;
 }) =>
   new ToolLoopAgent({
-    model: provider.languageModel("chat-model"),
+    model: provider.languageModel('chat-model'),
     instructions: systemPrompt({
-      agent: "chat",
+      agent: 'chat',
       requestHints,
       context,
     }),
     providerOptions: {
       openrouter: {
-        reasoning: { enabled: true, exclude: false, effort: "medium" },
+        reasoning: { enabled: true, exclude: false, effort: 'medium' },
       },
       google: {
         thinkingConfig: {
-          thinkingLevel: "medium",
+          thinkingLevel: 'medium',
           includeThoughts: true,
         },
       },
     },
-    toolChoice: "required",
+    toolChoice: 'required',
     tools: createToolset({ context, files, stream }),
     stopWhen: [
       stepCountIs(40),
-      successToolCall("leaveChannel"),
-      successToolCall("reply"),
-      successToolCall("skip"),
+      successToolCall('leaveChannel'),
+      successToolCall('reply'),
+      successToolCall('skip'),
     ],
     async prepareStep() {
       const taskId = crypto.randomUUID();
       const task = await createTask(stream, {
         taskId,
-        title: "Thinking",
-        status: "in_progress",
+        title: 'Thinking',
+        status: 'in_progress',
       });
       taskMap.set(context.event.event_ts, task);
       return {};
@@ -148,7 +148,7 @@ export const orchestratorAgent = ({
 
       logger.warn(
         { eventTs: context.event.event_ts },
-        "No taskId found in taskMap"
+        'No taskId found in taskMap'
       );
     },
     onFinish() {
@@ -156,6 +156,6 @@ export const orchestratorAgent = ({
     },
     experimental_telemetry: {
       isEnabled: true,
-      functionId: "orchestrator",
+      functionId: 'orchestrator',
     },
   });

@@ -1,5 +1,5 @@
-import type { ResolvedSandboxSession, SlackMessageContext } from "@/types";
-import type { AgentSessionEvent } from "@/types/sandbox/rpc";
+import type { ResolvedSandboxSession, SlackMessageContext } from '@/types';
+import type { AgentSessionEvent } from '@/types/sandbox/rpc';
 
 export interface ToolStartEvent {
   args: unknown;

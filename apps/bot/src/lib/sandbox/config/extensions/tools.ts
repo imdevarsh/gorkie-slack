@@ -1,10 +1,10 @@
-import fs from "node:fs";
-import nodePath from "node:path";
+import fs from 'node:fs';
+import nodePath from 'node:path';
 import type {
   AgentToolResult,
   AgentToolUpdateCallback,
   ExtensionAPI,
-} from "@earendil-works/pi-coding-agent";
+} from '@earendil-works/pi-coding-agent';
 import {
   createBashTool,
   createEditTool,
@@ -13,8 +13,8 @@ import {
   createLsTool,
   createReadTool,
   createWriteTool,
-} from "@earendil-works/pi-coding-agent";
-import { type Static, type TSchema, Type } from "typebox";
+} from '@earendil-works/pi-coding-agent';
+import { type Static, type TSchema, Type } from 'typebox';
 
 const statusSchema = Type.Object({
   status: Type.Optional(
@@ -62,7 +62,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const readParams = withStatus(read.parameters);
   register({
     ...read,
-    name: "read",
+    name: 'read',
     parameters: readParams,
     execute: passthrough(read),
   });
@@ -71,7 +71,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const editParams = withStatus(edit.parameters);
   register({
     ...edit,
-    name: "edit",
+    name: 'edit',
     parameters: editParams,
     execute: passthrough(edit),
   });
@@ -80,7 +80,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const writeParams = withStatus(write.parameters);
   register({
     ...write,
-    name: "write",
+    name: 'write',
     parameters: writeParams,
     execute: passthrough(write),
   });
@@ -89,7 +89,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const findParams = withStatus(find.parameters);
   register({
     ...find,
-    name: "find",
+    name: 'find',
     parameters: findParams,
     execute: passthrough(find),
   });
@@ -98,7 +98,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const grepParams = withStatus(grep.parameters);
   register({
     ...grep,
-    name: "grep",
+    name: 'grep',
     parameters: grepParams,
     execute: passthrough(grep),
   });
@@ -107,7 +107,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const lsParams = withStatus(ls.parameters);
   register({
     ...ls,
-    name: "ls",
+    name: 'ls',
     parameters: lsParams,
     execute: passthrough(ls),
   });
@@ -116,11 +116,11 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const bashParams = withStatus(
     Type.Intersect([
       // biome-ignore lint/suspicious/noExplicitAny: pi dual-typebox issue
-      Type.Omit(bash.parameters as any, ["timeout"]),
+      Type.Omit(bash.parameters as any, ['timeout']),
       Type.Object({
         timeout: Type.Optional(
           Type.Number({
-            description: "Timeout in seconds (defaults to 600 seconds).",
+            description: 'Timeout in seconds (defaults to 600 seconds).',
             default: 600,
           })
         ),
@@ -129,12 +129,12 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   );
   register({
     ...bash,
-    name: "bash",
+    name: 'bash',
     parameters: bashParams,
     execute: passthrough(bash, (rawArgs) => ({
       ...rawArgs,
       timeout:
-        typeof rawArgs.timeout === "number" &&
+        typeof rawArgs.timeout === 'number' &&
         Number.isFinite(rawArgs.timeout) &&
         rawArgs.timeout > 0
           ? rawArgs.timeout
@@ -145,11 +145,11 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const showFileParams = Type.Object({
     path: Type.String({
       description:
-        "Absolute path to the file in sandbox, e.g. /home/user/output/result.png",
+        'Absolute path to the file in sandbox, e.g. /home/user/output/result.png',
     }),
     title: Type.Optional(
       Type.String({
-        description: "Optional title to display in Slack",
+        description: 'Optional title to display in Slack',
       })
     ),
     status: Type.Optional(
@@ -161,16 +161,16 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   });
 
   register({
-    name: "showFile",
-    label: "showFile",
+    name: 'showFile',
+    label: 'showFile',
     description:
-      "Signal the host to upload a sandbox file to Slack once it is ready.",
+      'Signal the host to upload a sandbox file to Slack once it is ready.',
     parameters: showFileParams,
     execute: (_toolCallId: string, params: Static<typeof showFileParams>) => {
       const { path, title } = params;
 
       if (!nodePath.isAbsolute(path)) {
-        throw new Error("showFile.path must be absolute");
+        throw new Error('showFile.path must be absolute');
       }
 
       if (!fs.existsSync(path)) {
@@ -185,7 +185,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
       return Promise.resolve({
         content: [
           {
-            type: "text" as const,
+            type: 'text' as const,
             text: `Queued upload for ${path}`,
           },
         ],

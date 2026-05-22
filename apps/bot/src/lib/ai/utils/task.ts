@@ -1,11 +1,11 @@
-import { safeAppend } from "@/lib/ai/utils/stream";
+import { safeAppend } from '@/lib/ai/utils/stream';
 import type {
   CreateTaskInput,
   FinishTaskInput,
   Stream,
   TaskChunk,
   UpdateTaskInput,
-} from "@/types";
+} from '@/types';
 
 export async function updateTask(
   stream: Stream,
@@ -16,15 +16,15 @@ export async function updateTask(
   const previous = stream.tasks.get(taskId);
 
   const chunk: TaskChunk = {
-    type: "task_update",
+    type: 'task_update',
     id: taskId,
-    status: status === "error" ? "complete" : status,
+    status: status === 'error' ? 'complete' : status,
     ...((title ?? previous?.title) ? { title: title ?? previous?.title } : {}),
     ...(details ? { details } : {}),
     ...(output
       ? {
           output:
-            status === "error"
+            status === 'error'
               ? `${output}\n**[Oops! An error occurred]**`
               : output,
         }
@@ -54,7 +54,7 @@ export function createTask(
     taskId,
     title,
     details,
-    status: status ?? "pending",
+    status: status ?? 'pending',
   });
 }
 

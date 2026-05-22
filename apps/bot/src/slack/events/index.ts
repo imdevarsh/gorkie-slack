@@ -1,7 +1,7 @@
 import {
   execute as messageCreateExecute,
   name as messageCreateName,
-} from "./message-create";
+} from './message-create';
 
 export const events = [
   {

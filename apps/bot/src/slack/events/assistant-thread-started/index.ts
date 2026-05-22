@@ -1,10 +1,10 @@
-import { toLogError } from "@repo/utils/error";
-import type { App } from "@slack/bolt";
-import { assistantThread } from "@/config";
-import logger from "@/lib/logger";
+import { toLogError } from '@repo/utils/error';
+import type { App } from '@slack/bolt';
+import { assistantThread } from '@/config';
+import logger from '@/lib/logger';
 
 export function register(app: App): void {
-  app.event("assistant_thread_started", async ({ event, client }) => {
+  app.event('assistant_thread_started', async ({ event, client }) => {
     const { channel_id, thread_ts, context } = event.assistant_thread;
 
     try {
@@ -20,7 +20,7 @@ export function register(app: App): void {
     } catch (error) {
       logger.warn(
         { ...toLogError(error), channel: channel_id },
-        "Failed to set suggested prompts"
+        'Failed to set suggested prompts'
       );
     }
   });

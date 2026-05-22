@@ -1,4 +1,4 @@
-import { env } from "../env";
+import { env } from '../env';
 
 export interface ProviderEntry {
   apiKey: string;
@@ -6,9 +6,9 @@ export interface ProviderEntry {
 }
 
 const STATIC_BASE_URLS = {
-  gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
-  hackclub: "https://ai.hackclub.com/proxy/v1",
-  openrouter: "https://openrouter.ai/api/v1",
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
+  hackclub: 'https://ai.hackclub.com/proxy/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
 } as const;
 
 export const providers: Record<string, ProviderEntry> = Object.fromEntries(
