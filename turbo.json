@@ -1,6 +1,15 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalPassThroughEnv": [
+    "CI",
+    "NITRO_PRESET",
+    "NITRO_PRESET_CLOUD",
+    "NODE_ENV",
+    "VERCEL",
+    "VERCEL_ENV",
+    "VERCEL_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
