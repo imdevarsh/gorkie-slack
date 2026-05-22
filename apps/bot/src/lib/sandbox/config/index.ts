@@ -32,7 +32,7 @@ function buildModelsJson(): string {
       providers: {
         [provider]: {
           ...existing,
-          baseUrl: `${env.PROXY_BASE_URL}/${provider}`,
+          baseUrl: `${env.PROXY_BASE_URL}/provider/${provider}`,
           apiKey: 'GORKIE_SESSION_TOKEN',
           authHeader: true,
         },

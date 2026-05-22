@@ -33,7 +33,9 @@ export default defineHandler(async (event) => {
   }
 
   const requestUrl = new URL(event.req.url);
-  const upstreamPath = requestUrl.pathname.slice(1 + provider.length);
+  const upstreamPath = requestUrl.pathname.slice(
+    '/provider/'.length + provider.length
+  );
   const headers = new Headers(event.req.headers);
   headers.set('Authorization', `Bearer ${entry.apiKey}`);
   headers.set('Accept-Encoding', 'identity');
