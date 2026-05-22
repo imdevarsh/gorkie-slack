@@ -38,17 +38,27 @@ export async function createLogger({
   logDirectory = 'logs',
   logLevel = 'info',
 }: CreateLoggerOptions = {}): Promise<Logger> {
-  if (!(await exists(logDirectory))) {
-    await mkdir(logDirectory, { recursive: true });
+  let canWriteToFile = await exists(logDirectory);
+  if (!canWriteToFile) {
+    try {
+      await mkdir(logDirectory, { recursive: true });
+      canWriteToFile = true;
+    } catch {
+      canWriteToFile = false;
+    }
   }
 
-  const targets: TransportTargetOptions[] = [
-    {
-      target: 'pino/file',
-      options: { destination: path.join(logDirectory, `${createRunId()}.log`) },
-      level: logLevel,
-    },
-  ];
+  const targets: TransportTargetOptions[] = canWriteToFile
+    ? [
+        {
+          target: 'pino/file',
+          options: {
+            destination: path.join(logDirectory, `${createRunId()}.log`),
+          },
+          level: logLevel,
+        },
+      ]
+    : [];
 
   if (isProduction) {
     targets.push({

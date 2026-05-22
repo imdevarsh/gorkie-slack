@@ -6,7 +6,7 @@ import { env } from './env';
 import logger from './logger';
 import { proxyApp } from './proxy/app';
 
-export const app = new Hono();
+const app = new Hono();
 
 app.use(honoLogger((message) => logger.info(message)));
 app.use(
@@ -29,7 +29,4 @@ app.onError((error, c) => {
   return c.json({ message: 'Internal Server Error', status: 500 }, 500);
 });
 
-export default {
-  fetch: app.fetch,
-  port: env.PORT,
-};
+export default app;
