@@ -7,8 +7,8 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "check-types": "tsc -b --noEmit",
-    "clean": "git clean -xdf .cache .turbo dist node_modules"
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@cspell/cspell-types": "^9.0.0",

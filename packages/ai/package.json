@@ -19,7 +19,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "check-types": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@ai-sdk/google": "catalog:",

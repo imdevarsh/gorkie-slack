@@ -29,8 +29,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "check-types": "turbo run check-types",
-    "typecheck": "turbo run check-types",
+    "typecheck": "turbo run typecheck",
     "dev:server": "turbo run dev --filter=server",
     "dev:bot": "turbo run dev --filter=bot",
     "db:push": "turbo run db:push --filter=@repo/db",

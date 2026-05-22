@@ -4,9 +4,9 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsdown",
-    "check-types": "tsc -b",
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run dist/index.mjs"
+    "start": "bun run dist/index.mjs",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@e2b/code-interpreter": "^2.4.2",

@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "check-types": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "strip-ansi": "^7.2.0"

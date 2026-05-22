@@ -26,7 +26,7 @@ Port the Gorkie Slack bot into this Turborepo cleanly, with the bot runnable fro
 ## Verification Checklist
 
 - `bun run check`
-- `bun run check-types`
+- `bun run typecheck`
 - `bun run build`
 - `bun run check:spelling`
 - `bun run db:push` when PostgreSQL is available
@@ -37,7 +37,7 @@ Port the Gorkie Slack bot into this Turborepo cleanly, with the bot runnable fro
 ## Latest Evidence
 
 - `bun run check` passes.
-- `bun run check-types` passes.
+- `bun run typecheck` passes.
 - `bun run build` passes without the previous tsdown `noExternal` warning.
 - `bun run check:spelling` passes.
 - Direct `proxyApp.request()` smoke checks pass for `GET /health` and unauthenticated provider rejection.

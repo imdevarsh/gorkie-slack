@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "check-types": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@t3-oss/env-core": "catalog:",

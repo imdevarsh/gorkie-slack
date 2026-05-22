@@ -67,7 +67,7 @@ bun run dev:bot
 bun run dev:server
 bun run build
 bun run check
-bun run check-types
+bun run typecheck
 bun run check:spelling
 ```
 
