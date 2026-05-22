@@ -37,6 +37,7 @@ export const forwardRoutes = new Hono<{ Variables: ProxyVariables }>().all(
     const upstreamPath = c.req.path.slice(1 + provider.length);
     const headers = new Headers(c.req.raw.headers);
     headers.set("Authorization", `Bearer ${entry.apiKey}`);
+    headers.set("Accept-Encoding", "identity");
     headers.delete("host");
 
     const upstreamResponse = await fetch(

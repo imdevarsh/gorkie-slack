@@ -24,6 +24,36 @@ import { getContextId } from "@/utils/context";
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
 const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
 
+function getAgentError(events: AgentSessionEvent[]): string | null {
+  for (const event of events) {
+    if (event.type !== "agent_end") {
+      continue;
+    }
+
+    const messages = "messages" in event ? event.messages : undefined;
+    if (!Array.isArray(messages)) {
+      continue;
+    }
+
+    for (const message of messages) {
+      if (!(message && typeof message === "object")) {
+        continue;
+      }
+      if (!("stopReason" in message && message.stopReason === "error")) {
+        continue;
+      }
+
+      const errorMessage =
+        "errorMessage" in message && typeof message.errorMessage === "string"
+          ? message.errorMessage.trim()
+          : "";
+      return errorMessage || "Sandbox agent stopped with an error";
+    }
+  }
+
+  return null;
+}
+
 export const sandbox = ({
   context,
   files,
@@ -176,6 +206,11 @@ export const sandbox = ({
           clearTimeout(timeoutId);
           clearInterval(keepAlive);
           unsubscribe();
+        }
+
+        const agentError = getAgentError(eventStream);
+        if (agentError) {
+          throw new Error(`[sandbox] Agent failed: ${agentError}`);
         }
 
         await queue.onIdle();
