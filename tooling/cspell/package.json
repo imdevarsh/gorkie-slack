@@ -6,9 +6,8 @@
     ".": "./index.ts"
   },
   "scripts": {
-    "build": "tsc -b",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@cspell/cspell-types": "^9.0.0",

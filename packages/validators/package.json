@@ -7,8 +7,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "tsc -b",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "zod": "catalog:"

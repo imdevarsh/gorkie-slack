@@ -1,4 +1,4 @@
 {
-  "extends": "@repo/tsconfig/compiled-package.json",
+  "extends": "@repo/tsconfig/base.json",
   "include": ["src"]
 }

@@ -38,7 +38,7 @@
     "db:migrate": "turbo run db:migrate --filter=@repo/db",
     "check": "ultracite check .",
     "check:spelling": "cspell -c .cspell.jsonc --no-progress --no-summary --no-must-find-files --unique --cache .",
-    "check:unsafe": "ultracite fix --unsafe true .",
+    "check:unsafe": "ultracite fix --unsafe .",
     "check:write": "ultracite fix .",
     "fix": "ultracite fix .",
     "prepare": "lefthook install"
