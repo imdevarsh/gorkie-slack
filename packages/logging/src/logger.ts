@@ -11,6 +11,7 @@ export type Logger = PinoLogger;
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface CreateLoggerOptions {
+  fileLogging?: boolean;
   isProduction?: boolean;
   logDirectory?: string;
   logLevel?: LogLevel;
@@ -42,13 +43,16 @@ function createBaseOptions(logLevel: LogLevel): LoggerOptions {
 }
 
 export async function createLogger({
+  fileLogging,
   isProduction = process.env.NODE_ENV === 'production',
   logDirectory = 'logs',
   logLevel = 'info',
 }: CreateLoggerOptions = {}): Promise<Logger> {
   const options = createBaseOptions(logLevel);
+  const shouldLogToFile =
+    fileLogging ?? (isProduction && process.env.VERCEL !== '1');
 
-  if (process.env.VERCEL === '1') {
+  if (process.env.VERCEL === '1' || (isProduction && !shouldLogToFile)) {
     return pino(options);
   }
 

@@ -6,7 +6,7 @@ Port the Gorkie Slack bot into this Turborepo cleanly, with the bot runnable fro
 
 ## Active Scope
 
-- Polish the Hono proxy using route modules, route chaining, Hono auth middleware, and exported `AppType`.
+- Keep the proxy as a Nitro app with filesystem routes and standalone `.output` builds.
 - Keep the Slack bot decoupled from the proxy server. The bot may configure sandboxes with `PROXY_BASE_URL`, but must not import or start the server.
 - Move AI-specific Langfuse/OpenTelemetry startup out of the shared logging package.
 - Keep env validation local to the app or package that owns the variable. Shared env packages should only exist for genuinely shared services such as database and logging.
@@ -21,7 +21,8 @@ Port the Gorkie Slack bot into this Turborepo cleanly, with the bot runnable fro
 - `apps/bot` issues and revokes sandbox proxy tokens directly through `@repo/db`; `PROXY_API_KEY` is intentionally gone.
 - `apps/bot` owns AI telemetry startup because the telemetry is for AI SDK traces, not a generic app-wide concern.
 - `@repo/logging` remains logging-only unless a second app needs shared non-AI observability primitives.
-- Internal packages stay compiled when they are runtime libraries shared across apps. JIT exports are acceptable for app-local UI/config-style packages when the consuming toolchain can compile TypeScript directly.
+- `apps/server` uses Nitro because it bundles workspace packages into `.output` and avoids Vercel resolving raw `.ts` workspace exports at runtime.
+- Keep `@repo/db` as a compiled/composite package for declaration output and query/schema graph checks. Keep simple source-export packages on `tsc --noEmit` unless they need emitted artifacts.
 
 ## Verification Checklist
 
@@ -38,9 +39,9 @@ Port the Gorkie Slack bot into this Turborepo cleanly, with the bot runnable fro
 
 - `bun run check` passes.
 - `bun run typecheck` passes.
-- `bun run build` passes without the previous tsdown `noExternal` warning.
+- `bun run build` passes with `apps/server` building through Nitro.
 - `bun run check:spelling` passes.
-- Direct `proxyApp.request()` smoke checks pass for `GET /health` and unauthenticated provider rejection.
+- Nitro preview smoke checks pass for `GET /`, `GET /health`, `GET /ip`, CORS `OPTIONS`, unauthenticated proxy rejection, and DB-issued proxy-token forwarding.
 - Local PostgreSQL and Redis should be started directly in the container for validation; no Docker Compose scripts are tracked.
 
 ## Notes For Continuation

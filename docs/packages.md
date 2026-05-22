@@ -21,9 +21,12 @@ Turborepo supports both patterns:
 - Just-in-Time packages export source files and rely on the consuming app's bundler/runtime to compile TypeScript.
 - Compiled packages produce build output and declarations, which is safer when the package is a runtime library consumed by more than one app or by tooling that may not compile TypeScript for dependencies.
 
-This repo currently keeps shared runtime packages compiled with `tsc -b`. App builds still consume source exports during local development, but `tsc -b` gives package-level graph validation and declaration output for CI. That is a good fit for `@repo/db`, `@repo/ai`, `@repo/kv`, `@repo/logging`, `@repo/utils`, and `@repo/validators`.
+This repo currently uses both patterns:
 
-Better-T-Stack commonly uses a lightweight config package plus source-exported UI/app packages, while its publishable CLI packages compile with `tsdown`. That supports the same conclusion: use JIT for toolchain-friendly app packages, and compile packages with reusable runtime or publishable boundaries.
+- `@repo/db` is compiled with `tsc -b` because it is the shared persistence boundary for both apps and benefits from declaration output plus project-reference style validation.
+- `@repo/ai`, `@repo/kv`, `@repo/logging`, `@repo/utils`, and `@repo/validators` are source-exported packages that typecheck with `tsc --noEmit`. They do not need emitted artifacts until another toolchain or publish boundary requires them.
+
+Better-T-Stack commonly uses lightweight source-exported internal packages for app-owned code, and compiled output only where the package boundary needs emitted artifacts. Coolify Tweaks' Nitro API also uses `nitro prepare && tsc --noEmit --skipLibCheck` at the app layer rather than `composite` app builds. That supports the current split: compile the DB package, keep the Nitro app and simple packages no-emit.
 
 References:
 

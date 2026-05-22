@@ -7,20 +7,17 @@
 - `GET /health` returns configured proxy providers.
 - `ALL /:provider/*` forwards authenticated sandbox traffic to a configured upstream provider.
 
-## Hono Conventions
+## Nitro Conventions
 
-- Route groups live in separate `Hono` instances and are mounted with `route()`.
-- Request validation should use `@hono/zod-validator` when a route accepts structured input.
-- Bearer parsing uses Hono's `bearerAuth` middleware rather than hand-rolled header parsing.
-- `AppType` is exported from the chained route value so Hono RPC can infer routes correctly if a typed client is added later.
-- Tests should prefer `app.request()` or `Bun.serve({ fetch: proxyApp.fetch })` instead of booting a separate framework wrapper.
+- Routes live under `apps/server/src/routes`.
+- Middleware lives under `apps/server/src/middleware`.
+- `nitro build` owns the Vercel output and bundles workspace packages.
+- Use Web `Request`/`Response` APIs in route handlers where possible.
 
 References:
 
-- https://hono.dev/docs/api/routing
-- https://hono.dev/docs/guides/best-practices
-- https://hono.dev/docs/guides/validation
-- https://hono.dev/docs/middleware/builtin/bearer-auth
+- https://nitro.build/docs/routing
+- https://nitro.build/deploy/providers/vercel
 
 ## Security Model
 
@@ -35,14 +32,14 @@ When the bot can resolve the sandbox outbound IP, it stores that IP on the token
 1. Start PostgreSQL and Redis locally if they are not already running.
 2. Copy `apps/server/.env.example` to `apps/server/.env` and fill `DATABASE_URL` and at least one provider key.
 3. Run `bun run db:push`.
-4. Validate with a temporary local script or direct `proxyApp.request()` calls based on the original `gorkie-slack/server/scripts/proxy-test.ts`.
+4. Validate with a temporary local script or direct HTTP requests against `nitro dev` based on the original `gorkie-slack/server/scripts/proxy-test.ts`.
 
 Do not keep proxy tests checked in yet. The current migration target is to prove the sandbox proxy works locally, then delete any temporary validation script.
 
 ## Production Topology
 
-Deploy `apps/server` to Vercel as the public Hono proxy. Hono's Vercel target expects the app to default-export from `src/index.ts`, so do not add an `api/index.ts` shim that imports `dist`.
+Deploy `apps/server` to Vercel as the public Nitro proxy. Set the Vercel project root to `apps/server` and let Vercel run `bun run build`.
 
-Keep `apps/server` runtime imports Node-compatible with explicit `.js` relative specifiers. Vercel emits ESM JavaScript and preserves relative import strings, so extensionless imports such as `./env` can fail at runtime with `ERR_MODULE_NOT_FOUND`.
+Nitro is intentional for this monorepo. Vercel's direct Hono source execution can emit unbundled ESM and then resolve workspace package exports such as `@repo/db/keys` to `.ts` source files. Nitro produces Vercel-compatible output and bundles the workspace code.
 
 Run the bot separately on the Bun host that owns Slack connectivity. Set `apps/bot` `PROXY_BASE_URL` to the deployed Vercel proxy URL, not `localhost`, because E2B sandboxes must be able to reach it publicly.

@@ -2,6 +2,7 @@ import { createLogger, type Logger } from '@repo/logging/log';
 import { env } from '../env';
 
 const logger: Logger = await createLogger({
+  fileLogging: false,
   logLevel: env.LOG_LEVEL,
   logDirectory: env.LOG_DIRECTORY,
 });

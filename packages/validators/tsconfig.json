@@ -1,4 +1,6 @@
 {
   "extends": "@repo/tsconfig/base.json",
-  "include": ["src"]
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
 }

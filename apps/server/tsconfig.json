@@ -1,13 +1,22 @@
 {
   "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
-    "composite": true,
-    "outDir": "dist",
+    "types": ["node"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": true,
+    "noUnusedLocals": true,
     "paths": {
       "@/*": ["./src/*"]
     },
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
     "strictNullChecks": true
-  }
+  },
+  "include": ["src", "nitro.config.ts"],
+  "exclude": ["node_modules"]
 }
