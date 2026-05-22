@@ -25,9 +25,8 @@ const statusSchema = Type.Object({
   ),
 });
 
-// biome-ignore lint/suspicious/noExplicitAny: pi-agent-core's Tool<T> constrains T against @sinclair/typebox's TSchema while pi-coding-agent uses typebox@1.x; structurally equivalent but nominally incompatible
-const withStatus = (schema: any) =>
-  Type.Intersect([schema as TSchema, statusSchema]);
+const withStatus = <TParams extends TSchema>(schema: TParams) =>
+  Type.Intersect([schema, statusSchema]);
 
 function passthrough<TParams extends TSchema, TDetails>(
   tool: {
@@ -55,8 +54,7 @@ function passthrough<TParams extends TSchema, TDetails>(
 
 export default function registerToolsExtension(pi: ExtensionAPI): void {
   const cwd = process.cwd();
-  // biome-ignore lint/suspicious/noExplicitAny: same pi dual-typebox issue — AgentTool<TObject_v1> can't satisfy Tool<TParams extends TSchema_sinclair>
-  const register = (def: any) => pi.registerTool(def);
+  const register = pi.registerTool.bind(pi);
 
   const read = createReadTool(cwd);
   const readParams = withStatus(read.parameters);
@@ -115,8 +113,7 @@ export default function registerToolsExtension(pi: ExtensionAPI): void {
   const bash = createBashTool(cwd);
   const bashParams = withStatus(
     Type.Intersect([
-      // biome-ignore lint/suspicious/noExplicitAny: pi dual-typebox issue
-      Type.Omit(bash.parameters as any, ['timeout']),
+      Type.Omit(bash.parameters, ['timeout']),
       Type.Object({
         timeout: Type.Optional(
           Type.Number({

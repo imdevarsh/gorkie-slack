@@ -35,7 +35,7 @@ async function cleanup(): Promise<void> {
         await clearDestroyed(session.threadId);
         logger.info(
           { ctxId: session.threadId, sandboxId: session.sandboxId, cutoff },
-          '[sandbox-janitor] Deleted expired sandbox'
+          '[sandbox-cleanup] Deleted expired sandbox'
         );
       } catch (error) {
         await updateStatus(session.threadId, 'paused');
@@ -45,7 +45,7 @@ async function cleanup(): Promise<void> {
             ctxId: session.threadId,
             sandboxId: session.sandboxId,
           },
-          '[sandbox-janitor] Failed to delete expired sandbox'
+          '[sandbox-cleanup] Failed to delete expired sandbox'
         );
       }
     }
@@ -54,7 +54,7 @@ async function cleanup(): Promise<void> {
   }
 }
 
-export function startSandboxJanitor(): void {
+export function startSandboxCleanup(): void {
   if (timer) {
     return;
   }
@@ -63,11 +63,11 @@ export function startSandboxJanitor(): void {
     cleanup().catch((error) => {
       logger.error(
         { ...toLogError(error) },
-        '[sandbox-janitor] Unexpected error while running sweep'
+        '[sandbox-cleanup] Unexpected error while running sweep'
       );
     });
   }, config.janitorIntervalMs);
   timer.unref();
 
-  logger.info('[sandbox-janitor] Started');
+  logger.info('[sandbox-cleanup] Started');
 }

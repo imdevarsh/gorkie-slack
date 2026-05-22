@@ -1,3 +1,4 @@
+import { revokeProxyToken } from '@repo/db/queries';
 import { errorMessage, toLogError } from '@repo/utils/error';
 import { tool } from 'ai';
 import PQueue from 'p-queue';
@@ -9,11 +10,7 @@ import logger from '@/lib/logger';
 import { clearSandboxClient, setSandboxClient } from '@/lib/sandbox/active';
 import { syncAttachments } from '@/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '@/lib/sandbox/events';
-import {
-  pauseSession,
-  resolveSession,
-  revokeSessionProxyToken,
-} from '@/lib/sandbox/session';
+import { pauseSession, resolveSession } from '@/lib/sandbox/session';
 import { extendSandboxTimeout } from '@/lib/sandbox/timeout';
 import { getToolTaskEnd, getToolTaskStart } from '@/lib/sandbox/tools';
 import type { SlackFile, SlackMessageContext, Stream } from '@/types';
@@ -183,9 +180,9 @@ export const sandbox = ({
         });
 
         try {
-          const idlePromise = session.client.waitForIdle();
+          const idle = session.client.waitForIdle();
           await session.client.prompt(prompt);
-          await Promise.race([idlePromise, timeoutPromise]);
+          await Promise.race([idle, timeoutPromise]);
         } catch (error) {
           await session.client.abort().catch(() => null);
           throw error;
@@ -251,16 +248,15 @@ export const sandbox = ({
               '[sandbox] Failed to disconnect Pi client'
             );
           });
-          await revokeSessionProxyToken(runtime.sandbox.sandboxId).catch(
-            (error: unknown) => {
-              logger.debug(
-                { ...toLogError(error), ctxId },
-                '[sandbox] Failed to revoke proxy token'
-              );
-            }
-          );
+          await revokeProxyToken({
+            sandboxId: runtime.sandbox.sandboxId,
+          }).catch((error: unknown) => {
+            logger.debug(
+              { ...toLogError(error), ctxId },
+              '[sandbox] Failed to revoke proxy token'
+            );
+          });
           if (env.NODE_ENV === 'production') {
-            // Only pause in development to allow inspection
             await pauseSession(context, runtime.sandbox.sandboxId).catch(
               (error: unknown) => {
                 logger.debug(

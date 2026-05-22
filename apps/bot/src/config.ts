@@ -28,6 +28,12 @@ export const sandbox = {
   model: {
     provider: 'hackclub',
     modelId: 'google/gemini-3-flash-preview',
+    api: 'openai-completions',
+  },
+  retry: {
+    enabled: true,
+    maxRetries: 4,
+    baseDelayMs: 2000,
   },
   timeoutMs: 10 * 60 * 1000,
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
@@ -43,7 +49,7 @@ export const sandbox = {
   },
   runtime: {
     workdir: '/home/user',
-    executionTimeoutMs: 30 * 60 * 1000,
+    executionTimeoutMs: 20 * 60 * 1000,
   },
   attachments: {
     maxBytes: 1_000_000_000,

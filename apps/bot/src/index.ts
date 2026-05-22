@@ -1,8 +1,8 @@
 import { env } from '@/env';
 import { startTelemetry } from '@/lib/ai/telemetry';
 import logger from '@/lib/logger';
-import { startSandboxJanitor } from '@/lib/sandbox/janitor';
-import { startScheduledTaskRunner } from '@/lib/tasks/runner';
+import { startSandboxCleanup } from '@/lib/sandbox/janitor';
+import { startTaskRunner } from '@/lib/tasks/runner';
 import { createSlackApp } from '@/slack/app';
 
 const telemetry = startTelemetry({ logger });
@@ -27,9 +27,9 @@ process.on('uncaughtException', (error) => {
 });
 
 async function main() {
-  startSandboxJanitor();
+  startSandboxCleanup();
   const { app, socketMode } = createSlackApp();
-  startScheduledTaskRunner(app.client);
+  startTaskRunner(app.client);
 
   if (socketMode) {
     await app.start();

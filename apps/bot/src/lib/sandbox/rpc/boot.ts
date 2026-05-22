@@ -5,10 +5,6 @@ import logger from '@/lib/logger';
 import type { PtyLike } from '@/types/sandbox/rpc';
 import { PiRpcClient } from './client';
 
-const PTY_COLS = 220;
-const PTY_ROWS = 24;
-const PTY_TERM = 'dumb';
-
 export async function boot({
   sandbox,
   sessionId,
@@ -22,18 +18,16 @@ export async function boot({
   const encoder = new TextEncoder();
   let client: PiRpcClient | null = null;
 
-  const sandboxEnvs: Record<string, string> = {
-    GORKIE_SESSION_TOKEN: proxyToken,
-    AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
-    HOME: config.runtime.workdir,
-    TERM: PTY_TERM,
-  };
-
   const terminal = await sandbox.pty.create({
-    cols: PTY_COLS,
-    rows: PTY_ROWS,
+    cols: 220,
+    rows: 24,
     cwd: config.runtime.workdir,
-    envs: sandboxEnvs,
+    envs: {
+      GORKIE_SESSION_TOKEN: proxyToken,
+      AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
+      HOME: config.runtime.workdir,
+      TERM: 'dumb',
+    },
     timeoutMs: 0,
     onData: (data: Uint8Array) => {
       if (!client) {

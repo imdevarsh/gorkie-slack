@@ -56,7 +56,7 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
   });
 }
 
-async function getSandboxOutboundIp(sandbox: Sandbox): Promise<string | null> {
+async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
   const result = await sandbox.commands
     .run(`curl -fsS --max-time 5 ${env.PROXY_BASE_URL}/ip`, {
       timeoutMs: 10_000,
@@ -81,14 +81,14 @@ async function getSandboxOutboundIp(sandbox: Sandbox): Promise<string | null> {
   }
 }
 
-async function issueSessionProxyToken({
+async function issueSandboxToken({
   sandbox,
   sandboxId,
 }: {
   sandbox: Sandbox;
   sandboxId: string;
 }): Promise<string> {
-  const allowedIp = await getSandboxOutboundIp(sandbox);
+  const allowedIp = await getOutboundIp(sandbox);
   const { token } = await issueProxyToken({
     allowedIp,
     sandboxId,
@@ -114,7 +114,7 @@ async function createSandbox(
   await sandbox.setTimeout(config.timeoutMs);
 
   try {
-    const proxyToken = await issueSessionProxyToken({
+    const proxyToken = await issueSandboxToken({
       sandbox,
       sandboxId: sandbox.sandboxId,
     });
@@ -157,7 +157,7 @@ async function resumeSandbox(
 
   await sandbox.setTimeout(config.timeoutMs);
 
-  const proxyToken = await issueSessionProxyToken({
+  const proxyToken = await issueSandboxToken({
     sandbox,
     sandboxId: sandbox.sandboxId,
   });
@@ -235,8 +235,4 @@ export async function pauseSession(
       '[sandbox] Failed to pause sandbox'
     );
   }
-}
-
-export function revokeSessionProxyToken(sandboxId: string): Promise<void> {
-  return revokeProxyToken({ sandboxId });
 }

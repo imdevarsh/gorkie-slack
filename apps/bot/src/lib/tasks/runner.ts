@@ -161,7 +161,7 @@ async function sweep(client: WebClient): Promise<void> {
   }
 }
 
-export function startScheduledTaskRunner(client: WebClient): void {
+export function startTaskRunner(client: WebClient): void {
   if (timer) {
     return;
   }
@@ -170,11 +170,11 @@ export function startScheduledTaskRunner(client: WebClient): void {
     sweep(client).catch((error) => {
       logger.error(
         { ...toLogError(error) },
-        '[scheduled-task-runner] Unexpected error while running sweep'
+        '[task-runner] Unexpected error while running sweep'
       );
     });
   }, RUNNER_INTERVAL_MS);
   timer.unref();
 
-  logger.info('[scheduled-task-runner] Started');
+  logger.info('[task-runner] Started');
 }
