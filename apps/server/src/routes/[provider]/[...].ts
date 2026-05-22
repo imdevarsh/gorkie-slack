@@ -16,7 +16,6 @@ export default defineHandler(async (event) => {
   const provider = event.context.params?.provider;
   const entry = provider ? providers[provider] : undefined;
   if (!(provider && entry)) {
-    logger.warn({ provider }, '[proxy] unknown provider');
     event.res.status = 400;
     return {
       message: `Unknown provider: ${provider ?? 'unknown'}`,
