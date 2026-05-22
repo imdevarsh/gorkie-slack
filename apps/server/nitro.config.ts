@@ -9,4 +9,10 @@ export default defineConfig({
   routeRules: {
     '/': { redirect: '/health' },
   },
+  experimental: {
+    tasks: true,
+  },
+  scheduledTasks: {
+    '0 0 * * *': ['cleanup:proxy-tokens'],
+  },
 });

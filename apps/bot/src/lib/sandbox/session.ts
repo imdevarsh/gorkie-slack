@@ -2,7 +2,6 @@ import { Sandbox } from '@e2b/code-interpreter';
 import { systemPrompt } from '@repo/ai/prompts';
 import {
   clearDestroyed,
-  deleteExpiredProxyTokens,
   getByThread,
   issueProxyToken,
   markActivity,
@@ -89,7 +88,6 @@ async function issueSessionProxyToken({
   sandbox: Sandbox;
   sandboxId: string;
 }): Promise<string> {
-  await deleteExpiredProxyTokens();
   const allowedIp = await getSandboxOutboundIp(sandbox);
   const { token } = await issueProxyToken({
     allowedIp,
