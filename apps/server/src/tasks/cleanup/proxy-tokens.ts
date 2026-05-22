@@ -1,4 +1,5 @@
 import { deleteExpiredProxyTokens } from '@repo/db/queries';
+import { defineTask } from 'nitro/task';
 
 export default defineTask({
   meta: {
