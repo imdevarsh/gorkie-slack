@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
 import type { PlopTypes } from '@turbo/gen';
 
 interface PackageJson {
@@ -56,10 +57,7 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
           answers.deps.trim()
         ) {
           const pkg = JSON.parse(
-            require('node:fs').readFileSync(
-              `packages/${answers.name}/package.json`,
-              'utf8'
-            )
+            readFileSync(`packages/${answers.name}/package.json`, 'utf8')
           ) as PackageJson;
 
           for (const dep of answers.deps.split(' ').filter(Boolean)) {
@@ -68,13 +66,12 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
             )
               .then((res) => res.json() as Promise<Record<string, string>>)
               .then((json) => json.latest);
-            if (!pkg.dependencies) {
-              pkg.dependencies = {};
-            }
+
+            pkg.dependencies ??= {};
             pkg.dependencies[dep] = `^${version}`;
           }
 
-          require('node:fs').writeFileSync(
+          writeFileSync(
             `packages/${answers.name}/package.json`,
             JSON.stringify(pkg, null, 2)
           );
