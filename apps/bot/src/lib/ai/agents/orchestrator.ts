@@ -45,8 +45,10 @@ export async function resolveOrchestratorTask({
     return;
   }
 
-  const elapsedSec = Math.round((Date.now() - entry.startTime) / 1000);
-  const resolvedTitle = title ?? `Thought for ${elapsedSec}s`;
+  const elapsedMs = Date.now() - entry.startTime;
+  const elapsedLabel =
+    elapsedMs < 1000 ? '<1s' : `${Math.round(elapsedMs / 1000)}s`;
+  const resolvedTitle = title ?? `Thought for ${elapsedLabel}`;
 
   await finishTask(stream, {
     taskId: entry.taskId,
