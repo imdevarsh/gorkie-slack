@@ -6,7 +6,7 @@ import { env } from './env';
 import logger from './logger';
 import { proxyApp } from './proxy/app';
 
-const app = new Hono();
+export const app = new Hono();
 
 app.use(honoLogger((message) => logger.info(message)));
 app.use(
@@ -25,7 +25,6 @@ app.onError((error, c) => {
   if (error instanceof HTTPException) {
     return error.getResponse();
   }
-
   logger.error({ err: error, path: c.req.path }, '[server] unhandled error');
   return c.json({ message: 'Internal Server Error', status: 500 }, 500);
 });
