@@ -1,9 +1,50 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
-    "includes": ["!.agents"]
+    "ignoreUnknown": true,
+    "includes": [
+      "!node_modules",
+      "!**/dist",
+      "!**/public",
+      "!.agents",
+      "!.github/skills",
+      "!.vercel",
+      "!bun.lock",
+      "!**/*.md",
+      "!**/*.mdx",
+      "!**/.agents",
+      "!**/.claude"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "javascript": {
+    "formatter": {
+      "enabled": true,
+      "quoteStyle": "double",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always"
+    },
+    "globals": ["Bun"]
   },
   "linter": {
+    "enabled": true,
     "rules": {
       "complexity": {
         "noExcessiveCognitiveComplexity": "off"
@@ -18,6 +59,11 @@
       "suspicious": {
         "noEmptyBlockStatements": "error"
       }
+    }
+  },
+  "json": {
+    "parser": {
+      "allowComments": true
     }
   },
   "extends": ["ultracite/biome/core"]
