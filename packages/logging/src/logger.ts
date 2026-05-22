@@ -38,8 +38,11 @@ export async function createLogger({
   logDirectory = 'logs',
   logLevel = 'info',
 }: CreateLoggerOptions = {}): Promise<Logger> {
-  let canWriteToFile = await exists(logDirectory);
-  if (!canWriteToFile) {
+  const isVercel = process.env.VERCEL === '1';
+
+  let canWriteToFile =
+    isProduction && !isVercel && (await exists(logDirectory));
+  if (!canWriteToFile && isProduction && !isVercel) {
     try {
       await mkdir(logDirectory, { recursive: true });
       canWriteToFile = true;
@@ -60,7 +63,7 @@ export async function createLogger({
       ]
     : [];
 
-  if (isProduction) {
+  if (isProduction || isVercel) {
     targets.push({
       target: 'pino/file',
       options: { destination: 1 },

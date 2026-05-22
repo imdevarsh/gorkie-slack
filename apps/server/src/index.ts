@@ -1,10 +1,15 @@
+import { createLogger, type Logger } from '@repo/logging/log';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { logger as honoLogger } from 'hono/logger';
 import { env } from './env';
-import logger from './logger';
 import { proxyApp } from './proxy/app';
+
+const logger: Logger = await createLogger({
+  logLevel: env.LOG_LEVEL,
+  logDirectory: env.LOG_DIRECTORY,
+});
 
 const app = new Hono();
 
@@ -25,7 +30,7 @@ app.onError((error, c) => {
   if (error instanceof HTTPException) {
     return error.getResponse();
   }
-  logger.error({ err: error, path: c.req.path }, '[server] unhandled error');
+  logger.error({ path: c.req.path, error }, 'unhandled error');
   return c.json({ message: 'Internal Server Error', status: 500 }, 500);
 });
 

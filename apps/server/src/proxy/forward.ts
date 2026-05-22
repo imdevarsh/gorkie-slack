@@ -1,10 +1,10 @@
 import { validateProxyToken } from '@repo/db/queries';
 import { Hono } from 'hono';
 import { bearerAuth } from 'hono/bearer-auth';
-import logger from '../logger';
+import type { AppVariables } from '../types';
 import { providers } from './providers';
 
-interface ProxyVariables {
+interface ProxyVariables extends AppVariables {
   requestIp: string | null;
   sandboxId: string;
 }
@@ -66,9 +66,9 @@ export const forwardRoutes = new Hono<{ Variables: ProxyVariables }>().all(
         duplex: 'half',
       }
     ).catch((error: unknown) => {
-      logger.error(
-        { err: error, provider, sandboxId: c.var.sandboxId },
-        '[proxy]'
+      c.var.logger.error(
+        { provider, sandboxId: c.var.sandboxId, error },
+        'upstream fetch failed'
       );
       return null;
     });
@@ -76,17 +76,6 @@ export const forwardRoutes = new Hono<{ Variables: ProxyVariables }>().all(
     if (!upstreamResponse) {
       return c.json({ message: 'Upstream fetch failed', status: 502 }, 502);
     }
-
-    logger.debug(
-      {
-        path: upstreamPath,
-        provider,
-        requestIp: c.var.requestIp,
-        sandboxId: c.var.sandboxId,
-        status: upstreamResponse.status,
-      },
-      '[proxy] forwarded'
-    );
 
     return new Response(upstreamResponse.body, {
       headers: upstreamResponse.headers,
