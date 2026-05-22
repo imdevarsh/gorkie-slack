@@ -27,9 +27,11 @@
   ],
   "globalPassThroughEnv": [
     "CI",
+    "CRON_SECRET",
     "NITRO_PRESET",
     "NITRO_PRESET_CLOUD",
     "NODE_ENV",
+    "PORT",
     "TURBO_TEAM",
     "TURBO_TOKEN",
     "VERCEL",

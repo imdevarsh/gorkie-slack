@@ -92,7 +92,7 @@ async function issueSessionProxyToken({
   const { token } = await issueProxyToken({
     allowedIp,
     sandboxId,
-    ttlMs: config.timeoutMs,
+    ttlMs: config.runtime.executionTimeoutMs,
   });
   return token;
 }

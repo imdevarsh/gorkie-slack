@@ -183,8 +183,9 @@ export const sandbox = ({
         });
 
         try {
+          const idlePromise = session.client.waitForIdle();
           await session.client.prompt(prompt);
-          await Promise.race([session.client.waitForIdle(), timeoutPromise]);
+          await Promise.race([idlePromise, timeoutPromise]);
         } catch (error) {
           await session.client.abort().catch(() => null);
           throw error;

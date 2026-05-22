@@ -43,7 +43,7 @@ export const sandbox = {
   },
   runtime: {
     workdir: '/home/user',
-    executionTimeoutMs: 20 * 60 * 1000,
+    executionTimeoutMs: 30 * 60 * 1000,
   },
   attachments: {
     maxBytes: 1_000_000_000,
