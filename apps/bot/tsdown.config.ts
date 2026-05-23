@@ -5,8 +5,7 @@ export default defineConfig({
   format: 'esm',
   outDir: './dist',
   clean: true,
-  onSuccess:
-    'mkdir -p dist/extensions && cp src/lib/sandbox/config/extensions/tools.ts dist/extensions/tools.ts',
+  copy: 'src/lib/sandbox/config',
   deps: {
     alwaysBundle: [/@repo\/.*/],
     onlyBundle: false,

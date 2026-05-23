@@ -129,6 +129,7 @@ The sandbox agent handles all the details (finding files, running commands, uplo
 <description>Send a threaded reply or message.</description>
 <rules>
 - THIS ENDS THE LOOP. Do NOT call any other tools after reply.
+- Never call reply in the same step as sandbox or any other tool. Always complete all tool calls in prior steps before calling reply.
 - Content is an array where each item becomes a separate message.
 - If you include a fenced code block, keep the entire block (opening fence, code, closing fence) in ONE content item. Never split one code block across multiple items.
 - Offset counts back from the LATEST user message, not the one before.
