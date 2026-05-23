@@ -67,6 +67,15 @@ If you change `PROXY_BASE_URL`, restart the bot to pick it up.
 
 `SLACK_SOCKET_MODE=true` is the simplest setup for local Slack development. Slack does not need to reach your bot over HTTP.
 
+To test the production build locally, build first and then use `start:bot`:
+
+```bash
+bun run build --filter=bot
+bun run start:bot
+```
+
+This runs with `NODE_ENV=production`, so logs are written as plain JSON to stdout and to a timestamped file under `apps/bot/logs/`.
+
 ## Common Checks
 
 ```bash

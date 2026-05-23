@@ -6,7 +6,7 @@
     "build": "tsdown",
     "build:template": "bun run src/scripts/build-template.ts",
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run dist/index.mjs",
+    "start": "NODE_ENV=production bun run dist/index.mjs",
     "typecheck": "tsc -b"
   },
   "dependencies": {
