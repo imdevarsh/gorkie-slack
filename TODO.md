@@ -37,6 +37,14 @@ The `agent-browser` npm package is installed globally by the sandbox, but `agent
 - Add `agentmail` to the E2B sandbox template (rebuild with `bun run build:template`)
 - Or note it as a first-run install in the skill documentation
 
+### Refactor: Clean up message pipeline utilities
+`message-context.ts`, `triggers.ts`, `conversations.ts`, and `context.ts` accumulated dead code and duplicate patterns from the `users.info` caching work. Worth a pass to:
+- Remove any remaining inline `users.info` calls (should all go through `getSlackUserName`)
+- Simplify `buildUserCache` in `conversations.ts` — now just a thin wrapper
+- Audit `triggers.ts` for any leftover priming logic
+- Tighten types in `message-context.ts` now that `getAuthorName` no longer takes `ctxId`
+- Files: `apps/bot/src/slack/conversations.ts`, `apps/bot/src/slack/events/message-create/utils/message-context.ts`, `apps/bot/src/utils/triggers.ts`, `apps/bot/src/utils/context.ts`
+
 ### Refactor: Split monorepo packages further
 Consider extracting:
 - **`@repo/observability`** — telemetry/Langfuse setup currently lives in `apps/bot/src/lib/ai/telemetry.ts`, could be a shared package if `apps/server` ever needs it
