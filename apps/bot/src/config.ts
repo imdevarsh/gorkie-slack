@@ -54,10 +54,18 @@ export const sandbox = {
     modelId: 'google/gemini-3-flash-preview',
     api: 'openai-completions',
   },
+  modelChain: [
+    { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
+    { provider: 'hackclub', modelId: 'openai/gpt-5-mini' },
+    { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
+    { provider: 'openrouter', modelId: 'openai/gpt-5-mini' },
+    { provider: 'gemini', modelId: 'gemini-2.0-flash' },
+  ],
   retry: {
     enabled: true,
     maxRetries: 4,
     baseDelayMs: 2000,
+    maxDelayMs: 60_000,
   },
   timeoutMs: 10 * 60 * 1000,
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,

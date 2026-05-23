@@ -58,7 +58,7 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
 
 async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
   const result = await sandbox.commands
-    .run(`curl -fsS --max-time 5 ${env.PROXY_BASE_URL}/ip`, {
+    .run(`curl -fsS --max-time 5 ${new URL('/ip', env.PROXY_BASE_URL)}`, {
       timeoutMs: 10_000,
     })
     .catch((error: unknown) => {
@@ -144,6 +144,7 @@ async function createSandbox(
 }
 
 async function resumeSandbox(
+  context: SlackMessageContext,
   threadId: string,
   sandboxId: string,
   sessionId: string
@@ -161,6 +162,7 @@ async function resumeSandbox(
     sandbox,
     sandboxId: sandbox.sandboxId,
   });
+  await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
   const client = await boot({ sandbox, sessionId, proxyToken }).catch(
     async (error: unknown) => {
       await revokeProxyToken({ sandboxId: sandbox.sandboxId }).catch(
@@ -200,6 +202,7 @@ export async function resolveSession(
 
   try {
     return await resumeSandbox(
+      context,
       threadId,
       existing.sandboxId,
       existing.sessionId

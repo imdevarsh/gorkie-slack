@@ -10,6 +10,7 @@ import logger from '@/lib/logger';
 import { clearSandboxClient, setSandboxClient } from '@/lib/sandbox/active';
 import { syncAttachments } from '@/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '@/lib/sandbox/events';
+import { runWithModelRetry } from '@/lib/sandbox/model-retry';
 import { pauseSession, resolveSession } from '@/lib/sandbox/session';
 import { extendSandboxTimeout } from '@/lib/sandbox/timeout';
 import { getToolTaskEnd, getToolTaskStart } from '@/lib/sandbox/tools';
@@ -21,14 +22,17 @@ const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
 const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
 
 function getAgentError(events: AgentSessionEvent[]): string | null {
-  for (const event of events) {
-    if (event.type !== 'agent_end') {
+  // Check only the last non-retrying agent_end — earlier failures from model
+  // fallbacks in the chain must not be treated as the final outcome.
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i]!;
+    if (event.type !== 'agent_end' || event.willRetry) {
       continue;
     }
 
     const messages = 'messages' in event ? event.messages : undefined;
     if (!Array.isArray(messages)) {
-      continue;
+      return null;
     }
 
     for (const message of messages) {
@@ -45,6 +49,8 @@ function getAgentError(events: AgentSessionEvent[]): string | null {
           : '';
       return errorMessage || 'Sandbox agent stopped with an error';
     }
+
+    return null;
   }
 
   return null;
@@ -180,9 +186,21 @@ export const sandbox = ({
         });
 
         try {
-          const idle = session.client.waitForIdle();
-          await session.client.prompt(prompt);
-          await Promise.race([idle, timeoutPromise]);
+          await runWithModelRetry({
+            client: session.client,
+            prompt,
+            timeoutPromise,
+            ctxId,
+            onModelSwitch: (provider, modelId) => {
+              enqueue(() =>
+                updateTask(stream, {
+                  taskId,
+                  title: `Trying ${provider}/${modelId.split('/').pop()}`,
+                  status: 'in_progress',
+                })
+              );
+            },
+          });
         } catch (error) {
           await session.client.abort().catch(() => null);
           throw error;

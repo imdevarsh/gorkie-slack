@@ -7,7 +7,7 @@ export async function configureAgent(
   sandbox: Sandbox,
   prompt: string
 ): Promise<void> {
-  const { model, retry, runtime } = config;
+  const { model, modelChain, retry, runtime } = config;
   const piDir = `${runtime.workdir}/.pi`;
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
@@ -15,6 +15,39 @@ export async function configureAgent(
   const toolsExtension = await readFile(
     new URL('./extensions/tools.ts', import.meta.url),
     'utf8'
+  );
+
+  // Derive unique providers and their model lists from modelChain
+  const providerModels = new Map<string, string[]>();
+  for (const entry of modelChain) {
+    const models = providerModels.get(entry.provider) ?? [];
+    if (!models.includes(entry.modelId)) {
+      models.push(entry.modelId);
+      providerModels.set(entry.provider, models);
+    }
+  }
+
+  const providersMap = Object.fromEntries(
+    [...providerModels.entries()].map(([provider, models]) => [
+      provider,
+      {
+        baseUrl: new URL(
+          `/provider/${provider}`,
+          env.PROXY_BASE_URL
+        ).toString(),
+        api: model.api,
+        apiKey: 'GORKIE_SESSION_TOKEN',
+        authHeader: true,
+        models: models.map((id) => ({ id })),
+      },
+    ])
+  );
+
+  const authMap = Object.fromEntries(
+    [...providerModels.keys()].map((provider) => [
+      provider,
+      { type: 'api_key', key: 'GORKIE_SESSION_TOKEN' },
+    ])
   );
 
   for (const path of [piDir, agentDir, extensionsDir]) {
@@ -37,34 +70,11 @@ export async function configureAgent(
     },
     {
       path: `${agentDir}/models.json`,
-      content: JSON.stringify(
-        {
-          providers: {
-            [model.provider]: {
-              baseUrl: `${env.PROXY_BASE_URL}/provider/${model.provider}`,
-              api: model.api,
-              apiKey: 'GORKIE_SESSION_TOKEN',
-              authHeader: true,
-              models: [{ id: model.modelId }],
-            },
-          },
-        },
-        null,
-        2
-      ),
+      content: JSON.stringify({ providers: providersMap }, null, 2),
     },
     {
       path: `${agentDir}/auth.json`,
-      content: JSON.stringify(
-        {
-          [model.provider]: {
-            type: 'api_key',
-            key: 'GORKIE_SESSION_TOKEN',
-          },
-        },
-        null,
-        2
-      ),
+      content: JSON.stringify(authMap, null, 2),
     },
     { path: `${extensionsDir}/tools.ts`, content: toolsExtension },
   ]) {
