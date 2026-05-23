@@ -56,10 +56,7 @@ export async function configureAgent(
     'utf8'
   );
 
-  const { providers: providersMap, auth: authMap } = buildProviderConfig(
-    modelChain,
-    model.api
-  );
+  const { providers, auth } = buildProviderConfig(modelChain, model.api);
 
   for (const path of [piDir, agentDir, extensionsDir]) {
     await sandbox.files.makeDir(path).catch(() => undefined);
@@ -81,11 +78,11 @@ export async function configureAgent(
     },
     {
       path: `${agentDir}/models.json`,
-      content: JSON.stringify({ providers: providersMap }, null, 2),
+      content: JSON.stringify({ providers }, null, 2),
     },
     {
       path: `${agentDir}/auth.json`,
-      content: JSON.stringify(authMap, null, 2),
+      content: JSON.stringify(auth, null, 2),
     },
     { path: `${extensionsDir}/tools.ts`, content: toolsExtension },
   ]) {
