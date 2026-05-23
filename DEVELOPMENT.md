@@ -11,7 +11,7 @@ The bot does not start or import the proxy server. For sandbox work, E2B must be
 
 - Bun
 - PostgreSQL
-- A Slack app created from `apps/bot/slack-manifest.json`
+- A Slack app created from `slack-manifest.json`
 - An E2B API key
 - Provider API keys for the proxy in `apps/server/.env`
 
