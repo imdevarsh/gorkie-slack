@@ -68,24 +68,17 @@ async function main(): Promise<void> {
         'apt-get install -y nodejs',
         'ln -sf /usr/bin/node /usr/local/bin/node && ln -sf /usr/bin/npm /usr/local/bin/npm && ln -sf /usr/bin/npx /usr/local/bin/npx',
         'node --version | grep -E "^v2[4-9]" || (echo "ERROR: Node 24+ required, got $(node --version)" && exit 1)',
-        // Pin npm global prefix to /usr/local so binaries land in
-        // /usr/local/bin/ regardless of any HOME-based .npmrc in the base image.
         'npm config --global set prefix /usr/local',
         'python3 -m pip install --no-cache-dir --break-system-packages --no-user --upgrade pip',
         'python3 -m pip install --no-cache-dir --break-system-packages --no-user pillow matplotlib numpy pandas requests agentmail',
         'npm install -g @earendil-works/pi-coding-agent@0.75.4',
         'npm install -g agent-browser',
-        // Install Chrome and its system deps as root so apt can run.
         'bash -lc "yes | agent-browser install --with-deps"',
         'mkdir -p /home/user/attachments /home/user/output',
-        // npm ran as root with HOME=/home/user so .npm cache is root-owned;
-        // fix ownership before switching to user or npx will fail.
         'chown -R user:user /home/user',
       ])
       .setUser('user')
       .setWorkdir('/home/user')
-      // skills add must run as the sandbox user so config lands in
-      // /home/user/.config, not /root/.config where user can't read it.
       .runCmd([
         'npx --yes skills add vercel-labs/agent-browser --skill agent-browser --yes',
         'npx --yes skills add https://github.com/agentmail-to/agentmail-skills --skill agentmail --yes',
