@@ -30,10 +30,6 @@ The `agent-browser` npm package is installed globally by the sandbox, but `agent
 - Add `agentmail` to the E2B sandbox template (rebuild with `bun run build:template`)
 - Or note it as a first-run install in the skill documentation
 
-### Improve: "What can Gorkie do?" about panel is too vague
-Gorkie currently has "I can help you!" which tells the user nothing. Should have a concise capability list and example prompts covering all tools: web search, weather, image generation, Mermaid diagrams, Slack search, sandbox (code + agent-browser + agentmail), reminders, scheduled tasks, reactions, thread summaries.
-- Also review `assistantThread.suggestedPrompts` in `apps/bot/src/config.ts`
-
 ### Refactor: Split monorepo packages further
 Consider extracting:
 - **`@repo/observability`** — telemetry/Langfuse setup currently lives in `apps/bot/src/lib/ai/telemetry.ts`, could be a shared package if `apps/server` ever needs it
