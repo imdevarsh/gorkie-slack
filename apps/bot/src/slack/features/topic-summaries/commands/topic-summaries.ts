@@ -1,17 +1,14 @@
-import type {
-  AllMiddlewareArgs,
-  SlackCommandMiddlewareArgs,
-} from '@slack/bolt';
 import {
   getConfig,
   upsertEnabled,
   upsertPostfix,
   upsertPrefix,
 } from '@repo/db/queries/topic-summaries';
-import {
-  getCachedEnabled,
-  setCachedEnabled,
-} from '@repo/kv/queries/topic-summaries';
+import { setCachedEnabled } from '@repo/kv/queries/topic-summaries';
+import type {
+  AllMiddlewareArgs,
+  SlackCommandMiddlewareArgs,
+} from '@slack/bolt';
 
 export const name = 'topic-summaries';
 

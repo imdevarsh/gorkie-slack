@@ -1,9 +1,9 @@
 import { toLogError } from '@repo/utils/error';
 import { env } from '@/env';
-import { runTopicHeuristic } from '@/slack/features/topic-summaries/topic-generator';
 import { isUserAllowed } from '@/lib/allowed-users';
 import logger from '@/lib/logger';
 import { getQueue } from '@/lib/queue';
+import { runTopicHeuristic } from '@/slack/features/topic-summaries/topic-generator';
 import type { MessageEventArgs } from '@/types';
 import { buildChatContext, getContextId } from '@/utils/context';
 import { handleInlineCommand } from '@/utils/inline-commands';

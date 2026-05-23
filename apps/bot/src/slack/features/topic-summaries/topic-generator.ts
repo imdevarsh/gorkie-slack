@@ -1,12 +1,12 @@
-import { generateText } from 'ai';
-import { getConfig } from '@repo/db/queries/topic-summaries';
 import { provider } from '@repo/ai';
+import { getConfig } from '@repo/db/queries/topic-summaries';
 import {
   getCachedEnabled,
   incrementMessageCount,
   setCachedEnabled,
 } from '@repo/kv/queries/topic-summaries';
 import { toLogError } from '@repo/utils/error';
+import { generateText } from 'ai';
 import logger from '@/lib/logger';
 import type { SlackMessageContext } from '@/types';
 
@@ -24,12 +24,12 @@ export async function runTopicHeuristic(
     const cached = await getCachedEnabled(channelId);
     let enabled: boolean;
 
-    if (cached !== null) {
-      enabled = cached;
-    } else {
+    if (cached === null) {
       const config = await getConfig(channelId);
       enabled = config?.enabled ?? false;
       await setCachedEnabled(channelId, enabled);
+    } else {
+      enabled = cached;
     }
 
     if (!enabled) {
