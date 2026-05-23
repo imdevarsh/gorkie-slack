@@ -7,14 +7,14 @@
 
 An AI assistant (called Gorkie) designed to help Slack users. Based on [Gork for Slack](https://github.com/techwithanirudh/gork-slack).
 
-Gorkie responds to mentions, DMs, and thread replies with AI-generated responses — including web search, code sandboxes, image generation, scheduled tasks, and Slack-aware tools.
+Gorkie responds to mentions, DMs, and thread replies with AI-generated responses, including web search, code sandboxes, image generation, scheduled tasks, and Slack-aware tools.
 
 ## Tech Stack
 
 - [Vercel AI SDK][ai-sdk]
 - [Slack Bolt SDK][slack-bolt]
-- [Exa][exa] — web search
-- [E2B][e2b] — code sandboxes
+- [Exa][exa]: web search
+- [E2B][e2b]: code sandboxes
 - [PostgreSQL][postgres] + [Drizzle ORM][drizzle]
 - [Redis][redis]
 - [Bun][bun]
