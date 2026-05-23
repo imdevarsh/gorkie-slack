@@ -38,16 +38,14 @@ const google = env.GOOGLE_GENERATIVE_AI_API_KEY
   : null;
 
 const onModelError = (context: {
-  current: { model: { provider: string; modelId: string } };
+  current: { model: { provider: string; modelId: string }; error?: unknown };
 }) => {
-  const { model } = context.current;
-  const error = (context.current as { error?: { data?: { error?: unknown } } })
-    .error;
+  const { model, error } = context.current;
   logger.warn(
     {
       provider: model.provider,
       modelId: model.modelId,
-      err: error?.data?.error,
+      err: error,
     },
     'model error, switching to next'
   );
