@@ -41,23 +41,23 @@ bun install
 bun run db:push
 ```
 
-The bot and proxy run in separate terminals. E2B sandboxes are external processes, so the proxy must be reachable over a public URL — `localhost` is not sufficient.
+The bot and proxy run in separate terminals. E2B sandboxes are external processes, so the proxy must be reachable over a public URL. `localhost` is not sufficient.
 
-**Terminal 1** — start the proxy:
+Start the proxy in one terminal:
 
 ```bash
 bun run dev:server
 ```
 
-**Terminal 2** — expose the proxy with a public tunnel:
+In a second terminal, expose the proxy with a public tunnel:
 
 ```bash
 npx untun@latest tunnel http://localhost:3001
 ```
 
-Copy the printed `https://...trycloudflare.com` URL into `apps/bot/.env` as `PROXY_BASE_URL`. The `PROXY_BASE_URL` must point at the server root — the sandbox config appends paths like `/provider/hackclub` and calls `/ip` to resolve the sandbox outbound IP.
+Copy the printed `https://...trycloudflare.com` URL into `apps/bot/.env` as `PROXY_BASE_URL`. It must point at the server root. The sandbox config appends paths like `/provider/hackclub` and calls `/ip` to resolve the sandbox outbound IP.
 
-**Terminal 3** — start the bot:
+In a third terminal, start the bot:
 
 ```bash
 bun run dev:bot
@@ -65,7 +65,7 @@ bun run dev:bot
 
 If you change `PROXY_BASE_URL`, restart the bot to pick it up.
 
-`SLACK_SOCKET_MODE=true` is the simplest setup for local Slack development — Slack does not need to reach your bot over HTTP.
+`SLACK_SOCKET_MODE=true` is the simplest setup for local Slack development. Slack does not need to reach your bot over HTTP.
 
 ## Common Checks
 
