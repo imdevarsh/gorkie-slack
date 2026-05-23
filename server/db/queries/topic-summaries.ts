@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../index';
 import { channelTopicSummaries } from '../schema';
 
-export async function getTopicSummaryConfig(channelId: string) {
+export async function getConfig(channelId: string) {
   const result = await db
     .select({
       enabled: channelTopicSummaries.enabled,
@@ -22,7 +22,7 @@ export async function getTopicSummaryConfig(channelId: string) {
       };
 }
 
-export async function upsertTopicSummaryEnabled(
+export async function upsertEnabled(
   channelId: string,
   enabled: boolean
 ): Promise<void> {
@@ -35,7 +35,7 @@ export async function upsertTopicSummaryEnabled(
     });
 }
 
-export async function upsertTopicSummaryPrefix(
+export async function upsertPrefix(
   channelId: string,
   prefix: string | null
 ): Promise<void> {
@@ -48,7 +48,7 @@ export async function upsertTopicSummaryPrefix(
     });
 }
 
-export async function upsertTopicSummaryPostfix(
+export async function upsertPostfix(
   channelId: string,
   postfix: string | null
 ): Promise<void> {

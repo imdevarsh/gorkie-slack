@@ -2,7 +2,7 @@ import { env } from '~/env';
 import { isUserAllowed } from '~/lib/allowed-users';
 import logger from '~/lib/logger';
 import { getQueue } from '~/lib/queue';
-import { processTopicSummaryHeuristic } from '~/slack/features/topic-summaries/topic-generator';
+import { runTopicHeuristic } from '~/slack/features/topic-summaries/topic-generator';
 import type { MessageEventArgs } from '~/types';
 import { buildChatContext, getContextId } from '~/utils/context';
 import { toLogError } from '~/utils/error';
@@ -117,7 +117,7 @@ export async function execute(args: MessageEventArgs): Promise<void> {
   }
 
   // Run the topic summaries heuristic on valid messages (non-blocking)
-  processTopicSummaryHeuristic(messageContext).catch(() => null);
+  runTopicHeuristic(messageContext).catch(() => null);
 
   const ctxId = getContextId(messageContext);
   const trigger = await getTrigger(messageContext, messageContext.botUserId);

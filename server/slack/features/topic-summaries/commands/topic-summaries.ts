@@ -3,12 +3,15 @@ import type {
   SlackCommandMiddlewareArgs,
 } from '@slack/bolt';
 import {
-  getTopicSummaryConfig,
-  upsertTopicSummaryEnabled,
-  upsertTopicSummaryPostfix,
-  upsertTopicSummaryPrefix,
+  getConfig,
+  upsertEnabled,
+  upsertPostfix,
+  upsertPrefix,
 } from '~/db/queries/topic-summaries';
-import { redis } from '~/lib/kv';
+import {
+  getCachedEnabled,
+  setCachedEnabled,
+} from '~/lib/kv/queries/topic-summaries';
 
 export const name = 'topic-summaries';
 
@@ -55,14 +58,8 @@ export async function execute({
   if (action === 'enable' || action === 'disable') {
     const enabled = action === 'enable';
 
-    // 1. Upsert Postgres
-    await upsertTopicSummaryEnabled(channelId, enabled);
-
-    // 2. Update Redis Cache
-    await redis.set(
-      `channel:${channelId}:topic_summaries_enabled`,
-      enabled ? '1' : '0'
-    );
+    await upsertEnabled(channelId, enabled);
+    await setCachedEnabled(channelId, enabled);
 
     await respond({
       text: `Auto-topic summaries have been *${enabled ? 'enabled' : 'disabled'}* for this channel.`,
@@ -75,9 +72,9 @@ export async function execute({
     const value = parts.slice(1).join(' ') || null;
 
     if (action === 'prefix') {
-      await upsertTopicSummaryPrefix(channelId, value);
+      await upsertPrefix(channelId, value);
     } else {
-      await upsertTopicSummaryPostfix(channelId, value);
+      await upsertPostfix(channelId, value);
     }
 
     const typeName = action === 'prefix' ? 'Prefix' : 'Postfix';
@@ -93,12 +90,9 @@ export async function execute({
   }
 
   if (action === 'status' || action === '') {
-    const config = await getTopicSummaryConfig(channelId);
+    const config = await getConfig(channelId);
 
-    await redis.set(
-      `channel:${channelId}:topic_summaries_enabled`,
-      config.enabled ? '1' : '0'
-    );
+    await setCachedEnabled(channelId, config.enabled);
 
     let statusText = `Auto-topic summaries are currently *${config.enabled ? 'enabled' : 'disabled'}* for this channel.`;
     if (config.prefix) {
