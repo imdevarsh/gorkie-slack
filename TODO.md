@@ -16,6 +16,13 @@ Active task list for gorkie-turbo. Kept in sync as issues are found and resolved
 
 ## Open
 
+### Improve: Multi-provider retry for Pi sandbox agent
+The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the orchestrator (`createRetryable`) so it falls back to alternative providers on failure rather than erroring out.
+
+### Improve: Orchestrator — show terminal tool as task when no reasoning was shown
+Currently `prepareStep` always creates a "Thinking…" task, after terminal tool firing show just show "Replied" / "Skipping" / "Left channel" directly as the task title
+- File: `apps/bot/src/lib/ai/agents/orchestrator.ts`
+
 ### Bug: Task stream is intermittent — thinking sometimes missing
 The "Thinking…" task created in `prepareStep` of `orchestratorAgent` and its reasoning text (`consumeOrchestratorReasoningStream`) are sometimes not shown in Slack. Possibly a race condition in task creation vs. stream consumption, or the reasoning stream arriving after the step task is already resolved.
 - Files: `apps/bot/src/lib/ai/agents/orchestrator.ts`, `apps/bot/src/lib/ai/utils/stream.ts`
