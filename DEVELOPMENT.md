@@ -30,31 +30,7 @@ Use the same `DATABASE_URL` in both files. The bot writes short-lived proxy toke
 
 Put Slack, Exa, E2B, AgentMail, Langfuse, and `PROXY_BASE_URL` in `apps/bot/.env`.
 
-Put provider API keys such as `HACKCLUB_API_KEY`, `OPENROUTER_API_KEY`, and `GOOGLE_GENERATIVE_AI_API_KEY` in `apps/server/.env`.
-
-## Local Proxy Tunnel
-
-Start the proxy server on port `3001`:
-
-```bash
-bun run dev:server
-```
-
-In another terminal, expose that local server with untun:
-
-```bash
-npx untun@latest tunnel http://localhost:3001
-```
-
-Copy the printed `https://...trycloudflare.com` URL into `apps/bot/.env`:
-
-```bash
-PROXY_BASE_URL="https://your-untun-url.trycloudflare.com"
-```
-
-Restart the bot after changing `PROXY_BASE_URL`.
-
-This URL must point at the server root. The sandbox config appends provider paths like `/provider/hackclub`, and the sandbox session code calls `/ip` to resolve the sandbox outbound IP.
+Both apps need `HACKCLUB_API_KEY`, `OPENROUTER_API_KEY`, and `GOOGLE_GENERATIVE_AI_API_KEY`: the bot uses them for direct orchestrator inference, the proxy uses them to forward sandbox requests upstream.
 
 ## Running Locally
 
@@ -65,13 +41,31 @@ bun install
 bun run db:push
 ```
 
-Start both apps:
+The bot and proxy run in separate terminals. E2B sandboxes are external processes, so the proxy must be reachable over a public URL — `localhost` is not sufficient.
+
+**Terminal 1** — start the proxy:
 
 ```bash
-bun dev
+bun run dev:server
 ```
 
-For local Slack development, `SLACK_SOCKET_MODE=true` is the simplest setup because Slack does not need to reach your bot over HTTP. The proxy still needs a public tunnel because E2B sandboxes run outside your machine.
+**Terminal 2** — expose the proxy with a public tunnel:
+
+```bash
+npx untun@latest tunnel http://localhost:3001
+```
+
+Copy the printed `https://...trycloudflare.com` URL into `apps/bot/.env` as `PROXY_BASE_URL`. The `PROXY_BASE_URL` must point at the server root — the sandbox config appends paths like `/provider/hackclub` and calls `/ip` to resolve the sandbox outbound IP.
+
+**Terminal 3** — start the bot:
+
+```bash
+bun run dev:bot
+```
+
+If you change `PROXY_BASE_URL`, restart the bot to pick it up.
+
+`SLACK_SOCKET_MODE=true` is the simplest setup for local Slack development — Slack does not need to reach your bot over HTTP.
 
 ## Common Checks
 
@@ -80,3 +74,50 @@ bun run typecheck
 bun check
 bun run check:spelling
 ```
+
+## Deployment
+
+### Proxy (`apps/server`) to Vercel
+
+The proxy is a Nitro app and deploys to Vercel as a serverless Node.js function.
+
+1. Import the repo in the Vercel dashboard. Set the **Root Directory** to `apps/server` and the **Framework Preset** to **Other**.
+
+2. Add environment variables in the Vercel project settings, everything from `apps/server/.env.example`:
+
+   | Variable | Notes |
+   |---|---|
+   | `DATABASE_URL` | Same Neon connection string as the bot |
+   | `HACKCLUB_API_KEY` | Provider key (never put in the bot) |
+   | `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` | Optional fallback |
+   | `GOOGLE_GENERATIVE_AI_API_KEY` | Optional fallback |
+   | `CORS_ORIGIN` | Set to your bot's public URL or `*` |
+   | `LOG_LEVEL` | `info` for production |
+
+3. Deploy. The proxy URL will be `https://<your-project>.vercel.app`.
+
+4. Set that URL as `PROXY_BASE_URL` in `apps/bot/.env` (and in your bot's production environment).
+
+The `/health` and `/ip` endpoints have no auth. `/provider/:provider/*` requires a valid short-lived token issued by the bot.
+
+### Bot (`apps/bot`)
+
+The bot runs as a long-lived Node.js process and is not suited for serverless. Deploy it to a persistent host:
+
+1. Set the start command to `bun run start` (runs `dist/index.mjs`).
+2. Add all variables from `apps/bot/.env.example`, including `PROXY_BASE_URL` pointing at the deployed proxy.
+3. Set `SLACK_SOCKET_MODE=true`, Socket Mode keeps Slack's connection open without requiring a public HTTP endpoint for the bot itself.
+
+**Database:**
+
+Both apps must share the same `DATABASE_URL`. The bot writes short-lived proxy tokens; the proxy validates them. [Neon](https://neon.tech) works well for this, free tier is sufficient and the connection string supports SSL by default.
+
+### Deploying the Sandbox Template
+
+The E2B sandbox template must be built and registered before the bot can create sandboxes:
+
+```bash
+bun run build:template
+```
+
+The template name comes from `config.template` in `apps/bot/src/config.ts`. After building, the template ID is pinned, update `config.template` if you create a new version.

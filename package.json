@@ -45,6 +45,7 @@
     "dev:bot": "turbo run dev --filter=bot",
     "start:bot": "bun --filter=bot run start",
     "start:server": "bun --filter=server run start",
+    "build:template": "bun --filter=bot run build:template",
     "db:push": "turbo run db:push --filter=@repo/db",
     "db:studio": "turbo run db:studio --filter=@repo/db",
     "db:generate": "turbo run db:generate --filter=@repo/db",

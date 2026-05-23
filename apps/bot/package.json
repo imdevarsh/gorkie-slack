@@ -4,6 +4,7 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsdown",
+    "build:template": "bun run src/scripts/build-template.ts",
     "dev": "bun run --hot src/index.ts",
     "start": "bun run dist/index.mjs",
     "typecheck": "tsc -b"
