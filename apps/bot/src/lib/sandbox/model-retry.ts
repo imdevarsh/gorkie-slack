@@ -1,33 +1,12 @@
 import { sandbox as config } from '@/config';
 import logger from '@/lib/logger';
+import { agentFailed } from '@/lib/sandbox/agent-error';
 import type { PiRpcClient } from '@/lib/sandbox/rpc/client';
 import type { AgentSessionEvent } from '@/types/sandbox/rpc';
 
 const MODEL_ATTEMPT_TIMEOUT_MS = 90_000;
 
-function agentFailed(events: AgentSessionEvent[]): boolean {
-  for (const event of events) {
-    if (event.type !== 'agent_end' || event.willRetry) {
-      continue;
-    }
-    if (!Array.isArray(event.messages)) {
-      continue;
-    }
-    for (const msg of event.messages) {
-      if (
-        msg &&
-        typeof msg === 'object' &&
-        'stopReason' in msg &&
-        msg.stopReason === 'error'
-      ) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-export async function runWithModelRetry({
+export async function runInference({
   client,
   prompt,
   timeoutPromise,

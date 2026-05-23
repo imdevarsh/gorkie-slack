@@ -8,9 +8,10 @@ import { env } from '@/env';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
 import { clearSandboxClient, setSandboxClient } from '@/lib/sandbox/active';
+import { getAgentError } from '@/lib/sandbox/agent-error';
 import { syncAttachments } from '@/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '@/lib/sandbox/events';
-import { runWithModelRetry } from '@/lib/sandbox/model-retry';
+import { runInference } from '@/lib/sandbox/model-retry';
 import { pauseSession, resolveSession } from '@/lib/sandbox/session';
 import { extendSandboxTimeout } from '@/lib/sandbox/timeout';
 import { getToolTaskEnd, getToolTaskStart } from '@/lib/sandbox/tools';
@@ -20,41 +21,6 @@ import { getContextId } from '@/utils/context';
 
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
 const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
-
-function getAgentError(events: AgentSessionEvent[]): string | null {
-  // Check only the last non-retrying agent_end — earlier failures from model
-  // fallbacks in the chain must not be treated as the final outcome.
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i]!;
-    if (event.type !== 'agent_end' || event.willRetry) {
-      continue;
-    }
-
-    const messages = 'messages' in event ? event.messages : undefined;
-    if (!Array.isArray(messages)) {
-      return null;
-    }
-
-    for (const message of messages) {
-      if (!(message && typeof message === 'object')) {
-        continue;
-      }
-      if (!('stopReason' in message && message.stopReason === 'error')) {
-        continue;
-      }
-
-      const errorMessage =
-        'errorMessage' in message && typeof message.errorMessage === 'string'
-          ? message.errorMessage.trim()
-          : '';
-      return errorMessage || 'Sandbox agent stopped with an error';
-    }
-
-    return null;
-  }
-
-  return null;
-}
 
 export const sandbox = ({
   context,
@@ -186,7 +152,7 @@ export const sandbox = ({
         });
 
         try {
-          await runWithModelRetry({
+          await runInference({
             client: session.client,
             prompt,
             timeoutPromise,

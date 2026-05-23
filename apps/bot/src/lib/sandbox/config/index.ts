@@ -3,6 +3,45 @@ import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
 
+function buildProviderConfig(
+  modelChain: typeof config.modelChain,
+  api: string
+) {
+  const providerModels = new Map<string, string[]>();
+  for (const entry of modelChain) {
+    const models = providerModels.get(entry.provider) ?? [];
+    if (!models.includes(entry.modelId)) {
+      models.push(entry.modelId);
+      providerModels.set(entry.provider, models);
+    }
+  }
+
+  const providers = Object.fromEntries(
+    [...providerModels.entries()].map(([provider, models]) => [
+      provider,
+      {
+        baseUrl: new URL(
+          `/provider/${provider}`,
+          env.PROXY_BASE_URL
+        ).toString(),
+        api,
+        apiKey: 'GORKIE_SESSION_TOKEN',
+        authHeader: true,
+        models: models.map((id) => ({ id })),
+      },
+    ])
+  );
+
+  const auth = Object.fromEntries(
+    [...providerModels.keys()].map((provider) => [
+      provider,
+      { type: 'api_key', key: 'GORKIE_SESSION_TOKEN' },
+    ])
+  );
+
+  return { providers, auth };
+}
+
 export async function configureAgent(
   sandbox: Sandbox,
   prompt: string
@@ -17,37 +56,9 @@ export async function configureAgent(
     'utf8'
   );
 
-  // Derive unique providers and their model lists from modelChain
-  const providerModels = new Map<string, string[]>();
-  for (const entry of modelChain) {
-    const models = providerModels.get(entry.provider) ?? [];
-    if (!models.includes(entry.modelId)) {
-      models.push(entry.modelId);
-      providerModels.set(entry.provider, models);
-    }
-  }
-
-  const providersMap = Object.fromEntries(
-    [...providerModels.entries()].map(([provider, models]) => [
-      provider,
-      {
-        baseUrl: new URL(
-          `/provider/${provider}`,
-          env.PROXY_BASE_URL
-        ).toString(),
-        api: model.api,
-        apiKey: 'GORKIE_SESSION_TOKEN',
-        authHeader: true,
-        models: models.map((id) => ({ id })),
-      },
-    ])
-  );
-
-  const authMap = Object.fromEntries(
-    [...providerModels.keys()].map((provider) => [
-      provider,
-      { type: 'api_key', key: 'GORKIE_SESSION_TOKEN' },
-    ])
+  const { providers: providersMap, auth: authMap } = buildProviderConfig(
+    modelChain,
+    model.api
   );
 
   for (const path of [piDir, agentDir, extensionsDir]) {
