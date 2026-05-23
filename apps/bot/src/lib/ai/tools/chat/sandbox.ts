@@ -191,11 +191,11 @@ export const sandbox = ({
             prompt,
             timeoutPromise,
             ctxId,
-            onModelSwitch: (provider, modelId) => {
+            onModelSwitch: (attempt, total) => {
               enqueue(() =>
                 updateTask(stream, {
                   taskId,
-                  title: `Trying ${provider}/${modelId.split('/').pop()}`,
+                  title: `Trying ${attempt}/${total}`,
                   status: 'in_progress',
                 })
               );
@@ -236,6 +236,7 @@ export const sandbox = ({
         );
 
         await finishTask(stream, {
+          title: 'Running sandbox',
           status: 'complete',
           taskId,
           output: response,
