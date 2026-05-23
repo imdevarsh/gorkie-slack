@@ -118,6 +118,7 @@ export const orchestratorAgent = ({
     providerOptions: {
       openrouter: {
         reasoning: { enabled: true, exclude: false, effort: 'medium' },
+        parallelToolCalls: false,
       },
       google: {
         thinkingConfig: {

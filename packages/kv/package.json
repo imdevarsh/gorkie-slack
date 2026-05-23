@@ -5,8 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./keys": "./src/keys.ts",
-    "./redis": "./src/redis.ts",
-    "./*": "./src/*.ts"
+    "./redis": "./src/redis.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
