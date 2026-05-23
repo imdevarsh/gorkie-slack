@@ -1,29 +1,74 @@
 # TODO
 
-- Audit security: authentication boundaries, data access, and tool permissions.
-- Check With User DMs
-- Fix ratelimiting
-- fix lint
-- TODO: Langfuse shows daytona tools run in sandbox tool? it is very cursed
-- TODO: Test multiple prompt / queue
-- TODO: Test if it self-timeouts without interaction
-- TODO: re-eval pricing
-- TODO: add observability and better logging sandbox
-- add a path function to join paths rather than ${config.runtime.workdir}/xyz
-- remove unused unwanted db fields
-- Use typed ACP event schemas instead of manual casting in events.ts
-- Status update logic is half broken; fix that and cleanup RPC code, support custom MCP integrations
-- extend / bump timeouts tus: "is creating assets and rendering video"
-- Sandbox run timeout captured in logs; move full payload to issue/runbook with redacted identifiers.
-- Add clearer error messages, parse errors properly from pi
-- Add model retry support
-- Preconfigure playwright MCP (npm install -g agent-browser )
-- Handle timeouts and retries per task command vs per global agent
+Active task list for gorkie-turbo. Kept in sync as issues are found and resolved.
 
-Sandbox:
-Give Gorkie its own Github Account
-Give Gorkie persistent volumes
-Pre-install remotion skill + to make videos
-Pre-configure moltbook for FUN
-Block Gorkie process inspection (ps -a)
-Listen for webhooks for Agent Mail, and spawn Gorkie on email
+---
+
+## Done
+
+- [x] **tsdown `copy` fix** — replaced Linux-only `onSuccess` shell command with tsdown's built-in `copy: 'src/lib/sandbox/config'` config key. Copies `extensions/tools.ts` → `dist/extensions/tools.ts` (where `import.meta.url` resolves in the production bundle) and `index.ts` (harmless extra). Cross-platform, no shell required.
+  - File: `apps/bot/tsdown.config.ts`
+
+- [x] **Sandbox-before-reply ordering** — the outer orchestrator was calling `reply` and `sandbox` as parallel tool calls in the same step. Since `stopWhen: [successToolCall('reply')]` ends the loop after that step, the reply text was written before sandbox results were available ("I've spun up a sandbox for you. It's ready and waiting—what would you like to do with it?" sent before the actual task ran). Fixed by adding a rule to the `reply` tool: "Never call reply in the same step as sandbox or any other tool."
+  - File: `packages/ai/src/prompts/chat/tools.ts`
+
+---
+
+## Open
+
+### Improve: Multi-provider retry for Pi sandbox agent
+The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the orchestrator (`createRetryable`) so it falls back to alternative providers on failure rather than erroring out.
+
+### Improve: Orchestrator — show terminal tool as task when no reasoning was shown
+Currently `prepareStep` always creates a "Thinking…" task, after terminal tool firing show just show "Replied" / "Skipping" / "Left channel" directly as the task title
+- File: `apps/bot/src/lib/ai/agents/orchestrator.ts`
+
+### Bug: Task stream is intermittent — thinking sometimes missing
+The "Thinking…" task created in `prepareStep` of `orchestratorAgent` and its reasoning text (`consumeOrchestratorReasoningStream`) are sometimes not shown in Slack. Possibly a race condition in task creation vs. stream consumption, or the reasoning stream arriving after the step task is already resolved.
+- Files: `apps/bot/src/lib/ai/agents/orchestrator.ts`, `apps/bot/src/lib/ai/utils/stream.ts`
+- Investigate: does `prepareStep` always fire before the reasoning stream starts? Check if the taskMap entry is set before `consumeOrchestratorReasoningStream` is called.
+
+### Bug: `agent-browser` snapshot not saving files
+When the sandbox agent uses `agent-browser` to capture screenshots, `--snapshot /path/to/file.png` does not appear to write files to disk (file not found after command). The daemon opens the page successfully but the output file is missing. Needs investigation into whether `agent-browser`'s snapshot command writes relative to CWD, the daemon's CWD, or a temp dir.
+- Workaround: may need to use Playwright directly or pipe `agent-browser snapshot -i` to a custom save step.
+
+### Improve: `agent-browser` skill — agentmail not in sandbox template
+The `agent-browser` npm package is installed globally by the sandbox, but `agentmail` is not pre-installed in the E2B template. The sandbox agent has to install it on first use, adding latency and failure surface. Either:
+- Add `agentmail` to the E2B sandbox template (rebuild with `bun run build:template`)
+- Or note it as a first-run install in the skill documentation
+
+### Refactor: Split monorepo packages further
+Consider extracting:
+- **`@repo/observability`** — telemetry/Langfuse setup currently lives in `apps/bot/src/lib/ai/telemetry.ts`, could be a shared package if `apps/server` ever needs it
+- **`@repo/sandbox`** — sandbox session management, RPC boot, event subscription, config, attachments currently all live in `apps/bot/src/lib/sandbox/`. If sandbox logic is ever reused (e.g. scheduled tasks calling the sandbox), extracting a package reduces coupling.
+- Evaluate whether the split is worth the overhead given current team size.
+
+### Improve: `packages/kv` — wire up keys and queries
+`packages/kv` is a stub (`createRedisClient` factory, nothing else). Redis is not imported anywhere in the apps yet. Needs to be built out properly before any feature uses it.
+
+Pattern to follow: mirror `packages/db/src/queries/` — export typed helper functions, not raw clients.
+
+What to add:
+1. **`src/keys.ts`** — typed key builders (namespaced strings, no magic literals scattered around):
+   ```ts
+   export const keys = {
+     rateLimit: (userId: string) => `rate_limit:${userId}`,
+     imageGen: (userId: string) => `image_gen:${userId}`,
+     // ...
+   };
+   ```
+2. **`src/queries/`** — typed query helpers wrapping the client:
+   - `rateLimit(userId, opts)` — sliding window or token bucket, returns `{ allowed, remaining, reset }`
+   - `getCache(key)` / `setCache(key, value, ttlMs)` — simple get/set with TTL
+3. **Client lifetime**: the current factory throws if `REDIS_URL` is unset — that's fine, but callers should only import from `@repo/kv` in code paths gated by a `REDIS_URL` check. Document this.
+4. **Consider Upstash**: gorkie-slack uses `bun`'s built-in `RedisClient`. For `apps/server` (Vercel serverless), a persistent TCP connection isn't viable — Upstash's HTTP client (`@upstash/redis`) is a better fit. Evaluate whether bot and server need the same client or different ones.
+
+- Files: `packages/kv/src/`
+
+---
+
+## Notes
+
+- Proxy timeout is `AbortSignal.timeout(240_000)` (4 min) — safely under Vercel's 300s `maxDuration`.
+- `tools.ts` is uploaded as raw TypeScript source to E2B via `configureAgent`; it must NOT be compiled or it breaks the PI agent's dynamic extension loading.
+- If a plan block (conversation thread used for planning/tasking) exceeds 50 messages, start a new plan block to avoid context degradation.

@@ -1,0 +1,34 @@
+{
+  "name": "@repo/ai",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./prompts": "./src/prompts/index.ts",
+    "./prompts/chat": "./src/prompts/chat/index.ts",
+    "./prompts/chat/presets": "./src/prompts/chat/presets/index.ts",
+    "./prompts/chat/presets/*": "./src/prompts/chat/presets/*.ts",
+    "./prompts/chat/*": "./src/prompts/chat/*.ts",
+    "./prompts/sandbox": "./src/prompts/sandbox/index.ts",
+    "./prompts/sandbox/*": "./src/prompts/sandbox/*.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "clean": "git clean -xdf .turbo dist node_modules",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "catalog:",
+    "@openrouter/ai-sdk-provider": "catalog:",
+    "@repo/logging": "workspace:*",
+    "@t3-oss/env-core": "catalog:",
+    "ai": "catalog:",
+    "ai-retry": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

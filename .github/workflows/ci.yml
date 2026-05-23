@@ -2,10 +2,34 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: ["*"]
+  push:
+    branches: ["main"]
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  FORCE_COLOR: 3
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - name: Run build
+        run: bun run build
+
   ultracite:
     name: Ultracite
     runs-on: ubuntu-latest
@@ -14,10 +38,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: ./tooling/github/setup
 
       - name: Run Ultracite
-        run: bun check
+        run: bun run check
 
   types:
     name: TypeScript
@@ -27,10 +51,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: ./tooling/github/setup
 
       - name: Run type check
-        run: bun typecheck
+        run: bun run typecheck
 
   spelling:
     name: Spelling
@@ -40,7 +64,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: ./tooling/github/setup
 
       - name: Run spelling check
-        run: bun check:spelling
+        run: bun run check:spelling

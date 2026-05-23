@@ -23,29 +23,51 @@
       }
     ],
     "assistant_view": {
-      "assistant_description": "I can help you!",
-      "suggested_prompts": [
-        {
-          "title": "Help with Slack",
-          "message": "How do I block a user in Slack?"
-        },
-        {
-          "title": "Mathematics",
-          "message": "What is the Fundamental Theorem of Arithmetic?"
-        },
-        {
-          "title": "Philosophy",
-          "message": "Is AI sentient?"
-        },
-        {
-          "title": "Yapping",
-          "message": "Hi there gorkie!"
-        }
-      ]
+      "assistant_description": "Your AI assistant for Slack. Searches the web, writes and runs code, generates images, browses websites, manages reminders and scheduled tasks, and more."
     }
   },
   "oauth_config": {
     "scopes": {
+      "user": [
+        "search:read.public",
+        "search:read.private",
+        "search:read.mpim",
+        "search:read.im",
+        "search:read.files",
+        "search:read.users",
+        "chat:write",
+        "channels:history",
+        "groups:history",
+        "mpim:history",
+        "im:history",
+        "canvases:read",
+        "canvases:write",
+        "users:read",
+        "users:read.email",
+        "reactions:write",
+        "reactions:read",
+        "emoji:read",
+        "files:read",
+        "channels:write",
+        "groups:write",
+        "im:write",
+        "mpim:write",
+        "channels:read",
+        "groups:read",
+        "mpim:read"
+      ],
+      "user_optional": [
+        "search:read.private",
+        "search:read.mpim",
+        "search:read.im",
+        "search:read.files",
+        "chat:write",
+        "groups:history",
+        "mpim:history",
+        "im:history",
+        "canvases:read",
+        "canvases:write"
+      ],
       "bot": [
         "commands",
         "app_mentions:read",
@@ -99,6 +121,6 @@
     "org_deploy_enabled": false,
     "socket_mode_enabled": true,
     "token_rotation_enabled": false,
-    "is_mcp_enabled": false
+    "is_mcp_enabled": true
   }
 }

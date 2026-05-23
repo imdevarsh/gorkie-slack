@@ -1,0 +1,28 @@
+{
+  "name": "server",
+  "type": "module",
+  "scripts": {
+    "clean": "git clean -xdf .turbo .output node_modules",
+    "build": "nitro build",
+    "dev": "nitro dev --port 3001",
+    "prepare": "nitro prepare",
+    "preview": "NODE_ENV=production srvx --prod .output/",
+    "start": "NODE_ENV=production srvx --prod .output/",
+    "typecheck": "bun run prepare && tsc --noEmit --skipLibCheck"
+  },
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "@repo/logging": "workspace:*",
+    "@t3-oss/env-core": "catalog:",
+    "dotenv": "catalog:",
+    "nitro": "catalog:",
+    "srvx": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

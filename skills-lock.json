@@ -1,11 +1,35 @@
 {
   "version": 1,
   "skills": {
-    "slack-agent": {
-      "source": "vercel-labs/slack-agent-skill",
+    "hono": {
+      "source": "yusukebe/hono-skill",
       "sourceType": "github",
-      "skillPath": "SKILL.md",
-      "computedHash": "c40b751775659892fa9f3eb28f77d570243e07c85c575b24ee0fb19dc824f43f"
+      "skillPath": "skills/hono/SKILL.md",
+      "computedHash": "220e5e1b12bbaeec49ec362b6e2262d77632d0536e9758bba9acbbc323fef990"
+    },
+    "neon-postgres": {
+      "source": "neondatabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/neon-postgres/SKILL.md",
+      "computedHash": "6c6dc205493216d88fb0ee040eafec1d3a722926f6f8f3f568ce26740c53eb74"
+    },
+    "tsdown": {
+      "source": "rolldown/tsdown",
+      "sourceType": "github",
+      "skillPath": "skills/tsdown/SKILL.md",
+      "computedHash": "c5cb4d806d5bc454dbfc0bd03a8dbaf8fb1d45dea1973ed3ae724d3a2c191246"
+    },
+    "turborepo": {
+      "source": "vercel/turborepo",
+      "sourceType": "github",
+      "skillPath": "skills/turborepo/SKILL.md",
+      "computedHash": "6a23ee82918e35f8848b6fc2ccbea699d740a30fee65f288201adb4e98bf3827"
+    },
+    "ultracite": {
+      "source": "haydenbleasel/ultracite",
+      "sourceType": "github",
+      "skillPath": "skills/ultracite/SKILL.md",
+      "computedHash": "5efa7db1bc960b8beda708e3a6a4f633bf592e68b9d720524d17a300e091ac0e"
     }
   }
 }

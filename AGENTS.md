@@ -11,39 +11,39 @@ It responds to mentions, DMs, and thread replies with AI-generated responses.
 
 ```bash
 bun install          # Install dependencies
-bun run dev          # Development server (watch mode)
-bun run start        # Production server
-bun run format       # Format code
-bun run lint         # Lint (check only)
-bun run lint:fix     # Lint and auto-fix
-bun run check        # Check formatting and linting
-bun run fix          # Fix all issues
+bun dev              # Start all apps in watch mode
+bun build            # Build all apps and packages
+bun typecheck        # Type-check the monorepo
+bun check            # Lint + format check (Ultracite/Biome)
+bun fix              # Auto-fix lint and formatting issues
+bun run check:spelling  # Spell-check with cspell
+bun run db:push      # Push schema changes to database
 ```
 
-There are no tests in this project currently.
+There is no committed test suite for the sandbox proxy yet. Use temporary local scripts or direct app requests for validation, then delete those artifacts.
 
 ## Project Structure
 
 ```
-server/
-  index.ts              # Entry point, OpenTelemetry setup
-  env.ts                # Environment validation with @t3-oss/env-core
-  config.ts             # Application constants
-  lib/
-    ai/
-      prompts/          # System prompts for the AI
-      tools/            # AI tool definitions (reply, react, search, etc.)
-      providers.ts      # AI model provider configuration
-    allowed-users.ts    # User permission caching
-    kv.ts               # Redis client and rate limiting
-    logger.ts           # Pino logger configuration
-  slack/
-    app.ts              # Slack app initialization
-    conversations.ts    # Message history fetching
-    events/             # Slack event handlers
-  types/                # TypeScript type definitions
-  utils/                # Utility functions
+apps/
+  bot/              # Slack bot (entry point: src/index.ts)
+  server/           # Nitro proxy/API server for AI provider keys
+packages/
+  ai/               # AI providers, model config, and system prompts
+  db/               # Drizzle ORM schema, queries, Postgres client
+  kv/               # Redis env and client factory
+  logging/          # Pino logger factory
+  utils/            # Shared framework-agnostic utility helpers
+  validators/       # Shared Zod schemas
+tooling/
+  cspell/           # @repo/cspell-config — spell-check dictionaries
+  github/           # Reusable GitHub Actions (setup action)
+  typescript/       # @repo/tsconfig — shared TypeScript configs
 ```
+
+The Slack bot must not start or import the proxy server. Proxy/API work belongs in `apps/server`; `apps/bot` calls it through configured URLs only.
+
+`apps/server` uses Nitro with filesystem routing (`src/routes/`). Route handlers use `defineHandler` from `nitro/h3`. Middleware goes in `src/middleware/`. Plugins (startup hooks) go in `src/plugins/`.
 
 ## Coding Guidelines
 
@@ -88,7 +88,17 @@ Only add a comment when the **why** is non-obvious — a hidden constraint, a wo
 No multi-line block comments on functions. Self-documenting names are enough.
 
 ### Config for tuneable values
-Anything that could reasonably change per deployment (thresholds, message lists, locale) belongs in `server/config.ts`, not hardcoded at the call site.
+Anything that could reasonably change per deployment (thresholds, message lists, locale) belongs in `apps/bot/src/config.ts`, not hardcoded at the call site.
 
 ### Feature-enclosed architecture
-Features live under `server/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts`. Each command file exports `name`, `help: CommandHelp`, and `execute`. The single registry is `server/slack/commands/subcommands.ts`.
+Slack features live under `apps/bot/src/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts` when applicable. Keep feature-specific UI/actions near the feature that owns them.
+
+## Formatting and Linting (Ultracite)
+
+This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+
+- **Format code**: `bun x ultracite fix`
+- **Check for issues**: `bun x ultracite check`
+- **Diagnose setup**: `bun x ultracite doctor`
+
+Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.

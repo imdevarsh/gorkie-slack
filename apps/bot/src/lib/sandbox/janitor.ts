@@ -1,0 +1,73 @@
+import { Sandbox } from '@e2b/code-interpreter';
+import {
+  claimExpired,
+  clearDestroyed,
+  listExpired,
+  updateStatus,
+} from '@repo/db/queries';
+import { toLogError } from '@repo/utils/error';
+import { sandbox as config } from '@/config';
+import { env } from '@/env';
+import logger from '@/lib/logger';
+
+let timer: ReturnType<typeof setInterval> | null = null;
+let isRunning = false;
+
+async function cleanup(): Promise<void> {
+  if (isRunning) {
+    return;
+  }
+
+  isRunning = true;
+
+  try {
+    const cutoff = new Date(Date.now() - config.autoDeleteAfterMs);
+    const candidates = await listExpired(cutoff);
+
+    for (const session of candidates) {
+      const claimed = await claimExpired(session.threadId);
+      if (!claimed) {
+        continue;
+      }
+
+      try {
+        await Sandbox.kill(session.sandboxId, { apiKey: env.E2B_API_KEY });
+        await clearDestroyed(session.threadId);
+        logger.info(
+          { ctxId: session.threadId, sandboxId: session.sandboxId, cutoff },
+          '[sandbox-cleanup] Deleted expired sandbox'
+        );
+      } catch (error) {
+        await updateStatus(session.threadId, 'paused');
+        logger.warn(
+          {
+            ...toLogError(error),
+            ctxId: session.threadId,
+            sandboxId: session.sandboxId,
+          },
+          '[sandbox-cleanup] Failed to delete expired sandbox'
+        );
+      }
+    }
+  } finally {
+    isRunning = false;
+  }
+}
+
+export function startSandboxCleanup(): void {
+  if (timer) {
+    return;
+  }
+
+  timer = setInterval(() => {
+    cleanup().catch((error) => {
+      logger.error(
+        { ...toLogError(error) },
+        '[sandbox-cleanup] Unexpected error while running sweep'
+      );
+    });
+  }, config.janitorIntervalMs);
+  timer.unref();
+
+  logger.info('[sandbox-cleanup] Started');
+}

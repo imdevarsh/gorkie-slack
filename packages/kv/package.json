@@ -1,0 +1,25 @@
+{
+  "name": "@repo/kv",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./keys": "./src/keys.ts",
+    "./redis": "./src/redis.ts",
+    "./queries/*": "./src/queries/*.ts"
+  },
+  "scripts": {
+    "clean": "git clean -xdf .turbo dist node_modules",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@t3-oss/env-core": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}
