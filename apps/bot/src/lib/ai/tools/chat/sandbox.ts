@@ -11,7 +11,6 @@ import { clearSandboxClient, setSandboxClient } from '@/lib/sandbox/active';
 import { getAgentError } from '@/lib/sandbox/agent-error';
 import { syncAttachments } from '@/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '@/lib/sandbox/events';
-import { runInference } from '@/lib/sandbox/model-retry';
 import { pauseSession, resolveSession } from '@/lib/sandbox/session';
 import { extendSandboxTimeout } from '@/lib/sandbox/timeout';
 import { getToolTaskEnd, getToolTaskStart } from '@/lib/sandbox/tools';
@@ -87,6 +86,16 @@ export const sandbox = ({
           context,
           ctxId,
           events: eventStream,
+          onRetry: ({ attempt, maxAttempts, delayMs }) => {
+            const seconds = Math.round(delayMs / 1000);
+            enqueue(() =>
+              updateTask(stream, {
+                taskId,
+                status: 'in_progress',
+                details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
+              })
+            );
+          },
           onToolStart: ({ toolName, toolCallId, args, status }) => {
             keepSandboxAlive().catch((error: unknown) => {
               logger.warn(
@@ -142,11 +151,9 @@ export const sandbox = ({
         });
 
         try {
-          await runInference({
-            client: session.client,
-            prompt,
-            timeoutPromise,
-          });
+          const idle = session.client.waitForIdle();
+          await session.client.prompt(prompt);
+          await Promise.race([idle, timeoutPromise]);
         } catch (error) {
           await session.client.abort().catch(() => null);
           throw error;

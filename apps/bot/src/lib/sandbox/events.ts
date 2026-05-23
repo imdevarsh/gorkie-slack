@@ -35,11 +35,22 @@ function handleShowFileTool(params: {
 }
 
 export function subscribeEvents(params: SubscribeEventsParams): () => void {
-  const { runtime, context, ctxId, events, onToolStart, onToolEnd } = params;
+  const { runtime, context, ctxId, events, onToolStart, onToolEnd, onRetry } =
+    params;
 
   return runtime.client.onEvent((event) => {
     try {
       events.push(event);
+
+      if (event.type === 'auto_retry_start') {
+        const { attempt, maxAttempts, delayMs, errorMessage } = event;
+        logger.warn(
+          { ctxId, attempt, maxAttempts, delayMs, errorMessage },
+          '[subagent] Auto-retry started'
+        );
+        onRetry?.({ attempt, maxAttempts, delayMs, errorMessage });
+        return;
+      }
 
       if (event.type === 'tool_execution_start') {
         const { toolName, args, toolCallId } = event;

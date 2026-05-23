@@ -15,10 +15,18 @@ export interface ToolEndEvent {
   toolName: string;
 }
 
+export interface RetryEvent {
+  attempt: number;
+  delayMs: number;
+  errorMessage: string;
+  maxAttempts: number;
+}
+
 export interface SubscribeEventsParams {
   context: SlackMessageContext;
   ctxId: string;
   events: AgentSessionEvent[];
+  onRetry?: (event: RetryEvent) => void | Promise<void>;
   onToolEnd?: (event: ToolEndEvent) => void | Promise<void>;
   onToolStart?: (event: ToolStartEvent) => void | Promise<void>;
   runtime: ResolvedSandboxSession;
