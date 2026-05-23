@@ -195,7 +195,7 @@ export const sandbox = ({
               enqueue(() =>
                 updateTask(stream, {
                   taskId,
-                  title: `Trying ${attempt}/${total}`,
+                  title: `Something went wrong, retrying (${attempt}/${total - 1})`,
                   status: 'in_progress',
                 })
               );
