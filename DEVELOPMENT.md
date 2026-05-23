@@ -126,7 +126,7 @@ Both apps must share the same `DATABASE_URL`. The bot writes short-lived proxy t
 The E2B sandbox template must be built and registered before the bot can create sandboxes:
 
 ```bash
-bun run build:template
+bun run build:sandbox
 ```
 
 The template name comes from `config.template` in `apps/bot/src/config.ts`. After building, the template ID is pinned, update `config.template` if you create a new version.
