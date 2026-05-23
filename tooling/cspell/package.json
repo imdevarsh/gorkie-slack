@@ -1,0 +1,24 @@
+{
+  "name": "@repo/cspell-config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cspell/cspell-types": "^10.0.0",
+    "@cspell/dict-bash": "catalog:",
+    "@cspell/dict-npm": "catalog:",
+    "@cspell/dict-redis": "catalog:",
+    "cspell": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

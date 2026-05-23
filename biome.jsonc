@@ -18,7 +18,8 @@
       "!node_modules",
       "!**/dist",
       "!**/public",
-      "!.github",
+      "!.agents",
+      "!.github/skills",
       "!.vercel",
       "!bun.lock",
       "!**/*.md",
@@ -39,39 +40,27 @@
       "quoteStyle": "single",
       "jsxQuoteStyle": "single",
       "semicolons": "always"
-    }
+    },
+    "globals": ["Bun"]
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "correctness": {
-        "noUnusedImports": "error"
-      },
       "complexity": {
         "noExcessiveCognitiveComplexity": "off"
       },
+      "correctness": {
+        "noUnusedImports": "error"
+      },
       "performance": {
-        "noBarrelFile": "error",
+        "noBarrelFile": "off",
         "noNamespaceImport": "off"
       },
       "suspicious": {
         "noEmptyBlockStatements": "error"
-      },
-      "recommended": true
-    }
-  },
-  "overrides": [
-    {
-      "includes": ["server/types/index.ts"],
-      "linter": {
-        "rules": {
-          "performance": {
-            "noBarrelFile": "off"
-          }
-        }
       }
     }
-  ],
+  },
   "json": {
     "parser": {
       "allowComments": true

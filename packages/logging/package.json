@@ -1,0 +1,43 @@
+{
+  "name": "@repo/logging",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./keys": "./src/keys.ts",
+    "./log": "./src/log.ts",
+    "./logger": "./src/logger.ts",
+    "./*": "./src/*.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "keys": [
+        "./src/keys.ts"
+      ],
+      "log": [
+        "./src/log.ts"
+      ],
+      "logger": [
+        "./src/logger.ts"
+      ],
+      "*": [
+        "./src/*.ts"
+      ]
+    }
+  },
+  "scripts": {
+    "clean": "git clean -xdf .turbo dist node_modules",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@t3-oss/env-core": "catalog:",
+    "pino": "catalog:",
+    "pino-pretty": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

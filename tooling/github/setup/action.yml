@@ -1,0 +1,59 @@
+name: "Setup and install"
+description: "Common setup steps for GitHub Actions"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+
+    - name: Get Bun cache directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=${HOME}/.bun/install/cache" >> "$GITHUB_ENV"
+
+    - name: Setup Bun cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-bun-
+
+    - name: Install dependencies
+      shell: bash
+      run: bun install
+
+    - name: Create app environment files
+      shell: bash
+      run: |
+        cat << EOF > apps/bot/.env
+        NODE_ENV="test"
+        DATABASE_URL="postgres://postgres:postgres@localhost:5432/gorkie"
+        SLACK_APP_TOKEN="xapp-your-app-token"
+        SLACK_BOT_TOKEN="xoxb-your-bot-token"
+        SLACK_SIGNING_SECRET="your-signing-secret"
+        SLACK_SOCKET_MODE=true
+        PORT=3000
+        HACKCLUB_API_KEY="sk-hc-your-hackclub-api-key"
+        OPENROUTER_API_KEY="sk-or-your-openrouter-api-key"
+        LOG_DIRECTORY="logs"
+        LOG_LEVEL="info"
+        EXA_API_KEY="exa-your-exa-api-key"
+        E2B_API_KEY="e2b-your-e2b-api-key"
+        AGENTMAIL_API_KEY="am_your_agentmail_api_key"
+        PROXY_BASE_URL="http://localhost:3001"
+        VERCEL_TOKEN="your-vercel-oidc-token"
+        VERCEL_PROJECT_ID="prj_abc"
+        EOF
+
+        cat << EOF > apps/server/.env
+        NODE_ENV="test"
+        DATABASE_URL="postgres://postgres:postgres@localhost:5432/gorkie"
+        PORT=3001
+        CORS_ORIGIN="http://localhost:3000"
+        HACKCLUB_API_KEY="sk-hc-your-hackclub-api-key"
+        OPENROUTER_API_KEY="sk-or-your-openrouter-api-key"
+        LOG_DIRECTORY="logs"
+        LOG_LEVEL="info"
+        EOF
