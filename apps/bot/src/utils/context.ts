@@ -17,12 +17,20 @@ export function getContextId(context: SlackMessageContext): string {
   return `${channel}:${threadTs}`;
 }
 
+type BotDetails = { joined: number; status: string; activity: string };
+const botCache = new Map<string, BotDetails>();
+
 async function resolveBotDetails(
   ctx: SlackMessageContext
-): Promise<{ joined: number; status: string; activity: string }> {
+): Promise<BotDetails> {
   const botId = ctx.botUserId;
   if (!botId) {
     return { joined: Date.now(), status: 'active', activity: 'none' };
+  }
+
+  const cached = botCache.get(botId);
+  if (cached) {
+    return cached;
   }
 
   try {
@@ -36,11 +44,13 @@ async function resolveBotDetails(
       info.user?.profile?.status_text?.trim() ||
       info.user?.profile?.status_emoji?.trim() ||
       'active';
-    return {
+    const details: BotDetails = {
       joined: joinedSeconds * 1000,
       status,
       activity: info.user?.profile?.status_text?.trim() || 'none',
     };
+    botCache.set(botId, details);
+    return details;
   } catch {
     return { joined: Date.now(), status: 'active', activity: 'none' };
   }
