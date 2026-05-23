@@ -13,6 +13,12 @@
       "skillPath": "skills/neon-postgres/SKILL.md",
       "computedHash": "6c6dc205493216d88fb0ee040eafec1d3a722926f6f8f3f568ce26740c53eb74"
     },
+    "tsdown": {
+      "source": "rolldown/tsdown",
+      "sourceType": "github",
+      "skillPath": "skills/tsdown/SKILL.md",
+      "computedHash": "c5cb4d806d5bc454dbfc0bd03a8dbaf8fb1d45dea1973ed3ae724d3a2c191246"
+    },
     "turborepo": {
       "source": "vercel/turborepo",
       "sourceType": "github",
