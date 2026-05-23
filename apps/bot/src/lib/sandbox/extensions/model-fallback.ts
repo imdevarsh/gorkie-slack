@@ -1,6 +1,6 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 interface FallbackConfig {
   fallback: string[];
@@ -14,13 +14,21 @@ export default function modelFallback(pi: ExtensionAPI) {
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   function cleanup() {
-    if (timer !== null) { clearTimeout(timer); timer = null; }
-    if (controller !== null) { controller.abort(); controller = null; }
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    if (controller !== null) {
+      controller.abort();
+      controller = null;
+    }
   }
 
   function nextFallback(current: string): string | null {
     const idx = config.fallback.findIndex((e) => {
-      if (e === current) return true;
+      if (e === current) {
+        return true;
+      }
       const s = current.indexOf('/');
       return s > 0 && e.endsWith(current.slice(s));
     });
@@ -30,9 +38,14 @@ export default function modelFallback(pi: ExtensionAPI) {
   }
 
   async function tryFallback(ctx: any, attempts = 0): Promise<void> {
-    if (attempts >= config.fallback.length) return;
+    if (attempts >= config.fallback.length) {
+      return;
+    }
     const next = nextFallback(currentModel);
-    if (!next) { cleanup(); return; }
+    if (!next) {
+      cleanup();
+      return;
+    }
 
     controller?.abort();
     controller = null;
@@ -50,7 +63,7 @@ export default function modelFallback(pi: ExtensionAPI) {
       );
     }
 
-    if (!model || !(await pi.setModel(model))) {
+    if (!(model && (await pi.setModel(model)))) {
       currentModel = next;
       return tryFallback(ctx, attempts + 1);
     }
@@ -63,7 +76,9 @@ export default function modelFallback(pi: ExtensionAPI) {
   pi.on('session_start', async (_e, ctx) => {
     const path = join(ctx.cwd, '.pi', 'model-fallback.json');
     if (existsSync(path)) {
-      try { config = JSON.parse(readFileSync(path, 'utf8')); } catch {}
+      try {
+        config = JSON.parse(readFileSync(path, 'utf8'));
+      } catch {}
     }
   });
 
