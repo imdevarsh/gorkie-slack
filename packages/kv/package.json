@@ -8,6 +8,7 @@
     "./redis": "./src/redis.ts"
   },
   "scripts": {
+    "clean": "git clean -xdf .turbo dist node_modules",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

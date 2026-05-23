@@ -2,6 +2,7 @@
   "name": "server",
   "type": "module",
   "scripts": {
+    "clean": "git clean -xdf .turbo .output node_modules",
     "build": "nitro build",
     "dev": "nitro dev --port 3001",
     "prepare": "nitro prepare",

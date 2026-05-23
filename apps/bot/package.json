@@ -3,6 +3,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
+    "clean": "git clean -xdf .turbo dist node_modules",
     "build": "tsdown",
     "build:template": "bun run src/scripts/build-template.ts",
     "dev": "bun run --hot src/index.ts",
