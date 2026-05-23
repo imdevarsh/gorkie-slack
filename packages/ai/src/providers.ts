@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createLogger } from '@repo/logging/log';
-import { customProvider, type Provider, wrapProvider } from 'ai';
+import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
 import { createRetryable } from 'ai-retry';
 import { requestNotRetryable } from 'ai-retry/retryables';
 
@@ -41,12 +41,11 @@ const onModelError = (context: {
   current: { model: { provider: string; modelId: string }; error?: unknown };
 }) => {
   const { model, error } = context.current;
+  const err = APICallError.isInstance(error)
+    ? { status: error.statusCode, message: error.message, url: error.url }
+    : { message: error instanceof Error ? error.message : String(error) };
   logger.warn(
-    {
-      provider: model.provider,
-      modelId: model.modelId,
-      err: error,
-    },
+    { provider: model.provider, modelId: model.modelId, err },
     'model error, switching to next'
   );
 };
