@@ -77,6 +77,7 @@ export default defineHandler(async (event) => {
     body: requestBody ?? undefined,
     headers,
     method: event.req.method,
+    signal: AbortSignal.timeout(240_000),
   }).catch((error: unknown) => {
     logger.error(
       { err: error, provider, upstreamUrl },

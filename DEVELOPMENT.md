@@ -91,7 +91,7 @@ The proxy is a Nitro app and deploys to Vercel as a serverless Node.js function.
    | `HACKCLUB_API_KEY` | Provider key (never put in the bot) |
    | `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` | Optional fallback |
    | `GOOGLE_GENERATIVE_AI_API_KEY` | Optional fallback |
-   | `CORS_ORIGIN` | Set to your bot's public URL or `*` |
+   | `CORS_ORIGIN` | Your bot's public URL, or `*` to allow all origins |
    | `LOG_LEVEL` | `info` for production |
 
 3. Deploy. The proxy URL will be `https://<your-project>.vercel.app`.

@@ -31,7 +31,7 @@ Gorkie responds to mentions, DMs, and thread replies with AI-generated responses
 
 ## Getting Started
 
-Create a new [Slack App](https://api.slack.com/apps) using the [provided manifest](slack-manifest.json). You will also need [Git][git], [Bun][bun], a running [Redis][redis] instance, and a [PostgreSQL][postgres] database.
+Create a new [Slack App](https://api.slack.com/apps) using the [provided manifest](slack-manifest.json). You will also need [Git][git], [Bun][bun], and a [PostgreSQL][postgres] database.
 
 ```bash
 # Clone this repository
