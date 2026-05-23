@@ -87,16 +87,6 @@ export const sandbox = ({
           context,
           ctxId,
           events: eventStream,
-          onRetry: ({ attempt, maxAttempts, delayMs }) => {
-            const seconds = Math.round(delayMs / 1000);
-            enqueue(() =>
-              updateTask(stream, {
-                taskId,
-                status: 'in_progress',
-                details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
-              })
-            );
-          },
           onToolStart: ({ toolName, toolCallId, args, status }) => {
             keepSandboxAlive().catch((error: unknown) => {
               logger.warn(
@@ -156,16 +146,6 @@ export const sandbox = ({
             client: session.client,
             prompt,
             timeoutPromise,
-            ctxId,
-            onModelSwitch: (attempt, total) => {
-              enqueue(() =>
-                updateTask(stream, {
-                  taskId,
-                  title: `Something went wrong, retrying (${attempt}/${total - 1})`,
-                  status: 'in_progress',
-                })
-              );
-            },
           });
         } catch (error) {
           await session.client.abort().catch(() => null);
