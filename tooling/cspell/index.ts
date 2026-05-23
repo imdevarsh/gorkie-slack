@@ -86,6 +86,7 @@ export default defineConfig({
     'numpy',
     'ONLCR',
     'openrouter',
+    'pkce',
     'poppler',
     'roleplay',
     'retryables',

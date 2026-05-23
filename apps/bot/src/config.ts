@@ -6,15 +6,23 @@ export const appHome = {
 export const assistantThread = {
   suggestedPrompts: {
     dm: [
-      { title: 'Search the web', message: 'What are the top AI news stories today?' },
+      {
+        title: 'Search the web',
+        message: 'What are the top AI news stories today?',
+      },
       {
         title: 'Write and run code',
-        message: 'Write and run a Python script that plots a sine wave and sends me the image.',
+        message:
+          'Write and run a Python script that plots a sine wave and sends me the image.',
       },
-      { title: 'Generate an image', message: 'Generate an image of a futuristic city at night.' },
+      {
+        title: 'Generate an image',
+        message: 'Generate an image of a futuristic city at night.',
+      },
       {
         title: 'Browse a website',
-        message: 'Take a screenshot of https://example.com and describe what you see.',
+        message:
+          'Take a screenshot of https://example.com and describe what you see.',
       },
     ],
     channel: [
@@ -28,9 +36,13 @@ export const assistantThread = {
       },
       {
         title: 'Write and run code',
-        message: 'Write and run a Python script that plots a sine wave and sends me the image.',
+        message:
+          'Write and run a Python script that plots a sine wave and sends me the image.',
       },
-      { title: 'Generate an image', message: 'Generate an image of a futuristic city at night.' },
+      {
+        title: 'Generate an image',
+        message: 'Generate an image of a futuristic city at night.',
+      },
     ],
   },
 };
