@@ -29,10 +29,7 @@ interface BaseHints {
 }
 
 export interface ChatRequestHints extends BaseHints {
-  activity: string;
   customization?: UserCustomization;
-  joined: number;
-  status: string;
 }
 
 export interface SandboxRequestHints extends BaseHints {}

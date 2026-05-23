@@ -20,8 +20,6 @@ export function chatPrompt({
     `<context>
 The current date and time is ${requestHints.time}.
 You're in the ${requestHints.server} Slack workspace, inside the ${requestHints.channel} channel.
-You joined the server on ${new Date(requestHints.joined).toLocaleDateString()}.
-Your current status is ${requestHints.status} and your activity is ${requestHints.activity}.
 </context>`,
     requestHints.customization?.prompt
       ? `<user_instructions>

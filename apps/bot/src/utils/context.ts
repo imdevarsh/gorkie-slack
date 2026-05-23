@@ -17,61 +17,6 @@ export function getContextId(context: SlackMessageContext): string {
   return `${channel}:${threadTs}`;
 }
 
-type BotDetails = { joined: number; status: string; activity: string };
-const botCache = new Map<string, BotDetails>();
-const botInflight = new Map<string, Promise<BotDetails>>();
-
-function fetchBotDetails(
-  ctx: SlackMessageContext,
-  botId: string
-): Promise<BotDetails> {
-  const promise = ctx.client.users
-    .info({ user: botId })
-    .then((info) => {
-      const joinedSeconds =
-        (info.user as { updated?: number; created?: number } | undefined)
-          ?.created ??
-        info.user?.updated ??
-        Math.floor(Date.now() / 1000);
-      const status =
-        info.user?.profile?.status_text?.trim() ||
-        info.user?.profile?.status_emoji?.trim() ||
-        'active';
-      const details: BotDetails = {
-        joined: joinedSeconds * 1000,
-        status,
-        activity: info.user?.profile?.status_text?.trim() || 'none',
-      };
-      botCache.set(botId, details);
-      return details;
-    })
-    .catch(
-      (): BotDetails => ({
-        joined: Date.now(),
-        status: 'active',
-        activity: 'none',
-      })
-    )
-    .finally(() => {
-      botInflight.delete(botId);
-    });
-
-  botInflight.set(botId, promise);
-  return promise;
-}
-
-async function resolveBotDetails(
-  ctx: SlackMessageContext
-): Promise<BotDetails> {
-  const botId = ctx.botUserId;
-  if (!botId) {
-    return { joined: Date.now(), status: 'active', activity: 'none' };
-  }
-  return (
-    botCache.get(botId) ?? botInflight.get(botId) ?? fetchBotDetails(ctx, botId)
-  );
-}
-
 export async function buildChatContext(
   ctx: SlackMessageContext,
   opts?: {
@@ -104,23 +49,18 @@ export async function buildChatContext(
 
   if (!requestHints) {
     const userId = ctx.event.user;
-    const [channelName, serverName, botDetails, customization] =
-      await Promise.all([
-        resolveChannelName(ctx),
-        resolveServerName(ctx),
-        resolveBotDetails(ctx),
-        userId
-          ? getUserCustomization(userId).catch(() => null)
-          : Promise.resolve(null),
-      ]);
+    const [channelName, serverName, customization] = await Promise.all([
+      resolveChannelName(ctx),
+      resolveServerName(ctx),
+      userId
+        ? getUserCustomization(userId).catch(() => null)
+        : Promise.resolve(null),
+    ]);
 
     requestHints = {
       channel: channelName,
       time: getTime(),
       server: serverName,
-      joined: botDetails.joined,
-      status: botDetails.status,
-      activity: botDetails.activity,
       customization: customization ?? undefined,
     };
   }
