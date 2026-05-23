@@ -29,7 +29,7 @@ async function handleMessage(
   const { user: userId, text: messageText = '' } = event;
 
   const ctxId = getContextId(messageContext);
-  const authorName = await getAuthorName(messageContext, ctxId);
+  const authorName = await getAuthorName(messageContext);
   const content = messageText;
 
   const { messages, requestHints } = await buildChatContext(messageContext);

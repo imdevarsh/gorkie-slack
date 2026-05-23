@@ -1,6 +1,4 @@
-import { toLogError } from '@repo/utils/error';
 import { asRecord } from '@repo/utils/record';
-import logger from '@/lib/logger';
 import type {
   MessageEventArgs,
   SlackFile,
@@ -8,6 +6,7 @@ import type {
   SlackMessageEvent,
   SlackRawMessageEvent,
 } from '@/types';
+import { getSlackUserName } from '@/utils/users';
 
 function isSlackFile(value: unknown): value is SlackFile {
   return Boolean(asRecord(value));
@@ -104,28 +103,10 @@ export function shouldHandleMessage(
   return Boolean(event.user) && !messageText.startsWith('##');
 }
 
-export async function getAuthorName(
-  ctx: SlackMessageContext,
-  ctxId: string
-): Promise<string> {
+export async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
   const userId = ctx.event.user;
   if (!userId) {
     return 'unknown';
   }
-
-  try {
-    const info = await ctx.client.users.info({ user: userId });
-    return (
-      info.user?.profile?.display_name ||
-      info.user?.real_name ||
-      info.user?.name ||
-      userId
-    );
-  } catch (error) {
-    logger.warn(
-      { ...toLogError(error), userId, ctxId },
-      'Failed to fetch user info for logging'
-    );
-    return userId;
-  }
+  return getSlackUserName(ctx.client, userId);
 }

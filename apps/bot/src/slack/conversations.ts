@@ -3,13 +3,7 @@ import type { ModelMessage, UserContent } from 'ai';
 import logger from '@/lib/logger';
 import type { ConversationOptions, SlackConversationMessage } from '@/types';
 import { processSlackFiles } from '@/utils/images';
-
-interface CachedUser {
-  displayName: string;
-  id: string;
-  realName?: string;
-  username?: string;
-}
+import { getSlackUserName } from '@/utils/users';
 
 async function joinChannel(
   client: ConversationOptions['client'],
@@ -90,7 +84,7 @@ function filterMessages(
 async function buildUserCache(
   client: ConversationOptions['client'],
   messages: SlackConversationMessage[]
-): Promise<Map<string, CachedUser>> {
+): Promise<Map<string, string>> {
   const userIds = new Set<string>();
   for (const message of messages) {
     if (message.user) {
@@ -98,32 +92,11 @@ async function buildUserCache(
     }
   }
 
-  const userCache = new Map<string, CachedUser>();
+  const userCache = new Map<string, string>();
   await Promise.all(
     Array.from(userIds).map(async (userId) => {
-      try {
-        const info = await client.users.info({ user: userId });
-        const displayName =
-          info.user?.profile?.display_name ||
-          info.user?.real_name ||
-          info.user?.name ||
-          userId;
-        userCache.set(userId, {
-          id: userId,
-          displayName,
-          realName: info.user?.real_name || undefined,
-          username: info.user?.name || undefined,
-        });
-      } catch (error) {
-        logger.warn(
-          { ...toLogError(error), userId },
-          'Failed to fetch Slack user info'
-        );
-        userCache.set(userId, {
-          id: userId,
-          displayName: userId,
-        });
-      }
+      const name = await getSlackUserName(client, userId);
+      userCache.set(userId, name);
     })
   );
 
@@ -150,7 +123,7 @@ async function toModelMessage(
   options: {
     botUserId?: string;
     mentionRegex: RegExp | null;
-    userCache: Map<string, CachedUser>;
+    userCache: Map<string, string>;
   }
 ): Promise<ModelMessage> {
   const { botUserId, mentionRegex, userCache } = options;
@@ -164,7 +137,7 @@ async function toModelMessage(
   const textContent = cleaned.length > 0 ? cleaned : original;
 
   const author = message.user
-    ? (userCache.get(message.user)?.displayName ?? message.user)
+    ? (userCache.get(message.user) ?? message.user)
     : (message.bot_id ?? 'unknown');
   const authorId = message.user ?? message.bot_id ?? 'unknown';
 
