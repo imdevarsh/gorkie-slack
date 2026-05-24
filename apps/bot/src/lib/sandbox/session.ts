@@ -1,10 +1,10 @@
 import { Sandbox } from '@e2b/code-interpreter';
 import { systemPrompt } from '@repo/ai/prompts';
 import {
-  clearDestroyed,
   getByThread,
   issueProxyToken,
   markActivity,
+  markDestroyed,
   revokeProxyToken,
   updateRuntime,
   updateStatus,
@@ -19,7 +19,7 @@ import { getContextId } from '@/utils/context';
 import { configureAgent } from './config';
 import { boot } from './rpc/boot';
 
-function isMissingSandboxError(error: unknown): boolean {
+function isSandboxNotFoundError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
   return (
     message.includes('not found') ||
@@ -33,7 +33,7 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
     apiKey: env.E2B_API_KEY,
     timeoutMs: config.timeout,
   }).catch((error: unknown) => {
-    if (isMissingSandboxError(error)) {
+    if (isSandboxNotFoundError(error)) {
       return null;
     }
     throw error;
@@ -140,7 +140,7 @@ async function resumeSandbox(
   const sandbox = await connectSandbox(sandboxId);
 
   if (!sandbox) {
-    await clearDestroyed(threadId);
+    await markDestroyed(threadId);
     throw new Error(`[sandbox] Sandbox ${sandboxId} not found`);
   }
 
@@ -195,7 +195,7 @@ export async function resolveSession(
       existing.sandboxId,
       existing.sessionId
     ).catch((error: unknown) => {
-      if (isMissingSandboxError(error)) {
+      if (isSandboxNotFoundError(error)) {
         return createSandbox(context, threadId);
       }
       throw error;

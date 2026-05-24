@@ -34,14 +34,3 @@ export function getMessageText(message: ModelMessage): string {
 
   return '';
 }
-
-export function buildHistorySnippet(
-  messages: ModelMessage[],
-  limit: number
-): string {
-  return messages
-    .slice(-limit)
-    .map((msg) => getMessageText(msg))
-    .filter(Boolean)
-    .join('\n');
-}

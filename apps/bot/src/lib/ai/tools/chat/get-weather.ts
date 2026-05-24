@@ -3,14 +3,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
-import type { SlackMessageContext, Stream } from '@/types';
+import type { Stream } from '@/types';
 
-export const getWeather = ({
-  stream,
-}: {
-  context: SlackMessageContext;
-  stream: Stream;
-}) =>
+export const getWeather = ({ stream }: { stream: Stream }) =>
   tool({
     description: 'Get the current weather at a location',
     inputSchema: z.object({

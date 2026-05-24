@@ -79,7 +79,7 @@ export async function updateRuntime(
     .where(eq(sandboxSessions.threadId, threadId));
 }
 
-export async function clearDestroyed(threadId: string): Promise<void> {
+export async function markDestroyed(threadId: string): Promise<void> {
   await db
     .update(sandboxSessions)
     .set({

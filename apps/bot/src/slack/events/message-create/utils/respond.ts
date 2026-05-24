@@ -5,11 +5,7 @@ import {
   type UserContent,
 } from 'ai';
 import { clearAbortController, createAbortController } from '@/lib/abort';
-import {
-  consumeOrchestratorReasoningStream,
-  orchestratorAgent,
-  resolveOrchestratorTask,
-} from '@/lib/ai/agents/orchestrator';
+import { orchestratorSession } from '@/lib/ai/agents/orchestrator';
 import { setStatus } from '@/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '@/lib/ai/utils/stream';
 import { setConversationTitle } from '@/lib/ai/utils/title';
@@ -26,6 +22,9 @@ export async function generateResponse(
   const ctxId = getContextId(context);
   const controller = createAbortController(ctxId);
   let stream: Stream | null = null;
+  let resolveTask:
+    | ((opts?: { title?: string; details?: string }) => Promise<void>)
+    | undefined;
 
   try {
     await setStatus(context, {
@@ -69,12 +68,12 @@ export async function generateResponse(
           ] as UserContent)
         : replyPrompt;
 
-    const agent = orchestratorAgent({
-      context,
-      requestHints,
-      files,
-      stream,
-    });
+    const {
+      agent,
+      consumeReasoningStream,
+      resolveTask: resolve,
+    } = orchestratorSession({ context, requestHints, files, stream });
+    resolveTask = resolve;
 
     const streamResult = await agent.stream({
       messages: [
@@ -86,11 +85,7 @@ export async function generateResponse(
       ],
       abortSignal: controller.signal,
     });
-    await consumeOrchestratorReasoningStream({
-      context,
-      stream,
-      fullStream: streamResult.fullStream,
-    });
+    await consumeReasoningStream(streamResult.fullStream);
     const toolCalls = await streamResult.toolCalls;
 
     await closeStream(stream);
@@ -101,9 +96,7 @@ export async function generateResponse(
     if ((error as Error)?.name === 'AbortError') {
       if (stream) {
         await setPlanTitle(stream, 'Interrupted');
-        await resolveOrchestratorTask({
-          context,
-          stream,
+        await resolveTask?.({
           title: 'Interrupted',
           details: 'Stopped by user.',
         });
@@ -125,9 +118,7 @@ export async function generateResponse(
 
     if (stream) {
       await setPlanTitle(stream, 'Generation Failed');
-      await resolveOrchestratorTask({
-        context,
-        stream,
+      await resolveTask?.({
         title: 'Generation Failed',
         details: failureDetails,
       });

@@ -4,9 +4,7 @@ import { cleanTerminalText } from '@repo/utils/text';
 import { sandbox as config } from '@/config';
 import logger from '@/lib/logger';
 import type {
-  AgentMessage,
   AgentSessionEvent,
-  CompactionResult,
   PendingRequest,
   PtyLike,
   RpcCommand,
@@ -14,27 +12,7 @@ import type {
   RpcEventListener,
   RpcResponse,
   RpcSessionState,
-  RpcSlashCommand,
-  ThinkingLevel,
 } from '@/types/sandbox/rpc';
-
-type BashResult = Extract<
-  RpcResponse,
-  { command: 'bash'; success: true }
->['data'];
-type SessionStats = Extract<
-  RpcResponse,
-  { command: 'get_session_stats'; success: true }
->['data'];
-type ModelInfo = Extract<
-  RpcResponse,
-  { command: 'get_available_models'; success: true }
->['data']['models'][number];
-interface CycleModelResult {
-  isScoped: boolean;
-  model: { provider: string; id: string };
-  thinkingLevel: ThinkingLevel;
-}
 
 export class PiRpcClient {
   private buffer = '';
@@ -116,35 +94,10 @@ export class PiRpcClient {
     await this.send({ type: 'prompt', message, images });
   }
 
-  async steer(message: string, images?: ImageContent[]): Promise<void> {
-    await this.send({ type: 'steer', message, images });
-  }
-
-  async followUp(message: string, images?: ImageContent[]): Promise<void> {
-    await this.send({ type: 'follow_up', message, images });
-  }
-
-  async promptAndWait(
-    message: string,
-    images?: ImageContent[]
-  ): Promise<AgentSessionEvent[]> {
-    const eventsPromise = this.collectEvents();
-    await this.prompt(message, images);
-    return eventsPromise;
-  }
-
   // --- agent control ---
 
   async abort(): Promise<void> {
     await this.cmd({ type: 'abort' });
-  }
-
-  async abortRetry(): Promise<void> {
-    await this.cmd({ type: 'abort_retry' });
-  }
-
-  async abortBash(): Promise<void> {
-    await this.cmd({ type: 'abort_bash' });
   }
 
   // --- session ---
@@ -153,119 +106,12 @@ export class PiRpcClient {
     return this.cmd({ type: 'get_state' });
   }
 
-  newSession(parentSession?: string): Promise<{ cancelled: boolean }> {
-    return this.cmd({ type: 'new_session', parentSession });
-  }
-
-  switchSession(sessionPath: string): Promise<{ cancelled: boolean }> {
-    return this.cmd({ type: 'switch_session', sessionPath });
-  }
-
-  clone(): Promise<{ cancelled: boolean }> {
-    return this.cmd({ type: 'clone' });
-  }
-
-  fork(entryId: string): Promise<{ text: string; cancelled: boolean }> {
-    return this.cmd({ type: 'fork', entryId });
-  }
-
-  async getForkMessages(): Promise<Array<{ entryId: string; text: string }>> {
-    return (
-      await this.cmd<{ messages: Array<{ entryId: string; text: string }> }>({
-        type: 'get_fork_messages',
-      })
-    ).messages;
-  }
-
-  async setSessionName(name: string): Promise<void> {
-    await this.cmd({ type: 'set_session_name', name });
-  }
-
-  getSessionStats(): Promise<SessionStats> {
-    return this.cmd({ type: 'get_session_stats' });
-  }
-
-  exportHtml(outputPath?: string): Promise<{ path: string }> {
-    return this.cmd({ type: 'export_html', outputPath });
-  }
-
   async getLastAssistantText(): Promise<string | null> {
     return (
       await this.cmd<{ text: string | null }>({
         type: 'get_last_assistant_text',
       })
     ).text;
-  }
-
-  async getMessages(): Promise<AgentMessage[]> {
-    return (
-      await this.cmd<{ messages: AgentMessage[] }>({ type: 'get_messages' })
-    ).messages;
-  }
-
-  async getCommands(): Promise<RpcSlashCommand[]> {
-    return (
-      await this.cmd<{ commands: RpcSlashCommand[] }>({ type: 'get_commands' })
-    ).commands;
-  }
-
-  // --- model ---
-
-  setModel(
-    provider: string,
-    modelId: string
-  ): Promise<{ provider: string; id: string }> {
-    return this.cmd({ type: 'set_model', provider, modelId });
-  }
-
-  cycleModel(): Promise<CycleModelResult | null> {
-    return this.cmd({ type: 'cycle_model' });
-  }
-
-  async getAvailableModels(): Promise<ModelInfo[]> {
-    return (
-      await this.cmd<{ models: ModelInfo[] }>({ type: 'get_available_models' })
-    ).models;
-  }
-
-  // --- thinking ---
-
-  async setThinkingLevel(level: ThinkingLevel): Promise<void> {
-    await this.cmd({ type: 'set_thinking_level', level });
-  }
-
-  cycleThinkingLevel(): Promise<{ level: ThinkingLevel } | null> {
-    return this.cmd({ type: 'cycle_thinking_level' });
-  }
-
-  // --- steering / follow-up modes ---
-
-  async setSteeringMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
-    await this.cmd({ type: 'set_steering_mode', mode });
-  }
-
-  async setFollowUpMode(mode: 'all' | 'one-at-a-time'): Promise<void> {
-    await this.cmd({ type: 'set_follow_up_mode', mode });
-  }
-
-  // --- compaction / retry ---
-
-  compact(customInstructions?: string): Promise<CompactionResult> {
-    return this.cmd({ type: 'compact', customInstructions });
-  }
-
-  async setAutoCompaction(enabled: boolean): Promise<void> {
-    await this.cmd({ type: 'set_auto_compaction', enabled });
-  }
-
-  async setAutoRetry(enabled: boolean): Promise<void> {
-    await this.cmd({ type: 'set_auto_retry', enabled });
-  }
-
-  // --- bash ---
-
-  bash(command: string): Promise<BashResult> {
-    return this.cmd({ type: 'bash', command });
   }
 
   // --- lifecycle ---

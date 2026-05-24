@@ -1,9 +1,12 @@
 import { tool } from 'ai';
 import type { RegularSearchOptions } from 'exa-js';
+import Exa from 'exa-js';
 import { z } from 'zod';
-import { exa } from '@/lib/ai/exa';
+import { env } from '@/env';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import type { SlackMessageContext, Stream, TaskSource } from '@/types';
+
+const exa = new Exa(env.EXA_API_KEY);
 
 const EXA_SEARCH_OPTIONS = {
   type: 'auto',

@@ -30,7 +30,7 @@ export function createToolset({
     cancelScheduledTask: cancelScheduledTask({ context, stream }),
     generateImage: generateImageTool({ context, files, stream }),
     getUserInfo: getUserInfo({ context, stream }),
-    getWeather: getWeather({ context, stream }),
+    getWeather: getWeather({ stream }),
     leaveChannel: leaveChannel({ context, stream }),
     listScheduledTasks: listScheduledTasks({ context, stream }),
     mermaid: mermaid({ context, stream }),

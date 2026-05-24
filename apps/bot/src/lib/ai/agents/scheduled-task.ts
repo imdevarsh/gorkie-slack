@@ -44,7 +44,7 @@ Rules:
     toolChoice: 'required',
     tools: {
       searchWeb: searchWeb({ context, stream }),
-      getWeather: getWeather({ context, stream }),
+      getWeather: getWeather({ stream }),
       getUserInfo: getUserInfo({ context, stream }),
       readConversationHistory: readConversationHistory({ context, stream }),
       sandbox: sandbox({ context, stream }),
