@@ -45,6 +45,12 @@ The `agent-browser` npm package is installed globally by the sandbox, but `agent
 - Tighten types in `message-context.ts` now that `getAuthorName` no longer takes `ctxId`
 - Files: `apps/bot/src/slack/conversations.ts`, `apps/bot/src/slack/events/message-create/utils/message-context.ts`, `apps/bot/src/utils/triggers.ts`, `apps/bot/src/utils/context.ts`
 
+### Bug: Slack search errors mark entire task as failed + pinned items shown incorrectly
+When the bot performs a Slack search (e.g. searching for pinned messages or user-pinned items), errors from the search API bubble up and mark the whole task as a failure in the task list. The user sees the entire task as red/failed even if the core work succeeded. Additionally, pinned item detection doesn't correctly identify items the user has pinned — it may be checking the wrong field or returning all pins regardless of who pinned them.
+- Investigate: does the search error get caught and surfaced as a task failure? Wrap search calls so errors are non-fatal.
+- Investigate: pinned item filter logic — check whether `conversations.info` pin fields vs. `pins.list` API is being used, and whether user-specific pinning is filterable.
+- Files: `apps/bot/src/lib/ai/` (search tool), wherever pinned item logic lives
+
 ### Refactor: Split monorepo packages further
 Consider extracting:
 - **`@repo/observability`** — telemetry/Langfuse setup currently lives in `apps/bot/src/lib/ai/telemetry.ts`, could be a shared package if `apps/server` ever needs it
