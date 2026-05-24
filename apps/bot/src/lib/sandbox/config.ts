@@ -46,7 +46,7 @@ export async function configureAgent(
   sandbox: Sandbox,
   prompt: string
 ): Promise<void> {
-  const { model, modelChain, runtime } = config;
+  const { model, modelChain, retry, runtime } = config;
   const piDir = `${runtime.workdir}/.pi`;
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
@@ -68,24 +68,24 @@ export async function configureAgent(
   for (const file of [
     { path: `${piDir}/SYSTEM.md`, content: prompt },
     {
-      path: `${piDir}/model-fallback.json`,
-      content: JSON.stringify(
-        {
-          timeoutMs: 90_000,
-          fallback: modelChain.map(
-            ({ provider, modelId }) => `${provider}/${modelId}`
-          ),
-        },
-        null,
-        2
-      ),
-    },
-    {
       path: `${agentDir}/settings.json`,
       content: JSON.stringify(
         {
           defaultProvider: model.provider,
           defaultModel: model.modelId,
+          fallbackModels: modelChain.map(
+            ({ provider, modelId }) => `${provider}/${modelId}`
+          ),
+          retry: {
+            enabled: true,
+            maxRetries: Math.max(modelChain.length - 1, 0),
+            baseDelayMs: retry.baseDelayMs,
+            provider: {
+              timeoutMs: retry.providerTimeoutMs,
+              maxRetries: 0,
+              maxRetryDelayMs: retry.providerMaxRetryDelayMs,
+            },
+          },
         },
         null,
         2

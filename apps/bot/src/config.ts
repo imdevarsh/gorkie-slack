@@ -61,6 +61,11 @@ export const sandbox = {
     { provider: 'openrouter', modelId: 'openai/gpt-5-mini' },
     { provider: 'gemini', modelId: 'gemini-2.0-flash' },
   ],
+  retry: {
+    baseDelayMs: 1000,
+    providerMaxRetryDelayMs: 10_000,
+    providerTimeoutMs: 90_000,
+  },
   timeoutMs: 10 * 60 * 1000,
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
   janitorIntervalMs: 60 * 1000,

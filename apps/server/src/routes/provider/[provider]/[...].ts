@@ -82,11 +82,14 @@ export default defineHandler(async (event) => {
       ? await new Response(event.req.body).text().catch(() => null)
       : null;
 
+  const timeoutSignal = AbortSignal.timeout(240_000);
+  const signal = AbortSignal.any([event.req.signal, timeoutSignal]);
+
   const upstreamResponse = await fetch(upstreamUrl, {
     body: requestBody ?? undefined,
     headers,
     method: event.req.method,
-    signal: AbortSignal.timeout(240_000),
+    signal,
   }).catch((error: unknown) => {
     logger.error(
       {

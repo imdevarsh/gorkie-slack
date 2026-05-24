@@ -1,31 +1,56 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { Api, Model } from '@earendil-works/pi-ai';
 import type {
   ExtensionAPI,
   ExtensionContext,
 } from '@earendil-works/pi-coding-agent';
 
+const FALLBACK_ERROR_MARKERS = [
+  'overloaded',
+  'provider returned error',
+  'rate limit',
+  'too many requests',
+  '429',
+  '500',
+  '502',
+  '503',
+  '504',
+  'server error',
+  'internal error',
+  'service unavailable',
+  'timed out',
+  'timeout',
+  'retry delay',
+];
+
 interface FallbackConfig {
   fallback: string[];
-  timeoutMs: number;
+}
+
+function loadFallbackConfig(cwd: string): FallbackConfig {
+  try {
+    const settingsPath = join(cwd, '.pi', 'agent', 'settings.json');
+    const parsed = JSON.parse(readFileSync(settingsPath, 'utf8')) as {
+      fallbackModels?: unknown;
+    };
+    if (!Array.isArray(parsed.fallbackModels)) {
+      return { fallback: [] };
+    }
+    return {
+      fallback: parsed.fallbackModels.filter(
+        (entry): entry is string =>
+          typeof entry === 'string' && entry.includes('/')
+      ),
+    };
+  } catch {
+    return { fallback: [] };
+  }
 }
 
 export default function modelFallback(pi: ExtensionAPI) {
-  let config: FallbackConfig = { timeoutMs: 90_000, fallback: [] };
+  let config: FallbackConfig = { fallback: [] };
   let currentModel = '';
-  let controller: AbortController | null = null;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-
-  function cleanup() {
-    if (timer !== null) {
-      clearTimeout(timer);
-      timer = null;
-    }
-    if (controller !== null) {
-      controller.abort();
-      controller = null;
-    }
-  }
 
   function nextFallback(current: string): string | null {
     const idx = config.fallback.findIndex((e) => {
@@ -40,24 +65,14 @@ export default function modelFallback(pi: ExtensionAPI) {
       : (config.fallback[idx + 1] ?? null);
   }
 
-  async function tryFallback(
+  async function resolveModel(
     ctx: ExtensionContext,
-    attempts = 0
-  ): Promise<void> {
-    if (attempts >= config.fallback.length) {
-      return;
-    }
-    const next = nextFallback(currentModel);
-    if (!next) {
-      cleanup();
-      return;
-    }
-
-    controller?.abort();
-    controller = null;
-    timer = null;
-
+    next: string
+  ): Promise<Model<Api> | undefined> {
     const slash = next.indexOf('/');
+    if (slash <= 0) {
+      return;
+    }
     const provider = next.slice(0, slash);
     const modelId = next.slice(slash + 1);
 
@@ -69,24 +84,54 @@ export default function modelFallback(pi: ExtensionAPI) {
       );
     }
 
-    if (!(model && (await pi.setModel(model)))) {
-      currentModel = next;
-      return tryFallback(ctx, attempts + 1);
-    }
+    return model;
+  }
 
-    currentModel = next;
-    controller = new AbortController();
-    timer = setTimeout(() => tryFallback(ctx), config.timeoutMs);
+  function isRetryableError(message: {
+    errorMessage?: string;
+    role: string;
+    stopReason?: string;
+  }): boolean {
+    return (
+      message.role === 'assistant' &&
+      message.stopReason === 'error' &&
+      typeof message.errorMessage === 'string' &&
+      FALLBACK_ERROR_MARKERS.some((marker) =>
+        message.errorMessage?.toLowerCase().includes(marker)
+      )
+    );
+  }
+
+  async function switchToNextFallback(ctx: ExtensionContext): Promise<void> {
+    const attempted = new Set<string>();
+
+    while (attempted.size < config.fallback.length) {
+      const next = nextFallback(currentModel);
+      if (!(next && !attempted.has(next))) {
+        return;
+      }
+
+      attempted.add(next);
+      const model = await resolveModel(ctx, next);
+      if (!(model && (await pi.setModel(model)))) {
+        currentModel = next;
+        continue;
+      }
+
+      currentModel = `${model.provider}/${model.id}`;
+      pi.sendMessage({
+        customType: 'model-fallback',
+        content: `Provider request failed. Switched to fallback model: **${currentModel}**. Pi will retry automatically.`,
+        display: true,
+      });
+      return;
+    }
   }
 
   pi.on('session_start', (_e, ctx) => {
-    const path = join(ctx.cwd, '.pi', 'model-fallback.json');
-    if (existsSync(path)) {
-      try {
-        config = JSON.parse(readFileSync(path, 'utf8'));
-      } catch {
-        // ignore malformed config
-      }
+    config = loadFallbackConfig(ctx.cwd);
+    if (ctx.model) {
+      currentModel = `${ctx.model.provider}/${ctx.model.id}`;
     }
   });
 
@@ -94,18 +139,9 @@ export default function modelFallback(pi: ExtensionAPI) {
     currentModel = `${e.model.provider}/${e.model.id}`;
   });
 
-  pi.on('before_provider_request', (e, ctx) => {
-    cleanup();
-    controller = new AbortController();
-    timer = setTimeout(() => tryFallback(ctx), config.timeoutMs);
-    const payload = e.payload as unknown as {
-      options?: Record<string, unknown>;
-    };
-    if (payload?.options && typeof payload.options === 'object') {
-      payload.options.signal = controller.signal;
+  pi.on('message_end', async (e, ctx) => {
+    if (isRetryableError(e.message)) {
+      await switchToNextFallback(ctx);
     }
-    return payload;
   });
-
-  pi.on('agent_end', cleanup);
 }
