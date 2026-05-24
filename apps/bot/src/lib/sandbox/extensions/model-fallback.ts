@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from '@earendil-works/pi-coding-agent';
 
 interface FallbackConfig {
   fallback: string[];
@@ -37,7 +40,10 @@ export default function modelFallback(pi: ExtensionAPI) {
       : (config.fallback[idx + 1] ?? null);
   }
 
-  async function tryFallback(ctx: any, attempts = 0): Promise<void> {
+  async function tryFallback(
+    ctx: ExtensionContext,
+    attempts = 0
+  ): Promise<void> {
     if (attempts >= config.fallback.length) {
       return;
     }
@@ -59,7 +65,7 @@ export default function modelFallback(pi: ExtensionAPI) {
     if (!model) {
       const available = await ctx.modelRegistry.getAvailable();
       model = available.find(
-        (m: any) => `${m.provider}/${m.id}` === next || m.id === modelId
+        (m) => `${m.provider}/${m.id}` === next || m.id === modelId
       );
     }
 
@@ -73,12 +79,14 @@ export default function modelFallback(pi: ExtensionAPI) {
     timer = setTimeout(() => tryFallback(ctx), config.timeoutMs);
   }
 
-  pi.on('session_start', async (_e, ctx) => {
+  pi.on('session_start', (_e, ctx) => {
     const path = join(ctx.cwd, '.pi', 'model-fallback.json');
     if (existsSync(path)) {
       try {
         config = JSON.parse(readFileSync(path, 'utf8'));
-      } catch {}
+      } catch {
+        // ignore malformed config
+      }
     }
   });
 
@@ -90,7 +98,9 @@ export default function modelFallback(pi: ExtensionAPI) {
     cleanup();
     controller = new AbortController();
     timer = setTimeout(() => tryFallback(ctx), config.timeoutMs);
-    const payload = e.payload as any;
+    const payload = e.payload as unknown as {
+      options?: Record<string, unknown>;
+    };
     if (payload?.options && typeof payload.options === 'object') {
       payload.options.signal = controller.signal;
     }

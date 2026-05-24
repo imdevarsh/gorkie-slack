@@ -2,7 +2,10 @@ import type { AgentSessionEvent } from '@/types/sandbox/rpc';
 
 export function getAgentError(events: AgentSessionEvent[]): string | null {
   for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i]!;
+    const event = events[i];
+    if (!event) {
+      continue;
+    }
     if (event.type !== 'agent_end' || event.willRetry) {
       continue;
     }
