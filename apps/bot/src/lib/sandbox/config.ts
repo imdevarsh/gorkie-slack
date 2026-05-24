@@ -52,9 +52,9 @@ export async function configureAgent(
   const extensionsDir = `${piDir}/extensions`;
 
   const [toolsExtension, modelFallbackExtension] = await Promise.all([
-    readFile(new URL('../extensions/tools.ts', import.meta.url), 'utf8'),
+    readFile(new URL('./extensions/tools.ts', import.meta.url), 'utf8'),
     readFile(
-      new URL('../extensions/model-fallback.ts', import.meta.url),
+      new URL('./extensions/model-fallback.ts', import.meta.url),
       'utf8'
     ),
   ]);
