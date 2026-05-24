@@ -16,8 +16,8 @@ Active task list for gorkie-turbo. Kept in sync as issues are found and resolved
 
 ## Open
 
-### Improve: Multi-provider retry for Pi sandbox agent
-The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the orchestrator (`createRetryable`) so it falls back to alternative providers on failure rather than erroring out.
+- [x] **Multi-provider retry for Pi sandbox agent** — `configureAgent` now writes all three providers (`hackclub`, `openrouter`, `gemini`) to `models.json` and `auth.json`, each routed through the bot's proxy with `GORKIE_SESSION_TOKEN`. Added `maxDelayMs: 60000` to retry config. Fallback provider list lives in `sandbox.fallbackProviders` in `apps/bot/src/config.ts`.
+  - Files: `apps/bot/src/config.ts`, `apps/bot/src/lib/sandbox/config/index.ts`
 
 ### Improve: Orchestrator — show terminal tool as task when no reasoning was shown
 Currently `prepareStep` always creates a "Thinking…" task, after terminal tool firing show just show "Replied" / "Skipping" / "Left channel" directly as the task title

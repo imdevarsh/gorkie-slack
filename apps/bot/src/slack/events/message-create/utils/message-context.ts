@@ -103,10 +103,10 @@ export function shouldHandleMessage(
   return Boolean(event.user) && !messageText.startsWith('##');
 }
 
-export async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
+export function getAuthorName(ctx: SlackMessageContext): Promise<string> {
   const userId = ctx.event.user;
   if (!userId) {
-    return 'unknown';
+    return Promise.resolve('unknown');
   }
   return getSlackUserName(ctx.client, userId);
 }

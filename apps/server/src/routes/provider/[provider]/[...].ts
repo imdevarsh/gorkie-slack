@@ -13,9 +13,17 @@ function getBearerToken(header: string | null): string | null {
 }
 
 export default defineHandler(async (event) => {
+  const start = Date.now();
   const provider = event.context.params?.provider;
   const entry = provider ? providers[provider] : undefined;
   if (!(provider && entry)) {
+    logger.warn(
+      {
+        provider: provider ?? 'unknown',
+        ip: getRequestIP(event, { xForwardedFor: true }),
+      },
+      '[proxy] unknown provider'
+    );
     event.res.status = 400;
     return {
       message: `Unknown provider: ${provider ?? 'unknown'}`,
@@ -47,14 +55,15 @@ export default defineHandler(async (event) => {
   );
   const upstreamUrl = `${entry.url}${upstreamPath}${requestUrl.search}`;
 
-  logger.debug(
+  logger.info(
     {
       provider,
       sandboxId: session.sandboxId,
       method: event.req.method,
       path: upstreamPath,
+      ip: requestIp,
     },
-    '[proxy] forwarding request'
+    '[proxy] request'
   );
 
   const headers = new Headers(event.req.headers);
@@ -73,14 +82,23 @@ export default defineHandler(async (event) => {
       ? await new Response(event.req.body).text().catch(() => null)
       : null;
 
+  const timeoutSignal = AbortSignal.timeout(240_000);
+  const signal = AbortSignal.any([event.req.signal, timeoutSignal]);
+
   const upstreamResponse = await fetch(upstreamUrl, {
     body: requestBody ?? undefined,
     headers,
     method: event.req.method,
-    signal: AbortSignal.timeout(240_000),
+    signal,
   }).catch((error: unknown) => {
     logger.error(
-      { err: error, provider, upstreamUrl },
+      {
+        err: error,
+        provider,
+        sandboxId: session.sandboxId,
+        upstreamUrl,
+        durationMs: Date.now() - start,
+      },
       '[proxy] upstream fetch failed'
     );
     return null;
@@ -91,16 +109,20 @@ export default defineHandler(async (event) => {
     return { message: 'Upstream fetch failed', status: 502 };
   }
 
-  logger.debug(
-    {
-      provider,
-      sandboxId: session.sandboxId,
-      upstreamStatus: upstreamResponse.status,
-    },
-    '[proxy] upstream response'
-  );
+  const durationMs = Date.now() - start;
 
-  if (!upstreamResponse.ok) {
+  if (upstreamResponse.ok) {
+    logger.info(
+      {
+        provider,
+        sandboxId: session.sandboxId,
+        status: upstreamResponse.status,
+        path: upstreamPath,
+        durationMs,
+      },
+      '[proxy] response'
+    );
+  } else {
     const errorBody = await upstreamResponse
       .clone()
       .text()
@@ -109,11 +131,12 @@ export default defineHandler(async (event) => {
       {
         provider,
         sandboxId: session.sandboxId,
-        upstreamStatus: upstreamResponse.status,
-        upstreamUrl,
+        status: upstreamResponse.status,
+        path: upstreamPath,
+        durationMs,
         errorBody: errorBody.slice(0, 500),
       },
-      '[proxy] upstream returned non-2xx'
+      '[proxy] upstream error'
     );
   }
 
