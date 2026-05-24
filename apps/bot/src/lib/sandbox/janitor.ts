@@ -21,7 +21,7 @@ async function cleanup(): Promise<void> {
   isRunning = true;
 
   try {
-    const cutoff = new Date(Date.now() - config.autoDeleteAfterMs);
+    const cutoff = new Date(Date.now() - config.cleanup.deleteAfter);
     const candidates = await listExpired(cutoff);
 
     for (const session of candidates) {
@@ -66,7 +66,7 @@ export function startSandboxCleanup(): void {
         '[sandbox-cleanup] Unexpected error while running sweep'
       );
     });
-  }, config.janitorIntervalMs);
+  }, config.cleanup.interval);
   timer.unref();
 
   logger.info('[sandbox-cleanup] Started');

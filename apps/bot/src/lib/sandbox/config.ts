@@ -3,12 +3,9 @@ import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
 
-function buildProviderConfig(
-  retryModels: typeof config.retry.models,
-  api: string
-) {
+function buildProviderConfig(models: typeof config.models, api: string) {
   const providerModels = new Map<string, string[]>();
-  for (const entry of retryModels) {
+  for (const entry of models) {
     const ids = providerModels.get(entry.provider) ?? [];
     if (!ids.includes(entry.modelId)) {
       ids.push(entry.modelId);
@@ -46,15 +43,13 @@ export async function configureAgent(
   sandbox: Sandbox,
   prompt: string
 ): Promise<void> {
-  const { retry, runtime } = config;
+  const { models, modelApi, retry, runtime } = config;
 
-  if (retry.models.length === 0) {
-    throw new Error('sandbox.retry.models must not be empty');
+  if (models.length === 0) {
+    throw new Error('sandbox.models must not be empty');
   }
 
-  const defaultModel = retry.models[0] as NonNullable<
-    (typeof retry.models)[number]
-  >;
+  const defaultModel = models[0] as NonNullable<(typeof models)[number]>;
   const piDir = `${runtime.workdir}/.pi`;
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
@@ -72,7 +67,7 @@ export async function configureAgent(
     ),
   ]);
 
-  const { providers, auth } = buildProviderConfig(retry.models, retry.api);
+  const { providers, auth } = buildProviderConfig(models, modelApi);
 
   for (const path of [piDir, agentDir, extensionsDir, fallbackDir]) {
     await sandbox.files.makeDir(path).catch(() => undefined);
@@ -86,15 +81,15 @@ export async function configureAgent(
         {
           defaultProvider: defaultModel.provider,
           defaultModel: defaultModel.modelId,
-          fallbackModels: retry.models.map(
+          fallbackModels: models.map(
             ({ provider, modelId }) => `${provider}/${modelId}`
           ),
           retry: {
             enabled: true,
-            maxRetries: Math.max(retry.models.length - 1, 0),
-            baseDelayMs: retry.baseDelayMs,
+            maxRetries: Math.max(models.length - 1, 0),
+            baseDelayMs: retry.baseDelay,
             provider: {
-              timeoutMs: retry.timeoutMs,
+              timeoutMs: retry.timeout,
               maxRetries: 0,
             },
           },

@@ -49,24 +49,26 @@ export const assistantThread = {
 
 export const sandbox = {
   template: 'gorkie-sandbox:3.0',
+  models: [
+    { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
+    { provider: 'hackclub', modelId: 'openai/gpt-5.4-mini' },
+    { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
+    { provider: 'openrouter', modelId: 'openai/gpt-5.4-mini' },
+    { provider: 'gemini', modelId: 'gemini-2.0-flash' },
+  ],
+  modelApi: 'openai-completions',
   retry: {
-    api: 'openai-completions',
-    models: [
-      { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
-      { provider: 'hackclub', modelId: 'openai/gpt-5.4-mini' },
-      { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
-      { provider: 'openrouter', modelId: 'openai/gpt-5.4-mini' },
-      { provider: 'gemini', modelId: 'gemini-2.0-flash' },
-    ],
-    baseDelayMs: 1000,
-    timeoutMs: 90_000,
+    baseDelay: 1000,
+    timeout: 90_000,
   },
-  timeoutMs: 10 * 60 * 1000,
-  autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
-  janitorIntervalMs: 60 * 1000,
+  timeout: 10 * 60 * 1000,
+  cleanup: {
+    deleteAfter: 7 * 24 * 60 * 60 * 1000,
+    interval: 60 * 1000,
+  },
   rpc: {
-    commandTimeoutMs: 60_000,
-    startupTimeoutMs: 2 * 60 * 1000,
+    commandTimeout: 60_000,
+    startupTimeout: 2 * 60 * 1000,
   },
   toolOutput: {
     detailsMaxChars: 180,
@@ -75,7 +77,7 @@ export const sandbox = {
   },
   runtime: {
     workdir: '/home/user',
-    executionTimeoutMs: 20 * 60 * 1000,
+    executionTimeout: 20 * 60 * 1000,
   },
   attachments: {
     maxBytes: 1_000_000_000,

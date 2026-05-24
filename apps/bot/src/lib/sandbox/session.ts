@@ -47,7 +47,7 @@ function getSandboxMetadata(context: SlackMessageContext, threadId: string) {
 function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
   return Sandbox.connect(sandboxId, {
     apiKey: env.E2B_API_KEY,
-    timeoutMs: config.timeoutMs,
+    timeoutMs: config.timeout,
   }).catch((error: unknown) => {
     if (isMissingSandboxError(error)) {
       return null;
@@ -92,7 +92,7 @@ async function issueSandboxToken({
   const { token } = await issueProxyToken({
     allowedIp,
     sandboxId,
-    ttlMs: config.runtime.executionTimeoutMs,
+    ttlMs: config.runtime.executionTimeout,
   });
   return token;
 }
@@ -105,13 +105,13 @@ async function createSandbox(
 
   const sandbox = await Sandbox.betaCreate(template, {
     apiKey: env.E2B_API_KEY,
-    timeoutMs: config.timeoutMs,
+    timeoutMs: config.timeout,
     autoPause: true,
     allowInternetAccess: true,
     metadata: getSandboxMetadata(context, threadId),
   });
 
-  await sandbox.setTimeout(config.timeoutMs);
+  await sandbox.setTimeout(config.timeout);
 
   try {
     const proxyToken = await issueSandboxToken({
@@ -156,7 +156,7 @@ async function resumeSandbox(
     throw new Error(`[sandbox] Sandbox ${sandboxId} not found`);
   }
 
-  await sandbox.setTimeout(config.timeoutMs);
+  await sandbox.setTimeout(config.timeout);
 
   const proxyToken = await issueSandboxToken({
     sandbox,

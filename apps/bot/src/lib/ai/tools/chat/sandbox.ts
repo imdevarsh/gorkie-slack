@@ -149,7 +149,7 @@ export const sandbox = ({
         const timeoutPromise = new Promise<never>((_, reject) => {
           timeoutId = setTimeout(
             () => reject(new Error('[sandbox] Execution timed out')),
-            config.runtime.executionTimeoutMs
+            config.runtime.executionTimeout
           );
         });
 

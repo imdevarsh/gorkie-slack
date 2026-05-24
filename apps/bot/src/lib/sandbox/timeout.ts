@@ -21,7 +21,7 @@ export async function extendSandboxTimeout(
   minimumTimeoutMs?: number
 ): Promise<void> {
   const requiredRemainingMs = Math.max(
-    config.rpc.commandTimeoutMs,
+    config.rpc.commandTimeout,
     minimumTimeoutMs ?? 0
   );
 
@@ -34,7 +34,7 @@ export async function extendSandboxTimeout(
       return;
     }
 
-    await sandbox.setTimeout(config.timeoutMs);
+    await sandbox.setTimeout(config.timeout);
   } catch (error) {
     logger.warn(
       { ...toLogError(error), requiredRemainingMs },
