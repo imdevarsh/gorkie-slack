@@ -86,7 +86,7 @@ export default function modelFallback(pi: ExtensionAPI) {
       currentModel = `${model.provider}/${model.id}`;
       pi.sendMessage({
         customType: 'model-fallback',
-        content: `Provider request failed.\nSwitching to fallback model: **${currentModel}**.\nRetrying with Pi auto-retry...`,
+        content: currentModel,
         display: true,
       });
       return;

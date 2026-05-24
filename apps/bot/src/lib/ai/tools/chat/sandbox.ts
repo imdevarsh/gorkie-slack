@@ -86,22 +86,16 @@ export const sandbox = ({
           context,
           ctxId,
           events: eventStream,
-          onRetry: ({ attempt, maxAttempts, delayMs }) => {
-            const seconds = Math.round(delayMs / 1000);
-            enqueue(() =>
-              updateTask(stream, {
-                taskId,
-                status: 'in_progress',
-                details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
-              })
-            );
+          onRetry: () => {
+            // intentionally no-op: retry count noise is handled by model-fallback status
           },
           onStatus: ({ details }) => {
+            const id = `${taskId}:fallback:${Date.now()}`;
             enqueue(() =>
               updateTask(stream, {
-                taskId,
-                status: 'in_progress',
-                details,
+                taskId: id,
+                title: `Switched to ${details}`,
+                status: 'complete',
               })
             );
           },

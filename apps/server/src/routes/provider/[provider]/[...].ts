@@ -31,6 +31,16 @@ export default defineHandler(async (event) => {
     };
   }
 
+  const failProviders = process.env.FAIL_PROVIDER?.split(',') ?? [];
+  if (failProviders.includes(provider)) {
+    logger.warn({ provider }, '[proxy] simulated provider failure');
+    event.res.status = 503;
+    return {
+      message: 'Simulated provider failure (FAIL_PROVIDER)',
+      status: 503,
+    };
+  }
+
   const requestIp = getRequestIP(event, { xForwardedFor: true }) ?? null;
   const token = getBearerToken(event.req.headers.get('authorization'));
   const session = await (token
