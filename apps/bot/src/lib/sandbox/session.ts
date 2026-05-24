@@ -28,22 +28,6 @@ function isMissingSandboxError(error: unknown): boolean {
   );
 }
 
-function getChannelId(context: SlackMessageContext): string {
-  const channelId = context.event.channel;
-  if (!(typeof channelId === 'string' && channelId.length > 0)) {
-    throw new Error('Missing Slack channel ID for sandbox session');
-  }
-  return channelId;
-}
-
-function getSandboxMetadata(context: SlackMessageContext, threadId: string) {
-  return {
-    threadId,
-    channelId: getChannelId(context),
-    app: 'gorkie-slack',
-  } as const;
-}
-
 function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
   return Sandbox.connect(sandboxId, {
     apiKey: env.E2B_API_KEY,
@@ -92,7 +76,7 @@ async function issueSandboxToken({
   const { token } = await issueProxyToken({
     allowedIp,
     sandboxId,
-    ttlMs: config.runtime.executionTimeout,
+    ttlMs: config.runtime.execution,
   });
   return token;
 }
@@ -108,7 +92,11 @@ async function createSandbox(
     timeoutMs: config.timeout,
     autoPause: true,
     allowInternetAccess: true,
-    metadata: getSandboxMetadata(context, threadId),
+    metadata: {
+      threadId,
+      channelId: context.event.channel,
+      app: 'gorkie-slack',
+    },
   });
 
   await sandbox.setTimeout(config.timeout);

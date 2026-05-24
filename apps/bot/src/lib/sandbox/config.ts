@@ -89,7 +89,7 @@ export async function configureAgent(
             maxRetries: Math.max(models.length - 1, 0),
             baseDelayMs: retry.baseDelay,
             provider: {
-              timeoutMs: retry.timeout,
+              timeoutMs: retry.request,
               maxRetries: 0,
             },
           },

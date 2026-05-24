@@ -21,7 +21,7 @@ export async function extendSandboxTimeout(
   minimumTimeoutMs?: number
 ): Promise<void> {
   const requiredRemainingMs = Math.max(
-    config.rpc.commandTimeout,
+    config.rpc.command,
     minimumTimeoutMs ?? 0
   );
 

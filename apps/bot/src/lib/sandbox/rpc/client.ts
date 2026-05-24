@@ -271,7 +271,7 @@ export class PiRpcClient {
   // --- lifecycle ---
 
   async waitUntilReady(): Promise<void> {
-    const deadline = Date.now() + config.rpc.startupTimeout;
+    const deadline = Date.now() + config.rpc.startup;
     const attemptMs = 5000;
     const retryDelayMs = 500;
     let attempt = 0;
@@ -298,9 +298,7 @@ export class PiRpcClient {
       }
     }
 
-    throw new Error(
-      `[pi-rpc] Startup timed out after ${config.rpc.startupTimeout}ms`
-    );
+    throw new Error(`[pi-rpc] Startup timed out after ${config.rpc.startup}ms`);
   }
 
   async waitForIdle(timeoutMs?: number): Promise<void> {
@@ -387,7 +385,7 @@ export class PiRpcClient {
 
   private send(
     payload: RpcCommandBody,
-    timeoutMs = config.rpc.commandTimeout
+    timeoutMs = config.rpc.command
   ): Promise<RpcResponse> {
     const id = `req_${++this.requestId}`;
     const command = { ...payload, id } as RpcCommand;

@@ -1,38 +1,9 @@
 import { trimmed } from '@repo/utils/text';
 import { showFileInputSchema } from '@repo/validators';
 import logger from '@/lib/logger';
-import type {
-  ResolvedSandboxSession,
-  SlackMessageContext,
-  SubscribeEventsParams,
-} from '@/types';
+import type { SubscribeEventsParams } from '@/types';
 import type { AgentSessionEvent } from '@/types/sandbox/rpc';
 import { showFile } from './show-file';
-
-function handleShowFileTool(params: {
-  result: unknown;
-  runtime: ResolvedSandboxSession;
-  context: SlackMessageContext;
-  ctxId: string;
-}): void {
-  const { result, runtime, context, ctxId } = params;
-
-  const details = (result as Record<string, unknown> | null)?.details;
-  const parsed = showFileInputSchema.safeParse(details);
-  if (!parsed.success) {
-    logger.debug(
-      { ctxId, result },
-      '[subagent] showFile handler skipped: invalid result payload'
-    );
-    return;
-  }
-
-  showFile({ input: parsed.data, runtime, context, ctxId }).catch(
-    (error: unknown) => {
-      logger.debug({ error, ctxId }, '[subagent] showFile handler failed');
-    }
-  );
-}
 
 export function subscribeEvents(params: SubscribeEventsParams): () => void {
   const {
@@ -87,7 +58,23 @@ export function subscribeEvents(params: SubscribeEventsParams): () => void {
         onToolEnd?.({ toolName, toolCallId, isError, result });
 
         if (toolName === 'showFile') {
-          handleShowFileTool({ result, runtime, context, ctxId });
+          const details = (result as Record<string, unknown> | null)?.details;
+          const parsed = showFileInputSchema.safeParse(details);
+          if (parsed.success) {
+            showFile({ input: parsed.data, runtime, context, ctxId }).catch(
+              (error: unknown) => {
+                logger.debug(
+                  { error, ctxId },
+                  '[subagent] showFile handler failed'
+                );
+              }
+            );
+          } else {
+            logger.debug(
+              { ctxId, result },
+              '[subagent] showFile handler skipped: invalid result payload'
+            );
+          }
         }
       }
     } catch (error) {

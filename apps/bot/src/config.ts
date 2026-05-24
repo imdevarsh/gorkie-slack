@@ -59,7 +59,7 @@ export const sandbox = {
   modelApi: 'openai-completions',
   retry: {
     baseDelay: 1000,
-    timeout: 90_000,
+    request: 90_000,
   },
   timeout: 10 * 60 * 1000,
   cleanup: {
@@ -67,8 +67,8 @@ export const sandbox = {
     interval: 60 * 1000,
   },
   rpc: {
-    commandTimeout: 60_000,
-    startupTimeout: 2 * 60 * 1000,
+    command: 60_000,
+    startup: 2 * 60 * 1000,
   },
   toolOutput: {
     detailsMaxChars: 180,
@@ -77,7 +77,7 @@ export const sandbox = {
   },
   runtime: {
     workdir: '/home/user',
-    executionTimeout: 20 * 60 * 1000,
+    execution: 20 * 60 * 1000,
   },
   attachments: {
     maxBytes: 1_000_000_000,
