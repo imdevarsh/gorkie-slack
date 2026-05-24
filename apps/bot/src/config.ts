@@ -49,22 +49,17 @@ export const assistantThread = {
 
 export const sandbox = {
   template: 'gorkie-sandbox:3.0',
-  model: {
-    provider: 'hackclub',
-    modelId: 'google/gemini-3-flash-preview',
-    api: 'openai-completions',
-  },
-  modelChain: [
-    { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
-    { provider: 'hackclub', modelId: 'openai/gpt-5.4-mini' },
-    { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
-    { provider: 'openrouter', modelId: 'openai/gpt-5.4-mini' },
-    { provider: 'gemini', modelId: 'gemini-2.0-flash' },
-  ],
   retry: {
+    api: 'openai-completions',
+    models: [
+      { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
+      { provider: 'hackclub', modelId: 'openai/gpt-5.4-mini' },
+      { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
+      { provider: 'openrouter', modelId: 'openai/gpt-5.4-mini' },
+      { provider: 'gemini', modelId: 'gemini-2.0-flash' },
+    ],
     baseDelayMs: 1000,
-    providerMaxRetryDelayMs: 10_000,
-    providerTimeoutMs: 90_000,
+    timeoutMs: 90_000,
   },
   timeoutMs: 10 * 60 * 1000,
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,

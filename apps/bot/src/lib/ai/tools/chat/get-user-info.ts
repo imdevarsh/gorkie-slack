@@ -5,7 +5,6 @@ import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
-import { normalizeSlackUserId } from '@/utils/users';
 
 export const getUserInfo = ({
   context,
@@ -39,11 +38,8 @@ export const getUserInfo = ({
       });
 
       try {
-        const targetId = normalizeSlackUserId(userId);
-
-        const user = targetId
-          ? ((await context.client.users.info({ user: targetId })).user ?? null)
-          : null;
+        const user =
+          (await context.client.users.info({ user: userId })).user ?? null;
 
         if (!user) {
           await finishTask(stream, { status: 'error', taskId: task });
@@ -67,7 +63,7 @@ export const getUserInfo = ({
             updated: user.updated,
             title: user.profile?.title,
             teamId: user.team_id,
-            idResolved: targetId ?? null,
+            idResolved: userId,
           },
         };
       } catch (error) {
