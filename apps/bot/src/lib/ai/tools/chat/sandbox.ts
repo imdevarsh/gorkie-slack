@@ -96,6 +96,15 @@ export const sandbox = ({
               })
             );
           },
+          onStatus: ({ details }) => {
+            enqueue(() =>
+              updateTask(stream, {
+                taskId,
+                status: 'in_progress',
+                details,
+              })
+            );
+          },
           onToolStart: ({ toolName, toolCallId, args, status }) => {
             keepSandboxAlive().catch((error: unknown) => {
               logger.warn(

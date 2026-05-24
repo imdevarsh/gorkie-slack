@@ -50,18 +50,23 @@ export async function configureAgent(
   const piDir = `${runtime.workdir}/.pi`;
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
+  const fallbackDir = `${extensionsDir}/model-fallback`;
 
-  const [toolsExtension, modelFallbackExtension] = await Promise.all([
+  const [toolsExtension, fallbackExtension, fallbackRetry] = await Promise.all([
     readFile(new URL('./extensions/tools.ts', import.meta.url), 'utf8'),
     readFile(
-      new URL('./extensions/model-fallback.ts', import.meta.url),
+      new URL('./extensions/model-fallback/index.ts', import.meta.url),
+      'utf8'
+    ),
+    readFile(
+      new URL('./extensions/model-fallback/retry.ts', import.meta.url),
       'utf8'
     ),
   ]);
 
   const { providers, auth } = buildProviderConfig(modelChain, model.api);
 
-  for (const path of [piDir, agentDir, extensionsDir]) {
+  for (const path of [piDir, agentDir, extensionsDir, fallbackDir]) {
     await sandbox.files.makeDir(path).catch(() => undefined);
   }
 
@@ -101,8 +106,12 @@ export async function configureAgent(
     },
     { path: `${extensionsDir}/tools.ts`, content: toolsExtension },
     {
-      path: `${extensionsDir}/model-fallback.ts`,
-      content: modelFallbackExtension,
+      path: `${fallbackDir}/index.ts`,
+      content: fallbackExtension,
+    },
+    {
+      path: `${fallbackDir}/retry.ts`,
+      content: fallbackRetry,
     },
   ]) {
     await sandbox.files.write(file.path, file.content);

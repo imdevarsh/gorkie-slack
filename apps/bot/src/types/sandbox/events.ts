@@ -22,11 +22,16 @@ export interface RetryEvent {
   maxAttempts: number;
 }
 
+export interface StatusEvent {
+  details: string;
+}
+
 export interface SubscribeEventsParams {
   context: SlackMessageContext;
   ctxId: string;
   events: AgentSessionEvent[];
   onRetry?: (event: RetryEvent) => void | Promise<void>;
+  onStatus?: (event: StatusEvent) => void | Promise<void>;
   onToolEnd?: (event: ToolEndEvent) => void | Promise<void>;
   onToolStart?: (event: ToolStartEvent) => void | Promise<void>;
   runtime: ResolvedSandboxSession;
