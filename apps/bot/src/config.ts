@@ -56,9 +56,9 @@ export const sandbox = {
   },
   modelChain: [
     { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
-    { provider: 'hackclub', modelId: 'openai/gpt-5-mini' },
+    { provider: 'hackclub', modelId: 'openai/gpt-5.4-mini' },
     { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
-    { provider: 'openrouter', modelId: 'openai/gpt-5-mini' },
+    { provider: 'openrouter', modelId: 'openai/gpt-5.4-mini' },
     { provider: 'gemini', modelId: 'gemini-2.0-flash' },
   ],
   retry: {
