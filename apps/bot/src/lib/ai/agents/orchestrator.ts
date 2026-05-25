@@ -62,9 +62,25 @@ export function orchestratorAgent({
     fullStream: AsyncIterable<ReasoningStreamPart>
   ): Promise<void> {
     const lines: string[] = [];
+    let stepEntry: { taskId: string; startTime: number } | undefined;
+
+    async function flushReasoning() {
+      const reasoning = lines.join('\n');
+      lines.length = 0;
+      if (!(reasoning && stepEntry)) {
+        return;
+      }
+      await updateTask(stream, {
+        taskId: stepEntry.taskId,
+        status: 'in_progress',
+        output: reasoning,
+      });
+    }
 
     for await (const part of fullStream) {
       if (part.type === 'start-step') {
+        await flushReasoning();
+        stepEntry = taskMap.get(eventTs);
         continue;
       }
 
@@ -81,22 +97,7 @@ export function orchestratorAgent({
       lines.push(...chunk);
     }
 
-    const reasoning = lines.join('\n');
-    if (!reasoning) {
-      return;
-    }
-
-    const entry = taskMap.get(eventTs);
-    if (!entry) {
-      logger.warn({ eventTs }, 'No taskId found in taskMap');
-      return;
-    }
-
-    await updateTask(stream, {
-      taskId: entry.taskId,
-      status: 'in_progress',
-      output: reasoning,
-    });
+    await flushReasoning();
   }
 
   const agent = new ToolLoopAgent({
