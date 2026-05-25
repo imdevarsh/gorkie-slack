@@ -1,8 +1,6 @@
 import { asRecord } from '@repo/utils/record';
 import { cleanText, trimmed } from '@repo/utils/text';
 
-export { asRecord };
-
 export function asString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
     return;
