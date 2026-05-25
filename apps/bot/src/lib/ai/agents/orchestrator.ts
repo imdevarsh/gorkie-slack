@@ -61,6 +61,8 @@ export function orchestratorAgent({
   async function consumeReasoningStream(
     fullStream: AsyncIterable<ReasoningStreamPart>
   ): Promise<void> {
+    const lines: string[] = [];
+
     for await (const part of fullStream) {
       if (part.type === 'start-step') {
         continue;
@@ -70,29 +72,31 @@ export function orchestratorAgent({
         continue;
       }
 
-      const reasoningSummary = String(part.text)
+      const chunk = String(part.text)
         .trim()
         .split('\n')
         .filter(Boolean)
-        .filter((line) => line !== '[REDACTED]')
-        .join('\n');
+        .filter((line) => line !== '[REDACTED]');
 
-      if (!reasoningSummary) {
-        continue;
-      }
-
-      const entry = taskMap.get(eventTs);
-      if (!entry) {
-        logger.warn({ eventTs }, 'No taskId found in taskMap');
-        continue;
-      }
-
-      await updateTask(stream, {
-        taskId: entry.taskId,
-        status: 'in_progress',
-        output: `\n${reasoningSummary}`,
-      });
+      lines.push(...chunk);
     }
+
+    const reasoning = lines.join('\n');
+    if (!reasoning) {
+      return;
+    }
+
+    const entry = taskMap.get(eventTs);
+    if (!entry) {
+      logger.warn({ eventTs }, 'No taskId found in taskMap');
+      return;
+    }
+
+    await updateTask(stream, {
+      taskId: entry.taskId,
+      status: 'in_progress',
+      output: reasoning,
+    });
   }
 
   const agent = new ToolLoopAgent({
