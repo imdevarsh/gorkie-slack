@@ -50,7 +50,7 @@ export function isRetryableError(message: AssistantErrorMessage): boolean {
     }
     if (status) {
       const code = Number(status);
-      if (code === 429 || (code >= 500 && code < 600)) {
+      if (code === 402 || code === 429 || (code >= 500 && code < 600)) {
         return true;
       }
       status = '';
@@ -59,7 +59,7 @@ export function isRetryableError(message: AssistantErrorMessage): boolean {
 
   if (status) {
     const code = Number(status);
-    if (code === 429 || (code >= 500 && code < 600)) {
+    if (code === 402 || code === 429 || (code >= 500 && code < 600)) {
       return true;
     }
   }

@@ -13,7 +13,7 @@ import type {
   SlackMessageContext,
   Stream,
 } from '@/types';
-import { createTask, finishTask, updateTask } from '../utils/task';
+import { createTask, finishTask } from '../utils/task';
 
 type ReasoningStreamPart =
   | { type: 'start-step' }
@@ -33,6 +33,7 @@ export function orchestratorAgent({
 }) {
   const taskMap = new Map<string, { taskId: string; startTime: number }>();
   const eventTs = context.event.event_ts;
+  const pendingReasoning: string[] = [];
 
   async function resolveTask({
     title,
@@ -50,37 +51,23 @@ export function orchestratorAgent({
     const elapsedLabel =
       elapsedMs < 1000 ? '<1s' : `${Math.round(elapsedMs / 1000)}s`;
 
+    const reasoning = pendingReasoning.join('\n');
+    pendingReasoning.length = 0;
+
     await finishTask(stream, {
       taskId: entry.taskId,
       status: 'complete',
       title: title ?? `Thought for ${elapsedLabel}`,
       ...(details ? { details } : {}),
+      ...(reasoning ? { output: reasoning } : {}),
     });
   }
 
   async function consumeReasoningStream(
     fullStream: AsyncIterable<ReasoningStreamPart>
   ): Promise<void> {
-    const lines: string[] = [];
-    let stepEntry: { taskId: string; startTime: number } | undefined;
-
-    async function flushReasoning() {
-      const reasoning = lines.join('\n');
-      lines.length = 0;
-      if (!(reasoning && stepEntry)) {
-        return;
-      }
-      await updateTask(stream, {
-        taskId: stepEntry.taskId,
-        status: 'in_progress',
-        output: reasoning,
-      });
-    }
-
     for await (const part of fullStream) {
       if (part.type === 'start-step') {
-        await flushReasoning();
-        stepEntry = taskMap.get(eventTs);
         continue;
       }
 
@@ -94,10 +81,8 @@ export function orchestratorAgent({
         .filter(Boolean)
         .filter((line) => line !== '[REDACTED]');
 
-      lines.push(...chunk);
+      pendingReasoning.push(...chunk);
     }
-
-    await flushReasoning();
   }
 
   const agent = new ToolLoopAgent({
