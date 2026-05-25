@@ -37,6 +37,22 @@ The `agent-browser` npm package is installed globally by the sandbox, but `agent
 - Add `agentmail` to the E2B sandbox template (rebuild with `bun run build:template`)
 - Or note it as a first-run install in the skill documentation
 
+### Refactor: Replace custom task queue with BullMQ + Workbench
+Current scheduled-task logic is hand-rolled (cron parsing, storage in Postgres, custom job dispatch). Replace with [BullMQ](https://docs.bullmq.io) backed by `@repo/kv` (Redis), and use [Workbench](https://getworkbench.dev) as the queue dashboard.
+
+Benefits:
+- Retry, delay, priority, and concurrency built in — no custom code
+- Workbench gives a UI for inspecting and replaying failed jobs
+- Decouples job scheduling from the Slack event handler
+
+What to migrate:
+- `apps/bot/src/lib/tasks/` — cron scheduling, task dispatch
+- `packages/db/src/queries/scheduled-tasks.ts` — job persistence (replace with BullMQ queue)
+- `apps/bot/src/lib/ai/tools/chat/schedule-task.ts` / `schedule-reminder.ts` — enqueue via BullMQ instead of raw DB insert
+- `apps/bot/src/lib/ai/tools/tasks/send-scheduled-message.ts` — becomes a BullMQ worker processor
+
+Files: `apps/bot/src/lib/tasks/`, `apps/bot/src/lib/ai/tools/chat/schedule-*.ts`, `packages/kv/`
+
 ### Refactor: Split monorepo packages further
 Consider extracting:
 - **`@repo/observability`** — telemetry/Langfuse setup currently lives in `apps/bot/src/lib/ai/telemetry.ts`, could be a shared package if `apps/server` ever needs it
