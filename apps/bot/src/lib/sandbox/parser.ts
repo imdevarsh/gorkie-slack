@@ -1,12 +1,7 @@
+import { asRecord } from '@repo/utils/record';
 import { cleanText, trimmed } from '@repo/utils/text';
 
-export function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  return value as Record<string, unknown>;
-}
+export { asRecord };
 
 export function asString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
