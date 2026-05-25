@@ -43,7 +43,7 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
 async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
   const result = await sandbox.commands
     .run(`curl -fsS --max-time 5 ${new URL('/ip', env.PROXY_BASE_URL)}`, {
-      timeoutMs: 10_000,
+      timeoutMs: 0,
     })
     .catch((error: unknown) => {
       logger.warn(
