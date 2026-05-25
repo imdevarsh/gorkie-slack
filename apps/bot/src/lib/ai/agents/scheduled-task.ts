@@ -1,7 +1,10 @@
-import { provider } from '@repo/ai/providers';
-import { successToolCall } from '@repo/ai/tools';
+import {
+  provider,
+  stepCountIs,
+  successToolCall,
+  ToolLoopAgent,
+} from '@repo/ai';
 import { getTime } from '@repo/utils/time';
-import { stepCountIs, ToolLoopAgent } from 'ai';
 import { getUserInfo } from '@/lib/ai/tools/chat/get-user-info';
 import { getWeather } from '@/lib/ai/tools/chat/get-weather';
 import { readConversationHistory } from '@/lib/ai/tools/chat/read-conversation-history';
@@ -44,7 +47,7 @@ Rules:
     toolChoice: 'required',
     tools: {
       searchWeb: searchWeb({ context, stream }),
-      getWeather: getWeather({ context, stream }),
+      getWeather: getWeather({ stream }),
       getUserInfo: getUserInfo({ context, stream }),
       readConversationHistory: readConversationHistory({ context, stream }),
       sandbox: sandbox({ context, stream }),

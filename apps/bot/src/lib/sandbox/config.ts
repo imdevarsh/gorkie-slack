@@ -3,21 +3,18 @@ import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
 
-function buildProviderConfig(
-  modelChain: typeof config.modelChain,
-  api: string
-) {
+function buildProviderConfig(list: typeof config.models.list, api: string) {
   const providerModels = new Map<string, string[]>();
-  for (const entry of modelChain) {
-    const models = providerModels.get(entry.provider) ?? [];
-    if (!models.includes(entry.modelId)) {
-      models.push(entry.modelId);
-      providerModels.set(entry.provider, models);
+  for (const entry of list) {
+    const ids = providerModels.get(entry.provider) ?? [];
+    if (!ids.includes(entry.modelId)) {
+      ids.push(entry.modelId);
+      providerModels.set(entry.provider, ids);
     }
   }
 
   const providers = Object.fromEntries(
-    [...providerModels.entries()].map(([provider, models]) => [
+    [...providerModels.entries()].map(([provider, ids]) => [
       provider,
       {
         baseUrl: new URL(
@@ -27,7 +24,7 @@ function buildProviderConfig(
         api,
         apiKey: 'GORKIE_SESSION_TOKEN',
         authHeader: true,
-        models: models.map((id) => ({ id })),
+        models: ids.map((id) => ({ id })),
       },
     ])
   );
@@ -46,7 +43,14 @@ export async function configureAgent(
   sandbox: Sandbox,
   prompt: string
 ): Promise<void> {
-  const { model, modelChain, retry, runtime } = config;
+  const { models, retry, runtime } = config;
+  const { api, list } = models;
+
+  if (list.length === 0) {
+    throw new Error('sandbox.models.list must not be empty');
+  }
+
+  const defaultModel = list[0] as NonNullable<(typeof list)[number]>;
   const piDir = `${runtime.workdir}/.pi`;
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
@@ -64,7 +68,7 @@ export async function configureAgent(
     ),
   ]);
 
-  const { providers, auth } = buildProviderConfig(modelChain, model.api);
+  const { providers, auth } = buildProviderConfig(list, api);
 
   for (const path of [piDir, agentDir, extensionsDir, fallbackDir]) {
     await sandbox.files.makeDir(path).catch(() => undefined);
@@ -76,19 +80,18 @@ export async function configureAgent(
       path: `${agentDir}/settings.json`,
       content: JSON.stringify(
         {
-          defaultProvider: model.provider,
-          defaultModel: model.modelId,
-          fallbackModels: modelChain.map(
+          defaultProvider: defaultModel.provider,
+          defaultModel: defaultModel.modelId,
+          fallbackModels: list.map(
             ({ provider, modelId }) => `${provider}/${modelId}`
           ),
           retry: {
             enabled: true,
-            maxRetries: Math.max(modelChain.length - 1, 0),
-            baseDelayMs: retry.baseDelayMs,
+            maxRetries: Math.max(list.length - 1, 0),
+            baseDelayMs: retry.baseDelay,
             provider: {
-              timeoutMs: retry.providerTimeoutMs,
+              timeoutMs: retry.request,
               maxRetries: 0,
-              maxRetryDelayMs: retry.providerMaxRetryDelayMs,
             },
           },
         },

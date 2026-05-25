@@ -1,10 +1,10 @@
 import { Sandbox } from '@e2b/code-interpreter';
 import { systemPrompt } from '@repo/ai/prompts';
 import {
-  clearDestroyed,
   getByThread,
   issueProxyToken,
   markActivity,
+  markDestroyed,
   revokeProxyToken,
   updateRuntime,
   updateStatus,
@@ -19,7 +19,7 @@ import { getContextId } from '@/utils/context';
 import { configureAgent } from './config';
 import { boot } from './rpc/boot';
 
-function isMissingSandboxError(error: unknown): boolean {
+function isSandboxNotFoundError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
   return (
     message.includes('not found') ||
@@ -28,28 +28,12 @@ function isMissingSandboxError(error: unknown): boolean {
   );
 }
 
-function getChannelId(context: SlackMessageContext): string {
-  const channelId = context.event.channel;
-  if (!(typeof channelId === 'string' && channelId.length > 0)) {
-    throw new Error('Missing Slack channel ID for sandbox session');
-  }
-  return channelId;
-}
-
-function getSandboxMetadata(context: SlackMessageContext, threadId: string) {
-  return {
-    threadId,
-    channelId: getChannelId(context),
-    app: 'gorkie-slack',
-  } as const;
-}
-
 function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
   return Sandbox.connect(sandboxId, {
     apiKey: env.E2B_API_KEY,
-    timeoutMs: config.timeoutMs,
+    timeoutMs: config.timeout,
   }).catch((error: unknown) => {
-    if (isMissingSandboxError(error)) {
+    if (isSandboxNotFoundError(error)) {
       return null;
     }
     throw error;
@@ -59,7 +43,7 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
 async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
   const result = await sandbox.commands
     .run(`curl -fsS --max-time 5 ${new URL('/ip', env.PROXY_BASE_URL)}`, {
-      timeoutMs: 10_000,
+      timeoutMs: 0,
     })
     .catch((error: unknown) => {
       logger.warn(
@@ -92,7 +76,7 @@ async function issueSandboxToken({
   const { token } = await issueProxyToken({
     allowedIp,
     sandboxId,
-    ttlMs: config.runtime.executionTimeoutMs,
+    ttlMs: config.runtime.execution,
   });
   return token;
 }
@@ -105,13 +89,17 @@ async function createSandbox(
 
   const sandbox = await Sandbox.betaCreate(template, {
     apiKey: env.E2B_API_KEY,
-    timeoutMs: config.timeoutMs,
+    timeoutMs: config.timeout,
     autoPause: true,
     allowInternetAccess: true,
-    metadata: getSandboxMetadata(context, threadId),
+    metadata: {
+      threadId,
+      channelId: context.event.channel,
+      app: 'gorkie-slack',
+    },
   });
 
-  await sandbox.setTimeout(config.timeoutMs);
+  await sandbox.setTimeout(config.timeout);
 
   try {
     const proxyToken = await issueSandboxToken({
@@ -152,11 +140,11 @@ async function resumeSandbox(
   const sandbox = await connectSandbox(sandboxId);
 
   if (!sandbox) {
-    await clearDestroyed(threadId);
+    await markDestroyed(threadId);
     throw new Error(`[sandbox] Sandbox ${sandboxId} not found`);
   }
 
-  await sandbox.setTimeout(config.timeoutMs);
+  await sandbox.setTimeout(config.timeout);
 
   const proxyToken = await issueSandboxToken({
     sandbox,
@@ -207,7 +195,7 @@ export async function resolveSession(
       existing.sandboxId,
       existing.sessionId
     ).catch((error: unknown) => {
-      if (isMissingSandboxError(error)) {
+      if (isSandboxNotFoundError(error)) {
         return createSandbox(context, threadId);
       }
       throw error;

@@ -1,8 +1,8 @@
 import { Sandbox } from '@e2b/code-interpreter';
 import {
   claimExpired,
-  clearDestroyed,
   listExpired,
+  markDestroyed,
   updateStatus,
 } from '@repo/db/queries';
 import { toLogError } from '@repo/utils/error';
@@ -21,7 +21,7 @@ async function cleanup(): Promise<void> {
   isRunning = true;
 
   try {
-    const cutoff = new Date(Date.now() - config.autoDeleteAfterMs);
+    const cutoff = new Date(Date.now() - config.cleanup.deleteAfter);
     const candidates = await listExpired(cutoff);
 
     for (const session of candidates) {
@@ -32,7 +32,7 @@ async function cleanup(): Promise<void> {
 
       try {
         await Sandbox.kill(session.sandboxId, { apiKey: env.E2B_API_KEY });
-        await clearDestroyed(session.threadId);
+        await markDestroyed(session.threadId);
         logger.info(
           { ctxId: session.threadId, sandboxId: session.sandboxId, cutoff },
           '[sandbox-cleanup] Deleted expired sandbox'
@@ -66,7 +66,7 @@ export function startSandboxCleanup(): void {
         '[sandbox-cleanup] Unexpected error while running sweep'
       );
     });
-  }, config.janitorIntervalMs);
+  }, config.cleanup.interval);
   timer.unref();
 
   logger.info('[sandbox-cleanup] Started');

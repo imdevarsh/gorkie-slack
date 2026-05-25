@@ -1,5 +1,5 @@
+import { tool } from '@repo/ai';
 import { asRecord } from '@repo/utils/record';
-import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
@@ -36,16 +36,16 @@ export const searchSlack = ({
       const actionToken = getActionToken(context.event);
 
       if (!actionToken) {
-        const pingMessage =
-          'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.';
         await finishTask(stream, {
           status: 'error',
           taskId: toolCallId,
-          output: pingMessage,
+          output:
+            'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
         });
         return {
           success: false,
-          error: pingMessage,
+          error:
+            'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
         };
       }
 
@@ -79,16 +79,16 @@ export const searchSlack = ({
         logger.error({ ctxId, res }, 'Failed to search');
 
         if (isMissingActionToken) {
-          const pingMessage =
-            'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.';
           await finishTask(stream, {
             status: 'error',
             taskId: task,
-            output: pingMessage,
+            output:
+              'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
           });
           return {
             success: false,
-            error: pingMessage,
+            error:
+              'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
           };
         }
 

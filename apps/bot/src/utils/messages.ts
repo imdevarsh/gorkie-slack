@@ -1,4 +1,4 @@
-import type { ModelMessage } from 'ai';
+import type { ModelMessage } from '@repo/ai';
 
 export function getMessageText(message: ModelMessage): string {
   const { content } = message;
@@ -33,15 +33,4 @@ export function getMessageText(message: ModelMessage): string {
   }
 
   return '';
-}
-
-export function buildHistorySnippet(
-  messages: ModelMessage[],
-  limit: number
-): string {
-  return messages
-    .slice(-limit)
-    .map((msg) => getMessageText(msg))
-    .filter(Boolean)
-    .join('\n');
 }

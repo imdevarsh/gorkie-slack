@@ -1,6 +1,6 @@
+import type { ModelMessage } from '@repo/ai';
 import { getUserCustomization } from '@repo/db/queries';
 import { getTime } from '@repo/utils/time';
-import type { ModelMessage } from 'ai';
 import { getConversationMessages } from '@/slack/conversations';
 import type { ChatRequestHints, SlackMessageContext } from '@/types';
 import { resolveChannelName, resolveServerName } from '@/utils/slack';

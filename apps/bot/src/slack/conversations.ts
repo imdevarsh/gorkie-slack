@@ -1,5 +1,5 @@
+import type { ModelMessage, UserContent } from '@repo/ai';
 import { toLogError } from '@repo/utils/error';
-import type { ModelMessage, UserContent } from 'ai';
 import logger from '@/lib/logger';
 import type { ConversationOptions, SlackConversationMessage } from '@/types';
 import { processSlackFiles } from '@/utils/images';
@@ -59,65 +59,6 @@ export async function fetchMessages(
   return (response.messages as SlackConversationMessage[] | undefined) ?? [];
 }
 
-function filterMessages(
-  messages: SlackConversationMessage[],
-  latest: string | undefined,
-  inclusive: boolean
-): SlackConversationMessage[] {
-  if (!latest) {
-    return messages;
-  }
-
-  return messages.filter((message) => {
-    if (!message.ts) {
-      return false;
-    }
-    if (message.text?.startsWith('##')) {
-      return false;
-    }
-    const messageTs = Number(message.ts);
-    const latestTs = Number(latest);
-    return inclusive ? messageTs <= latestTs : messageTs < latestTs;
-  });
-}
-
-async function buildUserCache(
-  client: ConversationOptions['client'],
-  messages: SlackConversationMessage[]
-): Promise<Map<string, string>> {
-  const userIds = new Set<string>();
-  for (const message of messages) {
-    if (message.user) {
-      userIds.add(message.user);
-    }
-  }
-
-  const userCache = new Map<string, string>();
-  await Promise.all(
-    Array.from(userIds).map(async (userId) => {
-      const name = await getSlackUserName(client, userId);
-      userCache.set(userId, name);
-    })
-  );
-
-  return userCache;
-}
-
-function sortForModel(messages: SlackConversationMessage[]) {
-  return messages
-    .filter(
-      (message) =>
-        !message.subtype ||
-        message.subtype === 'file_share' ||
-        message.subtype === 'bot_message'
-    )
-    .sort((a, b) => {
-      const aTs = Number(a.ts ?? '0');
-      const bTs = Number(b.ts ?? '0');
-      return aTs - bTs;
-    });
-}
-
 async function toModelMessage(
   message: SlackConversationMessage,
   options: {
@@ -168,7 +109,8 @@ export async function getConversationMessages({
 }: ConversationOptions): Promise<ModelMessage[]> {
   try {
     const mentionRegex = botUserId ? new RegExp(`<@${botUserId}>`, 'gi') : null;
-    const messages = await fetchMessages({
+
+    const raw = await fetchMessages({
       client,
       channel,
       threadTs,
@@ -178,13 +120,40 @@ export async function getConversationMessages({
       oldest,
       inclusive,
     });
-    const filteredMessages = filterMessages(messages, latest, inclusive);
-    const userCache = await buildUserCache(client, filteredMessages);
-    const sortedMessages = sortForModel(filteredMessages);
+
+    const messages = latest
+      ? raw.filter((m) => {
+          if (!m.ts || m.text?.startsWith('##')) {
+            return false;
+          }
+          const ts = Number(m.ts);
+          const ref = Number(latest);
+          return inclusive ? ts <= ref : ts < ref;
+        })
+      : raw;
+
+    const userIds = new Set(
+      messages.map((m) => m.user).filter(Boolean) as string[]
+    );
+    const userCache = new Map<string, string>();
+    await Promise.all(
+      Array.from(userIds).map(async (id) => {
+        userCache.set(id, await getSlackUserName(client, id));
+      })
+    );
+
+    const sorted = messages
+      .filter(
+        (m) =>
+          !m.subtype ||
+          m.subtype === 'file_share' ||
+          m.subtype === 'bot_message'
+      )
+      .sort((a, b) => Number(a.ts ?? '0') - Number(b.ts ?? '0'));
 
     return await Promise.all(
-      sortedMessages.map((message) =>
-        toModelMessage(message, { botUserId, mentionRegex, userCache })
+      sorted.map((m) =>
+        toModelMessage(m, { botUserId, mentionRegex, userCache })
       )
     );
   } catch (error) {

@@ -35,14 +35,3 @@ export async function getSlackUserName(
     return userId;
   }
 }
-
-export function primeSlackUserName(userId: string, name: string) {
-  if (!userId) {
-    return;
-  }
-  cache.set(userId, name);
-}
-
-export function normalizeSlackUserId(raw: string): string {
-  return raw.replace(/[<@>]/g, '').trim();
-}

@@ -1,4 +1,4 @@
-import { tool } from 'ai';
+import { tool } from '@repo/ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';

@@ -1,5 +1,5 @@
+import type { ImagePart } from '@repo/ai';
 import { toLogError } from '@repo/utils/error';
-import type { ImagePart } from 'ai';
 import { env } from '@/env';
 import logger from '@/lib/logger';
 import type { SlackFile } from '@/types';

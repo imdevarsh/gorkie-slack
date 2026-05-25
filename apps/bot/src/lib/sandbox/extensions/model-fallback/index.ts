@@ -57,7 +57,7 @@ export default function modelFallback(pi: ExtensionAPI) {
     );
   }
 
-  async function switchToFallback(ctx: ExtensionContext): Promise<void> {
+  async function switchToFallback(ctx: ExtensionContext): Promise<boolean> {
     const attempted = new Set<string>();
 
     while (attempted.size < config.fallback.length) {
@@ -73,7 +73,7 @@ export default function modelFallback(pi: ExtensionAPI) {
           ? (config.fallback[0] ?? null)
           : (config.fallback[currentIndex + 1] ?? null);
       if (!(next && !attempted.has(next))) {
-        return;
+        return false;
       }
 
       attempted.add(next);
@@ -89,8 +89,10 @@ export default function modelFallback(pi: ExtensionAPI) {
         content: currentModel,
         display: true,
       });
-      return;
+      return true;
     }
+
+    return false;
   }
 
   pi.on('session_start', (_event, ctx) => {
@@ -105,8 +107,21 @@ export default function modelFallback(pi: ExtensionAPI) {
   });
 
   pi.on('message_end', async (event, ctx) => {
-    if (isRetryableError(event.message)) {
-      await switchToFallback(ctx);
+    if (!(isRetryableError(event.message) && (await switchToFallback(ctx)))) {
+      return;
     }
+
+    const errorMessage =
+      'errorMessage' in event.message &&
+      typeof event.message.errorMessage === 'string'
+        ? event.message.errorMessage
+        : 'retryable provider error';
+
+    return {
+      message: {
+        ...event.message,
+        errorMessage: `provider returned error: ${errorMessage}`,
+      },
+    };
   });
 }

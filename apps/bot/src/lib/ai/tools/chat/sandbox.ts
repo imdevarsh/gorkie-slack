@@ -1,6 +1,6 @@
+import { tool } from '@repo/ai';
 import { revokeProxyToken } from '@repo/db/queries';
 import { errorMessage, toLogError } from '@repo/utils/error';
-import { tool } from 'ai';
 import PQueue from 'p-queue';
 import { z } from 'zod';
 import { sandbox as config } from '@/config';
@@ -149,7 +149,7 @@ export const sandbox = ({
         const timeoutPromise = new Promise<never>((_, reject) => {
           timeoutId = setTimeout(
             () => reject(new Error('[sandbox] Execution timed out')),
-            config.runtime.executionTimeoutMs
+            config.runtime.execution
           );
         });
 
@@ -206,6 +206,8 @@ export const sandbox = ({
           { ...toLogError(error), ctxId, task, message },
           '[sandbox] Sandbox run failed'
         );
+
+        await queue.onIdle();
 
         await finishTask(stream, {
           status: 'error',

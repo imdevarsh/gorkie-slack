@@ -8,12 +8,12 @@ import { buildChatContext, getContextId } from '@/utils/context';
 import { handleInlineCommand } from '@/utils/inline-commands';
 import { logReply } from '@/utils/log';
 import { getTrigger } from '@/utils/triggers';
+import { getSlackUserName } from '@/utils/users';
 import {
-  getAuthorName,
   hasSupportedSubtype,
   shouldHandleMessage,
   toMessageContext,
-} from './utils/message-context';
+} from './utils/message';
 import { generateResponse } from './utils/respond';
 
 export const name = 'message';
@@ -29,7 +29,9 @@ async function handleMessage(
   const { user: userId, text: messageText = '' } = event;
 
   const ctxId = getContextId(messageContext);
-  const authorName = await getAuthorName(messageContext);
+  const authorName = messageContext.event.user
+    ? await getSlackUserName(messageContext.client, messageContext.event.user)
+    : 'unknown';
   const content = messageText;
 
   const { messages, requestHints } = await buildChatContext(messageContext);

@@ -6,7 +6,6 @@ import type {
   SlackMessageEvent,
   SlackRawMessageEvent,
 } from '@/types';
-import { getSlackUserName } from '@/utils/users';
 
 function isSlackFile(value: unknown): value is SlackFile {
   return Boolean(asRecord(value));
@@ -101,12 +100,4 @@ export function shouldHandleMessage(
 ): event is SlackMessageEvent & { user: string } {
   const messageText = event.text ?? '';
   return Boolean(event.user) && !messageText.startsWith('##');
-}
-
-export function getAuthorName(ctx: SlackMessageContext): Promise<string> {
-  const userId = ctx.event.user;
-  if (!userId) {
-    return Promise.resolve('unknown');
-  }
-  return getSlackUserName(ctx.client, userId);
 }

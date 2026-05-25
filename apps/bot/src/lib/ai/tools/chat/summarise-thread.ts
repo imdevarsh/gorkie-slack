@@ -1,7 +1,6 @@
+import { generateText, provider, tool } from '@repo/ai';
 import { summariseThreadPrompt } from '@repo/ai/prompts/chat/tasks';
-import { provider } from '@repo/ai/providers';
 import { errorMessage, toLogError } from '@repo/utils/error';
-import { generateText, tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';

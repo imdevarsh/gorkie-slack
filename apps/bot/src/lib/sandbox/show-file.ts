@@ -7,22 +7,6 @@ import type {
   SlackMessageContext,
 } from '@/types';
 
-async function postThreadError(
-  context: SlackMessageContext,
-  channelId: string,
-  threadTs: string | undefined,
-  messageTs: string | undefined,
-  text: string
-): Promise<void> {
-  await context.client.chat
-    .postMessage({
-      channel: channelId,
-      thread_ts: threadTs ?? messageTs,
-      text,
-    })
-    .catch(() => null);
-}
-
 export async function showFile(params: {
   input: ShowFileInput;
   runtime: ResolvedSandboxSession;
@@ -47,13 +31,13 @@ export async function showFile(params: {
       { path: input.path, ctxId },
       '[subagent] showFile: file not found in sandbox'
     );
-    await postThreadError(
-      context,
-      channelId,
-      threadTs,
-      messageTs,
-      `showFile failed: could not find \`${input.path}\` in sandbox.`
-    );
+    await context.client.chat
+      .postMessage({
+        channel: channelId,
+        thread_ts: threadTs ?? messageTs,
+        text: `showFile failed: could not find \`${input.path}\` in sandbox.`,
+      })
+      .catch(() => null);
     return;
   }
 
@@ -77,12 +61,12 @@ export async function showFile(params: {
       { ...toLogError(error), path: input.path, ctxId },
       '[subagent] showFile: failed to upload to Slack'
     );
-    await postThreadError(
-      context,
-      channelId,
-      threadTs,
-      messageTs,
-      `showFile failed while uploading \`${filename}\`: ${cause}`
-    );
+    await context.client.chat
+      .postMessage({
+        channel: channelId,
+        thread_ts: threadTs ?? messageTs,
+        text: `showFile failed while uploading \`${filename}\`: ${cause}`,
+      })
+      .catch(() => null);
   }
 }
