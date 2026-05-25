@@ -33,7 +33,7 @@ export function orchestratorAgent({
 }) {
   const taskMap = new Map<string, { taskId: string; startTime: number }>();
   const eventTs = context.event.event_ts;
-  const pendingReasoning: string[] = [];
+  let pendingReasoning = '';
 
   async function resolveTask({
     title,
@@ -51,8 +51,12 @@ export function orchestratorAgent({
     const elapsedLabel =
       elapsedMs < 1000 ? '<1s' : `${Math.round(elapsedMs / 1000)}s`;
 
-    const reasoning = pendingReasoning.join('\n');
-    pendingReasoning.length = 0;
+    const reasoning = pendingReasoning
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && line !== '[REDACTED]')
+      .join('\n');
+    pendingReasoning = '';
 
     await finishTask(stream, {
       taskId: entry.taskId,
@@ -75,13 +79,7 @@ export function orchestratorAgent({
         continue;
       }
 
-      const chunk = String(part.text)
-        .trim()
-        .split('\n')
-        .filter(Boolean)
-        .filter((line) => line !== '[REDACTED]');
-
-      pendingReasoning.push(...chunk);
+      pendingReasoning += String(part.text);
     }
   }
 

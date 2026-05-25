@@ -207,6 +207,8 @@ export const sandbox = ({
           '[sandbox] Sandbox run failed'
         );
 
+        await queue.onIdle();
+
         await finishTask(stream, {
           status: 'error',
           taskId,
