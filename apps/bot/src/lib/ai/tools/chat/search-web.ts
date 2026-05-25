@@ -1,4 +1,4 @@
-import { tool } from 'ai';
+import { tool } from '@repo/ai';
 import Exa from 'exa-js';
 import { z } from 'zod';
 import { env } from '@/env';

@@ -1,6 +1,6 @@
+import { tool } from '@repo/ai';
 import { revokeProxyToken } from '@repo/db/queries';
 import { errorMessage, toLogError } from '@repo/utils/error';
-import { tool } from 'ai';
 import PQueue from 'p-queue';
 import { z } from 'zod';
 import { sandbox as config } from '@/config';

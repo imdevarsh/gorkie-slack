@@ -1,6 +1,6 @@
+import { tool } from '@repo/ai';
 import { errorMessage, toLogError } from '@repo/utils/error';
 import type { WebClient } from '@slack/web-api';
-import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';

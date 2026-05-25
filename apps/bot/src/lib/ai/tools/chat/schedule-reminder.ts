@@ -1,5 +1,5 @@
+import { tool } from '@repo/ai';
 import { errorMessage, toLogError } from '@repo/utils/error';
-import { tool } from 'ai';
 import { formatDistanceToNow } from 'date-fns';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';

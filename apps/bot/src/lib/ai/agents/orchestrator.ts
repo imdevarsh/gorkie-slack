@@ -1,7 +1,10 @@
+import {
+  provider,
+  stepCountIs,
+  successToolCall,
+  ToolLoopAgent,
+} from '@repo/ai';
 import { systemPrompt } from '@repo/ai/prompts';
-import { provider } from '@repo/ai/providers';
-import { successToolCall } from '@repo/ai/tools';
-import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools/toolset';
 import logger from '@/lib/logger';
 import type {

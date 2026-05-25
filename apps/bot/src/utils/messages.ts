@@ -1,4 +1,4 @@
-import type { ModelMessage } from 'ai';
+import type { ModelMessage } from '@repo/ai';
 
 export function getMessageText(message: ModelMessage): string {
   const { content } = message;

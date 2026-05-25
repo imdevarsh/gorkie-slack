@@ -1,6 +1,5 @@
-import { provider } from '@repo/ai/providers';
+import { generateImage, tool, provider } from '@repo/ai';
 import { errorMessage, toLogError } from '@repo/utils/error';
-import { generateImage, tool } from 'ai';
 import { extension as getExtension } from 'mime-types';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';

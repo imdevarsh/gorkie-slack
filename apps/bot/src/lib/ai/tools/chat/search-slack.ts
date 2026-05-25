@@ -1,5 +1,5 @@
+import { tool } from '@repo/ai';
 import { asRecord } from '@repo/utils/record';
-import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';

@@ -1,9 +1,9 @@
-import { getErrorDetails } from '@repo/utils/error';
 import {
   type ModelMessage,
   NoOutputGeneratedError,
   type UserContent,
-} from 'ai';
+} from '@repo/ai';
+import { getErrorDetails } from '@repo/utils/error';
 import { clearAbortController, createAbortController } from '@/lib/abort';
 import { orchestratorAgent } from '@/lib/ai/agents/orchestrator';
 import { setStatus } from '@/lib/ai/utils/status';
