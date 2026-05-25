@@ -49,14 +49,16 @@ export const assistantThread = {
 
 export const sandbox = {
   template: 'gorkie-sandbox:3.0',
-  models: [
-    { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
-    { provider: 'hackclub', modelId: 'openai/gpt-5.4-mini' },
-    { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
-    { provider: 'openrouter', modelId: 'openai/gpt-5.4-mini' },
-    { provider: 'gemini', modelId: 'gemini-2.0-flash' },
-  ],
-  modelApi: 'openai-completions',
+  models: {
+    api: 'openai-completions',
+    list: [
+      { provider: 'hackclub', modelId: 'google/gemini-3-flash-preview' },
+      { provider: 'hackclub', modelId: 'openai/gpt-5.4-mini' },
+      { provider: 'openrouter', modelId: 'google/gemini-3-flash-preview' },
+      { provider: 'openrouter', modelId: 'openai/gpt-5.4-mini' },
+      { provider: 'gemini', modelId: 'gemini-2.0-flash' },
+    ],
+  },
   retry: {
     baseDelay: 1000,
     request: 90_000,

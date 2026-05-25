@@ -17,7 +17,7 @@ type ReasoningStreamPart =
   | { type: 'reasoning-delta'; text: string }
   | { type: string };
 
-export function orchestratorSession({
+export function orchestratorAgent({
   context,
   requestHints,
   files,

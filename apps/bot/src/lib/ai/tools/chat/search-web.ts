@@ -1,5 +1,4 @@
 import { tool } from 'ai';
-import type { RegularSearchOptions } from 'exa-js';
 import Exa from 'exa-js';
 import { z } from 'zod';
 import { env } from '@/env';
@@ -7,14 +6,6 @@ import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import type { SlackMessageContext, Stream, TaskSource } from '@/types';
 
 const exa = new Exa(env.EXA_API_KEY);
-
-const EXA_SEARCH_OPTIONS = {
-  type: 'auto',
-  numResults: 10,
-  contents: {
-    text: true,
-  },
-} as const satisfies RegularSearchOptions;
 
 export const searchWeb = ({
   stream,
@@ -50,7 +41,11 @@ export const searchWeb = ({
       });
 
       try {
-        const result = await exa.search(query, EXA_SEARCH_OPTIONS);
+        const result = await exa.search(query, {
+          type: 'auto',
+          numResults: 10,
+          contents: { text: true },
+        });
         const sources: TaskSource[] = result.results
           .map((item) => {
             const url = item.url?.trim();

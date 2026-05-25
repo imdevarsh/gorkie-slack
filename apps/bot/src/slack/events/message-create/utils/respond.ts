@@ -5,7 +5,7 @@ import {
   type UserContent,
 } from 'ai';
 import { clearAbortController, createAbortController } from '@/lib/abort';
-import { orchestratorSession } from '@/lib/ai/agents/orchestrator';
+import { orchestratorAgent } from '@/lib/ai/agents/orchestrator';
 import { setStatus } from '@/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '@/lib/ai/utils/stream';
 import { setConversationTitle } from '@/lib/ai/utils/title';
@@ -72,7 +72,7 @@ export async function generateResponse(
       agent,
       consumeReasoningStream,
       resolveTask: resolve,
-    } = orchestratorSession({ context, requestHints, files, stream });
+    } = orchestratorAgent({ context, requestHints, files, stream });
     resolveTask = resolve;
 
     const streamResult = await agent.stream({

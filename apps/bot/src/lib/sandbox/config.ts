@@ -3,9 +3,9 @@ import type { Sandbox } from '@e2b/code-interpreter';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
 
-function buildProviderConfig(models: typeof config.models, api: string) {
+function buildProviderConfig(list: typeof config.models.list, api: string) {
   const providerModels = new Map<string, string[]>();
-  for (const entry of models) {
+  for (const entry of list) {
     const ids = providerModels.get(entry.provider) ?? [];
     if (!ids.includes(entry.modelId)) {
       ids.push(entry.modelId);
@@ -43,13 +43,14 @@ export async function configureAgent(
   sandbox: Sandbox,
   prompt: string
 ): Promise<void> {
-  const { models, modelApi, retry, runtime } = config;
+  const { models, retry, runtime } = config;
+  const { api, list } = models;
 
-  if (models.length === 0) {
-    throw new Error('sandbox.models must not be empty');
+  if (list.length === 0) {
+    throw new Error('sandbox.models.list must not be empty');
   }
 
-  const defaultModel = models[0] as NonNullable<(typeof models)[number]>;
+  const defaultModel = list[0] as NonNullable<(typeof list)[number]>;
   const piDir = `${runtime.workdir}/.pi`;
   const agentDir = `${piDir}/agent`;
   const extensionsDir = `${piDir}/extensions`;
@@ -67,7 +68,7 @@ export async function configureAgent(
     ),
   ]);
 
-  const { providers, auth } = buildProviderConfig(models, modelApi);
+  const { providers, auth } = buildProviderConfig(list, api);
 
   for (const path of [piDir, agentDir, extensionsDir, fallbackDir]) {
     await sandbox.files.makeDir(path).catch(() => undefined);
@@ -81,12 +82,12 @@ export async function configureAgent(
         {
           defaultProvider: defaultModel.provider,
           defaultModel: defaultModel.modelId,
-          fallbackModels: models.map(
+          fallbackModels: list.map(
             ({ provider, modelId }) => `${provider}/${modelId}`
           ),
           retry: {
             enabled: true,
-            maxRetries: Math.max(models.length - 1, 0),
+            maxRetries: Math.max(list.length - 1, 0),
             baseDelayMs: retry.baseDelay,
             provider: {
               timeoutMs: retry.request,

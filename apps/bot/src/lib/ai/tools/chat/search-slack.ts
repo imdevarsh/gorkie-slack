@@ -6,9 +6,6 @@ import logger from '@/lib/logger';
 import type { SlackMessageContext, SlackSearchResponse, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 
-const MISSING_ACTION_TOKEN_MESSAGE =
-  'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.';
-
 function getActionToken(event: unknown): string | undefined {
   const assistantThread = asRecord(asRecord(event)?.assistant_thread);
   const actionToken = assistantThread?.action_token;
@@ -42,11 +39,13 @@ export const searchSlack = ({
         await finishTask(stream, {
           status: 'error',
           taskId: toolCallId,
-          output: MISSING_ACTION_TOKEN_MESSAGE,
+          output:
+            'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
         });
         return {
           success: false,
-          error: MISSING_ACTION_TOKEN_MESSAGE,
+          error:
+            'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
         };
       }
 
@@ -83,11 +82,13 @@ export const searchSlack = ({
           await finishTask(stream, {
             status: 'error',
             taskId: task,
-            output: MISSING_ACTION_TOKEN_MESSAGE,
+            output:
+              'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
           });
           return {
             success: false,
-            error: MISSING_ACTION_TOKEN_MESSAGE,
+            error:
+              'The search could not be completed because the user did not explicitly ping/mention you in their message. Please ask the user to do so.',
           };
         }
 
