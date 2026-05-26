@@ -4,6 +4,7 @@ import { buildCache } from '@/lib/allowed-users';
 import logger from '@/lib/logger';
 import type { SlackApp } from '@/types';
 import { actions } from './actions';
+import { commands } from './commands';
 import { events } from './events';
 import { register as registerAppHomeOpened } from './events/app-home-opened';
 import { register as registerAssistantThreadContextChanged } from './events/assistant-thread-context-changed';
@@ -12,6 +13,10 @@ import { views } from './views';
 
 function registerApp(app: App) {
   buildCache(app);
+
+  for (const command of commands) {
+    app.command(command.pattern, command.execute);
+  }
 
   for (const event of events) {
     app.event(event.name, event.execute);
