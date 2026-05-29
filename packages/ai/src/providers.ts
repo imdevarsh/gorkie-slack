@@ -128,7 +128,12 @@ const chatModel = createRetryable({
       }
       if (google) {
         markTrainingFallback(context);
-        return requestNotRetryable(google('gemini-3-flash-preview'))(context);
+        return {
+          model: google('gemini-3-flash-preview'),
+          maxAttempts: 4,
+          delay: 250,
+          backoffFactor: 2,
+        };
       }
     },
     // Any error: hackclub gpt-5-mini (no data training)
@@ -142,7 +147,12 @@ const chatModel = createRetryable({
         return;
       }
       markTrainingFallback(context);
-      return requestNotRetryable(google('gemini-3-flash-preview'))(context);
+      return {
+        model: google('gemini-3-flash-preview'),
+        maxAttempts: 4,
+        delay: 250,
+        backoffFactor: 2,
+      };
     },
     // Final fallback
     openrouter.languageModel('openai/gpt-5-mini'),
