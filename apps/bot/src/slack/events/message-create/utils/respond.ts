@@ -142,7 +142,7 @@ export async function generateResponse(
       success: false,
       error:
         error instanceof NoOutputGeneratedError
-          ? 'Oops! Gorkie is out of credits right now. Please try again later.'
+          ? 'Hack Club AI is unavailable right now. Enable data training in Home settings so Gorkie can use fallback models and respond.'
           : 'Oops! Something went wrong, try again later.',
     };
   } finally {
