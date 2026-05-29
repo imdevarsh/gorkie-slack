@@ -105,6 +105,9 @@ const chatModel = createRetryable({
           backoffFactor: 2,
         };
       }
+      if (allowDataTraining) {
+        markTrainingFallback(context);
+      }
       return requestNotRetryable(
         openrouter.languageModel('google/gemini-3-flash-preview')
       )(context);
@@ -138,8 +141,16 @@ const chatModel = createRetryable({
     },
     // Any error: hackclub gpt-5-mini (no data training)
     hackclub.languageModel('openai/gpt-5-mini'),
-    // Any error: openrouter gemini (no data training)
-    openrouter.languageModel('google/gemini-3-flash-preview'),
+    // Any error: openrouter gemini
+    (context) => {
+      const { allowDataTraining = true } = gorkieOpts(context);
+      if (allowDataTraining) {
+        markTrainingFallback(context);
+      }
+      return requestNotRetryable(
+        openrouter.languageModel('google/gemini-3-flash-preview')
+      )(context);
+    },
     // Any error: google native — only when data training allowed
     (context) => {
       const { allowDataTraining = true } = gorkieOpts(context);
