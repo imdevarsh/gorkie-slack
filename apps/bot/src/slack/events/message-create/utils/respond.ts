@@ -142,7 +142,7 @@ export async function generateResponse(
       success: false,
       error:
         error instanceof NoOutputGeneratedError
-          ? 'Hack Club AI is unavailable right now. Enable data training in Home settings so Gorkie can use fallback models and respond.'
+          ? 'Hack Club AI is down right now. Turn on Data Training in Home settings to let Gorkie use fallback models.'
           : 'Oops! Something went wrong, try again later.',
     };
   } finally {
