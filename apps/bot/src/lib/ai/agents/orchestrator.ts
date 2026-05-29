@@ -1,5 +1,9 @@
 import { systemPrompt } from '@repo/ai/prompts';
-import { provider } from '@repo/ai/providers';
+import {
+  provider,
+  registerFallbackCallback,
+  unregisterFallbackCallback,
+} from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
@@ -102,13 +106,18 @@ export const orchestratorAgent = ({
   requestHints,
   files,
   stream,
+  onFallback,
 }: {
   context: SlackMessageContext;
   requestHints: ChatRequestHints;
   files?: SlackFile[];
   stream: Stream;
-}) =>
-  new ToolLoopAgent({
+  onFallback: () => void;
+}) => {
+  const requestId = crypto.randomUUID();
+  registerFallbackCallback(requestId, onFallback);
+
+  return new ToolLoopAgent({
     model: provider.languageModel('chat-model'),
     instructions: systemPrompt({
       agent: 'chat',
@@ -124,6 +133,11 @@ export const orchestratorAgent = ({
           thinkingLevel: 'medium',
           includeThoughts: true,
         },
+      },
+      'x-gorkie': {
+        allowDataTraining:
+          requestHints.customization?.allowDataTraining ?? true,
+        requestId,
       },
     },
     toolChoice: 'required',
@@ -158,9 +172,11 @@ export const orchestratorAgent = ({
     },
     onFinish() {
       taskMap.delete(context.event.event_ts);
+      unregisterFallbackCallback(requestId);
     },
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'orchestrator',
     },
   });
+};

@@ -2,6 +2,7 @@ import * as clearPrompt from './actions/clear-prompt';
 import * as editPrompt from './actions/edit-prompt';
 import * as modalLoadPreset from './actions/modal-load-preset';
 import * as modalTogglePresets from './actions/modal-toggle-presets';
+import * as toggleDataTraining from './actions/toggle-data-training';
 import * as savePresetPrompt from './views/save-preset-prompt';
 import * as savePrompt from './views/save-prompt';
 
@@ -11,6 +12,7 @@ export const prompts = {
     { name: clearPrompt.name, execute: clearPrompt.execute },
     { name: modalTogglePresets.name, execute: modalTogglePresets.execute },
     { name: modalLoadPreset.name, execute: modalLoadPreset.execute },
+    { name: toggleDataTraining.name, execute: toggleDataTraining.execute },
   ],
   views: [
     { name: savePrompt.name, execute: savePrompt.execute },

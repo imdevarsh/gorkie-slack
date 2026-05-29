@@ -19,6 +19,7 @@ export interface SlackMessageContext {
 }
 
 export interface UserCustomization {
+  allowDataTraining?: boolean;
   prompt: string;
 }
 

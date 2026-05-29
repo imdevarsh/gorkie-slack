@@ -101,6 +101,27 @@ async function handleMessage(
         .catch(() => null);
     }
 
+    if (result.success && result.usedFreeModel && event.channel) {
+      await messageContext.client.chat
+        .postMessage({
+          channel: event.channel,
+          thread_ts: event.thread_ts ?? event.ts,
+          blocks: [
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: '_This response was generated using a free fallback model. Your data may be used for model training._',
+                },
+              ],
+            },
+          ],
+          text: 'This response was generated using a free fallback model. Your data may be used for model training.',
+        })
+        .catch(() => null);
+    }
+
     logReply({ ctxId, author: authorName, result, reason: 'trigger' });
     return;
   }

@@ -69,11 +69,15 @@ export async function generateResponse(
           ] as UserContent)
         : replyPrompt;
 
+    let usedFreeModel = false;
     const agent = orchestratorAgent({
       context,
       requestHints,
       files,
       stream,
+      onFallback: () => {
+        usedFreeModel = true;
+      },
     });
 
     const streamResult = await agent.stream({
@@ -96,7 +100,7 @@ export async function generateResponse(
     await closeStream(stream);
     await setStatus(context, { status: '' });
 
-    return { success: true, toolCalls };
+    return { success: true, toolCalls, usedFreeModel };
   } catch (error) {
     if ((error as Error)?.name === 'AbortError') {
       if (stream) {
