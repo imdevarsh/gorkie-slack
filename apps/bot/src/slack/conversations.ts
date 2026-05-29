@@ -81,28 +81,6 @@ function filterMessages(
   });
 }
 
-async function buildUserCache(
-  client: ConversationOptions['client'],
-  messages: SlackConversationMessage[]
-): Promise<Map<string, string>> {
-  const userIds = new Set<string>();
-  for (const message of messages) {
-    if (message.user) {
-      userIds.add(message.user);
-    }
-  }
-
-  const userCache = new Map<string, string>();
-  await Promise.all(
-    Array.from(userIds).map(async (userId) => {
-      const name = await getSlackUserName(client, userId);
-      userCache.set(userId, name);
-    })
-  );
-
-  return userCache;
-}
-
 function sortForModel(messages: SlackConversationMessage[]) {
   return messages
     .filter(
@@ -121,12 +99,12 @@ function sortForModel(messages: SlackConversationMessage[]) {
 async function toModelMessage(
   message: SlackConversationMessage,
   options: {
+    client: ConversationOptions['client'];
     botUserId?: string;
     mentionRegex: RegExp | null;
-    userCache: Map<string, string>;
   }
 ): Promise<ModelMessage> {
-  const { botUserId, mentionRegex, userCache } = options;
+  const { client, botUserId, mentionRegex } = options;
 
   const isAssistantMessage =
     message.user === botUserId || Boolean(message.bot_id);
@@ -136,10 +114,10 @@ async function toModelMessage(
     : original.trim();
   const textContent = cleaned.length > 0 ? cleaned : original;
 
-  const author = message.user
-    ? (userCache.get(message.user) ?? message.user)
-    : (message.bot_id ?? 'unknown');
   const authorId = message.user ?? message.bot_id ?? 'unknown';
+  const author = message.user
+    ? await getSlackUserName(client, message.user)
+    : (message.bot_id ?? 'unknown');
 
   const formattedText = `${author} (${authorId}): ${textContent}`;
 
@@ -178,15 +156,14 @@ export async function getConversationMessages({
       oldest,
       inclusive,
     });
-    const filteredMessages = filterMessages(messages, latest, inclusive);
-    const userCache = await buildUserCache(client, filteredMessages);
-    const sortedMessages = sortForModel(filteredMessages);
-
-    return await Promise.all(
-      sortedMessages.map((message) =>
-        toModelMessage(message, { botUserId, mentionRegex, userCache })
-      )
-    );
+    const sortedMessages = sortForModel(filterMessages(messages, latest, inclusive));
+    const modelMessages: ModelMessage[] = [];
+    for (const message of sortedMessages) {
+      modelMessages.push(
+        await toModelMessage(message, { client, botUserId, mentionRegex })
+      );
+    }
+    return modelMessages;
   } catch (error) {
     logger.error(
       { ...toLogError(error), channel, threadTs },
