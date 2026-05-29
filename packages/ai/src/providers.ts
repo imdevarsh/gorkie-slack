@@ -56,7 +56,10 @@ export function unregisterFallbackCallback(id: string): void {
   FALLBACK_CALLBACKS.delete(id);
 }
 
-type GorkieOptions = { allowDataTraining?: boolean; requestId?: string };
+interface GorkieOptions {
+  allowDataTraining?: boolean;
+  requestId?: string;
+}
 
 function gorkieOpts(context: RetryContext<LanguageModel>): GorkieOptions {
   return (
@@ -97,11 +100,14 @@ const chatModel = createRetryable({
       if (!allowDataTraining) {
         return;
       }
-      const model = orFree
-        ? orFree.languageModel('google/gemini-3.1-flash-lite-preview:free')
-        : google
-          ? google('gemini-3-flash-preview')
-          : null;
+      let model: LanguageModel | null = null;
+      if (orFree) {
+        model = orFree.languageModel(
+          'google/gemini-3.1-flash-lite-preview:free'
+        );
+      } else if (google) {
+        model = google('gemini-3-flash-preview');
+      }
       if (!model) {
         return;
       }
