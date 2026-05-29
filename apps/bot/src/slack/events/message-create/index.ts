@@ -101,7 +101,7 @@ async function handleMessage(
         .catch(() => null);
     }
 
-    if (result.success && result.usedFreeModel && event.channel) {
+    if (result.success && result.usedTrainingFallback && event.channel) {
       await messageContext.client.chat
         .postMessage({
           channel: event.channel,

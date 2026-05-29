@@ -96,14 +96,18 @@ const chatModel = createRetryable({
     // Non-retryable error: immediately switch to best available model
     (context) => {
       const { allowDataTraining = true } = gorkieOpts(context);
-      const model =
-        allowDataTraining && orFree
-          ? orFree.languageModel('google/gemini-3-flash-preview:free')
-          : openrouter.languageModel('google/gemini-3-flash-preview');
       if (allowDataTraining && orFree) {
         markTrainingFallback(context);
+        return {
+          model: orFree.languageModel('google/gemini-3-flash-preview:free'),
+          maxAttempts: 4,
+          delay: 250,
+          backoffFactor: 2,
+        };
       }
-      return requestNotRetryable(model)(context);
+      return requestNotRetryable(
+        openrouter.languageModel('google/gemini-3-flash-preview')
+      )(context);
     },
     // Non-retryable: second free option or skip if data training off
     (context) => {
@@ -111,24 +115,25 @@ const chatModel = createRetryable({
       if (!allowDataTraining) {
         return;
       }
-      let model: LanguageModel | null = null;
       if (orFree) {
         markTrainingFallback(context);
-        model = orFree.languageModel(
-          'google/gemini-3.1-flash-lite-preview:free'
-        );
-      } else if (google) {
+        return {
+          model: orFree.languageModel(
+            'google/gemini-3.1-flash-lite-preview:free'
+          ),
+          maxAttempts: 4,
+          delay: 250,
+          backoffFactor: 2,
+        };
+      }
+      if (google) {
         markTrainingFallback(context);
-        model = google('gemini-3-flash-preview');
+        return requestNotRetryable(google('gemini-3-flash-preview'))(context);
       }
-      if (!model) {
-        return;
-      }
-      return requestNotRetryable(model)(context);
     },
     // Any error: hackclub gpt-5-mini (no data training)
     hackclub.languageModel('openai/gpt-5-mini'),
-    // Any error: openrouter gemini via hackclub proxy (no data training)
+    // Any error: openrouter gemini (no data training)
     openrouter.languageModel('google/gemini-3-flash-preview'),
     // Any error: google native — only when data training allowed
     (context) => {
