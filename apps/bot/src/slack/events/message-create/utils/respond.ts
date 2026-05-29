@@ -116,7 +116,7 @@ export async function generateResponse(
         await closeStream(stream);
       }
       await setStatus(context, { status: '' });
-      return { success: false };
+      return { success: false, alreadyReplied: Boolean(stream) };
     }
 
     const errorDetails = getErrorDetails(error);
@@ -153,6 +153,7 @@ export async function generateResponse(
 
     return {
       success: false,
+      alreadyReplied: Boolean(stream),
       error:
         error instanceof NoOutputGeneratedError
           ? noOutputMessage
