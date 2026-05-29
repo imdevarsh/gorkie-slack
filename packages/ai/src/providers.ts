@@ -69,6 +69,14 @@ function gorkieOpts(context: RetryContext<LanguageModel>): GorkieOptions {
   );
 }
 
+function markTrainingFallback(context: RetryContext<LanguageModel>): void {
+  const { allowDataTraining = true, requestId } = gorkieOpts(context);
+  if (!(allowDataTraining && requestId)) {
+    return;
+  }
+  FALLBACK_CALLBACKS.get(requestId)?.();
+}
+
 const onModelError = (context: {
   current: { model: { provider: string; modelId: string }; error?: unknown };
 }) => {
@@ -92,6 +100,9 @@ const chatModel = createRetryable({
         allowDataTraining && orFree
           ? orFree.languageModel('google/gemini-3-flash-preview:free')
           : openrouter.languageModel('google/gemini-3-flash-preview');
+      if (allowDataTraining && orFree) {
+        markTrainingFallback(context);
+      }
       return requestNotRetryable(model)(context);
     },
     // Non-retryable: second free option or skip if data training off
@@ -102,10 +113,12 @@ const chatModel = createRetryable({
       }
       let model: LanguageModel | null = null;
       if (orFree) {
+        markTrainingFallback(context);
         model = orFree.languageModel(
           'google/gemini-3.1-flash-lite-preview:free'
         );
       } else if (google) {
+        markTrainingFallback(context);
         model = google('gemini-3-flash-preview');
       }
       if (!model) {
@@ -123,25 +136,12 @@ const chatModel = createRetryable({
       if (!(allowDataTraining && google)) {
         return;
       }
+      markTrainingFallback(context);
       return requestNotRetryable(google('gemini-3-flash-preview'))(context);
     },
     // Final fallback
     openrouter.languageModel('openai/gpt-5-mini'),
   ],
-  onRetry: (context) => {
-    const { allowDataTraining = true, requestId } = gorkieOpts(context);
-    if (!(allowDataTraining && requestId)) {
-      return;
-    }
-
-    const modelId = context.current.model.modelId ?? '';
-    const isFreeModel = modelId.includes(':free');
-    const isGoogleNative = context.current.model.provider === 'google';
-
-    if (isFreeModel || isGoogleNative) {
-      FALLBACK_CALLBACKS.get(requestId)?.();
-    }
-  },
   onError: onModelError,
 });
 
