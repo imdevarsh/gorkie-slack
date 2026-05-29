@@ -112,12 +112,12 @@ async function handleMessage(
               elements: [
                 {
                   type: 'mrkdwn',
-                  text: '_This response used a fallback model. You can disable fallback in settings._',
+                  text: '_Our primary inference provider was unavailable, so this response used a fallback model. Data may be used to improve the model. You can disable Data Training in settings._',
                 },
               ],
             },
           ],
-          text: 'This response used a fallback model. You can disable fallback in settings.',
+          text: 'Our primary inference provider was unavailable, so this response used a fallback model. Data may be used to improve the model. You can disable Data Training in settings.',
         })
         .catch(() => null);
     }
