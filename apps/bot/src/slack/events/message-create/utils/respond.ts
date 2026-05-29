@@ -142,7 +142,7 @@ export async function generateResponse(
       success: false,
       error:
         error instanceof NoOutputGeneratedError
-          ? 'Our primary inference provider is down right now. Turn on Data Training in Home settings to let Gorkie use fallback models.'
+          ? 'Inference is unavailable right now. Turn on data training in settings to let Gorkie use fallback models.'
           : 'Oops! Something went wrong, try again later.',
     };
   } finally {
