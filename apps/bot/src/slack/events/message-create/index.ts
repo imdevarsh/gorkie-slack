@@ -112,12 +112,12 @@ async function handleMessage(
               elements: [
                 {
                   type: 'mrkdwn',
-                  text: '_This response was generated using a free fallback model. Your data may be used for model training._',
+                  text: '_This response used a fallback model. You can disable fallback in settings._',
                 },
               ],
             },
           ],
-          text: 'This response was generated using a free fallback model. Your data may be used for model training.',
+          text: 'This response used a fallback model. You can disable fallback in settings.',
         })
         .catch(() => null);
     }
