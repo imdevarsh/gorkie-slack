@@ -108,5 +108,6 @@ export function getAuthorName(ctx: SlackMessageContext): Promise<string> {
   if (!userId) {
     return Promise.resolve('unknown');
   }
-  return (await getSlackUser(ctx.client, userId)).name;
+  const user = await getSlackUser(ctx.client, userId);
+  return user.name;
 }

@@ -2,20 +2,20 @@ import { toLogError } from '@repo/utils/error';
 import type { WebClient } from '@slack/web-api';
 import logger from '@/lib/logger';
 
-export type SlackUser = {
-  id: string;
-  name: string;
+export interface SlackUser {
   displayName: string | null;
+  id: string;
+  isBot: boolean;
+  name: string;
   realName: string | null;
   title: string | null;
-  isBot: boolean;
   tz: string | null;
-};
+}
 
 const cache = new Map<string, SlackUser>();
 const inFlight = new Map<string, Promise<SlackUser>>();
 
-export async function getSlackUser(
+export function getSlackUser(
   client: WebClient,
   userId: string
 ): Promise<SlackUser> {
@@ -30,12 +30,12 @@ export async function getSlackUser(
   };
 
   if (!userId) {
-    return fallback;
+    return Promise.resolve(fallback);
   }
 
   const cached = cache.get(userId);
   if (cached) {
-    return cached;
+    return Promise.resolve(cached);
   }
 
   const existing = inFlight.get(userId);

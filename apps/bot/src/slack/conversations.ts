@@ -118,11 +118,14 @@ async function toModelMessage(
   const slackUser = message.user
     ? await getSlackUser(client, message.user)
     : null;
-  const authorLabel = slackUser
-    ? slackUser.title
-      ? `${slackUser.name} [${slackUser.title}]`
-      : slackUser.name
-    : (message.bot_id ?? 'unknown');
+  let authorLabel: string;
+  if (!slackUser) {
+    authorLabel = message.bot_id ?? 'unknown';
+  } else if (slackUser.title) {
+    authorLabel = `${slackUser.name} [${slackUser.title}]`;
+  } else {
+    authorLabel = slackUser.name;
+  }
 
   const formattedText = `${authorLabel} (${authorId}): ${textContent}`;
 
