@@ -3,7 +3,7 @@ import type { ModelMessage, UserContent } from 'ai';
 import logger from '@/lib/logger';
 import type { ConversationOptions, SlackConversationMessage } from '@/types';
 import { processSlackFiles } from '@/utils/images';
-import { getSlackUserName } from '@/utils/users';
+import { getSlackUser } from '@/utils/users';
 
 async function joinChannel(
   client: ConversationOptions['client'],
@@ -115,11 +115,16 @@ async function toModelMessage(
   const textContent = cleaned.length > 0 ? cleaned : original;
 
   const authorId = message.user ?? message.bot_id ?? 'unknown';
-  const author = message.user
-    ? await getSlackUserName(client, message.user)
+  const slackUser = message.user
+    ? await getSlackUser(client, message.user)
+    : null;
+  const authorLabel = slackUser
+    ? slackUser.title
+      ? `${slackUser.name} [${slackUser.title}]`
+      : slackUser.name
     : (message.bot_id ?? 'unknown');
 
-  const formattedText = `${author} (${authorId}): ${textContent}`;
+  const formattedText = `${authorLabel} (${authorId}): ${textContent}`;
 
   if (isAssistantMessage) {
     return { role: 'assistant', content: formattedText };
@@ -156,7 +161,9 @@ export async function getConversationMessages({
       oldest,
       inclusive,
     });
-    const sortedMessages = sortForModel(filterMessages(messages, latest, inclusive));
+    const sortedMessages = sortForModel(
+      filterMessages(messages, latest, inclusive)
+    );
     const modelMessages: ModelMessage[] = [];
     for (const message of sortedMessages) {
       modelMessages.push(
