@@ -27,7 +27,7 @@ export async function generateResponse(
   const controller = createAbortController(ctxId);
   let stream: Stream | null = null;
   let fallback = false;
-  const allowTraining = requestHints.customization?.allowDataTraining ?? true;
+  const allowTraining = requestHints.customization?.allowTraining ?? true;
 
   try {
     await setStatus(context, {

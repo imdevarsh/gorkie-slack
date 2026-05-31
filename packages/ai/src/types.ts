@@ -19,8 +19,13 @@ export interface SlackMessageContext {
 }
 
 export interface UserCustomization {
-  allowDataTraining?: boolean;
+  allowTraining?: boolean;
   prompt: string;
+}
+
+export interface ChatModelOptions {
+  allowTraining?: boolean;
+  onFallback?: () => void;
 }
 
 interface BaseHints {

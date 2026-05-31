@@ -4,7 +4,7 @@ import { userCustomizations } from '../schema';
 
 export type UserCustomization = Pick<
   typeof userCustomizations.$inferSelect,
-  'prompt' | 'allowDataTraining'
+  'prompt' | 'allowTraining'
 >;
 
 export async function getUserCustomization(
@@ -13,7 +13,7 @@ export async function getUserCustomization(
   const rows = await db
     .select({
       prompt: userCustomizations.prompt,
-      allowDataTraining: userCustomizations.allowDataTraining,
+      allowTraining: userCustomizations.allowTraining,
     })
     .from(userCustomizations)
     .where(eq(userCustomizations.userId, userId))
@@ -31,7 +31,7 @@ export async function setUserCustomization(
     .values({
       userId,
       prompt: customization.prompt ?? '',
-      allowDataTraining: customization.allowDataTraining ?? true,
+      allowTraining: customization.allowTraining ?? true,
     })
     .onConflictDoUpdate({
       target: userCustomizations.userId,
@@ -39,9 +39,9 @@ export async function setUserCustomization(
         ...(customization.prompt === undefined
           ? {}
           : { prompt: customization.prompt }),
-        ...(customization.allowDataTraining === undefined
+        ...(customization.allowTraining === undefined
           ? {}
-          : { allowDataTraining: customization.allowDataTraining }),
+          : { allowTraining: customization.allowTraining }),
         updatedAt: new Date(),
       },
     });
@@ -53,10 +53,10 @@ export async function setUserDataTraining(
 ): Promise<void> {
   await db
     .insert(userCustomizations)
-    .values({ userId, prompt: '', allowDataTraining: allow })
+    .values({ userId, prompt: '', allowTraining: allow })
     .onConflictDoUpdate({
       target: userCustomizations.userId,
-      set: { allowDataTraining: allow, updatedAt: new Date() },
+      set: { allowTraining: allow, updatedAt: new Date() },
     });
 }
 

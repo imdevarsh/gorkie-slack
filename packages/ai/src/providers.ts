@@ -12,6 +12,7 @@ import {
 import { requestNotRetryable } from 'ai-retry/retryables';
 
 import { keys } from './keys';
+import type { ChatModelOptions } from './types';
 
 const logger = await createLogger({ fileLogging: false });
 
@@ -22,11 +23,6 @@ const RETRY = {
   delay: 250,
   backoffFactor: 2,
 } satisfies Omit<Retry<LanguageModel>, 'model'>;
-
-interface ChatModelOptions {
-  allowTraining?: boolean;
-  onFallback?: () => void;
-}
 
 const hackclubBase = createOpenRouter({
   apiKey: env.HACKCLUB_API_KEY,

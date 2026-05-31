@@ -102,7 +102,7 @@ export const orchestratorAgent = ({
 }) =>
   new ToolLoopAgent({
     model: createChatLanguageModel({
-      allowTraining: requestHints.customization?.allowDataTraining ?? true,
+      allowTraining: requestHints.customization?.allowTraining ?? true,
       onFallback,
     }),
     instructions: systemPrompt({

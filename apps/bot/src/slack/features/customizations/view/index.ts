@@ -10,7 +10,7 @@ export function buildHomeView({
   customization,
 }: {
   tasks: ScheduledTask[];
-  customization: { prompt?: string; allowDataTraining?: boolean } | null;
+  customization: { prompt?: string; allowTraining?: boolean } | null;
 }): SlackHomeTabDto {
   return HomeTab()
     .blocks(
@@ -21,7 +21,7 @@ export function buildHomeView({
       Blocks.Divider(),
       ...customInstructionsBlocks(customization),
       Blocks.Divider(),
-      ...dataTrainingBlocks(customization?.allowDataTraining ?? true),
+      ...dataTrainingBlocks(customization?.allowTraining ?? true),
       Blocks.Divider(),
       ...scheduledTasksBlocks(tasks)
     )
