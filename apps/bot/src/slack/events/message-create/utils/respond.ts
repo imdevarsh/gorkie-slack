@@ -1,5 +1,6 @@
 import { getErrorDetails } from '@repo/utils/error';
 import {
+  APICallError,
   type ModelMessage,
   NoOutputGeneratedError,
   type UserContent,
@@ -134,10 +135,15 @@ export async function generateResponse(
       await closeStream(stream);
     }
     await setStatus(context, { status: 'failed to generate' });
+
+    const isInsufficientCredits =
+      APICallError.isInstance(error) && error.statusCode === 402;
+
     return {
       success: false,
-      error:
-        error instanceof NoOutputGeneratedError
+      error: isInsufficientCredits
+        ? "It looks like Hack Club AI is currently down or out of capacity — this is outside of my control. You can check the status at https://status.ai.hackclub.com/ and try again once it's back up!"
+        : error instanceof NoOutputGeneratedError
           ? 'Oops! Gorkie is out of credits right now. Please try again later.'
           : 'Oops! Something went wrong, try again later.',
     };
