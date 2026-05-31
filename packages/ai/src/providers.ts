@@ -28,7 +28,7 @@ interface ChatModelOptions {
   onFallback?: () => void;
 }
 
-const hcBase = createOpenRouter({
+const hackclubBase = createOpenRouter({
   apiKey: env.HACKCLUB_API_KEY,
   baseURL: 'https://ai.hackclub.com/proxy/v1',
 });
@@ -46,8 +46,8 @@ const google = env.GOOGLE_GENERATIVE_AI_API_KEY
   ? createGoogleGenerativeAI({ apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY })
   : null;
 
-const hc = wrapProvider({
-  provider: hcBase,
+const hackclub = wrapProvider({
+  provider: hackclubBase,
   languageModelMiddleware: {
     specificationVersion: 'v3',
     overrideProvider: () => 'hackclub',
@@ -100,7 +100,7 @@ export function createChatLanguageModel({
     };
 
   return createRetryable({
-    model: hc.languageModel('google/gemini-3-flash-preview'),
+    model: hackclub.languageModel('google/gemini-3-flash-preview'),
     retries: [
       training(openrouter?.languageModel('google/gemini-3-flash-preview:free')),
       requestNotRetryable(
@@ -110,7 +110,7 @@ export function createChatLanguageModel({
         openrouter?.languageModel('google/gemini-3.1-flash-lite-preview:free')
       ),
       training(google?.('gemini-3-flash-preview')),
-      hc.languageModel('openai/gpt-5-mini'),
+      hackclub.languageModel('openai/gpt-5-mini'),
       inference.languageModel('google/gemini-3-flash-preview'),
       training(google?.('gemini-3-flash-preview')),
       inference.languageModel('openai/gpt-5-mini'),
@@ -120,7 +120,7 @@ export function createChatLanguageModel({
 }
 
 const summariserModel = createRetryable({
-  model: hc.languageModel('google/gemini-3.1-flash-lite-preview'),
+  model: hackclub.languageModel('google/gemini-3.1-flash-lite-preview'),
   retries: [
     requestNotRetryable(
       inference.languageModel('google/gemini-3.1-flash-lite-preview')
@@ -128,7 +128,7 @@ const summariserModel = createRetryable({
     ...(google
       ? [requestNotRetryable(google('gemini-3.1-flash-lite-preview'))]
       : []),
-    hc.languageModel('openai/gpt-5-nano'),
+    hackclub.languageModel('openai/gpt-5-nano'),
     inference.languageModel('google/gemini-3.1-flash-lite-preview'),
     inference.languageModel('openai/gpt-5-nano'),
   ],
@@ -141,6 +141,6 @@ export const provider: Provider = customProvider({
     'summariser-model': summariserModel,
   },
   imageModels: {
-    'image-model': hc.imageModel('google/gemini-3.1-flash-image-preview'),
+    'image-model': hackclub.imageModel('google/gemini-3.1-flash-image-preview'),
   },
 });
