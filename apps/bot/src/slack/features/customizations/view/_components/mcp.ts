@@ -16,13 +16,18 @@ function buildMcpServerBlock(server: McpServerWithOAuth) {
     server.transport.toUpperCase(),
     server.authType === 'bearer' ? 'bearer' : 'oauth',
     server.enabled ? 'enabled' : 'disabled',
-    connected ? 'connected' : 'not connected',
   ].join(' · ');
-  const lastSeen = server.lastConnectedAt
-    ? `Last connected ${formatDistanceToNowStrict(server.lastConnectedAt, {
+  let lastSeen = 'Not connected';
+  if (server.lastConnectedAt) {
+    lastSeen = `Last connected ${formatDistanceToNowStrict(
+      server.lastConnectedAt,
+      {
         addSuffix: true,
-      })}`
-    : 'Not connected yet';
+      }
+    )}`;
+  } else if (connected) {
+    lastSeen = 'Connected';
+  }
   const lastError = server.lastError ? `\nError: ${server.lastError}` : '';
 
   return [
@@ -46,11 +51,6 @@ function buildMcpServerBlock(server: McpServerWithOAuth) {
         value: server.id,
       }),
       Elements.Button({
-        actionId: 'home_mcp_refresh',
-        text: 'Refresh',
-        value: server.id,
-      }),
-      Elements.Button({
         actionId: 'home_mcp_delete',
         text: 'Delete',
         value: server.id,
@@ -70,7 +70,7 @@ function buildMcpServerBlock(server: McpServerWithOAuth) {
 
 export function mcpBlocks(servers: McpServerWithOAuth[]) {
   return [
-    Blocks.Section({ text: '*MCP*' }).accessory(
+    Blocks.Section({ text: `*MCP Servers* (${servers.length})` }).accessory(
       Elements.Button({
         actionId: 'home_mcp_add',
         text: 'Add',

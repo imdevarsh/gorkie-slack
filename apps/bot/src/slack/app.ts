@@ -21,12 +21,20 @@ function registerApp(app: App) {
   registerAssistantThreadContextChanged(app);
   registerAppHomeOpened(app);
 
+  const registerAction = app.action.bind(app) as (
+    name: string,
+    execute: unknown
+  ) => void;
   for (const action of actions) {
-    app.action(action.name, action.execute);
+    registerAction(action.name, action.execute);
   }
 
+  const registerView = app.view.bind(app) as (
+    name: string,
+    execute: unknown
+  ) => void;
   for (const view of views) {
-    app.view(view.name, view.execute);
+    registerView(view.name, view.execute);
   }
 }
 
