@@ -29,6 +29,7 @@ out
 
 # Logs
 logs
+core
 _.log
 *.log
 report.[0-9]_.*.json
