@@ -2,6 +2,7 @@ import type { ScheduledTask } from '@repo/db/schema';
 import { Blocks, HomeTab } from 'slack-block-builder';
 import type { SlackHomeTabDto } from 'slack-block-builder/dist/internal';
 import { customInstructionsBlocks } from './_components/custom-instructions';
+import { dataTrainingBlocks } from './_components/data-training';
 import { scheduledTasksBlocks } from './_components/scheduled-tasks';
 
 export function buildHomeView({
@@ -9,7 +10,7 @@ export function buildHomeView({
   customization,
 }: {
   tasks: ScheduledTask[];
-  customization: { prompt?: string } | null;
+  customization: { prompt?: string; allowDataTraining?: boolean } | null;
 }): SlackHomeTabDto {
   return HomeTab()
     .blocks(
@@ -19,6 +20,8 @@ export function buildHomeView({
       ),
       Blocks.Divider(),
       ...customInstructionsBlocks(customization),
+      Blocks.Divider(),
+      ...dataTrainingBlocks(customization?.allowDataTraining ?? true),
       Blocks.Divider(),
       ...scheduledTasksBlocks(tasks)
     )

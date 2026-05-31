@@ -2,7 +2,11 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createLogger } from '@repo/logging/log';
 import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
-import { createRetryable } from 'ai-retry';
+import {
+  createRetryable,
+  type LanguageModel,
+  type RetryContext,
+} from 'ai-retry';
 import { requestNotRetryable } from 'ai-retry/retryables';
 
 import { keys } from './keys';
@@ -21,6 +25,10 @@ const openrouter = createOpenRouter({
   baseURL: env.OPENROUTER_BASE_URL ?? undefined,
 });
 
+const orFree = env.OPENROUTER_FREE_API_KEY
+  ? createOpenRouter({ apiKey: env.OPENROUTER_FREE_API_KEY })
+  : null;
+
 const hackclub = wrapProvider({
   provider: hackclubBase,
   languageModelMiddleware: {
@@ -36,6 +44,38 @@ const hackclub = wrapProvider({
 const google = env.GOOGLE_GENERATIVE_AI_API_KEY
   ? createGoogleGenerativeAI({ apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY })
   : null;
+
+// Per-request callbacks fired when a data-training model is selected as fallback.
+const FALLBACK_CALLBACKS = new Map<string, () => void>();
+
+export function registerFallbackCallback(id: string, cb: () => void): void {
+  FALLBACK_CALLBACKS.set(id, cb);
+}
+
+export function unregisterFallbackCallback(id: string): void {
+  FALLBACK_CALLBACKS.delete(id);
+}
+
+interface GorkieOptions {
+  allowDataTraining?: boolean;
+  requestId?: string;
+}
+
+function gorkieOpts(context: RetryContext<LanguageModel>): GorkieOptions {
+  return (
+    (context.current.options.providerOptions?.['x-gorkie'] as
+      | GorkieOptions
+      | undefined) ?? {}
+  );
+}
+
+function markTrainingFallback(context: RetryContext<LanguageModel>): void {
+  const { allowDataTraining = true, requestId } = gorkieOpts(context);
+  if (!(allowDataTraining && requestId)) {
+    return;
+  }
+  FALLBACK_CALLBACKS.get(requestId)?.();
+}
 
 const onModelError = (context: {
   current: { model: { provider: string; modelId: string }; error?: unknown };
@@ -53,12 +93,79 @@ const onModelError = (context: {
 const chatModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3-flash-preview'),
   retries: [
-    requestNotRetryable(
-      openrouter.languageModel('google/gemini-3-flash-preview')
-    ),
-    ...(google ? [requestNotRetryable(google('gemini-3-flash-preview'))] : []),
+    // Non-retryable error: immediately switch to best available model
+    (context) => {
+      const { allowDataTraining = true } = gorkieOpts(context);
+      if (allowDataTraining && orFree) {
+        markTrainingFallback(context);
+        return {
+          model: orFree.languageModel('google/gemini-3-flash-preview:free'),
+          maxAttempts: 4,
+          delay: 250,
+          backoffFactor: 2,
+        };
+      }
+      if (allowDataTraining) {
+        markTrainingFallback(context);
+      }
+      return requestNotRetryable(
+        openrouter.languageModel('google/gemini-3-flash-preview')
+      )(context);
+    },
+    // Non-retryable: second free option or skip if data training off
+    (context) => {
+      const { allowDataTraining = true } = gorkieOpts(context);
+      if (!allowDataTraining) {
+        return;
+      }
+      if (orFree) {
+        markTrainingFallback(context);
+        return {
+          model: orFree.languageModel(
+            'google/gemini-3.1-flash-lite-preview:free'
+          ),
+          maxAttempts: 4,
+          delay: 250,
+          backoffFactor: 2,
+        };
+      }
+      if (google) {
+        markTrainingFallback(context);
+        return {
+          model: google('gemini-3-flash-preview'),
+          maxAttempts: 4,
+          delay: 250,
+          backoffFactor: 2,
+        };
+      }
+    },
+    // Any error: hackclub gpt-5-mini (no data training)
     hackclub.languageModel('openai/gpt-5-mini'),
-    openrouter.languageModel('google/gemini-3-flash-preview'),
+    // Any error: openrouter gemini
+    (context) => {
+      const { allowDataTraining = true } = gorkieOpts(context);
+      if (allowDataTraining) {
+        markTrainingFallback(context);
+      }
+      return requestNotRetryable(
+        openrouter.languageModel('google/gemini-3-flash-preview')
+      )(context);
+    },
+    // Any error: google native — only when data training allowed
+    (context) => {
+      const { allowDataTraining = true } = gorkieOpts(context);
+      if (!(allowDataTraining && google)) {
+        return;
+      }
+      markTrainingFallback(context);
+      return {
+        model: google('gemini-3-flash-preview'),
+        maxAttempts: 4,
+        delay: 250,
+        backoffFactor: 2,
+      };
+    },
+    // Final fallback
     openrouter.languageModel('openai/gpt-5-mini'),
   ],
   onError: onModelError,

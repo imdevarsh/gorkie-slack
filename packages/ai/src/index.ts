@@ -1,3 +1,7 @@
 export * from 'ai';
-export { provider } from './providers';
+export {
+  provider,
+  registerFallbackCallback,
+  unregisterFallbackCallback,
+} from './providers';
 export { successToolCall } from './tools';

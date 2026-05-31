@@ -26,6 +26,9 @@ export async function generateResponse(
   const ctxId = getContextId(context);
   const controller = createAbortController(ctxId);
   let stream: Stream | null = null;
+  let usedTrainingFallback = false;
+  const allowDataTraining =
+    requestHints.customization?.allowDataTraining ?? true;
 
   try {
     await setStatus(context, {
@@ -74,6 +77,9 @@ export async function generateResponse(
       requestHints,
       files,
       stream,
+      onFallback: () => {
+        usedTrainingFallback = true;
+      },
     });
 
     const streamResult = await agent.stream({
@@ -96,7 +102,7 @@ export async function generateResponse(
     await closeStream(stream);
     await setStatus(context, { status: '' });
 
-    return { success: true, toolCalls };
+    return { success: true, toolCalls, usedTrainingFallback };
   } catch (error) {
     if ((error as Error)?.name === 'AbortError') {
       if (stream) {
@@ -110,7 +116,7 @@ export async function generateResponse(
         await closeStream(stream);
       }
       await setStatus(context, { status: '' });
-      return { success: false };
+      return { success: false, alreadyReplied: Boolean(stream) };
     }
 
     const errorDetails = getErrorDetails(error);
@@ -134,11 +140,23 @@ export async function generateResponse(
       await closeStream(stream);
     }
     await setStatus(context, { status: 'failed to generate' });
+    let noOutputMessage =
+      'Inference is unavailable right now. Please try again shortly.';
+
+    if (!allowDataTraining) {
+      noOutputMessage =
+        'Inference is unavailable right now. Turn on data training in settings to let Gorkie use fallback models.';
+    } else if (usedTrainingFallback) {
+      noOutputMessage =
+        'Inference is unavailable right now, and fallback models also failed. Please try again shortly.';
+    }
+
     return {
       success: false,
+      alreadyReplied: Boolean(stream),
       error:
         error instanceof NoOutputGeneratedError
-          ? 'Oops! Gorkie is out of credits right now. Please try again later.'
+          ? noOutputMessage
           : 'Oops! Something went wrong, try again later.',
     };
   } finally {
