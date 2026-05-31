@@ -19,15 +19,6 @@ type ReasoningStreamPart =
   | { type: 'reasoning-delta'; text: string }
   | { type: string };
 
-function normalizeReasoning(reasoningText: unknown): string {
-  return String(reasoningText)
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .filter((line) => line !== '[REDACTED]')
-    .join('\n');
-}
-
 export async function resolveOrchestratorTask({
   context,
   stream,
@@ -78,8 +69,7 @@ export async function consumeOrchestratorReasoningStream({
       continue;
     }
 
-    const reasoningSummary = normalizeReasoning(part.text);
-    if (!reasoningSummary) {
+    if (!part.text) {
       continue;
     }
 
@@ -92,7 +82,7 @@ export async function consumeOrchestratorReasoningStream({
     await updateTask(stream, {
       taskId: entry.taskId,
       status: 'in_progress',
-      output: `\n${reasoningSummary}`,
+      output: part.text,
     });
   }
 }
