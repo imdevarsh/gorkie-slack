@@ -18,7 +18,7 @@ const logger = await createLogger({ fileLogging: false });
 const env = keys();
 
 const RETRY = {
-  maxAttempts: 4,
+  maxAttempts: 2,
   delay: 250,
   backoffFactor: 2,
 } satisfies Omit<Retry<LanguageModel>, 'model'>;
