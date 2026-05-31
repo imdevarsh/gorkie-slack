@@ -48,7 +48,7 @@ export const assistantThread = {
 };
 
 export const searchWeb = {
-  numResults: 6,
+  results: 6,
   contentMaxChars: 1500,
 };
 

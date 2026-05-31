@@ -9,7 +9,7 @@ import type { SlackMessageContext, Stream, TaskSource } from '@/types';
 
 const EXA_SEARCH_OPTIONS = {
   type: 'auto',
-  numResults: config.numResults,
+  numResults: config.results,
   contents: {
     text: {
       maxCharacters: config.contentMaxChars,
