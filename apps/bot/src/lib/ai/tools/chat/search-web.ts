@@ -1,15 +1,19 @@
+import { clampText } from '@repo/utils/text';
 import { tool } from 'ai';
 import type { RegularSearchOptions } from 'exa-js';
 import { z } from 'zod';
+import { searchWeb as config } from '@/config';
 import { exa } from '@/lib/ai/exa';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import type { SlackMessageContext, Stream, TaskSource } from '@/types';
 
 const EXA_SEARCH_OPTIONS = {
   type: 'auto',
-  numResults: 10,
+  numResults: config.numResults,
   contents: {
-    text: true,
+    text: {
+      maxCharacters: config.contentMaxChars,
+    },
   },
 } as const satisfies RegularSearchOptions;
 
@@ -48,7 +52,15 @@ export const searchWeb = ({
 
       try {
         const result = await exa.search(query, EXA_SEARCH_OPTIONS);
-        const sources: TaskSource[] = result.results
+        const results = result.results.map((item) => ({
+          title: item.title || item.url,
+          url: item.url,
+          publishedDate: item.publishedDate,
+          text: item.text
+            ? clampText(item.text, config.contentMaxChars)
+            : undefined,
+        }));
+        const sources: TaskSource[] = results
           .map((item) => {
             const url = item.url?.trim();
             if (!url) {
@@ -69,7 +81,10 @@ export const searchWeb = ({
           sources,
           output: `Searched the web for "${query}" and found *${sources.length} source${sources.length === 1 ? '' : 's'}*.`,
         });
-        return result;
+        return {
+          query,
+          results,
+        };
       } catch (error) {
         await finishTask(stream, { status: 'error', taskId: task });
         throw error;

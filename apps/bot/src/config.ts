@@ -47,6 +47,11 @@ export const assistantThread = {
   },
 };
 
+export const searchWeb = {
+  numResults: 6,
+  contentMaxChars: 1500,
+};
+
 export const sandbox = {
   template: 'gorkie-sandbox:3.0',
   model: {
