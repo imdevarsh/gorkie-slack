@@ -11,7 +11,9 @@
     "typecheck": "bun run prepare && tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "catalog:",
     "@repo/db": "workspace:*",
+    "@repo/utils": "workspace:*",
     "@repo/logging": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",

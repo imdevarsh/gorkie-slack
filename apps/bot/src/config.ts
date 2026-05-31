@@ -1,6 +1,8 @@
 export const appHome = {
   maxPromptDisplay: 200,
   maxTaskPrompt: 80,
+  maxMcpNameDisplay: 40,
+  maxMcpUrlDisplay: 80,
 };
 
 export const assistantThread = {
@@ -78,4 +80,12 @@ export const sandbox = {
   attachments: {
     maxBytes: 1_000_000_000,
   },
+};
+
+export const mcp = {
+  maxServersPerRequest: Number(process.env.MCP_MAX_SERVERS_PER_REQUEST ?? 3),
+  maxToolsPerServer: 25,
+  maxSchemaBytesPerServer: 256 * 1024,
+  requestTimeoutMs: 15_000,
+  maxResponseBytes: 10 * 1024 * 1024,
 };

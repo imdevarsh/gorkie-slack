@@ -69,7 +69,7 @@ export async function generateResponse(
           ] as UserContent)
         : replyPrompt;
 
-    const agent = orchestratorAgent({
+    const agent = await orchestratorAgent({
       context,
       requestHints,
       files,

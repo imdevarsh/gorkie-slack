@@ -1,6 +1,7 @@
 import { systemPrompt } from '@repo/ai/prompts';
 import { provider } from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
+import { clampText } from '@repo/utils/text';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
@@ -82,12 +83,12 @@ export async function consumeOrchestratorReasoningStream({
     await updateTask(stream, {
       taskId: entry.taskId,
       status: 'in_progress',
-      output: part.text,
+      output: clampText(part.text, 280),
     });
   }
 }
 
-export const orchestratorAgent = ({
+export const orchestratorAgent = async ({
   context,
   requestHints,
   files,
@@ -97,8 +98,9 @@ export const orchestratorAgent = ({
   requestHints: ChatRequestHints;
   files?: SlackFile[];
   stream: Stream;
-}) =>
-  new ToolLoopAgent({
+}) => {
+  const toolset = await createToolset({ context, files, stream });
+  return new ToolLoopAgent({
     model: provider.languageModel('chat-model'),
     instructions: systemPrompt({
       agent: 'chat',
@@ -117,7 +119,7 @@ export const orchestratorAgent = ({
       },
     },
     toolChoice: 'required',
-    tools: createToolset({ context, files, stream }),
+    tools: toolset.tools,
     stopWhen: [
       stepCountIs(40),
       successToolCall('leaveChannel'),
@@ -146,11 +148,13 @@ export const orchestratorAgent = ({
         'No taskId found in taskMap'
       );
     },
-    onFinish() {
+    async onFinish() {
       taskMap.delete(context.event.event_ts);
+      await toolset.cleanup();
     },
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'orchestrator',
     },
   });
+};

@@ -42,7 +42,7 @@ runs:
         EXA_API_KEY="exa-your-exa-api-key"
         E2B_API_KEY="e2b-your-e2b-api-key"
         AGENTMAIL_API_KEY="am_your_agentmail_api_key"
-        PROXY_BASE_URL="http://localhost:3001"
+        SERVER_BASE_URL="http://localhost:3001"
         VERCEL_TOKEN="your-vercel-oidc-token"
         VERCEL_PROJECT_ID="prj_abc"
         EOF

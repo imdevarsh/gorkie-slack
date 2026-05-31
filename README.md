@@ -66,7 +66,7 @@ packages/
 tooling/      Shared TypeScript, cspell, GitHub Action config
 ```
 
-The bot does not start or import the proxy server. It creates short-lived DB-backed tokens and passes `PROXY_BASE_URL` plus the scoped token into the sandbox. Provider keys stay in `apps/server`.
+The bot does not start or import the proxy server. It creates short-lived DB-backed tokens and passes `SERVER_BASE_URL` plus the scoped token into the sandbox. Provider keys stay in `apps/server`.
 
 ## License
 
