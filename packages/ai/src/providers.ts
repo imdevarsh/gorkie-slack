@@ -56,7 +56,6 @@ const chatModel = createRetryable({
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3-flash-preview')
     ),
-    ...(google ? [requestNotRetryable(google('gemini-3-flash-preview'))] : []),
     hackclub.languageModel('openai/gpt-5-mini'),
     openrouter.languageModel('google/gemini-3-flash-preview'),
     openrouter.languageModel('openai/gpt-5-mini'),
