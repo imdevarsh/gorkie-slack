@@ -5,7 +5,7 @@ export default defineConfig({
   format: 'esm',
   outDir: './dist',
   clean: true,
-  copy: 'src/lib/sandbox/config/extensions',
+  copy: 'src/lib/sandbox',
   deps: {
     alwaysBundle: [/@repo\/.*/],
     onlyBundle: false,

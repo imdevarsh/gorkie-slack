@@ -6,7 +6,7 @@ import type {
   SlackMessageEvent,
   SlackRawMessageEvent,
 } from '@/types';
-import { getSlackUserName } from '@/utils/users';
+import { getSlackUser } from '@/utils/users';
 
 function isSlackFile(value: unknown): value is SlackFile {
   return Boolean(asRecord(value));
@@ -108,5 +108,6 @@ export async function getAuthorName(ctx: SlackMessageContext): Promise<string> {
   if (!userId) {
     return 'unknown';
   }
-  return getSlackUserName(ctx.client, userId);
+  const user = await getSlackUser(ctx.client, userId);
+  return user.name;
 }
