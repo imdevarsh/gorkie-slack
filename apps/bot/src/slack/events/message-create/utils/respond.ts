@@ -27,8 +27,7 @@ export async function generateResponse(
   const controller = createAbortController(ctxId);
   let stream: Stream | null = null;
   let fallback = false;
-  const allowDataTraining =
-    requestHints.customization?.allowDataTraining ?? true;
+  const allowTraining = requestHints.customization?.allowDataTraining ?? true;
 
   try {
     await setStatus(context, {
@@ -116,7 +115,7 @@ export async function generateResponse(
         await closeStream(stream);
       }
       await setStatus(context, { status: '' });
-      return { success: false, alreadyReplied: Boolean(stream) };
+      return { success: false, replied: Boolean(stream) };
     }
 
     const errorDetails = getErrorDetails(error);
@@ -143,7 +142,7 @@ export async function generateResponse(
     let noOutputMessage =
       'Inference is unavailable right now. Please try again shortly.';
 
-    if (!allowDataTraining) {
+    if (!allowTraining) {
       noOutputMessage =
         'Inference is unavailable right now. Turn on data training in settings to let Gorkie use fallback models.';
     } else if (fallback) {
@@ -153,7 +152,7 @@ export async function generateResponse(
 
     return {
       success: false,
-      alreadyReplied: Boolean(stream),
+      replied: Boolean(stream),
       error:
         error instanceof NoOutputGeneratedError
           ? noOutputMessage

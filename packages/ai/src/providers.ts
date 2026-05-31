@@ -24,7 +24,7 @@ const RETRY = {
 } satisfies Omit<Retry<LanguageModel>, 'model'>;
 
 interface ChatModelOptions {
-  allowDataTraining?: boolean;
+  allowTraining?: boolean;
   onFallback?: () => void;
 }
 
@@ -76,7 +76,7 @@ const retry = (model: LanguageModel): Retry<LanguageModel> => ({
 });
 
 export function createChatLanguageModel({
-  allowDataTraining = true,
+  allowTraining = true,
   onFallback,
 }: ChatModelOptions = {}): LanguageModel {
   let reported = false;
@@ -92,7 +92,7 @@ export function createChatLanguageModel({
   const training =
     (model: LanguageModel | undefined): Retryable<LanguageModel> =>
     () => {
-      if (!(allowDataTraining && model)) {
+      if (!(allowTraining && model)) {
         return;
       }
       mark();
