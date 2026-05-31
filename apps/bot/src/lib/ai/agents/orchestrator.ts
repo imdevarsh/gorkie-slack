@@ -1,9 +1,5 @@
 import { systemPrompt } from '@repo/ai/prompts';
-import {
-  provider,
-  registerFallbackCallback,
-  unregisterFallbackCallback,
-} from '@repo/ai/providers';
+import { createChatLanguageModel } from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
@@ -22,15 +18,6 @@ type ReasoningStreamPart =
   | { type: 'start-step' }
   | { type: 'reasoning-delta'; text: string }
   | { type: string };
-
-function normalizeReasoning(reasoningText: unknown): string {
-  return String(reasoningText)
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .filter((line) => line !== '[REDACTED]')
-    .join('\n');
-}
 
 export async function resolveOrchestratorTask({
   context,
@@ -82,8 +69,7 @@ export async function consumeOrchestratorReasoningStream({
       continue;
     }
 
-    const reasoningSummary = normalizeReasoning(part.text);
-    if (!reasoningSummary) {
+    if (!part.text) {
       continue;
     }
 
@@ -96,7 +82,7 @@ export async function consumeOrchestratorReasoningStream({
     await updateTask(stream, {
       taskId: entry.taskId,
       status: 'in_progress',
-      output: `\n${reasoningSummary}`,
+      output: part.text,
     });
   }
 }
@@ -113,12 +99,12 @@ export const orchestratorAgent = ({
   files?: SlackFile[];
   stream: Stream;
   onFallback: () => void;
-}) => {
-  const requestId = crypto.randomUUID();
-  registerFallbackCallback(requestId, onFallback);
-
-  return new ToolLoopAgent({
-    model: provider.languageModel('chat-model'),
+}) =>
+  new ToolLoopAgent({
+    model: createChatLanguageModel({
+      allowDataTraining: requestHints.customization?.allowDataTraining ?? true,
+      onDataTrainingFallback: onFallback,
+    }),
     instructions: systemPrompt({
       agent: 'chat',
       requestHints,
@@ -133,11 +119,6 @@ export const orchestratorAgent = ({
           thinkingLevel: 'medium',
           includeThoughts: true,
         },
-      },
-      'x-gorkie': {
-        allowDataTraining:
-          requestHints.customization?.allowDataTraining ?? true,
-        requestId,
       },
     },
     toolChoice: 'required',
@@ -172,11 +153,9 @@ export const orchestratorAgent = ({
     },
     onFinish() {
       taskMap.delete(context.event.event_ts);
-      unregisterFallbackCallback(requestId);
     },
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'orchestrator',
     },
   });
-};

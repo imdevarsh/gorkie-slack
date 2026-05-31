@@ -1,7 +1,3 @@
 export * from 'ai';
-export {
-  provider,
-  registerFallbackCallback,
-  unregisterFallbackCallback,
-} from './providers';
+export { createChatLanguageModel, provider } from './providers';
 export { successToolCall } from './tools';
