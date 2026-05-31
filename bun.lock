@@ -100,14 +100,15 @@
     "packages/db": {
       "name": "@repo/db",
       "dependencies": {
-        "@neondatabase/serverless": "^1.1.0",
         "@t3-oss/env-core": "catalog:",
         "drizzle-orm": "catalog:",
+        "pg": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
         "@repo/tsconfig": "workspace:*",
         "@types/bun": "catalog:",
+        "@types/pg": "catalog:",
         "dotenv": "catalog:",
         "drizzle-kit": "catalog:",
         "typescript": "catalog:",

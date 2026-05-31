@@ -3,5 +3,5 @@ command = "bunx"
 args = ["create-better-t-stack@latest", "mcp"]
 
 [mcp_servers.context7]
-command = "bunx"
-args = ["@upstash/context7-mcp"]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]

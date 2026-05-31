@@ -70,13 +70,8 @@ async function handleMessage(
       });
     }
 
-    const repliedToUser =
-      result.success &&
-      Array.isArray(result.toolCalls) &&
-      result.toolCalls.some((tc) => tc.toolName === 'reply');
-
     if (
-      repliedToUser &&
+      result.success &&
       requestHints.customization?.prompt &&
       event.channel &&
       event.channel_type !== 'im'
