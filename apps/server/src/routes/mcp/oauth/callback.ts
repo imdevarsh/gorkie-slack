@@ -14,8 +14,40 @@ const guardedFetch = createGuardedFetch({
   timeoutMs: 15_000,
 });
 
-function html({ message, title }: { message: string; title: string }): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body><h1>${title}</h1><p>${message}</p></body></html>`;
+function html({
+  message,
+  status,
+  title,
+}: {
+  message: string;
+  status: 'error' | 'success';
+  title: string;
+}): string {
+  const accent = status === 'success' ? '#2563eb' : '#dc2626';
+  const icon = status === 'success' ? 'Connected' : 'Error';
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f8fafc;color:#111827;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,sans-serif}
+main{width:min(520px,calc(100vw - 32px));background:white;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 20px 50px rgb(15 23 42 / .12);padding:32px}
+.badge{display:inline-flex;align-items:center;gap:8px;color:${accent};font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.04em}
+.dot{width:10px;height:10px;border-radius:999px;background:${accent}}
+h1{margin:14px 0 10px;font-size:32px;line-height:1.15}
+p{margin:0;color:#4b5563;font-size:16px;line-height:1.6}
+</style>
+</head>
+<body>
+<main>
+<div class="badge"><span class="dot"></span>${icon}</div>
+<h1>${title}</h1>
+<p>${message}</p>
+</main>
+</body>
+</html>`;
 }
 
 export default defineHandler(async (event) => {
@@ -28,13 +60,18 @@ export default defineHandler(async (event) => {
 
   if (oauthError) {
     event.res.status = 400;
-    return html({ message: oauthError, title: 'MCP OAuth Failed' });
+    return html({
+      message: oauthError,
+      status: 'error',
+      title: 'MCP OAuth Failed',
+    });
   }
 
   if (!(code && state)) {
     event.res.status = 400;
     return html({
       message: 'Missing OAuth code or state.',
+      status: 'error',
       title: 'MCP OAuth Failed',
     });
   }
@@ -47,6 +84,7 @@ export default defineHandler(async (event) => {
     event.res.status = 400;
     return html({
       message: 'OAuth state was invalid.',
+      status: 'error',
       title: 'MCP OAuth Failed',
     });
   }
@@ -66,6 +104,7 @@ export default defineHandler(async (event) => {
     event.res.status = 404;
     return html({
       message: 'MCP server or OAuth connection was not found.',
+      status: 'error',
       title: 'MCP OAuth Failed',
     });
   }
@@ -99,13 +138,15 @@ export default defineHandler(async (event) => {
     return html({
       message:
         'Could not complete OAuth. Return to Slack App Home and try again.',
+      status: 'error',
       title: 'MCP OAuth Failed',
     });
   }
 
   return html({
     message:
-      'MCP server connected. You can close this tab and return to Slack.',
-    title: 'MCP Connected',
+      'This MCP server is connected to Gorkie. You can close this tab and refresh status in Slack.',
+    status: 'success',
+    title: 'Connected to Gorkie',
   });
 });

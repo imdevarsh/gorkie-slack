@@ -41,27 +41,61 @@ export function buildMcpAddModal(): SlackModalDto {
             Bits.Option({ text: 'SSE', value: 'sse' })
           )
           .initialOption(Bits.Option({ text: 'HTTP', value: 'http' }))
-      )
+      ),
+      Blocks.Input({
+        blockId: 'auth_block',
+        label: 'Authentication',
+      }).element(
+        Elements.StaticSelect({
+          actionId: 'auth_input',
+          placeholder: 'OAuth',
+        })
+          .options(
+            Bits.Option({ text: 'OAuth', value: 'oauth' }),
+            Bits.Option({ text: 'Bearer token', value: 'bearer' })
+          )
+          .initialOption(Bits.Option({ text: 'OAuth', value: 'oauth' }))
+      ),
+      Blocks.Input({
+        blockId: 'bearer_block',
+        hint: 'Only used when Authentication is Bearer token.',
+        label: 'Bearer token',
+      })
+        .optional()
+        .element(
+          Elements.TextInput({
+            actionId: 'bearer_input',
+            placeholder: 'Token',
+          })
+        )
     )
     .buildToObject();
 }
 
 export function buildMcpConnectModal({
   authorizationUrl,
+  serverId,
 }: {
   authorizationUrl: string;
+  serverId: string;
 }): SlackModalDto {
   return Modal({
     close: 'Done',
-    title: 'Connect MCP',
+    title: 'Connect to Gorkie',
   })
     .blocks(
       Blocks.Section({
-        text: 'Open the OAuth page to connect this MCP server. Return to App Home after approving access.',
-      }).accessory(
+        text: '*Connect MCP to Gorkie*\nOpen the OAuth page, approve access, then use refresh status below.',
+      }),
+      Blocks.Actions().elements(
         Elements.Button({
           text: 'Open OAuth',
           url: authorizationUrl,
+        }).primary(),
+        Elements.Button({
+          actionId: 'home_mcp_refresh',
+          text: 'Refresh status',
+          value: serverId,
         })
       )
     )

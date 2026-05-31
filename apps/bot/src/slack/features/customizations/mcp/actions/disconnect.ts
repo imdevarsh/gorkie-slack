@@ -1,5 +1,6 @@
 import {
   deleteMcpOAuthConnection,
+  getMcpServerByIdForUser,
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import type {
@@ -21,6 +22,19 @@ export async function execute({
   AllMiddlewareArgs): Promise<void> {
   await ack();
   if (!action.value) {
+    return;
+  }
+  const server = await getMcpServerByIdForUser({
+    id: action.value,
+    userId: body.user.id,
+  });
+  if (server?.authType === 'bearer') {
+    await updateMcpServerForUser({
+      id: action.value,
+      userId: body.user.id,
+      values: { bearerToken: null, enabled: false, lastConnectedAt: null },
+    });
+    await publishHome(client, body.user.id);
     return;
   }
   await deleteMcpOAuthConnection({

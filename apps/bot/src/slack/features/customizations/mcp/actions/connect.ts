@@ -36,6 +36,10 @@ export async function execute({
   if (!server) {
     return;
   }
+  if (server.authType === 'bearer') {
+    await publishHome(client, body.user.id);
+    return;
+  }
 
   const connection = await getMcpOAuthConnection({
     serverId: server.id,
@@ -78,6 +82,7 @@ export async function execute({
     trigger_id: body.trigger_id,
     view: buildMcpConnectModal({
       authorizationUrl: authorizationUrlRef.value.toString(),
+      serverId: server.id,
     }),
   });
 }

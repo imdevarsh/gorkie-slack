@@ -10,8 +10,10 @@ import {
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import type { McpServer } from '@repo/db/schema';
+import { decryptSecret } from '@repo/utils';
 import type { ToolSet } from 'ai';
 import { mcp } from '@/config';
+import { env } from '@/env';
 import logger from '@/lib/logger';
 import type { SlackMessageContext } from '@/types';
 import { guardedMcpFetch } from './guarded-fetch';
@@ -103,22 +105,35 @@ export async function createRemoteMcpToolset({
         serverId: server.id,
         userId,
       });
-      if (!connection?.tokensJson) {
+      const isBearer = server.authType === 'bearer';
+      if (!(isBearer ? server.bearerToken : connection?.tokensJson)) {
         await updateMcpServerForUser({
           id: server.id,
           userId,
           values: {
             enabled: false,
-            lastError: 'OAuth connection required before tools can be used.',
+            lastError: isBearer
+              ? 'Bearer token required before tools can be used.'
+              : 'OAuth connection required before tools can be used.',
           },
         });
         continue;
       }
 
+      const headers = isBearer
+        ? {
+            Authorization: `Bearer ${decryptSecret({
+              encrypted: server.bearerToken ?? '',
+              secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+            })}`,
+          }
+        : undefined;
       const client = await createMCPClient({
         clientName: 'gorkie',
         transport: {
-          authProvider: createMcpOAuthProvider({ connection, server }),
+          ...(isBearer
+            ? { headers }
+            : { authProvider: createMcpOAuthProvider({ connection, server }) }),
           fetch: guardedMcpFetch as typeof fetch,
           redirect: 'error',
           type: server.transport === 'sse' ? 'sse' : 'http',

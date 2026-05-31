@@ -1,7 +1,6 @@
 import { systemPrompt } from '@repo/ai/prompts';
 import { provider } from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
-import { clampText } from '@repo/utils/text';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
@@ -19,6 +18,10 @@ type ReasoningStreamPart =
   | { type: 'start-step' }
   | { type: 'reasoning-delta'; text: string }
   | { type: string };
+
+function trimEdgeNewlines(text: string): string {
+  return text.replace(/^\n+|\n+$/g, '');
+}
 
 export async function resolveOrchestratorTask({
   context,
@@ -83,7 +86,7 @@ export async function consumeOrchestratorReasoningStream({
     await updateTask(stream, {
       taskId: entry.taskId,
       status: 'in_progress',
-      output: clampText(part.text, 280),
+      output: trimEdgeNewlines(part.text),
     });
   }
 }

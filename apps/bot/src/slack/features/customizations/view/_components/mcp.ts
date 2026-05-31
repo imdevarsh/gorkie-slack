@@ -8,10 +8,15 @@ function truncate(value: string, max: number): string {
 }
 
 function buildMcpServerBlock(server: McpServerWithOAuth) {
+  const connected =
+    server.authType === 'bearer'
+      ? Boolean(server.bearerToken)
+      : server.hasOAuthConnection;
   const status = [
     server.transport.toUpperCase(),
+    server.authType === 'bearer' ? 'bearer' : 'oauth',
     server.enabled ? 'enabled' : 'disabled',
-    server.hasOAuthConnection ? 'connected' : 'not connected',
+    connected ? 'connected' : 'not connected',
   ].join(' · ');
   const lastSeen = server.lastConnectedAt
     ? `Last connected ${formatDistanceToNowStrict(server.lastConnectedAt, {
@@ -36,10 +41,13 @@ function buildMcpServerBlock(server: McpServerWithOAuth) {
     ),
     Blocks.Actions().elements(
       Elements.Button({
-        actionId: server.hasOAuthConnection
-          ? 'home_mcp_disconnect'
-          : 'home_mcp_connect',
-        text: server.hasOAuthConnection ? 'Disconnect' : 'Connect',
+        actionId: connected ? 'home_mcp_disconnect' : 'home_mcp_connect',
+        text: connected ? 'Disconnect' : 'Connect',
+        value: server.id,
+      }),
+      Elements.Button({
+        actionId: 'home_mcp_refresh',
+        text: 'Refresh',
         value: server.id,
       }),
       Elements.Button({

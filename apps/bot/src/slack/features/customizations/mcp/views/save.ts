@@ -1,9 +1,11 @@
 import { createMcpServer } from '@repo/db/queries';
+import { encryptSecret } from '@repo/utils';
 import type {
   AllMiddlewareArgs,
   SlackViewMiddlewareArgs,
   ViewSubmitAction,
 } from '@slack/bolt';
+import { env } from '@/env';
 import { validateHttpsUrlForServer } from '@/lib/mcp/guarded-fetch';
 import { publishHome } from '../../publish';
 
@@ -22,6 +24,10 @@ export async function execute({
   const transportValue =
     view.state.values.transport_block?.transport_input?.selected_option
       ?.value ?? 'http';
+  const authValue =
+    view.state.values.auth_block?.auth_input?.selected_option?.value ?? 'oauth';
+  const bearerToken =
+    view.state.values.bearer_block?.bearer_input?.value?.trim() ?? '';
 
   const errors: Record<string, string> = {};
   if (!nameValue) {
@@ -29,6 +35,12 @@ export async function execute({
   }
   if (!(transportValue === 'http' || transportValue === 'sse')) {
     errors.transport_block = 'Transport must be http or sse.';
+  }
+  if (!(authValue === 'oauth' || authValue === 'bearer')) {
+    errors.auth_block = 'Choose OAuth or bearer token.';
+  }
+  if (authValue === 'bearer' && !bearerToken) {
+    errors.bearer_block = 'Enter a bearer token.';
   }
 
   let safeUrl = '';
@@ -46,7 +58,15 @@ export async function execute({
 
   await ack();
   await createMcpServer({
-    enabled: false,
+    authType: authValue,
+    bearerToken:
+      authValue === 'bearer'
+        ? encryptSecret({
+            plaintext: bearerToken,
+            secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+          })
+        : null,
+    enabled: authValue === 'bearer',
     name: nameValue,
     teamId: body.team?.id ?? null,
     transport: transportValue,
