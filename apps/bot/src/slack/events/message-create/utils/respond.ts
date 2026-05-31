@@ -16,7 +16,7 @@ import { setConversationTitle } from '@/lib/ai/utils/title';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 import { processSlackFiles } from '@/utils/images';
-import { getSlackUserName } from '@/utils/users';
+import { getSlackUser } from '@/utils/users';
 
 export async function generateResponse(
   context: SlackMessageContext,
@@ -57,7 +57,7 @@ export async function generateResponse(
     }
     const files = context.event.files;
     const authorName = userId
-      ? await getSlackUserName(context.client, userId)
+      ? (await getSlackUser(context.client, userId)).name
       : 'user';
 
     const imageContents = await processSlackFiles(files);

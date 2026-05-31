@@ -8,7 +8,6 @@ import { env } from '@/env';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
 import { clearSandboxClient, setSandboxClient } from '@/lib/sandbox/active';
-import { getAgentError } from '@/lib/sandbox/agent-error';
 import { syncAttachments } from '@/lib/sandbox/attachments';
 import { getResponse, subscribeEvents } from '@/lib/sandbox/events';
 import { pauseSession, resolveSession } from '@/lib/sandbox/session';
@@ -20,6 +19,36 @@ import { getContextId } from '@/utils/context';
 
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
 const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
+
+function getAgentError(events: AgentSessionEvent[]): string | null {
+  for (const event of events) {
+    if (event.type !== 'agent_end') {
+      continue;
+    }
+
+    const messages = 'messages' in event ? event.messages : undefined;
+    if (!Array.isArray(messages)) {
+      continue;
+    }
+
+    for (const message of messages) {
+      if (!(message && typeof message === 'object')) {
+        continue;
+      }
+      if (!('stopReason' in message && message.stopReason === 'error')) {
+        continue;
+      }
+
+      const errorMessage =
+        'errorMessage' in message && typeof message.errorMessage === 'string'
+          ? message.errorMessage.trim()
+          : '';
+      return errorMessage || 'Sandbox agent stopped with an error';
+    }
+  }
+
+  return null;
+}
 
 export const sandbox = ({
   context,
@@ -86,16 +115,13 @@ export const sandbox = ({
           context,
           ctxId,
           events: eventStream,
-          onRetry: () => {
-            // intentionally no-op: retry count noise is handled by model-fallback status
-          },
-          onStatus: ({ details }) => {
-            const id = `${taskId}:fallback:${Date.now()}`;
+          onRetry: ({ attempt, maxAttempts, delayMs }) => {
+            const seconds = Math.round(delayMs / 1000);
             enqueue(() =>
               updateTask(stream, {
-                taskId: id,
-                title: `Switched to ${details}`,
-                status: 'complete',
+                taskId,
+                status: 'in_progress',
+                details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
               })
             );
           },
@@ -192,7 +218,6 @@ export const sandbox = ({
         );
 
         await finishTask(stream, {
-          title: 'Running sandbox',
           status: 'complete',
           taskId,
           output: response,

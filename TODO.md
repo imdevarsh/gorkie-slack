@@ -16,8 +16,8 @@ Active task list for gorkie-turbo. Kept in sync as issues are found and resolved
 
 ## Open
 
-- [x] **Multi-provider retry for Pi sandbox agent** — `configureAgent` now writes all three providers (`hackclub`, `openrouter`, `gemini`) to `models.json` and `auth.json`, each routed through the bot's proxy with `GORKIE_SESSION_TOKEN`. Added `maxDelayMs: 60000` to retry config. Fallback provider list lives in `sandbox.fallbackProviders` in `apps/bot/src/config.ts`.
-  - Files: `apps/bot/src/config.ts`, `apps/bot/src/lib/sandbox/config/index.ts`
+### Improve: Multi-provider retry for Pi sandbox agent
+The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the orchestrator (`createRetryable`) so it falls back to alternative providers on failure rather than erroring out.
 
 ### Improve: Orchestrator — show terminal tool as task when no reasoning was shown
 Currently `prepareStep` always creates a "Thinking…" task, after terminal tool firing show just show "Replied" / "Skipping" / "Left channel" directly as the task title
@@ -36,6 +36,20 @@ When the sandbox agent uses `agent-browser` to capture screenshots, `--snapshot 
 The `agent-browser` npm package is installed globally by the sandbox, but `agentmail` is not pre-installed in the E2B template. The sandbox agent has to install it on first use, adding latency and failure surface. Either:
 - Add `agentmail` to the E2B sandbox template (rebuild with `bun run build:template`)
 - Or note it as a first-run install in the skill documentation
+
+### Refactor: Clean up message pipeline utilities
+`message-context.ts`, `triggers.ts`, `conversations.ts`, and `context.ts` accumulated dead code and duplicate patterns from the `users.info` caching work. Worth a pass to:
+- Remove any remaining inline `users.info` calls (should all go through `getSlackUserName`)
+- Simplify `buildUserCache` in `conversations.ts` — now just a thin wrapper
+- Audit `triggers.ts` for any leftover priming logic
+- Tighten types in `message-context.ts` now that `getAuthorName` no longer takes `ctxId`
+- Files: `apps/bot/src/slack/conversations.ts`, `apps/bot/src/slack/events/message-create/utils/message-context.ts`, `apps/bot/src/utils/triggers.ts`, `apps/bot/src/utils/context.ts`
+
+### Bug: Slack search errors mark entire task as failed + pinned items shown incorrectly
+When the bot performs a Slack search (e.g. searching for pinned messages or user-pinned items), errors from the search API bubble up and mark the whole task as a failure in the task list. The user sees the entire task as red/failed even if the core work succeeded. Additionally, pinned item detection doesn't correctly identify items the user has pinned — it may be checking the wrong field or returning all pins regardless of who pinned them.
+- Investigate: does the search error get caught and surfaced as a task failure? Wrap search calls so errors are non-fatal.
+- Investigate: pinned item filter logic — check whether `conversations.info` pin fields vs. `pins.list` API is being used, and whether user-specific pinning is filterable.
+- Files: `apps/bot/src/lib/ai/` (search tool), wherever pinned item logic lives
 
 ### Refactor: Split monorepo packages further
 Consider extracting:

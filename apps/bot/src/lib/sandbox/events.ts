@@ -35,16 +35,8 @@ function handleShowFileTool(params: {
 }
 
 export function subscribeEvents(params: SubscribeEventsParams): () => void {
-  const {
-    runtime,
-    context,
-    ctxId,
-    events,
-    onToolStart,
-    onToolEnd,
-    onRetry,
-    onStatus,
-  } = params;
+  const { runtime, context, ctxId, events, onToolStart, onToolEnd, onRetry } =
+    params;
 
   return runtime.client.onEvent((event) => {
     try {
@@ -57,15 +49,6 @@ export function subscribeEvents(params: SubscribeEventsParams): () => void {
           '[subagent] Auto-retry started'
         );
         onRetry?.({ attempt, maxAttempts, delayMs, errorMessage });
-        return;
-      }
-
-      if (event.type === 'message_end' && event.message.role === 'custom') {
-        const { customType, content } = event.message;
-        if (customType === 'model-fallback' && typeof content === 'string') {
-          logger.warn({ ctxId, content }, '[subagent] Model fallback');
-          onStatus?.({ details: content });
-        }
         return;
       }
 

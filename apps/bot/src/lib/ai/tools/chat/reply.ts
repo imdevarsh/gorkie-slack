@@ -5,7 +5,7 @@ import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
 import type { SlackHistoryMessage, SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
-import { getSlackUserName } from '@/utils/users';
+import { getSlackUser } from '@/utils/users';
 
 async function resolveTargetMessage(
   ctx: SlackMessageContext,
@@ -141,7 +141,7 @@ export const reply = ({
         }
 
         const authorName = userId
-          ? await getSlackUserName(context.client, userId)
+          ? (await getSlackUser(context.client, userId)).name
           : 'unknown';
 
         logger.info(
