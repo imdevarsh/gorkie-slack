@@ -10,7 +10,7 @@ import type {
   SlackMessageContext,
   Stream,
 } from '@/types';
-import { createTask, finishTask } from '../utils/task';
+import { createTask, finishTask, updateTask } from '../utils/task';
 
 const taskMap = new Map<string, { taskId: string; startTime: number }>();
 
@@ -69,8 +69,7 @@ export async function consumeOrchestratorReasoningStream({
       continue;
     }
 
-    const reasoningSummary = normalizeReasoning(part.text);
-    if (!reasoningSummary) {
+    if (!part.text) {
       continue;
     }
 
@@ -83,7 +82,7 @@ export async function consumeOrchestratorReasoningStream({
     await updateTask(stream, {
       taskId: entry.taskId,
       status: 'in_progress',
-      output: `\n${reasoningSummary}`,
+      output: part.text,
     });
   }
 }
