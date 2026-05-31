@@ -3,7 +3,7 @@ import type {
   SlackMessageEvent,
   TriggerType,
 } from '@/types';
-import { getSlackUserName } from '@/utils/users';
+import { getSlackUser } from '@/utils/users';
 
 function isPlainMessage(
   event: SlackMessageEvent
@@ -31,7 +31,7 @@ export async function getTrigger(
   const content = event.text.trim();
 
   if (botId && content.includes(`<@${botId}>`)) {
-    const displayName = await getSlackUserName(client, botId);
+    const displayName = (await getSlackUser(client, botId)).name;
     return { type: 'ping', info: displayName };
   }
 

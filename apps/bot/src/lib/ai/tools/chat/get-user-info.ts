@@ -5,7 +5,7 @@ import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
-import { normalizeSlackUserId } from '@/utils/users';
+import { normalizeSlackUserId, primeSlackUser } from '@/utils/users';
 
 export const getUserInfo = ({
   context,
@@ -41,9 +41,15 @@ export const getUserInfo = ({
       try {
         const targetId = normalizeSlackUserId(userId);
 
-        const user = targetId
-          ? ((await context.client.users.info({ user: targetId })).user ?? null)
-          : null;
+        if (!targetId) {
+          await finishTask(stream, { status: 'error', taskId: task });
+          return {
+            success: false,
+            error: 'User not found. Use their Slack ID.',
+          };
+        }
+
+        const { user } = await context.client.users.info({ user: targetId });
 
         if (!user) {
           await finishTask(stream, { status: 'error', taskId: task });
@@ -52,22 +58,34 @@ export const getUserInfo = ({
             error: 'User not found. Use their Slack ID.',
           };
         }
+
+        const name =
+          user.profile?.display_name || user.real_name || user.name || targetId;
+        primeSlackUser(targetId, {
+          name,
+          displayName: user.profile?.display_name ?? null,
+          realName: user.profile?.real_name ?? null,
+          title: user.profile?.title ?? null,
+          isBot: user.is_bot ?? false,
+          tz: user.tz ?? null,
+        });
+
         await finishTask(stream, { status: 'complete', taskId: task });
         return {
           success: true,
           data: {
-            id: user.id,
-            username: user.name,
-            displayName: user.profile?.display_name,
-            realName: user.profile?.real_name,
-            statusText: user.profile?.status_text,
-            statusEmoji: user.profile?.status_emoji,
-            isBot: user.is_bot,
-            tz: user.tz,
+            id: targetId,
+            name,
+            displayName: user.profile?.display_name ?? null,
+            realName: user.profile?.real_name ?? null,
+            title: user.profile?.title ?? null,
+            isBot: user.is_bot ?? false,
+            tz: user.tz ?? null,
+            statusText: user.profile?.status_text ?? null,
+            statusEmoji: user.profile?.status_emoji ?? null,
             updated: user.updated,
-            title: user.profile?.title,
             teamId: user.team_id,
-            idResolved: targetId ?? null,
+            idResolved: targetId,
           },
         };
       } catch (error) {
