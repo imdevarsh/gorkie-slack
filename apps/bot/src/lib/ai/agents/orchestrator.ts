@@ -10,7 +10,7 @@ import type {
   SlackMessageContext,
   Stream,
 } from '@/types';
-import { createTask, finishTask, updateTask } from '../utils/task';
+import { createTask, finishTask } from '../utils/task';
 
 const taskMap = new Map<string, { taskId: string; startTime: number }>();
 
@@ -18,15 +18,6 @@ type ReasoningStreamPart =
   | { type: 'start-step' }
   | { type: 'reasoning-delta'; text: string }
   | { type: string };
-
-function normalizeReasoning(reasoningText: unknown): string {
-  return String(reasoningText)
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .filter((line) => line !== '[REDACTED]')
-    .join('\n');
-}
 
 export async function resolveOrchestratorTask({
   context,
