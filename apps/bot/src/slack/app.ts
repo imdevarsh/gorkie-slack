@@ -1,4 +1,16 @@
-import { App, ExpressReceiver, LogLevel } from '@slack/bolt';
+import {
+  type AllMiddlewareArgs,
+  App,
+  type BlockAction,
+  type ButtonAction,
+  ExpressReceiver,
+  LogLevel,
+  type SlackActionMiddlewareArgs,
+  type SlackViewMiddlewareArgs,
+  type StaticSelectAction,
+  type ViewClosedAction,
+  type ViewSubmitAction,
+} from '@slack/bolt';
 import { env } from '@/env';
 import { buildCache } from '@/lib/allowed-users';
 import logger from '@/lib/logger';
@@ -9,6 +21,20 @@ import { register as registerAppHomeOpened } from './events/app-home-opened';
 import { register as registerAssistantThreadContextChanged } from './events/assistant-thread-context-changed';
 import { register as registerAssistantThreadStarted } from './events/assistant-thread-started';
 import { views } from './views';
+
+type ButtonActionHandler = (
+  args: SlackActionMiddlewareArgs<BlockAction<ButtonAction>> & AllMiddlewareArgs
+) => Promise<void>;
+type SelectActionHandler = (
+  args: SlackActionMiddlewareArgs<BlockAction<StaticSelectAction>> &
+    AllMiddlewareArgs
+) => Promise<void>;
+type ViewSubmitHandler = (
+  args: SlackViewMiddlewareArgs<ViewSubmitAction> & AllMiddlewareArgs
+) => Promise<void>;
+type ViewClosedHandler = (
+  args: SlackViewMiddlewareArgs<ViewClosedAction> & AllMiddlewareArgs
+) => Promise<void>;
 
 function registerApp(app: App) {
   buildCache(app);
@@ -21,28 +47,22 @@ function registerApp(app: App) {
   registerAssistantThreadContextChanged(app);
   registerAppHomeOpened(app);
 
-  const registerAction = app.action.bind(app) as (
-    name: string,
-    execute: unknown
-  ) => void;
   for (const action of actions) {
-    registerAction(action.name, action.execute);
+    if ('actionType' in action && action.actionType === 'select') {
+      app.action(action.name, action.execute as SelectActionHandler);
+    } else {
+      app.action(action.name, action.execute as ButtonActionHandler);
+    }
   }
 
-  const registerViewSubmission = app.view.bind(app) as (
-    name: string,
-    execute: unknown
-  ) => void;
   for (const view of views) {
     if ('viewType' in view && view.viewType === 'view_closed') {
-      (
-        app.view.bind(app) as (
-          constraint: { callback_id: string; type: 'view_closed' },
-          execute: unknown
-        ) => void
-      )({ callback_id: view.name, type: 'view_closed' }, view.execute);
+      app.view(
+        { callback_id: view.name, type: 'view_closed' },
+        view.execute as ViewClosedHandler
+      );
     } else {
-      registerViewSubmission(view.name, view.execute);
+      app.view(view.name, view.execute as ViewSubmitHandler);
     }
   }
 }

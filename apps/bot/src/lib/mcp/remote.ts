@@ -22,6 +22,7 @@ import { env } from '@/env';
 import { createTask, finishTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
+import { formatToolInput } from './format-tool-input';
 import { guardedMcpFetch } from './guarded-fetch';
 import { createMcpOAuthProvider } from './oauth-provider';
 
@@ -270,7 +271,7 @@ export async function createMcpToolset({
         server,
       });
       const threadTs = context.event.thread_ts ?? context.event.ts;
-      const existingPermissions = await ensureMcpToolPermissions({
+      await ensureMcpToolPermissions({
         serverId: server.id,
         teamId: context.teamId,
         userId,
@@ -279,14 +280,11 @@ export async function createMcpToolset({
           toolName: definition.name,
         })),
       });
-      const permissions = [
-        ...existingPermissions,
-        ...(await listMcpToolPermissions({
-          serverId: server.id,
-          threadTs,
-          userId,
-        })),
-      ];
+      const permissions = await listMcpToolPermissions({
+        serverId: server.id,
+        threadTs,
+        userId,
+      });
       const permissionByTool = new Map(
         permissions.map((permission) => [
           `${permission.scope}:${permission.toolName}`,
@@ -322,31 +320,39 @@ export async function createMcpToolset({
             ? {
                 ...tool,
                 metadata,
-                needsApproval: mode !== 'allow',
+                needsApproval: mode === 'ask',
                 onInputStart: tool.onInputStart,
                 execute: async (
                   input: unknown,
                   options: ToolExecutionOptions
                 ) => {
-                  if (mode === 'block') {
-                    return {
-                      error: `MCP tool ${server.name}.${toolName} is blocked by your settings.`,
-                    };
-                  }
+                  const details = clampText(
+                    formatToolInput(input),
+                    mcp.taskOutputMaxChars
+                  );
 
-                  let inputPreview = 'Input: undefined';
-                  try {
-                    inputPreview = `Input:\n${
-                      JSON.stringify(input, null, 2) ?? String(input)
-                    }`;
-                  } catch {
-                    inputPreview = `Input:\n${String(input)}`;
+                  if (mode === 'block') {
+                    const message = 'Tool is blocked by your settings.';
+                    await createTask(stream, {
+                      taskId: options.toolCallId,
+                      title: `Blocked ${server.name}: ${toolName}`,
+                      details,
+                      status: 'in_progress',
+                    });
+                    await finishTask(stream, {
+                      taskId: options.toolCallId,
+                      status: 'complete',
+                      output: message,
+                    });
+                    return {
+                      content: [{ type: 'text', text: message }],
+                    };
                   }
 
                   await createTask(stream, {
                     taskId: options.toolCallId,
                     title: taskTitle,
-                    details: clampText(inputPreview, mcp.taskOutputMaxChars),
+                    details,
                     status: 'in_progress',
                   });
 

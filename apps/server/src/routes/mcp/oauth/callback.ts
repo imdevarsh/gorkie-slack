@@ -124,7 +124,11 @@ export default defineHandler(async (event) => {
   if (oauthError) {
     event.res.status = 400;
     return html({
-      message: oauthError,
+      message: oauthError
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;'),
       status: 'error',
       title: 'MCP OAuth Failed',
     });

@@ -153,7 +153,7 @@ export async function issueSandboxToken({
 
   await db.insert(sandboxTokens).values({
     allowedIp,
-    tokenHash: hashSandboxToken(token),
+    token: hashSandboxToken(token),
     sandboxId,
     expiresAt,
   });
@@ -173,7 +173,7 @@ export async function validateSandboxToken(
     .from(sandboxTokens)
     .where(
       and(
-        eq(sandboxTokens.tokenHash, hashSandboxToken(token)),
+        eq(sandboxTokens.token, hashSandboxToken(token)),
         gt(sandboxTokens.expiresAt, new Date())
       )
     )
@@ -205,6 +205,6 @@ export async function deleteExpiredSandboxTokens(
   const rows = await db
     .delete(sandboxTokens)
     .where(lt(sandboxTokens.expiresAt, now))
-    .returning({ tokenHash: sandboxTokens.tokenHash });
+    .returning({ token: sandboxTokens.token });
   return rows.length;
 }

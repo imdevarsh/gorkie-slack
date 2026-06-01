@@ -9,9 +9,10 @@ import { clampText } from '@repo/utils/text';
 import { env } from '@/env';
 import { getQueue } from '@/lib/queue';
 import {
-  decodeApprovalPayload,
-  resumeResponse,
-} from '@/slack/events/message-create/utils/respond';
+  asSlackBlocks,
+  decodeApprovalState,
+} from '@/slack/events/message-create/utils/approval-helpers';
+import { resumeResponse } from '@/slack/events/message-create/utils/respond';
 import type { SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
 import { actions } from '../ids';
@@ -35,7 +36,7 @@ async function updateApprovalMessage({
     return;
   }
 
-  const blocks = [
+  const blocks = asSlackBlocks([
     {
       type: 'card',
       title: {
@@ -52,7 +53,7 @@ async function updateApprovalMessage({
           : text,
       },
     },
-  ];
+  ]);
 
   await client.chat
     .update({ channel, ts, text, blocks } as unknown as Parameters<
@@ -82,12 +83,13 @@ async function handleApproval(args: ButtonArgs, approved: boolean) {
   }
 
   const alwaysInThread = action.action_id === alwaysThreadName;
+
   if (approved && alwaysInThread) {
     await upsertMcpToolPermission({
       mode: 'allow',
       scope: 'thread',
       serverId: approval.serverId,
-      source: 'chat',
+      source: 'user',
       teamId: approval.teamId,
       threadTs: approval.threadTs,
       toolName: approval.toolName,
@@ -100,12 +102,14 @@ async function handleApproval(args: ButtonArgs, approved: boolean) {
     userId: body.user.id,
     values: { status: approved ? 'approved' : 'denied' },
   });
+
   let resultText = `Denied ${approval.toolName}.`;
   if (approved) {
     resultText = alwaysInThread
       ? `Approved ${approval.toolName} for this thread.`
       : `Approved ${approval.toolName} once.`;
   }
+
   const input = approval.argsJson
     ? decryptSecret({
         encrypted: approval.argsJson,
@@ -114,10 +118,10 @@ async function handleApproval(args: ButtonArgs, approved: boolean) {
     : undefined;
   await updateApprovalMessage({ ...args, input, text: resultText });
 
-  const { messages, requestHints } = decodeApprovalPayload({
-    messagesJson: approval.messagesJson,
-    requestHintsJson: approval.requestHintsJson,
+  const { messages, requestHints } = decodeApprovalState({
+    state: approval.state,
   });
+
   const resumeContext: SlackMessageContext = {
     botUserId: context.botUserId,
     client,

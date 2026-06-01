@@ -45,11 +45,10 @@ export const askUser = ({
         text: question,
         blocks: [
           {
-            type: 'card',
-            title: { type: 'mrkdwn', text: 'Question for you' },
-            body: {
+            type: 'section',
+            text: {
               type: 'mrkdwn',
-              text: clampText(`${question}${choices}`, 200),
+              text: `*Question for you*\n${clampText(`${question}${choices}`, 500)}`,
             },
           },
           {

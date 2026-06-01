@@ -57,8 +57,9 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
 }
 
 async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
+  const ipUrl = new URL('/ip', env.SERVER_BASE_URL).toString();
   const result = await sandbox.commands
-    .run(`curl -fsS --max-time 5 ${env.SERVER_BASE_URL}/ip`, {
+    .run(`curl -fsS --max-time 5 ${JSON.stringify(ipUrl)}`, {
       timeoutMs: 10_000,
     })
     .catch((error: unknown) => {

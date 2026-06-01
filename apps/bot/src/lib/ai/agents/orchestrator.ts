@@ -148,9 +148,9 @@ export const orchestratorAgent = async ({
   requestHints: ChatRequestHints;
   files?: SlackFile[];
   stream: Stream;
-}) => {
+}): Promise<{ agent: ToolLoopAgent; cleanup: () => Promise<void> }> => {
   const toolset = await createToolset({ context, files, stream });
-  return new ToolLoopAgent({
+  const agent = new ToolLoopAgent({
     model: provider.languageModel('chat-model'),
     instructions: systemPrompt({
       agent: 'chat',
@@ -208,4 +208,5 @@ export const orchestratorAgent = async ({
       functionId: 'orchestrator',
     },
   });
+  return { agent, cleanup: toolset.cleanup };
 };

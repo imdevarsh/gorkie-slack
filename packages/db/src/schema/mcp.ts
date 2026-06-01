@@ -157,8 +157,7 @@ export const mcpToolApprovals = pgTable(
     exposedName: text('exposed_name').notNull(),
     toolCallId: text('tool_call_id').notNull(),
     argsJson: text('args_json'),
-    messagesJson: text('messages_json').notNull(),
-    requestHintsJson: text('request_hints_json').notNull(),
+    state: text('state').notNull(),
     status: text('status').notNull().default('pending'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
