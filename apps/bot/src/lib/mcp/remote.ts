@@ -226,7 +226,10 @@ export async function createRemoteMcpToolset({
                     await finishTask(stream, {
                       taskId: options.toolCallId,
                       status: 'complete',
-                      output: clampText(output, mcp.taskOutputMaxChars),
+                      output: clampText(
+                        `Output:\n${output}`,
+                        mcp.taskOutputMaxChars
+                      ),
                     });
                     return result;
                   } catch (error) {
@@ -234,7 +237,7 @@ export async function createRemoteMcpToolset({
                       taskId: options.toolCallId,
                       status: 'error',
                       output: clampText(
-                        errorMessage(error),
+                        `Output:\n${errorMessage(error)}`,
                         mcp.taskOutputMaxChars
                       ),
                     });
