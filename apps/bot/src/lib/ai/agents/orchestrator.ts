@@ -19,10 +19,6 @@ type ReasoningStreamPart =
   | { type: 'reasoning-delta'; text: string }
   | { type: string };
 
-function trimEdgeNewlines(text: string): string {
-  return text.replace(/^\n+|\n+$/g, '');
-}
-
 export async function resolveOrchestratorTask({
   context,
   stream,
@@ -45,14 +41,10 @@ export async function resolveOrchestratorTask({
     elapsedMs < 1000 ? '<1s' : `${Math.round(elapsedMs / 1000)}s`;
   const resolvedTitle = title ?? `Thought for ${elapsedLabel}`;
 
-  const accumulated = stream.tasks.get(entry.taskId)?.output;
-  const trimmedOutput = accumulated ? trimEdgeNewlines(accumulated) : undefined;
-
   await finishTask(stream, {
     taskId: entry.taskId,
     status: 'complete',
     title: resolvedTitle,
-    ...(trimmedOutput ? { output: trimmedOutput } : {}),
     ...(details ? { details } : {}),
   });
 }
