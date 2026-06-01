@@ -3,7 +3,7 @@ import {
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
-import { syncMcpToolPermissions } from '@/lib/mcp/remote';
+import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { views } from '../ids';
 import type { CloseArgs, ServerMeta } from '../types';
@@ -31,7 +31,7 @@ export async function execute({
     : null;
   if (server) {
     try {
-      await syncMcpToolPermissions({
+      await syncMcpPermissions({
         server,
         teamId: body.team?.id,
         userId: body.user.id,

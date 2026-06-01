@@ -29,7 +29,7 @@ export function decodeApprovalState({ state }: { state: string }): {
       encrypted: state,
       secret: env.MCP_TOKEN_ENCRYPTION_KEY,
     })
-  ) as { messages: ModelMessage[]; requestHints: ChatRequestHints };
+  );
 }
 
 export async function recordApprovalTask({
