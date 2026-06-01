@@ -162,6 +162,7 @@ export async function createRemoteMcpToolset({
         usedNames.add(exposedName);
 
         const execute = tool.execute;
+        const taskTitle = `Using ${server.name}: ${toolName}`;
         tools[exposedName] =
           typeof execute === 'function'
             ? {
@@ -170,8 +171,7 @@ export async function createRemoteMcpToolset({
                   await tool.onInputStart?.(options);
                   await createTask(stream, {
                     taskId: options.toolCallId,
-                    title: `Using ${server.name}`,
-                    details: toolName,
+                    title: taskTitle,
                     status: 'pending',
                   });
                 },
@@ -179,10 +179,19 @@ export async function createRemoteMcpToolset({
                   input: unknown,
                   options: ToolExecutionOptions
                 ) => {
+                  let inputPreview = 'Input: undefined';
+                  try {
+                    inputPreview = `Input:\n${
+                      JSON.stringify(input, null, 2) ?? String(input)
+                    }`;
+                  } catch {
+                    inputPreview = `Input:\n${String(input)}`;
+                  }
+
                   await createTask(stream, {
                     taskId: options.toolCallId,
-                    title: `Using ${server.name}`,
-                    details: toolName,
+                    title: taskTitle,
+                    details: clampText(inputPreview, mcp.taskOutputMaxChars),
                     status: 'in_progress',
                   });
 
