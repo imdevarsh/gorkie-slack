@@ -51,9 +51,6 @@ export async function createToolset({
 
   return {
     cleanup: remoteMcp.cleanup,
-    tools: {
-      ...nativeTools,
-      ...remoteMcp.tools,
-    },
+    tools: { ...nativeTools, ...remoteMcp.tools },
   };
 }

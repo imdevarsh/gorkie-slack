@@ -29,12 +29,21 @@ function registerApp(app: App) {
     registerAction(action.name, action.execute);
   }
 
-  const registerView = app.view.bind(app) as (
+  const registerViewSubmission = app.view.bind(app) as (
     name: string,
     execute: unknown
   ) => void;
   for (const view of views) {
-    registerView(view.name, view.execute);
+    if ('viewType' in view && view.viewType === 'view_closed') {
+      (
+        app.view.bind(app) as (
+          constraint: { callback_id: string; type: 'view_closed' },
+          execute: unknown
+        ) => void
+      )({ callback_id: view.name, type: 'view_closed' }, view.execute);
+    } else {
+      registerViewSubmission(view.name, view.execute);
+    }
   }
 }
 

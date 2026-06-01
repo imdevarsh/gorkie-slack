@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { boolean, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
 export const mcpServers = pgTable(
   'mcp_servers',
@@ -14,6 +21,7 @@ export const mcpServers = pgTable(
     authType: text('auth_type').notNull().default('oauth'),
     url: text('url').notNull(),
     bearerToken: text('bearer_token'),
+    clientId: text('client_id'),
     enabled: boolean('enabled').notNull().default(false),
     includeToolsJson: text('include_tools_json'),
     excludeToolsJson: text('exclude_tools_json'),
@@ -59,7 +67,7 @@ export const mcpOauthConnections = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    index('mcp_oauth_server_user_idx').on(table.serverId, table.userId),
+    uniqueIndex('mcp_oauth_server_user_idx').on(table.serverId, table.userId),
     index('mcp_oauth_state_idx').on(table.state),
   ]
 );

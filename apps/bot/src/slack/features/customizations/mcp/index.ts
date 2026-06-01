@@ -19,6 +19,10 @@ export const mcp = {
   ],
   views: [
     { execute: save.execute, name: save.name },
-    { execute: connectClosed.execute, name: connectClosed.name },
+    {
+      execute: connectClosed.execute,
+      name: connectClosed.name,
+      viewType: connectClosed.viewType,
+    },
   ],
 };

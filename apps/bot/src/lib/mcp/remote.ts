@@ -168,12 +168,19 @@ export async function createRemoteMcpToolset({
         { err: error, serverId: server.id, userId },
         'MCP server failed'
       );
+      const message =
+        error instanceof Error ? error.message : 'MCP server failed';
+      const isAuthExpired =
+        message.includes('Unexpected content type: text/html') ||
+        message.includes('401');
       await updateMcpServerForUser({
         id: server.id,
         userId,
         values: {
-          lastError:
-            error instanceof Error ? error.message : 'MCP server failed',
+          ...(isAuthExpired ? { enabled: false } : {}),
+          lastError: isAuthExpired
+            ? 'OAuth session expired. Click Connect to re-authenticate.'
+            : message,
         },
       });
     }

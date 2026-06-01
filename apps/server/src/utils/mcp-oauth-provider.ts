@@ -77,6 +77,12 @@ export function createMcpOAuthProvider({
       });
     },
     clientInformation() {
+      if (server.clientId) {
+        const fromDb = parseEncryptedJson<OAuthClientInformation>(
+          currentConnection?.clientInformationJson ?? null
+        );
+        return fromDb ?? { client_id: server.clientId };
+      }
       return parseEncryptedJson<OAuthClientInformation>(
         currentConnection?.clientInformationJson ?? null
       );

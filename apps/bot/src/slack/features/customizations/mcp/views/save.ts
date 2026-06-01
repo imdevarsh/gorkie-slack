@@ -28,6 +28,8 @@ export async function execute({
     view.state.values.auth_block?.auth_input?.selected_option?.value ?? 'oauth';
   const bearerToken =
     view.state.values.bearer_block?.bearer_input?.value?.trim() ?? '';
+  const clientId =
+    view.state.values.client_id_block?.client_id_input?.value?.trim() ?? '';
 
   const errors: Record<string, string> = {};
   if (!nameValue) {
@@ -66,6 +68,7 @@ export async function execute({
             secret: env.MCP_TOKEN_ENCRYPTION_KEY,
           })
         : null,
+    clientId: authValue === 'oauth' && clientId ? clientId : null,
     enabled: authValue === 'bearer',
     name: nameValue,
     teamId: body.team?.id ?? null,

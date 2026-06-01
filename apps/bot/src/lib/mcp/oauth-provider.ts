@@ -99,6 +99,12 @@ export function createMcpOAuthProvider({
       });
     },
     clientInformation() {
+      if (server.clientId) {
+        const fromDb = parseEncryptedJson<OAuthClientInformation>(
+          currentConnection?.clientInformationJson ?? null
+        );
+        return fromDb ?? { client_id: server.clientId };
+      }
       return parseEncryptedJson<OAuthClientInformation>(
         currentConnection?.clientInformationJson ?? null
       );
@@ -130,16 +136,16 @@ export function createMcpOAuthProvider({
     async saveState(state) {
       currentConnection = await upsertMcpOAuthConnection({
         clientInformationJson: currentConnection?.clientInformationJson ?? null,
-        codeVerifier: currentConnection?.codeVerifier ?? null,
-        expiresAt: currentConnection?.expiresAt ?? null,
-        scopes: currentConnection?.scopes ?? null,
+        codeVerifier: null,
+        expiresAt: null,
+        scopes: null,
         serverId: server.id,
         state: encryptSecret({
           plaintext: state,
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         }),
         teamId: server.teamId,
-        tokensJson: currentConnection?.tokensJson ?? null,
+        tokensJson: null,
         userId: server.userId,
       });
     },
