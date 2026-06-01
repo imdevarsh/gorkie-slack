@@ -128,3 +128,34 @@ export function buildMcpConnectModal({
     )
     .buildToObject();
 }
+
+export function buildMcpBearerTokenModal({
+  serverId,
+  serverName,
+}: {
+  serverId: string;
+  serverName: string;
+}): SlackModalDto {
+  return Modal({
+    callbackId: 'home_mcp_bearer_save',
+    close: 'Cancel',
+    privateMetaData: JSON.stringify({ serverId }),
+    submit: 'Save',
+    title: 'Connect MCP',
+  })
+    .blocks(
+      Blocks.Section({
+        text: `*Connect ${serverName} to Gorkie*\nEnter a bearer token for this MCP server.`,
+      }),
+      Blocks.Input({
+        blockId: 'bearer_block',
+        label: 'Bearer token',
+      }).element(
+        Elements.TextInput({
+          actionId: 'bearer_input',
+          placeholder: 'Token',
+        })
+      )
+    )
+    .buildToObject();
+}

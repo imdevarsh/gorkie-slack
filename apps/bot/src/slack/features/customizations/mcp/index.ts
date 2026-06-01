@@ -6,6 +6,7 @@ import * as disconnect from './actions/disconnect';
 import * as toggle from './actions/toggle';
 import * as connectClosed from './views/connect-closed';
 import * as save from './views/save';
+import * as saveBearer from './views/save-bearer';
 
 export const mcp = {
   actions: [
@@ -18,6 +19,7 @@ export const mcp = {
     { execute: toggle.execute, name: toggle.disableName },
   ],
   views: [
+    { execute: saveBearer.execute, name: saveBearer.name },
     { execute: save.execute, name: save.name },
     {
       execute: connectClosed.execute,

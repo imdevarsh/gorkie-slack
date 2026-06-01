@@ -32,7 +32,12 @@ export async function execute({
     await updateMcpServerForUser({
       id: action.value,
       userId: body.user.id,
-      values: { bearerToken: null, enabled: false, lastConnectedAt: null },
+      values: {
+        bearerToken: null,
+        enabled: false,
+        lastConnectedAt: null,
+        lastError: null,
+      },
     });
     await publishHome(client, body.user.id);
     return;
@@ -44,7 +49,7 @@ export async function execute({
   await updateMcpServerForUser({
     id: action.value,
     userId: body.user.id,
-    values: { enabled: false, lastConnectedAt: null },
+    values: { enabled: false, lastConnectedAt: null, lastError: null },
   });
   await publishHome(client, body.user.id);
 }

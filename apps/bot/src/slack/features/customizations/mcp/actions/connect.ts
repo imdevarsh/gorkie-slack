@@ -13,7 +13,7 @@ import type {
 import { guardedMcpFetch } from '@/lib/mcp/guarded-fetch';
 import { createMcpOAuthProvider } from '@/lib/mcp/oauth-provider';
 import { publishHome } from '../../publish';
-import { buildMcpConnectModal } from '../view';
+import { buildMcpBearerTokenModal, buildMcpConnectModal } from '../view';
 
 export const name = 'home_mcp_connect';
 
@@ -37,7 +37,13 @@ export async function execute({
     return;
   }
   if (server.authType === 'bearer') {
-    await publishHome(client, body.user.id);
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: buildMcpBearerTokenModal({
+        serverId: server.id,
+        serverName: server.name,
+      }),
+    });
     return;
   }
 

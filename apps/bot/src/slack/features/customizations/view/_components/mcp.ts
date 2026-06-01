@@ -56,7 +56,7 @@ function buildMcpServerBlock(server: McpServerWithOAuth) {
           Bits.ConfirmationDialog({
             confirm: 'Delete',
             deny: 'Keep',
-            text: 'This removes the server and stored OAuth credentials.',
+            text: 'This removes the server and stored credentials.',
             title: 'Delete MCP server?',
           })
         )

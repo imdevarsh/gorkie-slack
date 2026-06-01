@@ -263,14 +263,25 @@ export async function createMcpToolset({
       const isAuthExpired =
         message.includes('Unexpected content type: text/html') ||
         message.includes('401');
+      let lastError = message;
+      if (isAuthExpired) {
+        lastError =
+          server.authType === 'bearer'
+            ? 'Bearer token was rejected. Click Connect to set a new token.'
+            : 'OAuth session expired. Click Connect to re-authenticate.';
+      }
       await updateMcpServerForUser({
         id: server.id,
         userId,
         values: {
-          ...(isAuthExpired ? { enabled: false } : {}),
-          lastError: isAuthExpired
-            ? 'OAuth session expired. Click Connect to re-authenticate.'
-            : message,
+          ...(isAuthExpired
+            ? {
+                ...(server.authType === 'bearer' ? { bearerToken: null } : {}),
+                enabled: false,
+                lastConnectedAt: null,
+              }
+            : {}),
+          lastError,
         },
       });
     }
