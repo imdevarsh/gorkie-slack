@@ -118,7 +118,7 @@ export async function createMcpToolset({
           values: {
             enabled: false,
             lastError: isBearer
-              ? 'Bearer token required before tools can be used.'
+              ? 'Token required before tools can be used.'
               : 'OAuth connection required before tools can be used.',
           },
         });
@@ -267,7 +267,7 @@ export async function createMcpToolset({
       if (isAuthExpired) {
         lastError =
           server.authType === 'bearer'
-            ? 'Bearer token was rejected. Click Connect to set a new token.'
+            ? 'Token was rejected. Click Connect to set a new token.'
             : 'OAuth session expired. Click Connect to re-authenticate.';
       }
       await updateMcpServerForUser({

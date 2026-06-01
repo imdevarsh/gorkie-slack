@@ -38,13 +38,13 @@ export async function execute({
     errors[blocks.name] = 'Enter a name.';
   }
   if (!(authValue === 'oauth' || authValue === 'bearer')) {
-    errors[blocks.auth] = 'Choose OAuth or bearer token.';
+    errors[blocks.auth] = 'Choose OAuth or token.';
   }
   if (!(transportValue === 'http' || transportValue === 'sse')) {
     errors[blocks.transport] = 'Transport must be http or sse.';
   }
   if (auth === 'bearer' && !bearerToken) {
-    errors[blocks.bearer] = 'Enter a bearer token.';
+    errors[blocks.bearer] = 'Enter a token.';
   }
 
   let safeUrl = '';

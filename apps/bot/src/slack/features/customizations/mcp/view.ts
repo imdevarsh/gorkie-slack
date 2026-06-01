@@ -6,7 +6,7 @@ import type { ModalState } from './types';
 const httpOption = Bits.Option({ text: 'HTTP', value: 'http' });
 const sseOption = Bits.Option({ text: 'SSE', value: 'sse' });
 const oauthOption = Bits.Option({ text: 'OAuth', value: 'oauth' });
-const bearerOption = Bits.Option({ text: 'Bearer token', value: 'bearer' });
+const bearerOption = Bits.Option({ text: 'Token', value: 'bearer' });
 
 export function addModal(state: ModalState = {}): SlackModalDto {
   const auth = state.auth ?? 'oauth';
@@ -70,7 +70,7 @@ export function addModal(state: ModalState = {}): SlackModalDto {
     modal.blocks(
       Blocks.Input({
         blockId: blocks.bearer,
-        label: 'Bearer token',
+        label: 'Token',
       }).element(
         Elements.TextInput({
           actionId: inputs.bearer,
@@ -142,7 +142,7 @@ export function bearerModal({
       }),
       Blocks.Input({
         blockId: blocks.bearer,
-        label: 'Bearer token',
+        label: 'Token',
       }).element(
         Elements.TextInput({
           actionId: inputs.bearer,
