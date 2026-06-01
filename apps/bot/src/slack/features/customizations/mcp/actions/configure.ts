@@ -4,7 +4,7 @@ import {
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
-import { syncMcpToolPermissions } from '@/lib/mcp/remote';
+import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -34,7 +34,7 @@ export async function execute({
 
   let discoveryError: string | undefined;
   try {
-    await syncMcpToolPermissions({
+    await syncMcpPermissions({
       server,
       teamId: body.team?.id,
       userId: body.user.id,

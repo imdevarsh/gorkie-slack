@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import {
   createMCPClient,
   type ListToolsResult,
@@ -35,10 +34,6 @@ function slugify(value: string): string {
   return slug || 'server';
 }
 
-function defaultToolMode(): 'ask' {
-  return 'ask';
-}
-
 function normalizeToolMode(mode?: string | null): 'allow' | 'ask' | 'block' {
   if (mode === 'allow' || mode === 'auto') {
     return 'allow';
@@ -49,11 +44,7 @@ function normalizeToolMode(mode?: string | null): 'allow' | 'ask' | 'block' {
   return 'ask';
 }
 
-function shortId(value: string): string {
-  return createHash('sha256').update(value).digest('hex').slice(0, 8);
-}
-
-function filterToolDefinitions({
+function limitTools({
   definitions,
   server,
 }: {
@@ -94,6 +85,36 @@ function filterToolDefinitions({
   return { ...definitions, tools };
 }
 
+async function getMcpConnection({
+  server,
+  userId,
+}: {
+  server: McpServer;
+  userId: string;
+}) {
+  const isBearer = server.authType === 'bearer';
+  const bearerConnection = isBearer
+    ? await getMcpBearerConnection({
+        serverId: server.id,
+        userId,
+      })
+    : null;
+  const oauthConnection = isBearer
+    ? null
+    : await getMcpOAuthConnection({
+        serverId: server.id,
+        userId,
+      });
+
+  return {
+    bearerConnection,
+    hasCredentials: isBearer
+      ? Boolean(bearerConnection?.token)
+      : Boolean(oauthConnection?.tokens),
+    oauthConnection,
+  };
+}
+
 function openMcpClient({
   bearerConnection,
   bearerToken,
@@ -129,7 +150,7 @@ function openMcpClient({
               server,
             }),
           }),
-      fetch: guardedMcpFetch as typeof fetch,
+      fetch: guardedMcpFetch,
       redirect: 'error',
       type: server.transport === 'sse' ? 'sse' : 'http',
       url: server.url,
@@ -137,7 +158,7 @@ function openMcpClient({
   });
 }
 
-async function listMcpToolDefinitions({
+async function listTools({
   bearerToken,
   server,
   userId,
@@ -147,23 +168,12 @@ async function listMcpToolDefinitions({
   userId: string;
 }) {
   const isBearer = server.authType === 'bearer';
-  const bearerConnection = isBearer
-    ? await getMcpBearerConnection({
-        serverId: server.id,
-        userId,
-      })
-    : null;
-  const oauthConnection = isBearer
-    ? null
-    : await getMcpOAuthConnection({
-        serverId: server.id,
-        userId,
-      });
-  if (
-    !(isBearer
-      ? bearerToken || bearerConnection?.token
-      : oauthConnection?.tokens)
-  ) {
+  const { bearerConnection, hasCredentials, oauthConnection } =
+    await getMcpConnection({
+      server,
+      userId,
+    });
+  if (!(bearerToken || hasCredentials)) {
     throw new Error(
       isBearer
         ? 'Bearer token required before tools can be used.'
@@ -178,7 +188,7 @@ async function listMcpToolDefinitions({
     server,
   });
   try {
-    return filterToolDefinitions({
+    return limitTools({
       definitions: await client.listTools(),
       server,
     });
@@ -187,19 +197,7 @@ async function listMcpToolDefinitions({
   }
 }
 
-export function validateMcpServerTools({
-  bearerToken,
-  server,
-  userId,
-}: {
-  bearerToken?: string;
-  server: McpServer;
-  userId: string;
-}) {
-  return listMcpToolDefinitions({ bearerToken, server, userId });
-}
-
-export async function syncMcpToolPermissions({
+export async function syncMcpPermissions({
   server,
   teamId,
   userId,
@@ -208,13 +206,13 @@ export async function syncMcpToolPermissions({
   teamId?: string | null;
   userId: string;
 }) {
-  const definitions = await listMcpToolDefinitions({ server, userId });
+  const definitions = await listTools({ server, userId });
   return ensureMcpToolPermissions({
     serverId: server.id,
     teamId,
     userId,
     tools: definitions.tools.map((definition) => ({
-      mode: defaultToolMode(),
+      mode: mcp.defaultToolMode,
       toolName: definition.name,
     })),
   });
@@ -242,20 +240,12 @@ export async function createMcpToolset({
 
   for (const server of servers) {
     try {
-      const isBearer = server.authType === 'bearer';
-      const bearerConnection = isBearer
-        ? await getMcpBearerConnection({
-            serverId: server.id,
-            userId,
-          })
-        : null;
-      const oauthConnection = isBearer
-        ? null
-        : await getMcpOAuthConnection({
-            serverId: server.id,
-            userId,
-          });
-      if (!(isBearer ? bearerConnection?.token : oauthConnection?.tokens)) {
+      const { bearerConnection, hasCredentials, oauthConnection } =
+        await getMcpConnection({
+          server,
+          userId,
+        });
+      if (!hasCredentials) {
         continue;
       }
 
@@ -266,7 +256,7 @@ export async function createMcpToolset({
       });
       clients.push(client);
 
-      const definitions = filterToolDefinitions({
+      const definitions = limitTools({
         definitions: await client.listTools(),
         server,
       });
@@ -276,7 +266,7 @@ export async function createMcpToolset({
         teamId: context.teamId,
         userId,
         tools: definitions.tools.map((definition) => ({
-          mode: defaultToolMode(),
+          mode: mcp.defaultToolMode,
           toolName: definition.name,
         })),
       });
@@ -296,9 +286,12 @@ export async function createMcpToolset({
 
       for (const [toolName, tool] of Object.entries(serverTools)) {
         const baseName = `mcp_${serverSlug}_${slugify(toolName)}`;
-        const exposedName = usedNames.has(baseName)
-          ? `${baseName}_${shortId(`${server.id}:${toolName}`)}`
-          : baseName;
+        let exposedName = baseName;
+        let collision = 2;
+        while (usedNames.has(exposedName)) {
+          exposedName = `${baseName}_${collision}`;
+          collision += 1;
+        }
         usedNames.add(exposedName);
 
         const execute = tool.execute;
@@ -306,7 +299,9 @@ export async function createMcpToolset({
         const threadPermission = permissionByTool.get(`thread:${toolName}`);
         const globalPermission = permissionByTool.get(`global:${toolName}`);
         const mode = normalizeToolMode(
-          threadPermission?.mode ?? globalPermission?.mode ?? defaultToolMode()
+          threadPermission?.mode ??
+            globalPermission?.mode ??
+            mcp.defaultToolMode
         );
         const metadata = {
           mcp: {

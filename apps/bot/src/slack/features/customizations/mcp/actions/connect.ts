@@ -7,7 +7,7 @@ import {
 import { errorMessage } from '@repo/utils/error';
 import { guardedMcpFetch } from '@/lib/mcp/guarded-fetch';
 import { createMcpOAuthProvider } from '@/lib/mcp/oauth-provider';
-import { syncMcpToolPermissions } from '@/lib/mcp/remote';
+import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -54,7 +54,7 @@ export async function execute({
     await auth(
       createMcpOAuthProvider({ authorizationUrlRef, connection, server }),
       {
-        fetchFn: guardedMcpFetch as typeof fetch,
+        fetchFn: guardedMcpFetch,
         serverUrl: server.url,
       }
     );
@@ -78,7 +78,7 @@ export async function execute({
 
   if (!authorizationUrlRef.value) {
     try {
-      await syncMcpToolPermissions({
+      await syncMcpPermissions({
         server,
         teamId: body.team?.id,
         userId: body.user.id,

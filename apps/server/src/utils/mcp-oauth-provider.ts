@@ -5,7 +5,11 @@ import type {
   OAuthTokens,
 } from '@ai-sdk/mcp';
 import { upsertMcpOAuthConnection } from '@repo/db/queries';
-import type { McpOauthConnection, McpServer } from '@repo/db/schema';
+import type {
+  McpOauthConnection,
+  McpServer,
+  NewMcpOauthConnection,
+} from '@repo/db/schema';
 import { decryptSecret, encryptSecret } from '@repo/utils';
 import { env } from '@/env';
 
@@ -15,7 +19,7 @@ function parseEncryptedJson<T>(value: string | null): T | undefined {
   }
   return JSON.parse(
     decryptSecret({ encrypted: value, secret: env.MCP_TOKEN_ENCRYPTION_KEY })
-  ) as T;
+  );
 }
 
 export function createMcpOAuthProvider({
@@ -34,6 +38,21 @@ export function createMcpOAuthProvider({
     response_types: ['code'],
     token_endpoint_auth_method: 'none',
   };
+  const saveConnection = async (values: Partial<NewMcpOauthConnection>) => {
+    currentConnection = await upsertMcpOAuthConnection({
+      clientId: currentConnection?.clientId ?? null,
+      clientInformation: currentConnection?.clientInformation ?? null,
+      codeVerifier: currentConnection?.codeVerifier ?? null,
+      expiresAt: currentConnection?.expiresAt ?? null,
+      scopes: currentConnection?.scopes ?? null,
+      serverId: server.id,
+      state: currentConnection?.state ?? null,
+      teamId: server.teamId,
+      tokens: currentConnection?.tokens ?? null,
+      userId: server.userId,
+      ...values,
+    });
+  };
 
   return {
     get clientMetadata() {
@@ -46,22 +65,15 @@ export function createMcpOAuthProvider({
       return parseEncryptedJson<OAuthTokens>(currentConnection?.tokens ?? null);
     },
     async saveTokens(tokens) {
-      currentConnection = await upsertMcpOAuthConnection({
-        clientId: currentConnection?.clientId ?? null,
-        clientInformation: currentConnection?.clientInformation ?? null,
-        codeVerifier: currentConnection?.codeVerifier ?? null,
+      await saveConnection({
         expiresAt: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
           : null,
         scopes: tokens.scope ?? currentConnection?.scopes ?? null,
-        serverId: server.id,
-        state: currentConnection?.state ?? null,
-        teamId: server.teamId,
         tokens: encryptSecret({
           plaintext: JSON.stringify(tokens),
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         }),
-        userId: server.userId,
       });
     },
     redirectToAuthorization: () => undefined,

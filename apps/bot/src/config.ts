@@ -83,6 +83,7 @@ export const sandbox = {
 };
 
 export const mcp = {
+  defaultToolMode: 'ask',
   maxServersPerRequest: Number(process.env.MCP_MAX_SERVERS_PER_REQUEST ?? 3),
   maxToolsPerServer: 25,
   maxSchemaBytesPerServer: 256 * 1024,
