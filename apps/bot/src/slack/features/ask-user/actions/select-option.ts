@@ -4,7 +4,7 @@ import { actions } from '../ids';
 import { getAskUserFlow, saveAskUserFlow } from '../state';
 import type { ButtonArgs } from '../types';
 
-export const name = actions.interact;
+export const name = new RegExp(`^${actions.interact}_`);
 
 export async function execute({
   ack,

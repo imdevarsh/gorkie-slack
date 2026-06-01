@@ -16,6 +16,18 @@ function actionValue({
   return JSON.stringify({ action, flowId, optionId });
 }
 
+function actionId({
+  action,
+  flow,
+  id,
+}: {
+  action: string;
+  flow: AskUserFlow;
+  id: string;
+}) {
+  return `${actions.interact}_${flow.index}_${action}_${id}`;
+}
+
 function optionLine({
   index,
   option,
@@ -104,7 +116,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
     ...(question.multiSelect && selected.includes(option.id)
       ? { style: 'primary' }
       : {}),
-    action_id: actions.interact,
+    action_id: actionId({ action: optionAction, flow, id: option.id }),
     value: actionValue({
       action: optionAction,
       flowId: flow.id,
@@ -121,7 +133,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
         text: 'Back',
         emoji: false,
       },
-      action_id: actions.interact,
+      action_id: actionId({ action: 'back', flow, id: 'back' }),
       value: actionValue({ action: 'back', flowId: flow.id }),
     });
   }
@@ -134,7 +146,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
         text: 'Skip',
         emoji: false,
       },
-      action_id: actions.interact,
+      action_id: actionId({ action: 'skip', flow, id: 'skip' }),
       value: actionValue({ action: 'skip', flowId: flow.id }),
     });
   }
@@ -148,7 +160,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
         emoji: false,
       },
       style: 'primary',
-      action_id: actions.interact,
+      action_id: actionId({ action: 'continue', flow, id: 'continue' }),
       value: actionValue({ action: 'continue', flowId: flow.id }),
     });
   }
