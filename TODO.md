@@ -16,6 +16,20 @@ Active task list for gorkie-turbo. Kept in sync as issues are found and resolved
 
 ## Open
 
+### Bug: AI provider fallback ends on OpenRouter max_tokens credit failure
+Production logs show HackClub and OpenRouter calls failing during fallback:
+- HackClub sometimes returns a Cloudflare `504 Gateway time-out` HTML response.
+- OpenRouter then rejects the fallback request with:
+`Agent failed: 402 This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens...`
+
+The request body in one trace has `max_tokens: undefined`, so OpenRouter appears to reserve the model's default max output budget (`65536`) rather than a value explicitly set by Gorkie. Add a configurable output cap for chat and sandbox model calls so fallback requests do not reserve unaffordable output budgets.
+- Files: `packages/ai/src/providers.ts`, `apps/bot/src/config.ts`, `apps/bot/src/lib/sandbox/config/index.ts`
+- Validation: confirm HackClub `504` responses retry to the next provider and OpenRouter/HackClub requests no longer reserve `65536` output tokens by default.
+
+### Improve: MCP tool task display
+MCP tool tasks should show the normalized MCP tool name in the title, plus concise input and output details. For example, use `Using Fathom: list_meetings` instead of only `Using Fathom MCP`, then include a clamped JSON input preview and a clamped text/JSON output preview.
+- File: `apps/bot/src/lib/mcp/remote.ts`
+
 ### Improve: Multi-provider retry for Pi sandbox agent
 The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the orchestrator (`createRetryable`) so it falls back to alternative providers on failure rather than erroring out.
 
