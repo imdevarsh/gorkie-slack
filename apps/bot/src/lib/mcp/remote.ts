@@ -6,6 +6,7 @@ import {
 } from '@ai-sdk/mcp';
 import {
   ensureMcpToolPermissions,
+  getMcpBearerConnection,
   getMcpOAuthConnection,
   listEnabledMcpServersByUser,
   listMcpToolPermissions,
@@ -93,12 +94,14 @@ function filterToolDefinitions({
 }
 
 function openMcpClient({
+  bearerConnection,
   bearerToken,
-  connection,
+  oauthConnection,
   server,
 }: {
+  bearerConnection?: Awaited<ReturnType<typeof getMcpBearerConnection>>;
   bearerToken?: string;
-  connection: Awaited<ReturnType<typeof getMcpOAuthConnection>>;
+  oauthConnection?: Awaited<ReturnType<typeof getMcpOAuthConnection>>;
   server: McpServer;
 }) {
   const isBearer = server.authType === 'bearer';
@@ -107,7 +110,7 @@ function openMcpClient({
         Authorization: `Bearer ${
           bearerToken ??
           decryptSecret({
-            encrypted: server.bearerToken ?? '',
+            encrypted: bearerConnection?.token ?? '',
             secret: env.MCP_TOKEN_ENCRYPTION_KEY,
           })
         }`,
@@ -119,7 +122,12 @@ function openMcpClient({
     transport: {
       ...(isBearer
         ? { headers }
-        : { authProvider: createMcpOAuthProvider({ connection, server }) }),
+        : {
+            authProvider: createMcpOAuthProvider({
+              connection: oauthConnection ?? null,
+              server,
+            }),
+          }),
       fetch: guardedMcpFetch as typeof fetch,
       redirect: 'error',
       type: server.transport === 'sse' ? 'sse' : 'http',
@@ -137,13 +145,23 @@ async function listMcpToolDefinitions({
   server: McpServer;
   userId: string;
 }) {
-  const connection = await getMcpOAuthConnection({
-    serverId: server.id,
-    userId,
-  });
   const isBearer = server.authType === 'bearer';
+  const bearerConnection = isBearer
+    ? await getMcpBearerConnection({
+        serverId: server.id,
+        userId,
+      })
+    : null;
+  const oauthConnection = isBearer
+    ? null
+    : await getMcpOAuthConnection({
+        serverId: server.id,
+        userId,
+      });
   if (
-    !(isBearer ? bearerToken || server.bearerToken : connection?.tokensJson)
+    !(isBearer
+      ? bearerToken || bearerConnection?.token
+      : oauthConnection?.tokens)
   ) {
     throw new Error(
       isBearer
@@ -152,7 +170,12 @@ async function listMcpToolDefinitions({
     );
   }
 
-  const client = await openMcpClient({ bearerToken, connection, server });
+  const client = await openMcpClient({
+    bearerConnection,
+    bearerToken,
+    oauthConnection,
+    server,
+  });
   try {
     return filterToolDefinitions({
       definitions: await client.listTools(),
@@ -218,16 +241,28 @@ export async function createMcpToolset({
 
   for (const server of servers) {
     try {
-      const connection = await getMcpOAuthConnection({
-        serverId: server.id,
-        userId,
-      });
       const isBearer = server.authType === 'bearer';
-      if (!(isBearer ? server.bearerToken : connection?.tokensJson)) {
+      const bearerConnection = isBearer
+        ? await getMcpBearerConnection({
+            serverId: server.id,
+            userId,
+          })
+        : null;
+      const oauthConnection = isBearer
+        ? null
+        : await getMcpOAuthConnection({
+            serverId: server.id,
+            userId,
+          });
+      if (!(isBearer ? bearerConnection?.token : oauthConnection?.tokens)) {
         continue;
       }
 
-      const client = await openMcpClient({ connection, server });
+      const client = await openMcpClient({
+        bearerConnection,
+        oauthConnection,
+        server,
+      });
       clients.push(client);
 
       const definitions = filterToolDefinitions({

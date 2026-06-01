@@ -45,6 +45,9 @@ export async function execute({
     ) {
       continue;
     }
+    if (permission.mode === value) {
+      continue;
+    }
 
     await upsertMcpToolPermission({
       mode: value,

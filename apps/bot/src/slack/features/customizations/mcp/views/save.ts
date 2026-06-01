@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { createMcpServer, updateMcpServerForUser } from '@repo/db/queries';
+import {
+  createMcpServer,
+  updateMcpServerForUser,
+  upsertMcpBearerConnection,
+  upsertMcpOAuthConnection,
+} from '@repo/db/queries';
 import type { McpServer } from '@repo/db/schema';
 import { encryptSecret } from '@repo/utils';
 import { errorMessage } from '@repo/utils/error';
@@ -67,7 +72,7 @@ export async function execute({
     return;
   }
 
-  const encryptedBearerToken =
+  const token =
     auth === 'bearer'
       ? encryptSecret({
           plaintext: bearerToken,
@@ -78,13 +83,9 @@ export async function execute({
     const now = new Date();
     const candidate = {
       authType: auth,
-      bearerToken: encryptedBearerToken,
-      clientId: null,
       createdAt: now,
       enabled: true,
-      excludeToolsJson: null,
       id: randomUUID(),
-      includeToolsJson: null,
       lastConnectedAt: null,
       lastError: null,
       name: nameValue,
@@ -112,8 +113,6 @@ export async function execute({
   await ack();
   const server = await createMcpServer({
     authType: auth,
-    bearerToken: encryptedBearerToken,
-    clientId: auth === 'oauth' && clientId ? clientId : null,
     enabled: auth === 'bearer',
     name: nameValue,
     teamId: body.team?.id ?? null,
@@ -121,6 +120,22 @@ export async function execute({
     url: safeUrl,
     userId: body.user.id,
   });
+  if (server && token) {
+    await upsertMcpBearerConnection({
+      token,
+      serverId: server.id,
+      teamId: body.team?.id ?? null,
+      userId: body.user.id,
+    });
+  }
+  if (server && auth === 'oauth' && clientId) {
+    await upsertMcpOAuthConnection({
+      clientId,
+      serverId: server.id,
+      teamId: body.team?.id ?? null,
+      userId: body.user.id,
+    });
+  }
   if (server && auth === 'bearer') {
     try {
       await syncMcpToolPermissions({

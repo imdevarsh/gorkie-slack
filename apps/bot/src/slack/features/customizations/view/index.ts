@@ -1,4 +1,4 @@
-import type { McpServerWithOAuth } from '@repo/db/queries';
+import type { McpServerWithConnection } from '@repo/db/queries';
 import type { ScheduledTask } from '@repo/db/schema';
 import { Blocks, HomeTab } from 'slack-block-builder';
 import type { SlackHomeTabDto } from 'slack-block-builder/dist/internal';
@@ -13,7 +13,7 @@ export function buildHomeView({
 }: {
   tasks: ScheduledTask[];
   customization: { prompt?: string } | null;
-  mcpServers: McpServerWithOAuth[];
+  mcpServers: McpServerWithConnection[];
 }): SlackHomeTabDto {
   return HomeTab()
     .blocks(

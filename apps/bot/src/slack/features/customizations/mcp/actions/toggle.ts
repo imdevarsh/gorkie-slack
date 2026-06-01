@@ -1,4 +1,5 @@
 import {
+  getMcpBearerConnection,
   getMcpOAuthConnection,
   getMcpServerByIdForUser,
   updateMcpServerForUser,
@@ -33,14 +34,16 @@ export async function execute({
       return;
     }
 
-    const connection =
-      server.authType === 'bearer'
-        ? server.bearerToken
-        : await getMcpOAuthConnection({
-            serverId,
-            userId: body.user.id,
-          });
-    if (!connection) {
+    const hasCredentials = await (server.authType === 'bearer'
+      ? getMcpBearerConnection({
+          serverId,
+          userId: body.user.id,
+        }).then((connection) => Boolean(connection?.token))
+      : getMcpOAuthConnection({
+          serverId,
+          userId: body.user.id,
+        }).then((connection) => Boolean(connection?.tokens)));
+    if (!hasCredentials) {
       await updateMcpServerForUser({
         id: serverId,
         userId: body.user.id,

@@ -1,6 +1,7 @@
 import {
   getMcpServerByIdForUser,
   updateMcpServerForUser,
+  upsertMcpBearerConnection,
 } from '@repo/db/queries';
 import { encryptSecret } from '@repo/utils';
 import { errorMessage } from '@repo/utils/error';
@@ -59,14 +60,14 @@ export async function execute({
     return;
   }
 
-  const encryptedBearerToken = encryptSecret({
+  const token = encryptSecret({
     plaintext: bearerToken,
     secret: env.MCP_TOKEN_ENCRYPTION_KEY,
   });
   try {
     await validateMcpServerTools({
       bearerToken,
-      server: { ...server, bearerToken: encryptedBearerToken },
+      server,
       userId: body.user.id,
     });
   } catch (error) {
@@ -78,11 +79,16 @@ export async function execute({
   }
 
   await ack();
+  await upsertMcpBearerConnection({
+    token,
+    serverId,
+    teamId: body.team?.id ?? null,
+    userId: body.user.id,
+  });
   await updateMcpServerForUser({
     id: serverId,
     userId: body.user.id,
     values: {
-      bearerToken: encryptedBearerToken,
       enabled: true,
       lastConnectedAt: null,
       lastError: null,

@@ -46,13 +46,12 @@ export function createMcpOAuthProvider({
       return redirectUrl.toString();
     },
     tokens() {
-      return parseEncryptedJson<OAuthTokens>(
-        currentConnection?.tokensJson ?? null
-      );
+      return parseEncryptedJson<OAuthTokens>(currentConnection?.tokens ?? null);
     },
     async saveTokens(tokens) {
       currentConnection = await upsertMcpOAuthConnection({
-        clientInformationJson: currentConnection?.clientInformationJson ?? null,
+        clientId: currentConnection?.clientId ?? null,
+        clientInformation: currentConnection?.clientInformation ?? null,
         codeVerifier: currentConnection?.codeVerifier ?? null,
         expiresAt: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
@@ -61,7 +60,7 @@ export function createMcpOAuthProvider({
         serverId: server.id,
         state: currentConnection?.state ?? null,
         teamId: server.teamId,
-        tokensJson: encryptSecret({
+        tokens: encryptSecret({
           plaintext: JSON.stringify(tokens),
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         }),
@@ -75,7 +74,8 @@ export function createMcpOAuthProvider({
     },
     async saveCodeVerifier(codeVerifier) {
       currentConnection = await upsertMcpOAuthConnection({
-        clientInformationJson: currentConnection?.clientInformationJson ?? null,
+        clientId: currentConnection?.clientId ?? null,
+        clientInformation: currentConnection?.clientInformation ?? null,
         codeVerifier: encryptSecret({
           plaintext: codeVerifier,
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
@@ -85,7 +85,7 @@ export function createMcpOAuthProvider({
         serverId: server.id,
         state: currentConnection?.state ?? null,
         teamId: server.teamId,
-        tokensJson: currentConnection?.tokensJson ?? null,
+        tokens: currentConnection?.tokens ?? null,
         userId: server.userId,
       });
     },
@@ -99,19 +99,20 @@ export function createMcpOAuthProvider({
       });
     },
     clientInformation() {
-      if (server.clientId) {
+      if (currentConnection?.clientId) {
         const fromDb = parseEncryptedJson<OAuthClientInformation>(
-          currentConnection?.clientInformationJson ?? null
+          currentConnection?.clientInformation ?? null
         );
-        return fromDb ?? { client_id: server.clientId };
+        return fromDb ?? { client_id: currentConnection.clientId };
       }
       return parseEncryptedJson<OAuthClientInformation>(
-        currentConnection?.clientInformationJson ?? null
+        currentConnection?.clientInformation ?? null
       );
     },
     async saveClientInformation(clientInformation) {
       currentConnection = await upsertMcpOAuthConnection({
-        clientInformationJson: encryptSecret({
+        clientId: currentConnection?.clientId ?? null,
+        clientInformation: encryptSecret({
           plaintext: JSON.stringify(clientInformation),
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         }),
@@ -121,7 +122,7 @@ export function createMcpOAuthProvider({
         serverId: server.id,
         state: currentConnection?.state ?? null,
         teamId: server.teamId,
-        tokensJson: currentConnection?.tokensJson ?? null,
+        tokens: currentConnection?.tokens ?? null,
         userId: server.userId,
       });
     },
@@ -135,7 +136,8 @@ export function createMcpOAuthProvider({
     },
     async saveState(state) {
       currentConnection = await upsertMcpOAuthConnection({
-        clientInformationJson: currentConnection?.clientInformationJson ?? null,
+        clientId: currentConnection?.clientId ?? null,
+        clientInformation: currentConnection?.clientInformation ?? null,
         codeVerifier: null,
         expiresAt: null,
         scopes: null,
@@ -145,7 +147,7 @@ export function createMcpOAuthProvider({
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         }),
         teamId: server.teamId,
-        tokensJson: null,
+        tokens: null,
         userId: server.userId,
       });
     },
@@ -161,10 +163,12 @@ export function createMcpOAuthProvider({
     async invalidateCredentials(scope) {
       if (scope === 'all' || scope === 'tokens') {
         currentConnection = await upsertMcpOAuthConnection({
-          clientInformationJson:
+          clientId:
+            scope === 'all' ? null : (currentConnection?.clientId ?? null),
+          clientInformation:
             scope === 'all'
               ? null
-              : (currentConnection?.clientInformationJson ?? null),
+              : (currentConnection?.clientInformation ?? null),
           codeVerifier:
             scope === 'all' ? null : (currentConnection?.codeVerifier ?? null),
           expiresAt: null,
@@ -172,7 +176,7 @@ export function createMcpOAuthProvider({
           serverId: server.id,
           state: scope === 'all' ? null : (currentConnection?.state ?? null),
           teamId: server.teamId,
-          tokensJson: null,
+          tokens: null,
           userId: server.userId,
         });
       }

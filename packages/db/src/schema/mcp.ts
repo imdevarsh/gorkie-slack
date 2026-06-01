@@ -20,11 +20,7 @@ export const mcpServers = pgTable(
     transport: text('transport').notNull(),
     authType: text('auth_type').notNull().default('oauth'),
     url: text('url').notNull(),
-    bearerToken: text('bearer_token'),
-    clientId: text('client_id'),
     enabled: boolean('enabled').notNull().default(false),
-    includeToolsJson: text('include_tools_json'),
-    excludeToolsJson: text('exclude_tools_json'),
     lastConnectedAt: timestamp('last_connected_at', { withTimezone: true }),
     lastError: text('last_error'),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -41,6 +37,34 @@ export const mcpServers = pgTable(
   ]
 );
 
+export const mcpBearerConnections = pgTable(
+  'mcp_bearer_connections',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    serverId: text('server_id')
+      .notNull()
+      .references(() => mcpServers.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
+    teamId: text('team_id'),
+    token: text('token'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex('mcp_bearer_connections_server_user_idx').on(
+      table.serverId,
+      table.userId
+    ),
+  ]
+);
+
 export const mcpOauthConnections = pgTable(
   'mcp_oauth_connections',
   {
@@ -52,8 +76,9 @@ export const mcpOauthConnections = pgTable(
       .references(() => mcpServers.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
     teamId: text('team_id'),
-    tokensJson: text('tokens_json'),
-    clientInformationJson: text('client_information_json'),
+    clientId: text('client_id'),
+    tokens: text('tokens'),
+    clientInformation: text('client_information'),
     codeVerifier: text('code_verifier'),
     state: text('state'),
     scopes: text('scopes'),
@@ -67,8 +92,10 @@ export const mcpOauthConnections = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    uniqueIndex('mcp_oauth_server_user_idx').on(table.serverId, table.userId),
-    index('mcp_oauth_state_idx').on(table.state),
+    uniqueIndex('mcp_oauth_connections_server_user_idx').on(
+      table.serverId,
+      table.userId
+    ),
   ]
 );
 
@@ -149,6 +176,8 @@ export const mcpToolApprovals = pgTable(
 
 export type McpServer = typeof mcpServers.$inferSelect;
 export type NewMcpServer = typeof mcpServers.$inferInsert;
+export type McpBearerConnection = typeof mcpBearerConnections.$inferSelect;
+export type NewMcpBearerConnection = typeof mcpBearerConnections.$inferInsert;
 export type McpOauthConnection = typeof mcpOauthConnections.$inferSelect;
 export type NewMcpOauthConnection = typeof mcpOauthConnections.$inferInsert;
 export type McpToolPermission = typeof mcpToolPermissions.$inferSelect;

@@ -3,9 +3,9 @@ import { systemPrompt } from '@repo/ai/prompts';
 import {
   clearDestroyed,
   getByThread,
-  issueProxyToken,
+  issueSandboxToken,
   markActivity,
-  revokeProxyToken,
+  revokeSandboxToken,
   updateRuntime,
   updateStatus,
   upsert,
@@ -81,7 +81,7 @@ async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
   }
 }
 
-async function issueSandboxToken({
+async function createSandboxToken({
   sandbox,
   sandboxId,
 }: {
@@ -89,7 +89,7 @@ async function issueSandboxToken({
   sandboxId: string;
 }): Promise<string> {
   const allowedIp = await getOutboundIp(sandbox);
-  const { token } = await issueProxyToken({
+  const { token } = await issueSandboxToken({
     allowedIp,
     sandboxId,
     ttlMs: config.runtime.executionTimeoutMs,
@@ -114,12 +114,12 @@ async function createSandbox(
   await sandbox.setTimeout(config.timeoutMs);
 
   try {
-    const proxyToken = await issueSandboxToken({
+    const sandboxToken = await createSandboxToken({
       sandbox,
       sandboxId: sandbox.sandboxId,
     });
     await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
-    const client = await boot({ sandbox, proxyToken });
+    const client = await boot({ sandbox, sessionToken: sandboxToken });
     const { sessionId } = await client.getState();
 
     await upsert({
@@ -135,7 +135,9 @@ async function createSandbox(
 
     return { client, sandbox };
   } catch (error) {
-    await revokeProxyToken({ sandboxId: sandbox.sandboxId }).catch(() => null);
+    await revokeSandboxToken({ sandboxId: sandbox.sandboxId }).catch(
+      () => null
+    );
     await Sandbox.kill(sandbox.sandboxId, { apiKey: env.E2B_API_KEY }).catch(
       () => null
     );
@@ -157,18 +159,20 @@ async function resumeSandbox(
 
   await sandbox.setTimeout(config.timeoutMs);
 
-  const proxyToken = await issueSandboxToken({
+  const sandboxToken = await createSandboxToken({
     sandbox,
     sandboxId: sandbox.sandboxId,
   });
-  const client = await boot({ sandbox, sessionId, proxyToken }).catch(
-    async (error: unknown) => {
-      await revokeProxyToken({ sandboxId: sandbox.sandboxId }).catch(
-        () => null
-      );
-      throw error;
-    }
-  );
+  const client = await boot({
+    sandbox,
+    sessionId,
+    sessionToken: sandboxToken,
+  }).catch(async (error: unknown) => {
+    await revokeSandboxToken({ sandboxId: sandbox.sandboxId }).catch(
+      () => null
+    );
+    throw error;
+  });
 
   const state = await client.getState();
   logger.debug(

@@ -1,4 +1,4 @@
-import type { McpServerWithOAuth } from '@repo/db/queries';
+import type { McpServerWithConnection } from '@repo/db/queries';
 import { clampText } from '@repo/utils/text';
 import { Bits, Blocks, Elements } from 'slack-block-builder';
 import { appHome } from '@/config';
@@ -12,12 +12,8 @@ function codeBlock(value: string): string {
   return `\`\`\`${clampText(value.replaceAll('```', "'''"), 900)}\`\`\``;
 }
 
-function serverBlocks(server: McpServerWithOAuth) {
-  const connected =
-    server.authType === 'bearer'
-      ? Boolean(server.bearerToken)
-      : server.hasOAuthConnection;
-  const usable = connected && server.enabled;
+function serverBlocks(server: McpServerWithConnection) {
+  const connected = server.hasConnection;
   let authStatus = 'OAuth required';
   if (server.authType === 'bearer') {
     authStatus = connected ? 'Bearer token set' : 'Bearer token required';
@@ -29,7 +25,7 @@ function serverBlocks(server: McpServerWithOAuth) {
     ? `\n\n*Error:*\n${codeBlock(server.lastError)}`
     : '';
 
-  const canToggle = usable;
+  const canToggle = connected;
   const section = Blocks.Section({
     text: [
       `*${truncate(server.name, appHome.maxMcpNameDisplay)}*`,
@@ -51,11 +47,11 @@ function serverBlocks(server: McpServerWithOAuth) {
     section,
     Blocks.Actions().elements(
       Elements.Button({
-        actionId: usable ? actions.disconnect : actions.connect,
-        text: usable ? 'Disconnect' : 'Connect',
+        actionId: connected ? actions.disconnect : actions.connect,
+        text: connected ? 'Disconnect' : 'Connect',
         value: server.id,
       }),
-      ...(usable
+      ...(connected && server.enabled
         ? [
             Elements.Button({
               actionId: actions.configure,
@@ -82,7 +78,7 @@ function serverBlocks(server: McpServerWithOAuth) {
   ];
 }
 
-export function mcpBlocks(servers: McpServerWithOAuth[]) {
+export function mcpBlocks(servers: McpServerWithConnection[]) {
   const header = Blocks.Section({
     text: `*MCP Servers*${servers.length > 0 ? ` (${servers.length})` : ''}`,
   }).accessory(

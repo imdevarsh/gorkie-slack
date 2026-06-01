@@ -8,11 +8,11 @@ import { PiRpcClient } from './client';
 export async function boot({
   sandbox,
   sessionId,
-  proxyToken,
+  sessionToken,
 }: {
   sandbox: Sandbox;
   sessionId?: string;
-  proxyToken: string;
+  sessionToken: string;
 }): Promise<PiRpcClient> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -23,7 +23,7 @@ export async function boot({
     rows: 24,
     cwd: config.runtime.workdir,
     envs: {
-      GORKIE_SESSION_TOKEN: proxyToken,
+      GORKIE_SESSION_TOKEN: sessionToken,
       AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY,
       HOME: config.runtime.workdir,
       TERM: 'dumb',

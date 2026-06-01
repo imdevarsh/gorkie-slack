@@ -43,13 +43,12 @@ export function createMcpOAuthProvider({
       return redirectUrl.toString();
     },
     tokens() {
-      return parseEncryptedJson<OAuthTokens>(
-        currentConnection?.tokensJson ?? null
-      );
+      return parseEncryptedJson<OAuthTokens>(currentConnection?.tokens ?? null);
     },
     async saveTokens(tokens) {
       currentConnection = await upsertMcpOAuthConnection({
-        clientInformationJson: currentConnection?.clientInformationJson ?? null,
+        clientId: currentConnection?.clientId ?? null,
+        clientInformation: currentConnection?.clientInformation ?? null,
         codeVerifier: currentConnection?.codeVerifier ?? null,
         expiresAt: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
@@ -58,7 +57,7 @@ export function createMcpOAuthProvider({
         serverId: server.id,
         state: currentConnection?.state ?? null,
         teamId: server.teamId,
-        tokensJson: encryptSecret({
+        tokens: encryptSecret({
           plaintext: JSON.stringify(tokens),
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         }),
@@ -77,14 +76,14 @@ export function createMcpOAuthProvider({
       });
     },
     clientInformation() {
-      if (server.clientId) {
+      if (currentConnection?.clientId) {
         const fromDb = parseEncryptedJson<OAuthClientInformation>(
-          currentConnection?.clientInformationJson ?? null
+          currentConnection?.clientInformation ?? null
         );
-        return fromDb ?? { client_id: server.clientId };
+        return fromDb ?? { client_id: currentConnection.clientId };
       }
       return parseEncryptedJson<OAuthClientInformation>(
-        currentConnection?.clientInformationJson ?? null
+        currentConnection?.clientInformation ?? null
       );
     },
     saveClientInformation: () => undefined,

@@ -1,5 +1,5 @@
 import {
-  deleteMcpOAuthConnection,
+  deleteMcpConnections,
   getMcpServerByIdForUser,
   updateMcpServerForUser,
 } from '@repo/db/queries';
@@ -23,21 +23,10 @@ export async function execute({
     id: action.value,
     userId: body.user.id,
   });
-  if (server?.authType === 'bearer') {
-    await updateMcpServerForUser({
-      id: action.value,
-      userId: body.user.id,
-      values: {
-        bearerToken: null,
-        enabled: false,
-        lastConnectedAt: null,
-        lastError: null,
-      },
-    });
-    await publishHome(client, body.user.id);
+  if (!server) {
     return;
   }
-  await deleteMcpOAuthConnection({
+  await deleteMcpConnections({
     serverId: action.value,
     userId: body.user.id,
   });

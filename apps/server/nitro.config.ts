@@ -13,6 +13,6 @@ export default defineConfig({
     tasks: true,
   },
   scheduledTasks: {
-    '0 0 * * *': ['cleanup:proxy-tokens'],
+    '0 0 * * *': ['cleanup:sandbox-tokens'],
   },
 });
