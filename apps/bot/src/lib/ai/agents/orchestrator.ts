@@ -6,50 +6,15 @@ import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
 import type {
   ChatRequestHints,
+  ReasoningStreamPart,
   SlackFile,
   SlackMessageContext,
   Stream,
+  ToolApprovalRequest,
 } from '@/types';
 import { createTask, finishTask, updateTask } from '../utils/task';
 
 const taskMap = new Map<string, { taskId: string; startTime: number }>();
-
-type ReasoningStreamPart =
-  | { type: 'start-step' }
-  | { type: 'reasoning-delta'; text: string }
-  | {
-      approvalId: string;
-      toolCall: {
-        input: unknown;
-        toolCallId: string;
-        toolMetadata?: {
-          mcp?: {
-            serverId?: string;
-            serverName?: string;
-            toolName?: string;
-          };
-        };
-        toolName: string;
-      };
-      type: 'tool-approval-request';
-    }
-  | { type: string };
-
-function isToolApprovalRequest(
-  part: ReasoningStreamPart
-): part is Extract<ReasoningStreamPart, { type: 'tool-approval-request' }> {
-  return part.type === 'tool-approval-request' && 'toolCall' in part;
-}
-
-export interface ToolApprovalRequest {
-  approvalId: string;
-  exposedName: string;
-  input: unknown;
-  serverId: string;
-  serverName: string;
-  toolCallId: string;
-  toolName: string;
-}
 
 export async function resolveOrchestratorTask({
   context,
@@ -94,7 +59,7 @@ export async function consumeOrchestratorReasoningStream({
   const approvals: ToolApprovalRequest[] = [];
 
   for await (const part of fullStream) {
-    if (isToolApprovalRequest(part)) {
+    if (part.type === 'tool-approval-request' && 'toolCall' in part) {
       const mcp = part.toolCall.toolMetadata?.mcp;
       if (mcp?.serverId && mcp.serverName && mcp.toolName) {
         approvals.push({

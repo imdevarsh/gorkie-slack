@@ -6,10 +6,7 @@ import {
 import { encryptSecret } from '@repo/utils';
 import { errorMessage } from '@repo/utils/error';
 import { env } from '@/env';
-import {
-  syncMcpToolPermissions,
-  validateMcpServerTools,
-} from '@/lib/mcp/remote';
+import { syncMcpToolPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { blocks, inputs, views } from '../ids';
 import type { ServerMeta, SubmitArgs } from '../types';
@@ -64,20 +61,6 @@ export async function execute({
     plaintext: bearerToken,
     secret: env.MCP_TOKEN_ENCRYPTION_KEY,
   });
-  try {
-    await validateMcpServerTools({
-      bearerToken,
-      server,
-      userId: body.user.id,
-    });
-  } catch (error) {
-    await ack({
-      errors: { [blocks.bearer]: errorMessage(error) },
-      response_action: 'errors',
-    });
-    return;
-  }
-
   await ack();
   await upsertMcpBearerConnection({
     token,

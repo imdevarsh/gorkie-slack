@@ -37,6 +37,18 @@ The Pi coding agent inside the sandbox uses a single provider/model. It should h
 Currently `prepareStep` always creates a "Thinking…" task, after terminal tool firing show just show "Replied" / "Skipping" / "Left channel" directly as the task title
 - File: `apps/bot/src/lib/ai/agents/orchestrator.ts`
 
+### Improve: `askUser` should support interactive option cards
+The current `askUser` tool renders choice options as text bullets and relies on a threaded text reply. Upgrade it to support multiple selectable options with Slack card-style actions, similar to the MCP approval card pattern.
+- Add persistent question IDs with an ascending `que...` style identifier, following the same idea as OpenCode's `QuestionID` newtype pattern.
+- Store question state so button/select answers can resume the original thread cleanly.
+- Keep schemas tidy and colocated with the feature/tool rather than adding more ad hoc inline shapes.
+- Files: `apps/bot/src/lib/ai/tools/chat/ask-user.ts`, `apps/bot/src/types/ai/`
+
+### Improve: Auto-commit at checkpoints
+Add an explicit checkpoint flow for larger agent tasks so meaningful working states can be committed automatically when the user opts into that workflow.
+- Keep commits scoped to the current task and avoid mixing unrelated dirty worktree changes.
+- Consider where checkpoint metadata belongs before adding more one-off state fields.
+
 ### Bug: Task stream is intermittent — thinking sometimes missing
 The "Thinking…" task created in `prepareStep` of `orchestratorAgent` and its reasoning text (`consumeOrchestratorReasoningStream`) are sometimes not shown in Slack. Possibly a race condition in task creation vs. stream consumption, or the reasoning stream arriving after the step task is already resolved.
 - Files: `apps/bot/src/lib/ai/agents/orchestrator.ts`, `apps/bot/src/lib/ai/utils/stream.ts`
@@ -58,6 +70,13 @@ The `agent-browser` npm package is installed globally by the sandbox, but `agent
 - Audit `triggers.ts` for any leftover priming logic
 - Tighten types in `message-context.ts` now that `getAuthorName` no longer takes `ctxId`
 - Files: `apps/bot/src/slack/conversations.ts`, `apps/bot/src/slack/events/message-create/utils/message-context.ts`, `apps/bot/src/utils/triggers.ts`, `apps/bot/src/utils/context.ts`
+
+### Refactor: Reduce schema and type clutter
+The codebase is accumulating inline schemas, duplicated DTO shapes, and large files that mix Slack UI, persistence, and orchestration concerns. Do a cleanup pass guided by `AGENTS.md`:
+- Move reusable types into `apps/bot/src/types/` or package-level type files.
+- Keep feature-owned Slack actions/views inside their feature folders.
+- Split genuinely shared logic into small feature utilities, but avoid one-shot helpers.
+- Prefer dict params for functions with multiple inputs.
 
 ### Bug: Slack search errors mark entire task as failed + pinned items shown incorrectly
 When the bot performs a Slack search (e.g. searching for pinned messages or user-pinned items), errors from the search API bubble up and mark the whole task as a failure in the task list. The user sees the entire task as red/failed even if the core work succeeded. Additionally, pinned item detection doesn't correctly identify items the user has pinned — it may be checking the wrong field or returning all pins regardless of who pinned them.

@@ -1,19 +1,14 @@
-import { randomUUID } from 'node:crypto';
 import {
   createMcpServer,
   updateMcpServerForUser,
   upsertMcpBearerConnection,
   upsertMcpOAuthConnection,
 } from '@repo/db/queries';
-import type { McpServer } from '@repo/db/schema';
 import { encryptSecret } from '@repo/utils';
 import { errorMessage } from '@repo/utils/error';
 import { env } from '@/env';
 import { validateHttpsUrlForServer } from '@/lib/mcp/guarded-fetch';
-import {
-  syncMcpToolPermissions,
-  validateMcpServerTools,
-} from '@/lib/mcp/remote';
+import { syncMcpToolPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { blocks, inputs, views } from '../ids';
 import type { Auth, SubmitArgs, Transport } from '../types';
@@ -79,37 +74,6 @@ export async function execute({
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         })
       : null;
-  if (auth === 'bearer') {
-    const now = new Date();
-    const candidate = {
-      authType: auth,
-      createdAt: now,
-      enabled: true,
-      id: randomUUID(),
-      lastConnectedAt: null,
-      lastError: null,
-      name: nameValue,
-      teamId: body.team?.id ?? null,
-      transport,
-      updatedAt: now,
-      url: safeUrl,
-      userId: body.user.id,
-    } satisfies McpServer;
-    try {
-      await validateMcpServerTools({
-        bearerToken,
-        server: candidate,
-        userId: body.user.id,
-      });
-    } catch (error) {
-      await ack({
-        errors: { [blocks.bearer]: errorMessage(error) },
-        response_action: 'errors',
-      });
-      return;
-    }
-  }
-
   await ack();
   const server = await createMcpServer({
     authType: auth,

@@ -4,11 +4,15 @@ import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
 import { env } from '@/env';
-import type { ToolApprovalRequest } from '@/lib/ai/agents/orchestrator';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/mcp/format-tool-input';
 import { actions } from '@/slack/features/customizations/mcp/ids';
-import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
+import type {
+  ChatRequestHints,
+  SlackMessageContext,
+  Stream,
+  ToolApprovalRequest,
+} from '@/types';
 
 type SlackBlocks = ChannelAndBlocks['blocks'];
 
