@@ -11,11 +11,14 @@ import {
 } from '@repo/db/queries';
 import type { McpServer } from '@repo/db/schema';
 import { decryptSecret } from '@repo/utils';
-import type { ToolSet } from 'ai';
+import { errorMessage } from '@repo/utils/error';
+import { clampText } from '@repo/utils/text';
+import type { ToolExecutionOptions, ToolSet } from 'ai';
 import { mcp } from '@/config';
 import { env } from '@/env';
+import { createTask, finishTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
-import type { SlackMessageContext } from '@/types';
+import type { SlackMessageContext, Stream } from '@/types';
 import { guardedMcpFetch } from './guarded-fetch';
 import { createMcpOAuthProvider } from './oauth-provider';
 
@@ -83,8 +86,10 @@ function filterToolDefinitions({
 
 export async function createRemoteMcpToolset({
   context,
+  stream,
 }: {
   context: SlackMessageContext;
+  stream: Stream;
 }): Promise<{ cleanup: () => Promise<void>; tools: ToolSet }> {
   const userId = context.event.user;
   if (!userId) {
@@ -155,7 +160,80 @@ export async function createRemoteMcpToolset({
           ? `${baseName}_${shortId(`${server.id}:${toolName}`)}`
           : baseName;
         usedNames.add(exposedName);
-        tools[exposedName] = tool;
+
+        const execute = tool.execute;
+        tools[exposedName] =
+          typeof execute === 'function'
+            ? {
+                ...tool,
+                onInputStart: async (options: ToolExecutionOptions) => {
+                  await tool.onInputStart?.(options);
+                  await createTask(stream, {
+                    taskId: options.toolCallId,
+                    title: `Using ${server.name}`,
+                    details: toolName,
+                    status: 'pending',
+                  });
+                },
+                execute: async (
+                  input: unknown,
+                  options: ToolExecutionOptions
+                ) => {
+                  await createTask(stream, {
+                    taskId: options.toolCallId,
+                    title: `Using ${server.name}`,
+                    details: toolName,
+                    status: 'in_progress',
+                  });
+
+                  try {
+                    const result = await execute(input, options);
+                    let output = 'Done';
+                    if (
+                      result &&
+                      typeof result === 'object' &&
+                      'content' in result &&
+                      Array.isArray(result.content)
+                    ) {
+                      const text = result.content
+                        .map((item) =>
+                          item &&
+                          typeof item === 'object' &&
+                          'type' in item &&
+                          item.type === 'text' &&
+                          'text' in item &&
+                          typeof item.text === 'string'
+                            ? item.text
+                            : ''
+                        )
+                        .filter(Boolean)
+                        .join('\n');
+                      if (text) {
+                        output = text;
+                      }
+                    } else {
+                      output = JSON.stringify(result);
+                    }
+                    await finishTask(stream, {
+                      taskId: options.toolCallId,
+                      status: 'complete',
+                      output: clampText(output, mcp.taskOutputMaxChars),
+                    });
+                    return result;
+                  } catch (error) {
+                    await finishTask(stream, {
+                      taskId: options.toolCallId,
+                      status: 'error',
+                      output: clampText(
+                        errorMessage(error),
+                        mcp.taskOutputMaxChars
+                      ),
+                    });
+                    throw error;
+                  }
+                },
+              }
+            : tool;
       }
 
       await updateMcpServerForUser({

@@ -47,7 +47,7 @@ export async function createToolset({
     skip: skip({ context, stream }),
     summariseThread: summariseThread({ context, stream }),
   };
-  const remoteMcp = await createRemoteMcpToolset({ context });
+  const remoteMcp = await createRemoteMcpToolset({ context, stream });
 
   return {
     cleanup: remoteMcp.cleanup,

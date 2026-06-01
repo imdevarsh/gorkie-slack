@@ -88,4 +88,5 @@ export const mcp = {
   maxSchemaBytesPerServer: 256 * 1024,
   requestTimeoutMs: 15_000,
   maxResponseBytes: 10 * 1024 * 1024,
+  taskOutputMaxChars: 260,
 };
