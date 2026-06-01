@@ -83,7 +83,7 @@ export function addModal(state: ModalState = {}): SlackModalDto {
     modal.blocks(
       Blocks.Input({
         blockId: blocks.clientId,
-        hint: 'Required for servers like GitHub Copilot that do not support dynamic client registration. Leave blank for auto-registration.',
+        hint: 'Required for servers that do not support dynamic client registration. Leave blank for auto-registration.',
         label: 'Client ID',
       })
         .optional()
