@@ -45,10 +45,14 @@ export async function resolveOrchestratorTask({
     elapsedMs < 1000 ? '<1s' : `${Math.round(elapsedMs / 1000)}s`;
   const resolvedTitle = title ?? `Thought for ${elapsedLabel}`;
 
+  const accumulated = stream.tasks.get(entry.taskId)?.output;
+  const trimmedOutput = accumulated ? trimEdgeNewlines(accumulated) : undefined;
+
   await finishTask(stream, {
     taskId: entry.taskId,
     status: 'complete',
     title: resolvedTitle,
+    ...(trimmedOutput ? { output: trimmedOutput } : {}),
     ...(details ? { details } : {}),
   });
 }
@@ -86,7 +90,7 @@ export async function consumeOrchestratorReasoningStream({
     await updateTask(stream, {
       taskId: entry.taskId,
       status: 'in_progress',
-      output: trimEdgeNewlines(part.text),
+      output: part.text,
     });
   }
 }
