@@ -1,6 +1,8 @@
 import { clampText } from '@repo/utils/text';
+import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import { actions } from './ids';
 import type { AskUserFlow, AskUserOption } from './state';
+import type { AskUserButton } from './types';
 
 function actionValue({
   action,
@@ -87,7 +89,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
     )
     .join('\n');
   const optionAction = question.multiSelect ? 'toggle' : 'choose';
-  const actionsList = options.map((option) => ({
+  const optionButtons: AskUserButton[] = options.map((option) => ({
     type: 'button',
     text: {
       type: 'plain_text',
@@ -109,9 +111,10 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
       optionId: option.id,
     }),
   }));
+  const navButtons: typeof optionButtons = [];
 
   if (flow.index > 0) {
-    actionsList.push({
+    navButtons.push({
       type: 'button',
       text: {
         type: 'plain_text',
@@ -124,7 +127,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
   }
 
   if (question.skippable !== false) {
-    actionsList.push({
+    navButtons.push({
       type: 'button',
       text: {
         type: 'plain_text',
@@ -137,7 +140,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
   }
 
   if (question.multiSelect) {
-    actionsList.push({
+    navButtons.push({
       type: 'button',
       text: {
         type: 'plain_text',
@@ -150,7 +153,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
     });
   }
 
-  return [
+  const blocks: ChannelAndBlocks['blocks'] = [
     {
       type: 'card',
       title: {
@@ -161,7 +164,22 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
         type: 'mrkdwn',
         text: clampText(`*${question.title}*\n${optionText}`, 200),
       },
-      actions: actionsList,
     },
   ];
+
+  for (let index = 0; index < optionButtons.length; index += 5) {
+    blocks.push({
+      type: 'actions',
+      elements: optionButtons.slice(index, index + 5),
+    });
+  }
+
+  if (navButtons.length > 0) {
+    blocks.push({
+      type: 'actions',
+      elements: navButtons,
+    });
+  }
+
+  return blocks;
 }
