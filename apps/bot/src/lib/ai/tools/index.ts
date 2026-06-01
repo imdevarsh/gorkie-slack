@@ -16,7 +16,6 @@ import { searchSlack } from '@/lib/ai/tools/chat/search-slack';
 import { searchWeb } from '@/lib/ai/tools/chat/search-web';
 import { skip } from '@/lib/ai/tools/chat/skip';
 import { summariseThread } from '@/lib/ai/tools/chat/summarise-thread';
-import logger from '@/lib/logger';
 import { createMcpToolset } from '@/lib/mcp/toolset';
 import type { SlackFile, SlackMessageContext, Stream } from '@/types';
 
@@ -48,23 +47,10 @@ export async function createToolset({
     skip: skip({ context, stream }),
     summariseThread: summariseThread({ context, stream }),
   };
-  let mcpToolset: { cleanup: () => Promise<void>; tools: ToolSet };
-
-  try {
-    mcpToolset = await createMcpToolset({ context, stream });
-  } catch (error) {
-    logger.warn(
-      { err: error, userId: context.event.user },
-      'Failed to initialize MCP toolset'
-    );
-    mcpToolset = {
-      cleanup: async () => undefined,
-      tools: {},
-    };
-  }
+  const mcpTools = await createMcpToolset({ context, stream });
 
   return {
-    cleanup: mcpToolset.cleanup,
-    tools: { ...nativeTools, ...mcpToolset.tools },
+    cleanup: mcpTools.cleanup,
+    tools: { ...nativeTools, ...mcpTools.tools },
   };
 }
