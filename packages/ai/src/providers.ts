@@ -2,7 +2,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createLogger } from '@repo/logging/log';
 import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
-import { createRetryable } from 'ai-retry';
+import { createRetryable, type LanguageModel, type Retry } from 'ai-retry';
 import { requestNotRetryable } from 'ai-retry/retryables';
 
 import { keys } from './keys';
@@ -10,6 +10,12 @@ import { keys } from './keys';
 const logger = await createLogger({ fileLogging: false });
 
 const env = keys();
+
+const RETRY = {
+  backoffFactor: 2,
+  delay: 250,
+  maxAttempts: 2,
+} satisfies Omit<Retry<LanguageModel>, 'model'>;
 
 const hackclubBase = createOpenRouter({
   apiKey: env.HACKCLUB_API_KEY,
@@ -50,15 +56,20 @@ const onModelError = (context: {
   );
 };
 
+const retry = (model: LanguageModel): Retry<LanguageModel> => ({
+  model,
+  ...RETRY,
+});
+
 const chatModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3-flash-preview'),
   retries: [
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3-flash-preview')
     ),
-    hackclub.languageModel('openai/gpt-5-mini'),
-    openrouter.languageModel('google/gemini-3-flash-preview'),
-    openrouter.languageModel('openai/gpt-5-mini'),
+    retry(hackclub.languageModel('openai/gpt-5-mini')),
+    retry(openrouter.languageModel('google/gemini-3-flash-preview')),
+    retry(openrouter.languageModel('openai/gpt-5-mini')),
   ],
   onError: onModelError,
 });
@@ -72,9 +83,9 @@ const summariserModel = createRetryable({
     ...(google
       ? [requestNotRetryable(google('gemini-3.1-flash-lite-preview'))]
       : []),
-    hackclub.languageModel('openai/gpt-5-nano'),
-    openrouter.languageModel('google/gemini-3.1-flash-lite-preview'),
-    openrouter.languageModel('openai/gpt-5-nano'),
+    retry(hackclub.languageModel('openai/gpt-5-nano')),
+    retry(openrouter.languageModel('google/gemini-3.1-flash-lite-preview')),
+    retry(openrouter.languageModel('openai/gpt-5-nano')),
   ],
   onError: onModelError,
 });
