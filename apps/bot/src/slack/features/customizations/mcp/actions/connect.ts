@@ -4,26 +4,21 @@ import {
   getMcpServerByIdForUser,
   updateMcpServerForUser,
 } from '@repo/db/queries';
-import type {
-  AllMiddlewareArgs,
-  BlockAction,
-  ButtonAction,
-  SlackActionMiddlewareArgs,
-} from '@slack/bolt';
 import { guardedMcpFetch } from '@/lib/mcp/guarded-fetch';
 import { createMcpOAuthProvider } from '@/lib/mcp/oauth-provider';
 import { publishHome } from '../../publish';
-import { buildMcpBearerTokenModal, buildMcpConnectModal } from '../view';
+import { actions } from '../ids';
+import type { ButtonArgs } from '../types';
+import { bearerModal, oauthModal } from '../view';
 
-export const name = 'home_mcp_connect';
+export const name = actions.connect;
 
 export async function execute({
   ack,
   action,
   body,
   client,
-}: SlackActionMiddlewareArgs<BlockAction<ButtonAction>> &
-  AllMiddlewareArgs): Promise<void> {
+}: ButtonArgs): Promise<void> {
   await ack();
   if (!action.value) {
     return;
@@ -39,7 +34,7 @@ export async function execute({
   if (server.authType === 'bearer') {
     await client.views.open({
       trigger_id: body.trigger_id,
-      view: buildMcpBearerTokenModal({
+      view: bearerModal({
         serverId: server.id,
         serverName: server.name,
       }),
@@ -86,7 +81,7 @@ export async function execute({
 
   await client.views.open({
     trigger_id: body.trigger_id,
-    view: buildMcpConnectModal({
+    view: oauthModal({
       authorizationUrl: authorizationUrlRef.value.toString(),
       serverId: server.id,
     }),

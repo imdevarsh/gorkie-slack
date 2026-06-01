@@ -3,23 +3,18 @@ import {
   getMcpServerByIdForUser,
   updateMcpServerForUser,
 } from '@repo/db/queries';
-import type {
-  AllMiddlewareArgs,
-  BlockAction,
-  ButtonAction,
-  SlackActionMiddlewareArgs,
-} from '@slack/bolt';
 import { publishHome } from '../../publish';
+import { actions } from '../ids';
+import type { ButtonArgs } from '../types';
 
-export const name = 'home_mcp_disconnect';
+export const name = actions.disconnect;
 
 export async function execute({
   ack,
   action,
   body,
   client,
-}: SlackActionMiddlewareArgs<BlockAction<ButtonAction>> &
-  AllMiddlewareArgs): Promise<void> {
+}: ButtonArgs): Promise<void> {
   await ack();
   if (!action.value) {
     return;

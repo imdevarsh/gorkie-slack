@@ -1,35 +1,28 @@
-import type {
-  AllMiddlewareArgs,
-  BlockAction,
-  SlackActionMiddlewareArgs,
-  StaticSelectAction,
-} from '@slack/bolt';
-import { buildMcpAddModal, type McpAddModalState } from '../view';
+import { actions, blocks, inputs } from '../ids';
+import type { ModalState, SelectArgs } from '../types';
+import { addModal } from '../view';
 
-export const name = 'auth_input';
+export const name = actions.auth;
 
-function readState(
-  view: SlackActionMiddlewareArgs<
-    BlockAction<StaticSelectAction>
-  >['body']['view']
-): McpAddModalState {
+function readState(view: SelectArgs['body']['view']): ModalState {
   const values = view?.state.values;
-  const authType =
-    values?.auth_block?.auth_input?.selected_option?.value === 'bearer'
+  const auth =
+    values?.[blocks.auth]?.[inputs.auth]?.selected_option?.value === 'bearer'
       ? 'bearer'
       : 'oauth';
   const transport =
-    values?.transport_block?.transport_input?.selected_option?.value === 'sse'
+    values?.[blocks.transport]?.[inputs.transport]?.selected_option?.value ===
+    'sse'
       ? 'sse'
       : 'http';
 
   return {
-    authType,
-    bearerToken: values?.bearer_block?.bearer_input?.value?.trim() ?? '',
-    clientId: values?.client_id_block?.client_id_input?.value?.trim() ?? '',
-    name: values?.name_block?.name_input?.value?.trim() ?? '',
+    auth,
+    bearerToken: values?.[blocks.bearer]?.[inputs.bearer]?.value?.trim() ?? '',
+    clientId: values?.[blocks.clientId]?.[inputs.clientId]?.value?.trim() ?? '',
+    name: values?.[blocks.name]?.[inputs.name]?.value?.trim() ?? '',
     transport,
-    url: values?.url_block?.url_input?.value?.trim() ?? '',
+    url: values?.[blocks.url]?.[inputs.url]?.value?.trim() ?? '',
   };
 }
 
@@ -37,8 +30,7 @@ export async function execute({
   ack,
   body,
   client,
-}: SlackActionMiddlewareArgs<BlockAction<StaticSelectAction>> &
-  AllMiddlewareArgs): Promise<void> {
+}: SelectArgs): Promise<void> {
   await ack();
   const view = body.view;
   if (!view?.id) {
@@ -47,7 +39,7 @@ export async function execute({
 
   await client.views.update({
     hash: view.hash,
-    view: buildMcpAddModal(readState(view)),
+    view: addModal(readState(view)),
     view_id: view.id,
   });
 }

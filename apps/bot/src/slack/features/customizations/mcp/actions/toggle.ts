@@ -3,24 +3,19 @@ import {
   getMcpServerByIdForUser,
   updateMcpServerForUser,
 } from '@repo/db/queries';
-import type {
-  AllMiddlewareArgs,
-  BlockAction,
-  ButtonAction,
-  SlackActionMiddlewareArgs,
-} from '@slack/bolt';
 import { publishHome } from '../../publish';
+import { actions } from '../ids';
+import type { ButtonArgs } from '../types';
 
-export const enableName = 'home_mcp_enable';
-export const disableName = 'home_mcp_disable';
+export const enableName = actions.enable;
+export const disableName = actions.disable;
 
 export async function execute({
   ack,
   action,
   body,
   client,
-}: SlackActionMiddlewareArgs<BlockAction<ButtonAction>> &
-  AllMiddlewareArgs): Promise<void> {
+}: ButtonArgs): Promise<void> {
   await ack();
   const serverId = action.value;
   if (!serverId) {

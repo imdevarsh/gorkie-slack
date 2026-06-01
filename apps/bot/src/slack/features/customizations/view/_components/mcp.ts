@@ -1,12 +1,13 @@
 import type { McpServerWithOAuth } from '@repo/db/queries';
 import { Bits, Blocks, Elements } from 'slack-block-builder';
 import { appHome } from '@/config';
+import { actions } from '../../mcp/ids';
 
 function truncate(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}...` : value;
 }
 
-function buildMcpServerBlock(server: McpServerWithOAuth) {
+function serverBlocks(server: McpServerWithOAuth) {
   const connected =
     server.authType === 'bearer'
       ? Boolean(server.bearerToken)
@@ -31,7 +32,7 @@ function buildMcpServerBlock(server: McpServerWithOAuth) {
   if (canToggle) {
     section.accessory(
       Elements.Button({
-        actionId: server.enabled ? 'home_mcp_disable' : 'home_mcp_enable',
+        actionId: server.enabled ? actions.disable : actions.enable,
         text: server.enabled ? 'Disable' : 'Enable',
         value: server.id,
       })
@@ -42,12 +43,12 @@ function buildMcpServerBlock(server: McpServerWithOAuth) {
     section,
     Blocks.Actions().elements(
       Elements.Button({
-        actionId: connected ? 'home_mcp_disconnect' : 'home_mcp_connect',
+        actionId: connected ? actions.disconnect : actions.connect,
         text: connected ? 'Disconnect' : 'Connect',
         value: server.id,
       }),
       Elements.Button({
-        actionId: 'home_mcp_delete',
+        actionId: actions.delete,
         text: 'Delete',
         value: server.id,
       })
@@ -69,7 +70,7 @@ export function mcpBlocks(servers: McpServerWithOAuth[]) {
     text: `*MCP Servers*${servers.length > 0 ? ` (${servers.length})` : ''}`,
   }).accessory(
     Elements.Button({
-      actionId: 'home_mcp_add',
+      actionId: actions.add,
       text: 'Add',
     })
   );
@@ -83,5 +84,5 @@ export function mcpBlocks(servers: McpServerWithOAuth[]) {
     ];
   }
 
-  return [header, servers.flatMap((server) => buildMcpServerBlock(server))];
+  return [header, servers.flatMap((server) => serverBlocks(server))];
 }
