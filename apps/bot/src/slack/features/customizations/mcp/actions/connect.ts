@@ -4,8 +4,10 @@ import {
   getMcpServerByIdForUser,
   updateMcpServerForUser,
 } from '@repo/db/queries';
+import { errorMessage } from '@repo/utils/error';
 import { guardedMcpFetch } from '@/lib/mcp/guarded-fetch';
 import { createMcpOAuthProvider } from '@/lib/mcp/oauth-provider';
+import { syncMcpToolPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -75,6 +77,22 @@ export async function execute({
   }
 
   if (!authorizationUrlRef.value) {
+    try {
+      await syncMcpToolPermissions({
+        server,
+        teamId: body.team?.id,
+        userId: body.user.id,
+      });
+    } catch (error) {
+      await updateMcpServerForUser({
+        id: server.id,
+        userId: body.user.id,
+        values: {
+          enabled: false,
+          lastError: errorMessage(error),
+        },
+      });
+    }
     await publishHome(client, body.user.id);
     return;
   }

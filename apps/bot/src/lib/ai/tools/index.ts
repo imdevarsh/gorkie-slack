@@ -1,4 +1,5 @@
 import type { ToolSet } from 'ai';
+import { askUser } from '@/lib/ai/tools/chat/ask-user';
 import { cancelScheduledTask } from '@/lib/ai/tools/chat/cancel-scheduled-task';
 import { generateImageTool } from '@/lib/ai/tools/chat/generate-image';
 import { getUserInfo } from '@/lib/ai/tools/chat/get-user-info';
@@ -29,6 +30,7 @@ export async function createToolset({
   stream: Stream;
 }): Promise<{ cleanup: () => Promise<void>; tools: ToolSet }> {
   const nativeTools = {
+    askUser: askUser({ context, stream }),
     cancelScheduledTask: cancelScheduledTask({ context, stream }),
     generateImage: generateImageTool({ context, files, stream }),
     getUserInfo: getUserInfo({ context, stream }),

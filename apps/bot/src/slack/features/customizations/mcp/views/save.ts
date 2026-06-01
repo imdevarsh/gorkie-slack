@@ -1,7 +1,14 @@
-import { createMcpServer } from '@repo/db/queries';
+import { randomUUID } from 'node:crypto';
+import { createMcpServer, updateMcpServerForUser } from '@repo/db/queries';
+import type { McpServer } from '@repo/db/schema';
 import { encryptSecret } from '@repo/utils';
+import { errorMessage } from '@repo/utils/error';
 import { env } from '@/env';
 import { validateHttpsUrlForServer } from '@/lib/mcp/guarded-fetch';
+import {
+  syncMcpToolPermissions,
+  validateMcpServerTools,
+} from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { blocks, inputs, views } from '../ids';
 import type { Auth, SubmitArgs, Transport } from '../types';
@@ -60,16 +67,52 @@ export async function execute({
     return;
   }
 
+  const encryptedBearerToken =
+    auth === 'bearer'
+      ? encryptSecret({
+          plaintext: bearerToken,
+          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+        })
+      : null;
+  if (auth === 'bearer') {
+    const now = new Date();
+    const candidate = {
+      authType: auth,
+      bearerToken: encryptedBearerToken,
+      clientId: null,
+      createdAt: now,
+      enabled: true,
+      excludeToolsJson: null,
+      id: randomUUID(),
+      includeToolsJson: null,
+      lastConnectedAt: null,
+      lastError: null,
+      name: nameValue,
+      teamId: body.team?.id ?? null,
+      transport,
+      updatedAt: now,
+      url: safeUrl,
+      userId: body.user.id,
+    } satisfies McpServer;
+    try {
+      await validateMcpServerTools({
+        bearerToken,
+        server: candidate,
+        userId: body.user.id,
+      });
+    } catch (error) {
+      await ack({
+        errors: { [blocks.bearer]: errorMessage(error) },
+        response_action: 'errors',
+      });
+      return;
+    }
+  }
+
   await ack();
-  await createMcpServer({
+  const server = await createMcpServer({
     authType: auth,
-    bearerToken:
-      auth === 'bearer'
-        ? encryptSecret({
-            plaintext: bearerToken,
-            secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-          })
-        : null,
+    bearerToken: encryptedBearerToken,
     clientId: auth === 'oauth' && clientId ? clientId : null,
     enabled: auth === 'bearer',
     name: nameValue,
@@ -78,5 +121,23 @@ export async function execute({
     url: safeUrl,
     userId: body.user.id,
   });
+  if (server && auth === 'bearer') {
+    try {
+      await syncMcpToolPermissions({
+        server,
+        teamId: body.team?.id,
+        userId: body.user.id,
+      });
+    } catch (error) {
+      await updateMcpServerForUser({
+        id: server.id,
+        userId: body.user.id,
+        values: {
+          enabled: false,
+          lastError: errorMessage(error),
+        },
+      });
+    }
+  }
   await publishHome(client, body.user.id);
 }

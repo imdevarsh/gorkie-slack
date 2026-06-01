@@ -3,6 +3,8 @@ import {
   getMcpServerByIdForUser,
   updateMcpServerForUser,
 } from '@repo/db/queries';
+import { errorMessage } from '@repo/utils/error';
+import { syncMcpToolPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -48,6 +50,25 @@ export async function execute({
             server.authType === 'bearer'
               ? 'Bearer token required before tools can be enabled.'
               : 'OAuth connection required before tools can be enabled.',
+        },
+      });
+      await publishHome(client, body.user.id);
+      return;
+    }
+
+    try {
+      await syncMcpToolPermissions({
+        server,
+        teamId: body.team?.id,
+        userId: body.user.id,
+      });
+    } catch (error) {
+      await updateMcpServerForUser({
+        id: serverId,
+        userId: body.user.id,
+        values: {
+          enabled: false,
+          lastError: errorMessage(error),
         },
       });
       await publishHome(client, body.user.id);

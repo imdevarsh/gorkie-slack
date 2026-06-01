@@ -1,12 +1,18 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import { db } from '../index';
 import {
   type McpOauthConnection,
   type McpServer,
+  type McpToolApproval,
+  type McpToolPermission,
   mcpOauthConnections,
   mcpServers,
+  mcpToolApprovals,
+  mcpToolPermissions,
   type NewMcpOauthConnection,
   type NewMcpServer,
+  type NewMcpToolApproval,
+  type NewMcpToolPermission,
 } from '../schema';
 
 export interface McpServerWithOAuth extends McpServer {
@@ -183,6 +189,169 @@ export async function deleteMcpOAuthConnection({
       and(
         eq(mcpOauthConnections.serverId, serverId),
         eq(mcpOauthConnections.userId, userId)
+      )
+    )
+    .returning();
+  return rows[0] ?? null;
+}
+
+export function listMcpToolPermissions({
+  serverId,
+  userId,
+  threadTs,
+}: {
+  serverId: string;
+  userId: string;
+  threadTs?: string | null;
+}): Promise<McpToolPermission[]> {
+  return db
+    .select()
+    .from(mcpToolPermissions)
+    .where(
+      and(
+        eq(mcpToolPermissions.serverId, serverId),
+        eq(mcpToolPermissions.userId, userId),
+        threadTs
+          ? or(
+              and(
+                eq(mcpToolPermissions.scope, 'global'),
+                eq(mcpToolPermissions.threadTs, '')
+              ),
+              and(
+                eq(mcpToolPermissions.scope, 'thread'),
+                eq(mcpToolPermissions.threadTs, threadTs)
+              )
+            )
+          : and(
+              eq(mcpToolPermissions.scope, 'global'),
+              eq(mcpToolPermissions.threadTs, '')
+            )
+      )
+    );
+}
+
+export async function upsertMcpToolPermission(
+  permission: NewMcpToolPermission
+) {
+  const rows = await db
+    .insert(mcpToolPermissions)
+    .values(permission)
+    .onConflictDoUpdate({
+      target: [
+        mcpToolPermissions.serverId,
+        mcpToolPermissions.userId,
+        mcpToolPermissions.toolName,
+        mcpToolPermissions.scope,
+        mcpToolPermissions.threadTs,
+      ],
+      set: {
+        mode: permission.mode,
+        source: permission.source,
+        teamId: permission.teamId,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+  return rows[0] ?? null;
+}
+
+export async function ensureMcpToolPermissions({
+  serverId,
+  userId,
+  teamId,
+  tools,
+}: {
+  serverId: string;
+  userId: string;
+  teamId?: string | null;
+  tools: Array<{ mode: string; toolName: string }>;
+}) {
+  if (tools.length === 0) {
+    return [];
+  }
+
+  const existing = await db
+    .select()
+    .from(mcpToolPermissions)
+    .where(
+      and(
+        eq(mcpToolPermissions.serverId, serverId),
+        eq(mcpToolPermissions.userId, userId),
+        eq(mcpToolPermissions.scope, 'global'),
+        eq(mcpToolPermissions.threadTs, ''),
+        inArray(
+          mcpToolPermissions.toolName,
+          tools.map((tool) => tool.toolName)
+        )
+      )
+    );
+  const known = new Set(existing.map((permission) => permission.toolName));
+  const rows = tools
+    .filter((tool) => !known.has(tool.toolName))
+    .map((tool) => ({
+      mode: tool.mode,
+      scope: 'global',
+      serverId,
+      source: 'heuristic',
+      teamId,
+      threadTs: '',
+      toolName: tool.toolName,
+      userId,
+    }));
+
+  if (rows.length === 0) {
+    return existing;
+  }
+
+  const inserted = await db
+    .insert(mcpToolPermissions)
+    .values(rows)
+    .onConflictDoNothing()
+    .returning();
+  return [...existing, ...inserted];
+}
+
+export async function createMcpToolApproval(approval: NewMcpToolApproval) {
+  const rows = await db.insert(mcpToolApprovals).values(approval).returning();
+  return rows[0] ?? null;
+}
+
+export function getMcpToolApproval({
+  approvalId,
+  userId,
+}: {
+  approvalId: string;
+  userId: string;
+}): Promise<McpToolApproval | null> {
+  return db
+    .select()
+    .from(mcpToolApprovals)
+    .where(
+      and(
+        eq(mcpToolApprovals.approvalId, approvalId),
+        eq(mcpToolApprovals.userId, userId)
+      )
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+}
+
+export async function updateMcpToolApproval({
+  approvalId,
+  userId,
+  values,
+}: {
+  approvalId: string;
+  userId: string;
+  values: Partial<NewMcpToolApproval>;
+}) {
+  const rows = await db
+    .update(mcpToolApprovals)
+    .set({ ...values, updatedAt: new Date() })
+    .where(
+      and(
+        eq(mcpToolApprovals.approvalId, approvalId),
+        eq(mcpToolApprovals.userId, userId)
       )
     )
     .returning();

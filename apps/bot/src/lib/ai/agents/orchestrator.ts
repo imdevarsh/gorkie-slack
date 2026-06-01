@@ -17,7 +17,39 @@ const taskMap = new Map<string, { taskId: string; startTime: number }>();
 type ReasoningStreamPart =
   | { type: 'start-step' }
   | { type: 'reasoning-delta'; text: string }
+  | {
+      approvalId: string;
+      toolCall: {
+        input: unknown;
+        toolCallId: string;
+        toolMetadata?: {
+          mcp?: {
+            serverId?: string;
+            serverName?: string;
+            toolName?: string;
+          };
+        };
+        toolName: string;
+      };
+      type: 'tool-approval-request';
+    }
   | { type: string };
+
+function isToolApprovalRequest(
+  part: ReasoningStreamPart
+): part is Extract<ReasoningStreamPart, { type: 'tool-approval-request' }> {
+  return part.type === 'tool-approval-request' && 'toolCall' in part;
+}
+
+export interface ToolApprovalRequest {
+  approvalId: string;
+  exposedName: string;
+  input: unknown;
+  serverId: string;
+  serverName: string;
+  toolCallId: string;
+  toolName: string;
+}
 
 export async function resolveOrchestratorTask({
   context,
@@ -57,10 +89,27 @@ export async function consumeOrchestratorReasoningStream({
   context: SlackMessageContext;
   stream: Stream;
   fullStream: AsyncIterable<ReasoningStreamPart>;
-}): Promise<void> {
+}): Promise<ToolApprovalRequest[]> {
   const eventTs = context.event.event_ts;
+  const approvals: ToolApprovalRequest[] = [];
 
   for await (const part of fullStream) {
+    if (isToolApprovalRequest(part)) {
+      const mcp = part.toolCall.toolMetadata?.mcp;
+      if (mcp?.serverId && mcp.serverName && mcp.toolName) {
+        approvals.push({
+          approvalId: part.approvalId,
+          exposedName: part.toolCall.toolName,
+          input: part.toolCall.input,
+          serverId: mcp.serverId,
+          serverName: mcp.serverName,
+          toolCallId: part.toolCall.toolCallId,
+          toolName: mcp.toolName,
+        });
+      }
+      continue;
+    }
+
     if (part.type === 'start-step') {
       continue;
     }
@@ -85,6 +134,8 @@ export async function consumeOrchestratorReasoningStream({
       output: part.text,
     });
   }
+
+  return approvals;
 }
 
 export const orchestratorAgent = async ({
@@ -121,6 +172,7 @@ export const orchestratorAgent = async ({
     tools: toolset.tools,
     stopWhen: [
       stepCountIs(40),
+      successToolCall('askUser'),
       successToolCall('leaveChannel'),
       successToolCall('reply'),
       successToolCall('skip'),

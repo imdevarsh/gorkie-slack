@@ -5,8 +5,10 @@ import {
   type MCPClient,
 } from '@ai-sdk/mcp';
 import {
+  ensureMcpToolPermissions,
   getMcpOAuthConnection,
   listEnabledMcpServersByUser,
+  listMcpToolPermissions,
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import type { McpServer } from '@repo/db/schema';
@@ -22,9 +24,6 @@ import type { SlackMessageContext, Stream } from '@/types';
 import { guardedMcpFetch } from './guarded-fetch';
 import { createMcpOAuthProvider } from './oauth-provider';
 
-const blockedToolPattern =
-  /\b(delete|destroy|drop|remove|revoke|terminate|kill|shutdown|purchase|buy|charge|pay|transfer|withdraw|send_money)\b/i;
-
 function slugify(value: string): string {
   const slug = value
     .toLowerCase()
@@ -32,6 +31,20 @@ function slugify(value: string): string {
     .replace(/^_+|_+$/g, '')
     .slice(0, 32);
   return slug || 'server';
+}
+
+function defaultToolMode(): 'ask' {
+  return 'ask';
+}
+
+function normalizeToolMode(mode?: string | null): 'allow' | 'ask' | 'block' {
+  if (mode === 'allow' || mode === 'auto') {
+    return 'allow';
+  }
+  if (mode === 'block') {
+    return 'block';
+  }
+  return 'ask';
 }
 
 function shortId(value: string): string {
@@ -51,11 +64,6 @@ function filterToolDefinitions({
   for (const tool of definitions.tools) {
     if (tools.length >= mcp.maxToolsPerServer) {
       break;
-    }
-
-    const searchable = `${tool.name} ${tool.description ?? ''}`;
-    if (blockedToolPattern.test(searchable)) {
-      continue;
     }
 
     const nextSchemaBytes = Buffer.byteLength(
@@ -82,6 +90,110 @@ function filterToolDefinitions({
   }
 
   return { ...definitions, tools };
+}
+
+function openMcpClient({
+  bearerToken,
+  connection,
+  server,
+}: {
+  bearerToken?: string;
+  connection: Awaited<ReturnType<typeof getMcpOAuthConnection>>;
+  server: McpServer;
+}) {
+  const isBearer = server.authType === 'bearer';
+  const headers = isBearer
+    ? {
+        Authorization: `Bearer ${
+          bearerToken ??
+          decryptSecret({
+            encrypted: server.bearerToken ?? '',
+            secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+          })
+        }`,
+      }
+    : undefined;
+
+  return createMCPClient({
+    clientName: 'gorkie',
+    transport: {
+      ...(isBearer
+        ? { headers }
+        : { authProvider: createMcpOAuthProvider({ connection, server }) }),
+      fetch: guardedMcpFetch as typeof fetch,
+      redirect: 'error',
+      type: server.transport === 'sse' ? 'sse' : 'http',
+      url: server.url,
+    },
+  });
+}
+
+async function listMcpToolDefinitions({
+  bearerToken,
+  server,
+  userId,
+}: {
+  bearerToken?: string;
+  server: McpServer;
+  userId: string;
+}) {
+  const connection = await getMcpOAuthConnection({
+    serverId: server.id,
+    userId,
+  });
+  const isBearer = server.authType === 'bearer';
+  if (
+    !(isBearer ? bearerToken || server.bearerToken : connection?.tokensJson)
+  ) {
+    throw new Error(
+      isBearer
+        ? 'Bearer token required before tools can be used.'
+        : 'OAuth connection required before tools can be used.'
+    );
+  }
+
+  const client = await openMcpClient({ bearerToken, connection, server });
+  try {
+    return filterToolDefinitions({
+      definitions: await client.listTools(),
+      server,
+    });
+  } finally {
+    await client.close();
+  }
+}
+
+export function validateMcpServerTools({
+  bearerToken,
+  server,
+  userId,
+}: {
+  bearerToken?: string;
+  server: McpServer;
+  userId: string;
+}) {
+  return listMcpToolDefinitions({ bearerToken, server, userId });
+}
+
+export async function syncMcpToolPermissions({
+  server,
+  teamId,
+  userId,
+}: {
+  server: McpServer;
+  teamId?: string | null;
+  userId: string;
+}) {
+  const definitions = await listMcpToolDefinitions({ server, userId });
+  return ensureMcpToolPermissions({
+    serverId: server.id,
+    teamId,
+    userId,
+    tools: definitions.tools.map((definition) => ({
+      mode: defaultToolMode(),
+      toolName: definition.name,
+    })),
+  });
 }
 
 export async function createMcpToolset({
@@ -112,45 +224,40 @@ export async function createMcpToolset({
       });
       const isBearer = server.authType === 'bearer';
       if (!(isBearer ? server.bearerToken : connection?.tokensJson)) {
-        await updateMcpServerForUser({
-          id: server.id,
-          userId,
-          values: {
-            enabled: false,
-            lastError: isBearer
-              ? 'Token required before tools can be used.'
-              : 'OAuth connection required before tools can be used.',
-          },
-        });
         continue;
       }
 
-      const headers = isBearer
-        ? {
-            Authorization: `Bearer ${decryptSecret({
-              encrypted: server.bearerToken ?? '',
-              secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-            })}`,
-          }
-        : undefined;
-      const client = await createMCPClient({
-        clientName: 'gorkie',
-        transport: {
-          ...(isBearer
-            ? { headers }
-            : { authProvider: createMcpOAuthProvider({ connection, server }) }),
-          fetch: guardedMcpFetch as typeof fetch,
-          redirect: 'error',
-          type: server.transport === 'sse' ? 'sse' : 'http',
-          url: server.url,
-        },
-      });
+      const client = await openMcpClient({ connection, server });
       clients.push(client);
 
       const definitions = filterToolDefinitions({
         definitions: await client.listTools(),
         server,
       });
+      const threadTs = context.event.thread_ts ?? context.event.ts;
+      const existingPermissions = await ensureMcpToolPermissions({
+        serverId: server.id,
+        teamId: context.teamId,
+        userId,
+        tools: definitions.tools.map((definition) => ({
+          mode: defaultToolMode(),
+          toolName: definition.name,
+        })),
+      });
+      const permissions = [
+        ...existingPermissions,
+        ...(await listMcpToolPermissions({
+          serverId: server.id,
+          threadTs,
+          userId,
+        })),
+      ];
+      const permissionByTool = new Map(
+        permissions.map((permission) => [
+          `${permission.scope}:${permission.toolName}`,
+          permission,
+        ])
+      );
       const serverTools = client.toolsFromDefinitions(definitions);
       const serverSlug = slugify(server.name);
 
@@ -163,22 +270,35 @@ export async function createMcpToolset({
 
         const execute = tool.execute;
         const taskTitle = `Using ${server.name}: ${toolName}`;
+        const threadPermission = permissionByTool.get(`thread:${toolName}`);
+        const globalPermission = permissionByTool.get(`global:${toolName}`);
+        const mode = normalizeToolMode(
+          threadPermission?.mode ?? globalPermission?.mode ?? defaultToolMode()
+        );
+        const metadata = {
+          mcp: {
+            serverId: server.id,
+            serverName: server.name,
+            toolName,
+          },
+        };
         tools[exposedName] =
           typeof execute === 'function'
             ? {
                 ...tool,
-                onInputStart: async (options: ToolExecutionOptions) => {
-                  await tool.onInputStart?.(options);
-                  await createTask(stream, {
-                    taskId: options.toolCallId,
-                    title: taskTitle,
-                    status: 'pending',
-                  });
-                },
+                metadata,
+                needsApproval: mode !== 'allow',
+                onInputStart: tool.onInputStart,
                 execute: async (
                   input: unknown,
                   options: ToolExecutionOptions
                 ) => {
+                  if (mode === 'block') {
+                    return {
+                      error: `MCP tool ${server.name}.${toolName} is blocked by your settings.`,
+                    };
+                  }
+
                   let inputPreview = 'Input: undefined';
                   try {
                     inputPreview = `Input:\n${
@@ -258,32 +378,6 @@ export async function createMcpToolset({
         { err: error, serverId: server.id, userId },
         'MCP server failed'
       );
-      const message =
-        error instanceof Error ? error.message : 'MCP server failed';
-      const isAuthExpired =
-        message.includes('Unexpected content type: text/html') ||
-        message.includes('401');
-      let lastError = message;
-      if (isAuthExpired) {
-        lastError =
-          server.authType === 'bearer'
-            ? 'Token was rejected. Click Connect to set a new token.'
-            : 'OAuth session expired. Click Connect to re-authenticate.';
-      }
-      await updateMcpServerForUser({
-        id: server.id,
-        userId,
-        values: {
-          ...(isAuthExpired
-            ? {
-                ...(server.authType === 'bearer' ? { bearerToken: null } : {}),
-                enabled: false,
-                lastConnectedAt: null,
-              }
-            : {}),
-          lastError,
-        },
-      });
     }
   }
 

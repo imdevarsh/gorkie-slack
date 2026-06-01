@@ -1,4 +1,5 @@
 import type { McpServerWithOAuth } from '@repo/db/queries';
+import { clampText } from '@repo/utils/text';
 import { Bits, Blocks, Elements } from 'slack-block-builder';
 import { appHome } from '@/config';
 import { actions } from '../../mcp/ids';
@@ -7,11 +8,16 @@ function truncate(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}...` : value;
 }
 
+function codeBlock(value: string): string {
+  return `\`\`\`${clampText(value.replaceAll('```', "'''"), 900)}\`\`\``;
+}
+
 function serverBlocks(server: McpServerWithOAuth) {
   const connected =
     server.authType === 'bearer'
       ? Boolean(server.bearerToken)
       : server.hasOAuthConnection;
+  const usable = connected && server.enabled;
   let authStatus = 'OAuth required';
   if (server.authType === 'bearer') {
     authStatus = connected ? 'Bearer token set' : 'Bearer token required';
@@ -19,9 +25,11 @@ function serverBlocks(server: McpServerWithOAuth) {
     authStatus = 'OAuth connected';
   }
   const status = `${server.enabled ? 'Enabled' : 'Disabled'} · ${authStatus}`;
-  const lastError = server.lastError ? `\nError: ${server.lastError}` : '';
+  const lastError = server.lastError
+    ? `\n\n*Error:*\n${codeBlock(server.lastError)}`
+    : '';
 
-  const canToggle = connected;
+  const canToggle = usable;
   const section = Blocks.Section({
     text: [
       `*${truncate(server.name, appHome.maxMcpNameDisplay)}*`,
@@ -43,10 +51,19 @@ function serverBlocks(server: McpServerWithOAuth) {
     section,
     Blocks.Actions().elements(
       Elements.Button({
-        actionId: connected ? actions.disconnect : actions.connect,
-        text: connected ? 'Disconnect' : 'Connect',
+        actionId: usable ? actions.disconnect : actions.connect,
+        text: usable ? 'Disconnect' : 'Connect',
         value: server.id,
       }),
+      ...(usable
+        ? [
+            Elements.Button({
+              actionId: actions.configure,
+              text: 'Configure',
+              value: server.id,
+            }),
+          ]
+        : []),
       Elements.Button({
         actionId: actions.delete,
         text: 'Delete',
@@ -84,5 +101,11 @@ export function mcpBlocks(servers: McpServerWithOAuth[]) {
     ];
   }
 
-  return [header, servers.flatMap((server) => serverBlocks(server))];
+  return [
+    header,
+    ...servers.flatMap((server, i) => [
+      ...(i > 0 ? [Blocks.Divider()] : []),
+      ...serverBlocks(server),
+    ]),
+  ];
 }
