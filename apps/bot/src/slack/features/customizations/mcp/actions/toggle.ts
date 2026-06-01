@@ -1,4 +1,8 @@
-import { updateMcpServerForUser } from '@repo/db/queries';
+import {
+  getMcpOAuthConnection,
+  getMcpServerByIdForUser,
+  updateMcpServerForUser,
+} from '@repo/db/queries';
 import type {
   AllMiddlewareArgs,
   BlockAction,
@@ -22,10 +26,44 @@ export async function execute({
   if (!serverId) {
     return;
   }
+  const enabled = action.action_id === enableName;
+  if (enabled) {
+    const server = await getMcpServerByIdForUser({
+      id: serverId,
+      userId: body.user.id,
+    });
+    if (!server) {
+      return;
+    }
+
+    const connection =
+      server.authType === 'bearer'
+        ? server.bearerToken
+        : await getMcpOAuthConnection({
+            serverId,
+            userId: body.user.id,
+          });
+    if (!connection) {
+      await updateMcpServerForUser({
+        id: serverId,
+        userId: body.user.id,
+        values: {
+          enabled: false,
+          lastError:
+            server.authType === 'bearer'
+              ? 'Bearer token required before tools can be enabled.'
+              : 'OAuth connection required before tools can be enabled.',
+        },
+      });
+      await publishHome(client, body.user.id);
+      return;
+    }
+  }
+
   await updateMcpServerForUser({
     id: serverId,
     userId: body.user.id,
-    values: { enabled: action.action_id === enableName },
+    values: { enabled, lastError: null },
   });
   await publishHome(client, body.user.id);
 }
