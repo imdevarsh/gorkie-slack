@@ -23,8 +23,10 @@ function html({
   status: 'error' | 'success';
   title: string;
 }): string {
-  const accent = status === 'success' ? '#2563eb' : '#dc2626';
-  const icon = status === 'success' ? 'Connected' : 'Error';
+  const isSuccess = status === 'success';
+  const iconSvg = isSuccess
+    ? `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor" opacity=".12"/><path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor" opacity=".12"/><path d="M10 6v4.5M10 13.5h.01" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -32,19 +34,80 @@ function html({
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
 <style>
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f8fafc;color:#111827;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,sans-serif}
-main{width:min(520px,calc(100vw - 32px));background:white;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 20px 50px rgb(15 23 42 / .12);padding:32px}
-.badge{display:inline-flex;align-items:center;gap:8px;color:${accent};font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.04em}
-.dot{width:10px;height:10px;border-radius:999px;background:${accent}}
-h1{margin:14px 0 10px;font-size:32px;line-height:1.15}
-p{margin:0;color:#4b5563;font-size:16px;line-height:1.6}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f7;
+  --card:#ffffff;
+  --border:rgba(0,0,0,.06);
+  --shadow:0 2px 4px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.08);
+  --text:#1d1d1f;
+  --muted:#6e6e73;
+  --accent:${isSuccess ? '#22c55e' : '#ef4444'};
+  --accent-bg:${isSuccess ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)'};
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#000000;
+    --card:#1c1c1e;
+    --border:rgba(255,255,255,.08);
+    --shadow:0 2px 4px rgba(0,0,0,.4),0 8px 32px rgba(0,0,0,.6);
+    --text:#f5f5f7;
+    --muted:#98989f;
+    --accent:${isSuccess ? '#4ade80' : '#f87171'};
+    --accent-bg:${isSuccess ? 'rgba(74,222,128,.1)' : 'rgba(248,113,113,.1)'};
+  }
+}
+body{
+  min-height:100dvh;
+  display:grid;
+  place-items:center;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+  padding:24px;
+  -webkit-font-smoothing:antialiased;
+}
+main{
+  width:min(440px,100%);
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:36px;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  background:var(--accent-bg);
+  color:var(--accent);
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  padding:5px 12px 5px 8px;
+  border-radius:999px;
+  margin-bottom:24px;
+}
+h1{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:-.5px;
+  line-height:1.2;
+  margin-bottom:10px;
+}
+p{
+  font-size:15px;
+  line-height:1.6;
+  color:var(--muted);
+}
 </style>
 </head>
 <body>
 <main>
-<div class="badge"><span class="dot"></span>${icon}</div>
-<h1>${title}</h1>
-<p>${message}</p>
+  <div class="badge">${iconSvg}${isSuccess ? 'Connected' : 'Error'}</div>
+  <h1>${title}</h1>
+  <p>${message}</p>
 </main>
 </body>
 </html>`;
