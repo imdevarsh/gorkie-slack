@@ -84,11 +84,5 @@ export function mcpBlocks(servers: McpServerWithOAuth[]) {
     ];
   }
 
-  return [
-    header,
-    servers.flatMap((server, i) => [
-      ...(i > 0 ? [Blocks.Divider()] : []),
-      ...serverBlocks(server),
-    ]),
-  ];
+  return [header, servers.flatMap((server) => serverBlocks(server))];
 }

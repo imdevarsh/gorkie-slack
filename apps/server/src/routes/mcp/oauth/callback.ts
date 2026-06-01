@@ -207,8 +207,7 @@ export default defineHandler(async (event) => {
   }
 
   return html({
-    message:
-      'This MCP server is connected to Gorkie. You can close this tab and refresh status in Slack.',
+    message: 'You can close this tab and go back to Slack.',
     status: 'success',
     title: 'Connected to Gorkie',
   });

@@ -27,7 +27,7 @@ export function addModal(state: ModalState = {}): SlackModalDto {
         actionId: inputs.name,
         initialValue: state.name || undefined,
         maxLength: 80,
-        placeholder: 'GitHub MCP',
+        placeholder: 'GitHub',
       })
     ),
     Blocks.Input({
@@ -116,7 +116,7 @@ export function oauthModal({
     .notifyOnClose()
     .blocks(
       Blocks.Section({
-        text: `*Connect MCP to Gorkie*\nOpen the OAuth page, approve access, then press *Done*.\n\n<${authorizationUrl}|Authenticate>`,
+        text: `*Connect MCP to Gorkie*\n\n<${authorizationUrl}|Authenticate>`,
       })
     )
     .buildToObject();
