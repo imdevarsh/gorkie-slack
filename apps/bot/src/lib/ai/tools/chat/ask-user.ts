@@ -81,17 +81,23 @@ export const askUser = ({
             },
           ];
       const flow = createAskUserFlow({
-        questions: normalizedQuestions.map((item) => ({
-          ...item,
-          options: item.options.map((option, index) =>
-            typeof option === 'string'
-              ? {
-                  id: `option_${index + 1}`,
-                  title: option,
-                }
-              : option
-          ),
-        })),
+        questions: normalizedQuestions.map((item) => {
+          const seenIds = new Set<string>();
+          return {
+            ...item,
+            options: item.options.map((option, index) => {
+              const normalized =
+                typeof option === 'string'
+                  ? { id: `option_${index + 1}`, title: option }
+                  : option;
+              if (seenIds.has(normalized.id)) {
+                return { ...normalized, id: `${normalized.id}_${index + 1}` };
+              }
+              seenIds.add(normalized.id);
+              return normalized;
+            }),
+          };
+        }),
       });
 
       await context.client.chat.postMessage({
