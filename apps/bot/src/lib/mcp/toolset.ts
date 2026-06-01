@@ -1,1 +1,1 @@
-export { createRemoteMcpToolset } from './remote';
+export { createMcpToolset } from './remote';

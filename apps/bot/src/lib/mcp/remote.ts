@@ -84,7 +84,7 @@ function filterToolDefinitions({
   return { ...definitions, tools };
 }
 
-export async function createRemoteMcpToolset({
+export async function createMcpToolset({
   context,
   stream,
 }: {
