@@ -78,11 +78,17 @@ export function mcpBlocks(servers: McpServerWithOAuth[]) {
   if (servers.length === 0) {
     return [
       header,
-      Blocks.Section({
-        text: 'No MCP servers added yet. Add one to connect external tools.',
-      }),
+      Blocks.Context().elements(
+        'No MCP servers added yet. Add one to connect external tools.'
+      ),
     ];
   }
 
-  return [header, servers.flatMap((server) => serverBlocks(server))];
+  return [
+    header,
+    servers.flatMap((server, i) => [
+      ...(i > 0 ? [Blocks.Divider()] : []),
+      ...serverBlocks(server),
+    ]),
+  ];
 }
