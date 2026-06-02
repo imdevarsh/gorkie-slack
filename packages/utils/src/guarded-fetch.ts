@@ -2,23 +2,7 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import ipaddr from 'ipaddr.js';
 
-const BLOCKED_IP_RANGES = new Set([
-  'broadcast',
-  'carrierGradeNat',
-  'linkLocal',
-  'loopback',
-  'multicast',
-  'private',
-  'reserved',
-  'unspecified',
-  'uniqueLocal',
-]);
-
-function isBlockedIp(address: string): boolean {
-  return BLOCKED_IP_RANGES.has(ipaddr.process(address).range());
-}
-
-async function assertSafeHttpsUrl(input: string | URL): Promise<URL> {
+export async function assertSafeHttpsUrl(input: string | URL): Promise<URL> {
   const url = input instanceof URL ? input : new URL(input);
   if (url.protocol !== 'https:') {
     throw new Error('MCP server URL must use https.');
@@ -32,38 +16,24 @@ async function assertSafeHttpsUrl(input: string | URL): Promise<URL> {
       : [{ address: hostname, family: parsedIp }];
 
   for (const address of addresses) {
-    if (isBlockedIp(address.address)) {
+    if (
+      [
+        'broadcast',
+        'carrierGradeNat',
+        'linkLocal',
+        'loopback',
+        'multicast',
+        'private',
+        'reserved',
+        'unspecified',
+        'uniqueLocal',
+      ].includes(ipaddr.process(address.address).range())
+    ) {
       throw new Error('MCP server URL resolves to a blocked network address.');
     }
   }
 
   return url;
-}
-
-function limitResponseBytes(response: Response, maxBytes: number): Response {
-  if (!response.body) {
-    return response;
-  }
-
-  let bytes = 0;
-  const counted = response.body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        bytes += chunk.byteLength;
-        if (bytes > maxBytes) {
-          controller.error(new Error('MCP response exceeded byte limit.'));
-          return;
-        }
-        controller.enqueue(chunk);
-      },
-    })
-  );
-
-  return new Response(counted, {
-    headers: response.headers,
-    status: response.status,
-    statusText: response.statusText,
-  });
 }
 
 export type GuardedFetch = (
@@ -92,15 +62,31 @@ export function createGuardedFetch({
           ? AbortSignal.any([init.signal, controller.signal])
           : controller.signal,
       });
-      return limitResponseBytes(response, maxResponseBytes);
+      if (!response.body) {
+        return response;
+      }
+
+      let bytes = 0;
+      const counted = response.body.pipeThrough(
+        new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            bytes += chunk.byteLength;
+            if (bytes > maxResponseBytes) {
+              controller.error(new Error('MCP response exceeded byte limit.'));
+              return;
+            }
+            controller.enqueue(chunk);
+          },
+        })
+      );
+
+      return new Response(counted, {
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText,
+      });
     } finally {
       clearTimeout(timeout);
     }
   };
-}
-
-export async function validateHttpsUrlForServer(
-  input: string
-): Promise<string> {
-  return (await assertSafeHttpsUrl(input)).toString();
 }

@@ -4,7 +4,7 @@ import {
   upsertMcpBearerConnection,
   upsertMcpOAuthConnection,
 } from '@repo/db/queries';
-import { encryptSecret, validateHttpsUrlForServer } from '@repo/utils';
+import { assertSafeHttpsUrl, encryptSecret } from '@repo/utils';
 import { errorMessage } from '@repo/utils/error';
 import { env } from '@/env';
 import { syncMcpPermissions } from '@/lib/mcp/remote';
@@ -55,7 +55,7 @@ export async function execute({
 
   let safeUrl = '';
   try {
-    safeUrl = await validateHttpsUrlForServer(urlValue);
+    safeUrl = (await assertSafeHttpsUrl(urlValue)).toString();
   } catch (error) {
     errors[blocks.url] =
       error instanceof Error ? error.message : 'Enter a valid HTTPS URL.';
