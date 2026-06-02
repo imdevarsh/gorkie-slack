@@ -1,44 +1,54 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '../client';
 import {
-  type AskUserFlowRecord,
-  askUserFlows,
-  type NewAskUserFlowRecord,
+  type AskUserApproval,
+  askUserApprovals,
+  type NewAskUserApproval,
 } from '../schema';
 
-export async function createAskUserFlowRecord(flow: NewAskUserFlowRecord) {
-  const rows = await db.insert(askUserFlows).values(flow).returning();
+export async function createAskUserApproval(approval: NewAskUserApproval) {
+  const rows = await db.insert(askUserApprovals).values(approval).returning();
   return rows[0] ?? null;
 }
 
-export function getAskUserFlowRecord({
-  id,
+export function getAskUserApproval({
+  approvalId,
   userId,
 }: {
-  id: string;
+  approvalId: string;
   userId: string;
-}): Promise<AskUserFlowRecord | null> {
+}): Promise<AskUserApproval | null> {
   return db
     .select()
-    .from(askUserFlows)
-    .where(and(eq(askUserFlows.id, id), eq(askUserFlows.userId, userId)))
+    .from(askUserApprovals)
+    .where(
+      and(
+        eq(askUserApprovals.approvalId, approvalId),
+        eq(askUserApprovals.userId, userId)
+      )
+    )
     .limit(1)
     .then((rows) => rows[0] ?? null);
 }
 
-export async function updateAskUserFlowRecord({
-  id,
+export async function updateAskUserApproval({
+  approvalId,
   userId,
   values,
 }: {
-  id: string;
+  approvalId: string;
   userId: string;
-  values: Partial<NewAskUserFlowRecord>;
+  values: Partial<NewAskUserApproval>;
 }) {
   const rows = await db
-    .update(askUserFlows)
+    .update(askUserApprovals)
     .set({ ...values, updatedAt: new Date() })
-    .where(and(eq(askUserFlows.id, id), eq(askUserFlows.userId, userId)))
+    .where(
+      and(
+        eq(askUserApprovals.approvalId, approvalId),
+        eq(askUserApprovals.userId, userId)
+      )
+    )
     .returning();
   return rows[0] ?? null;
 }

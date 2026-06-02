@@ -2,9 +2,14 @@ import type {
   AllMiddlewareArgs,
   BlockAction,
   SlackActionMiddlewareArgs,
+  SlackViewMiddlewareArgs,
+  ViewSubmitAction,
 } from '@slack/bolt';
 
 export type ActionArgs = SlackActionMiddlewareArgs<BlockAction> &
+  AllMiddlewareArgs;
+
+export type SubmitArgs = SlackViewMiddlewareArgs<ViewSubmitAction> &
   AllMiddlewareArgs;
 
 export interface AskUserButton {

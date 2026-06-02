@@ -1,11 +1,20 @@
 import { randomUUID } from 'node:crypto';
-import { index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 
-export const askUserFlows = pgTable(
-  'ask_user_flows',
+export const askUserApprovals = pgTable(
+  'ask_user_approvals',
   {
     id: text('id')
       .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    approvalId: text('approval_id')
+      .notNull()
       .$defaultFn(() => `que_${randomUUID()}`),
     userId: text('user_id').notNull(),
     teamId: text('team_id'),
@@ -24,9 +33,10 @@ export const askUserFlows = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    index('ask_user_flows_user_status_idx').on(table.userId, table.status),
+    uniqueIndex('ask_user_approvals_approval_idx').on(table.approvalId),
+    index('ask_user_approvals_user_status_idx').on(table.userId, table.status),
   ]
 );
 
-export type AskUserFlowRecord = typeof askUserFlows.$inferSelect;
-export type NewAskUserFlowRecord = typeof askUserFlows.$inferInsert;
+export type AskUserApproval = typeof askUserApprovals.$inferSelect;
+export type NewAskUserApproval = typeof askUserApprovals.$inferInsert;

@@ -1,7 +1,7 @@
 import {
-  createAskUserFlowRecord,
-  getAskUserFlowRecord,
-  updateAskUserFlowRecord,
+  createAskUserApproval,
+  getAskUserApproval as getAskUserApprovalRecord,
+  updateAskUserApproval,
 } from '@repo/db/queries';
 import { decryptSecret, encryptSecret } from '@repo/utils';
 import type { WebClient } from '@slack/web-api';
@@ -18,6 +18,7 @@ export interface AskUserOption {
 export interface AskUserQuestion {
   allowOther?: boolean;
   id: string;
+  mode?: 'choice' | 'text';
   multiSelect?: boolean;
   nextLabel?: string;
   options: AskUserOption[];
@@ -26,7 +27,7 @@ export interface AskUserQuestion {
   title: string;
 }
 
-export interface AskUserFlow {
+export interface AskUserApprovalState {
   answers: Record<string, string[]>;
   completed?: boolean;
   context: SlackMessageContext;
@@ -41,20 +42,24 @@ export interface AskUserFlow {
   requestHints: ChatRequestHints;
 }
 
-function encodeFlowState({ flow }: { flow: AskUserFlow }): string {
+function encodeApprovalState({
+  approval,
+}: {
+  approval: AskUserApprovalState;
+}): string {
   return encryptSecret({
     plaintext: JSON.stringify({
-      answers: flow.answers,
-      index: flow.index,
-      messages: flow.messages,
-      questions: flow.questions,
-      requestHints: flow.requestHints,
+      answers: approval.answers,
+      index: approval.index,
+      messages: approval.messages,
+      questions: approval.questions,
+      requestHints: approval.requestHints,
     }),
     secret: env.MCP_TOKEN_ENCRYPTION_KEY,
   });
 }
 
-function decodeFlowState({ state }: { state: string }): {
+function decodeApprovalState({ state }: { state: string }): {
   answers: Record<string, string[]>;
   index: number;
   messages: ModelMessage[];
@@ -69,7 +74,7 @@ function decodeFlowState({ state }: { state: string }): {
   );
 }
 
-export async function createAskUserFlow({
+export async function createAskUserApprovalState({
   context,
   messages,
   questions,
@@ -79,9 +84,9 @@ export async function createAskUserFlow({
   messages: ModelMessage[];
   questions: AskUserQuestion[];
   requestHints: ChatRequestHints;
-}): Promise<AskUserFlow> {
+}): Promise<AskUserApprovalState> {
   const threadTs = context.event.thread_ts ?? context.event.ts;
-  const flow = {
+  const approval = {
     answers: {},
     context,
     id: '',
@@ -90,10 +95,10 @@ export async function createAskUserFlow({
     questions,
     requestHints,
   };
-  const record = await createAskUserFlowRecord({
+  const record = await createAskUserApproval({
     channelId: context.event.channel,
     eventTs: context.event.ts,
-    state: encodeFlowState({ flow: { ...flow, id: 'pending' } }),
+    state: encodeApprovalState({ approval: { ...approval, id: 'pending' } }),
     status: 'pending',
     teamId: context.teamId ?? null,
     threadTs,
@@ -101,16 +106,16 @@ export async function createAskUserFlow({
   });
 
   if (!record) {
-    throw new Error('Failed to create ask user flow.');
+    throw new Error('Failed to create ask user approval.');
   }
 
   return {
-    ...flow,
-    id: record.id,
+    ...approval,
+    id: record.approvalId,
   };
 }
 
-export async function getAskUserFlow({
+export async function getAskUserApprovalState({
   botUserId,
   client,
   id,
@@ -122,13 +127,13 @@ export async function getAskUserFlow({
   id: string;
   teamId?: string;
   userId: string;
-}): Promise<AskUserFlow | null> {
-  const record = await getAskUserFlowRecord({ id, userId });
+}): Promise<AskUserApprovalState | null> {
+  const record = await getAskUserApprovalRecord({ approvalId: id, userId });
   if (!record) {
     return null;
   }
 
-  const state = decodeFlowState({ state: record.state });
+  const state = decodeApprovalState({ state: record.state });
   return {
     ...state,
     completed: record.status !== 'pending',
@@ -145,7 +150,7 @@ export async function getAskUserFlow({
         user: record.userId,
       },
     },
-    id: record.id,
+    id: record.approvalId,
     ...(record.messageTs
       ? {
           message: {
@@ -157,35 +162,46 @@ export async function getAskUserFlow({
   };
 }
 
-export async function saveAskUserFlow({
-  flow,
+export async function saveAskUserApprovalState({
+  approval,
 }: {
-  flow: AskUserFlow;
+  approval: AskUserApprovalState;
 }): Promise<void> {
-  await updateAskUserFlowRecord({
-    id: flow.id,
-    userId: flow.context.event.user ?? '',
+  await updateAskUserApproval({
+    approvalId: approval.id,
+    userId: approval.context.event.user ?? '',
     values: {
-      ...(flow.message?.ts ? { messageTs: flow.message.ts } : {}),
-      state: encodeFlowState({ flow }),
-      status: flow.completed ? 'completed' : 'pending',
+      ...(approval.message?.ts ? { messageTs: approval.message.ts } : {}),
+      state: encodeApprovalState({ approval }),
+      status: approval.completed ? 'approved' : 'pending',
     },
   });
 }
 
-export function askUserAnswerSummary({ flow }: { flow: AskUserFlow }): string {
-  return flow.questions
+export function askUserAnswerSummary({
+  approval,
+}: {
+  approval: AskUserApprovalState;
+}): string {
+  return approval.questions
     .map((question) => {
-      const selected = flow.answers[question.id] ?? [];
+      const selected = approval.answers[question.id] ?? [];
       const titles = selected
-        .map(
-          (optionId) =>
+        .map((optionId) => {
+          if (question.mode === 'text') {
+            return optionId;
+          }
+          if (optionId.startsWith('other:')) {
+            return optionId.slice('other:'.length);
+          }
+          return (
             question.options.find((option) => option.id === optionId)?.title ??
             (optionId === 'other'
               ? (question.otherPlaceholder ?? 'Other')
               : null) ??
             optionId
-        )
+          );
+        })
         .join(', ');
       return `${question.title}: ${titles || 'Skipped'}`;
     })

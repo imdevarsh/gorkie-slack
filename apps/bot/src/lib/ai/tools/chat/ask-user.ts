@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { createTask, finishTask } from '@/lib/ai/utils/task';
 import { askUserBlocks } from '@/slack/features/ask-user/components';
 import {
-  createAskUserFlow,
-  saveAskUserFlow,
+  type AskUserQuestion,
+  createAskUserApprovalState,
+  saveAskUserApprovalState,
 } from '@/slack/features/ask-user/state';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 
@@ -20,12 +21,13 @@ const optionSchema = z.union([
 const questionSchema = z.object({
   id: z.string().min(1).max(80),
   title: z.string().min(1).max(500),
+  mode: z.enum(['choice', 'text']).optional(),
   multiSelect: z.boolean().optional(),
   skippable: z.boolean().optional(),
   allowOther: z.boolean().optional(),
   otherPlaceholder: z.string().min(1).max(80).optional(),
   nextLabel: z.string().min(1).max(40).optional(),
-  options: z.array(optionSchema).min(1).max(5),
+  options: z.array(optionSchema).max(5).optional(),
 });
 
 export const askUser = ({
@@ -69,33 +71,32 @@ export const askUser = ({
     ) => {
       const channel = context.event.channel;
       const threadTs = context.event.thread_ts ?? context.event.ts;
-      const normalizedQuestions = questions?.length
+      const rawQuestions = questions?.length
         ? questions
         : [
             {
               id: 'question',
               title: question ?? 'What should I know?',
-              options:
-                mode === 'choice' && options?.length
-                  ? options
-                  : [
-                      {
-                        id: 'reply',
-                        title: 'Reply in thread',
-                        description: 'Answer in your own words',
-                      },
-                    ],
+              mode: mode === 'freeform' ? 'text' : 'choice',
+              options: mode === 'choice' && options?.length ? options : [],
               allowOther: mode === 'freeform',
             },
           ];
-      const flow = await createAskUserFlow({
+      const approval = await createAskUserApprovalState({
         context,
         messages,
-        questions: normalizedQuestions.map((item) => {
+        questions: rawQuestions.map((item): AskUserQuestion => {
           const seenIds = new Set<string>();
+          let questionMode: AskUserQuestion['mode'] = 'text';
+          if (item.mode === 'choice' || item.mode === 'text') {
+            questionMode = item.mode;
+          } else if (item.options?.length) {
+            questionMode = 'choice';
+          }
           return {
             ...item,
-            options: item.options.map((option, index) => {
+            mode: questionMode,
+            options: (item.options ?? []).map((option, index) => {
               const normalized =
                 typeof option === 'string'
                   ? { id: `option_${index + 1}`, title: option }
@@ -114,15 +115,15 @@ export const askUser = ({
       const posted = await context.client.chat.postMessage({
         channel,
         thread_ts: threadTs,
-        text: flow.questions[0]?.title ?? 'Question for you',
-        blocks: askUserBlocks({ flow }),
+        text: approval.questions[0]?.title ?? 'Question for you',
+        blocks: askUserBlocks({ approval }),
       });
       if (posted.ts) {
-        flow.message = {
+        approval.message = {
           channel: posted.channel ?? channel,
           ts: posted.ts,
         };
-        await saveAskUserFlow({ flow });
+        await saveAskUserApprovalState({ approval });
       }
       await finishTask(stream, {
         taskId: toolCallId,

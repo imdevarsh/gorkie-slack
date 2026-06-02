@@ -2,17 +2,35 @@ import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ViewsOpenArguments } from '@slack/web-api/dist/types/request/views';
 import { actions, views } from './ids';
-import { type AskUserFlow, askUserAnswerSummary } from './state';
+import { type AskUserApprovalState, askUserAnswerSummary } from './state';
 import type { AskUserButton, AskUserOptionElement } from './types';
 
 type AskUserModalView = ViewsOpenArguments['view'];
 
-function actionId({ action, flow }: { action: string; flow: AskUserFlow }) {
-  return `${actions.interact}_${action}_${flow.id}`;
+function actionId({
+  action,
+  approval,
+}: {
+  action: string;
+  approval: AskUserApprovalState;
+}) {
+  return `${actions.interact}_${action}_${approval.id}`;
 }
 
-export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
-  const question = flow.questions[flow.index];
+export function askUserTextBlockId({ index }: { index: number }) {
+  return `ask_user_text_${index}`;
+}
+
+export function askUserOtherBlockId({ index }: { index: number }) {
+  return `ask_user_other_${index}`;
+}
+
+export function askUserBlocks({
+  approval,
+}: {
+  approval: AskUserApprovalState;
+}) {
+  const question = approval.questions[approval.index];
   if (!question) {
     return [
       {
@@ -23,7 +41,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
         },
         body: {
           type: 'mrkdwn',
-          text: clampText(askUserAnswerSummary({ flow }), 900),
+          text: clampText(askUserAnswerSummary({ approval }), 900),
         },
       },
     ];
@@ -34,7 +52,7 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
       type: 'card',
       title: {
         type: 'mrkdwn',
-        text: `Question ${flow.index + 1} of ${flow.questions.length}`,
+        text: `Question ${approval.index + 1} of ${approval.questions.length}`,
       },
       body: {
         type: 'mrkdwn',
@@ -52,8 +70,8 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
             emoji: false,
           },
           style: 'primary',
-          action_id: actionId({ action: 'open', flow }),
-          value: flow.id,
+          action_id: actionId({ action: 'open', approval }),
+          value: approval.id,
         },
       ],
     },
@@ -61,16 +79,16 @@ export function askUserBlocks({ flow }: { flow: AskUserFlow }) {
 }
 
 export function askUserModal({
-  flow,
+  approval,
 }: {
-  flow: AskUserFlow;
+  approval: AskUserApprovalState;
 }): AskUserModalView {
-  const question = flow.questions[flow.index];
+  const question = approval.questions[approval.index];
   if (!question) {
     return {
       type: 'modal',
       callback_id: views.modal,
-      private_metadata: flow.id,
+      private_metadata: approval.id,
       title: { type: 'plain_text', text: 'Question answered' },
       close: { type: 'plain_text', text: 'Done' },
       blocks: [
@@ -78,14 +96,21 @@ export function askUserModal({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: clampText(askUserAnswerSummary({ flow }), 900),
+            text: clampText(askUserAnswerSummary({ approval }), 900),
           },
         },
       ],
     };
   }
 
-  const selected = flow.answers[question.id] ?? [];
+  const selected = approval.answers[question.id] ?? [];
+  const selectedOptionIds = selected.map((value) =>
+    value.startsWith('other:') ? 'other' : value
+  );
+  const otherValue =
+    selected
+      .find((value) => value.startsWith('other:'))
+      ?.slice('other:'.length) ?? '';
   const options = [
     ...question.options,
     ...(question.allowOther
@@ -116,7 +141,7 @@ export function askUserModal({
   }));
   const navButtons: AskUserButton[] = [];
 
-  if (flow.index > 0) {
+  if (approval.index > 0) {
     navButtons.push({
       type: 'button',
       text: {
@@ -124,8 +149,8 @@ export function askUserModal({
         text: 'Back',
         emoji: false,
       },
-      action_id: actionId({ action: 'back', flow }),
-      value: flow.id,
+      action_id: actionId({ action: 'back', approval }),
+      value: approval.id,
     });
   }
 
@@ -137,22 +162,8 @@ export function askUserModal({
         text: 'Skip',
         emoji: false,
       },
-      action_id: actionId({ action: 'skip', flow }),
-      value: flow.id,
-    });
-  }
-
-  if (question.multiSelect) {
-    navButtons.push({
-      type: 'button',
-      text: {
-        type: 'plain_text',
-        text: question.nextLabel ?? 'Continue',
-        emoji: false,
-      },
-      style: 'primary',
-      action_id: actionId({ action: 'continue', flow }),
-      value: flow.id,
+      action_id: actionId({ action: 'skip', approval }),
+      value: approval.id,
     });
   }
 
@@ -161,45 +172,85 @@ export function askUserModal({
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*Question ${flow.index + 1} of ${flow.questions.length}*\n${question.title}`,
+        text: `*Question ${approval.index + 1} of ${approval.questions.length}*\n${question.title}`,
       },
     },
-    {
-      type: 'actions',
-      block_id: `ask_user_options_${flow.index}`,
-      elements: [
-        question.multiSelect
-          ? {
-              type: 'checkboxes',
-              action_id: actionId({ action: 'toggle', flow }),
-              options: optionElements,
-              ...(selected.length > 0
-                ? {
-                    initial_options: optionElements.filter((option) =>
-                      selected.includes(option.value)
-                    ),
-                  }
-                : {}),
-            }
-          : {
-              type: 'radio_buttons',
-              action_id: actionId({ action: 'choose', flow }),
-              options: optionElements,
-              ...(selected[0]
-                ? {
-                    initial_option: optionElements.find(
-                      (option) => option.value === selected[0]
-                    ),
-                  }
-                : {}),
+    ...(question.mode === 'text'
+      ? [
+          {
+            type: 'input',
+            block_id: askUserTextBlockId({ index: approval.index }),
+            optional: question.skippable !== false,
+            element: {
+              type: 'plain_text_input',
+              action_id: actionId({ action: 'input', approval }),
+              multiline: true,
+              ...(selected[0] ? { initial_value: selected[0] } : {}),
             },
-      ],
-    },
+            label: {
+              type: 'plain_text',
+              text: 'Answer',
+              emoji: false,
+            },
+          },
+        ]
+      : [
+          {
+            type: 'actions',
+            block_id: `ask_user_options_${approval.index}`,
+            elements: [
+              question.multiSelect
+                ? {
+                    type: 'checkboxes',
+                    action_id: actionId({ action: 'toggle', approval }),
+                    options: optionElements,
+                    ...(selectedOptionIds.length > 0
+                      ? {
+                          initial_options: optionElements.filter((option) =>
+                            selectedOptionIds.includes(option.value)
+                          ),
+                        }
+                      : {}),
+                  }
+                : {
+                    type: 'radio_buttons',
+                    action_id: actionId({ action: 'choose', approval }),
+                    options: optionElements,
+                    ...(selectedOptionIds[0]
+                      ? {
+                          initial_option: optionElements.find(
+                            (option) => option.value === selectedOptionIds[0]
+                          ),
+                        }
+                      : {}),
+                  },
+            ],
+          },
+        ]),
+    ...(question.allowOther && selectedOptionIds.includes('other')
+      ? [
+          {
+            type: 'input',
+            block_id: askUserOtherBlockId({ index: approval.index }),
+            optional: true,
+            element: {
+              type: 'plain_text_input',
+              action_id: actionId({ action: 'other', approval }),
+              ...(otherValue ? { initial_value: otherValue } : {}),
+            },
+            label: {
+              type: 'plain_text',
+              text: question.otherPlaceholder ?? 'Other',
+              emoji: false,
+            },
+          },
+        ]
+      : []),
     ...(navButtons.length > 0
       ? [
           {
             type: 'actions',
-            block_id: `ask_user_nav_${flow.index}`,
+            block_id: `ask_user_nav_${approval.index}`,
             elements: navButtons,
           },
         ]
@@ -209,7 +260,7 @@ export function askUserModal({
   return {
     type: 'modal',
     callback_id: views.modal,
-    private_metadata: flow.id,
+    private_metadata: approval.id,
     title: {
       type: 'plain_text',
       text: 'Question for you',
@@ -218,11 +269,21 @@ export function askUserModal({
       type: 'plain_text',
       text: 'Close',
     },
+    submit: {
+      type: 'plain_text',
+      text:
+        question.nextLabel ??
+        (approval.index + 1 >= approval.questions.length ? 'Done' : 'Next'),
+    },
     blocks,
   };
 }
 
-export function askUserAnsweredBlocks({ flow }: { flow: AskUserFlow }) {
+export function askUserAnsweredBlocks({
+  approval,
+}: {
+  approval: AskUserApprovalState;
+}) {
   return [
     {
       type: 'card',
@@ -232,7 +293,7 @@ export function askUserAnsweredBlocks({ flow }: { flow: AskUserFlow }) {
       },
       body: {
         type: 'mrkdwn',
-        text: clampText(askUserAnswerSummary({ flow }), 900),
+        text: clampText(askUserAnswerSummary({ approval }), 900),
       },
     },
   ] satisfies ChannelAndBlocks['blocks'];
