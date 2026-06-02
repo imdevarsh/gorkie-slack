@@ -5,7 +5,6 @@ import { askUserBlocks } from '@/slack/features/ask-user/components';
 import {
   type AskUserQuestion,
   createAskUserApprovalState,
-  normalizeAskUserQuestion,
   saveAskUserApprovalState,
 } from '@/slack/features/ask-user/state';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
@@ -22,7 +21,7 @@ const choiceSchema = z.union([
 const questionSchema = z.object({
   id: z.string().min(1).max(80),
   title: z.string().min(1).max(500),
-  type: z.enum(['single_choice', 'multi_choice', 'text']).optional(),
+  type: z.enum(['single_choice', 'multi_choice', 'text']),
   skippable: z.boolean().optional(),
   allowOther: z.boolean().optional(),
   otherPlaceholder: z.string().min(1).max(80).optional(),
@@ -99,34 +98,29 @@ export const askUser = ({
               return normalized;
             }
           );
-          const questionType =
-            item.type ??
-            (normalizedChoices.length > 0 ? 'single_choice' : 'text');
-          return normalizeAskUserQuestion({
-            question: {
-              id: item.id,
-              title: item.title,
-              type:
-                questionType === 'text' ||
-                normalizedChoices.length > 0 ||
-                item.allowOther
-                  ? questionType
-                  : 'text',
-              choices: normalizedChoices,
-              ...(item.allowOther === undefined
-                ? {}
-                : { allowOther: item.allowOther }),
-              ...(item.nextLabel === undefined
-                ? {}
-                : { nextLabel: item.nextLabel }),
-              ...(item.otherPlaceholder === undefined
-                ? {}
-                : { otherPlaceholder: item.otherPlaceholder }),
-              ...(item.skippable === undefined
-                ? {}
-                : { skippable: item.skippable }),
-            },
-          });
+          return {
+            choices: normalizedChoices,
+            id: item.id,
+            title: item.title,
+            type:
+              item.type === 'text' ||
+              normalizedChoices.length > 0 ||
+              item.allowOther
+                ? item.type
+                : 'text',
+            ...(item.allowOther === undefined
+              ? {}
+              : { allowOther: item.allowOther }),
+            ...(item.nextLabel === undefined
+              ? {}
+              : { nextLabel: item.nextLabel }),
+            ...(item.otherPlaceholder === undefined
+              ? {}
+              : { otherPlaceholder: item.otherPlaceholder }),
+            ...(item.skippable === undefined
+              ? {}
+              : { skippable: item.skippable }),
+          };
         }),
         requestHints,
       });
