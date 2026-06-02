@@ -258,7 +258,6 @@ export async function createMcpToolset({
 
   const servers = await listEnabledMcpServersByUser({
     limit: mcp.maxServersPerRequest,
-    teamId: context.teamId,
     userId,
   });
   const clients: MCPClient[] = [];

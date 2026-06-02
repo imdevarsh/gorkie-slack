@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 import { decryptSecret } from './secret';
 
-export function parseEncryptedMcpJson<TSchema extends z.ZodType>({
+export function parseEncrypted<TSchema extends z.ZodType>({
   encrypted,
   schema,
   secret,

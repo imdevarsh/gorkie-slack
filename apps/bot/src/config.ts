@@ -4,8 +4,6 @@ export const appHome = {
   maxMcpNameDisplay: 40,
   maxMcpUrlDisplay: 80,
   mcpEmptyState: 'No MCP servers added yet. Add one to connect external tools.',
-  mcpNoToolsFound:
-    'No tools were found for this server yet. Run a request that uses this MCP server, then reopen this modal.',
 };
 
 export const assistantThread = {

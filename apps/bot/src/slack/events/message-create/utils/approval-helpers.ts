@@ -1,5 +1,5 @@
 import { createMcpToolApproval } from '@repo/db/queries';
-import { encryptSecret, parseEncryptedMcpJson } from '@repo/utils';
+import { encryptSecret, parseEncrypted } from '@repo/utils';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
@@ -35,7 +35,7 @@ export function decodeApprovalState({ state }: { state: string }): {
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
 } {
-  const parsed = parseEncryptedMcpJson({
+  const parsed = parseEncrypted({
     encrypted: state,
     schema: approvalStateSchema,
     secret: env.MCP_TOKEN_ENCRYPTION_KEY,

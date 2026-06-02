@@ -29,11 +29,9 @@ export async function createMcpServer(server: NewMcpServer) {
 
 export function listMcpServersByUser({
   userId,
-  teamId,
   limit = 20,
 }: {
   userId: string;
-  teamId?: string | null;
   limit?: number;
 }): Promise<McpServerWithConnection[]> {
   return db
@@ -57,12 +55,7 @@ export function listMcpServersByUser({
         eq(mcpOauthConnections.userId, userId)
       )
     )
-    .where(
-      and(
-        eq(mcpServers.userId, userId),
-        teamId ? eq(mcpServers.teamId, teamId) : undefined
-      )
-    )
+    .where(eq(mcpServers.userId, userId))
     .orderBy(desc(mcpServers.createdAt))
     .limit(limit)
     .then((rows) =>
@@ -78,23 +71,15 @@ export function listMcpServersByUser({
 
 export function listEnabledMcpServersByUser({
   userId,
-  teamId,
   limit,
 }: {
   userId: string;
-  teamId?: string | null;
   limit: number;
 }): Promise<McpServer[]> {
   return db
     .select()
     .from(mcpServers)
-    .where(
-      and(
-        eq(mcpServers.userId, userId),
-        eq(mcpServers.enabled, true),
-        teamId ? eq(mcpServers.teamId, teamId) : undefined
-      )
-    )
+    .where(and(eq(mcpServers.userId, userId), eq(mcpServers.enabled, true)))
     .orderBy(desc(mcpServers.createdAt))
     .limit(limit);
 }
@@ -396,20 +381,13 @@ export async function createMcpToolApproval(approval: NewMcpToolApproval) {
 
 export function getMcpToolApproval({
   approvalId,
-  userId,
 }: {
   approvalId: string;
-  userId: string;
 }): Promise<McpToolApproval | null> {
   return db
     .select()
     .from(mcpToolApprovals)
-    .where(
-      and(
-        eq(mcpToolApprovals.approvalId, approvalId),
-        eq(mcpToolApprovals.userId, userId)
-      )
-    )
+    .where(eq(mcpToolApprovals.approvalId, approvalId))
     .limit(1)
     .then((rows) => rows[0] ?? null);
 }

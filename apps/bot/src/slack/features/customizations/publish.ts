@@ -11,7 +11,6 @@ import { buildHomeView } from './view';
 export async function publishHome({
   client,
   userId,
-  teamId,
 }: {
   client: WebClient;
   userId: string;
@@ -20,7 +19,7 @@ export async function publishHome({
   const [tasks, customization, mcpServers] = await Promise.all([
     listScheduledTasksByUser(userId),
     getUserCustomization(userId),
-    listMcpServersByUser({ userId, teamId }),
+    listMcpServersByUser({ userId }),
   ]);
   await client.views.publish({
     user_id: userId,

@@ -70,8 +70,15 @@ export async function execute(args: ButtonArgs): Promise<void> {
 
   const approval = await getMcpToolApproval({
     approvalId,
-    userId: body.user.id,
   });
+  if (approval && approval.userId !== body.user.id) {
+    await updateApprovalMessage({
+      ...args,
+      text: 'This MCP approval request is not yours.',
+    });
+    return;
+  }
+
   if (!approval || approval.status !== 'pending') {
     await updateApprovalMessage({
       ...args,
