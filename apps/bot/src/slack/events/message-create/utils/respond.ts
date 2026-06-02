@@ -84,8 +84,6 @@ async function runAgent({
     await setStatus(context, { status: '' });
     return { success: true, toolCalls };
   } catch (error) {
-    await cleanup?.().catch(() => undefined);
-
     if (error instanceof Error && error.name === 'AbortError') {
       if (stream) {
         await setPlanTitle(stream, 'Interrupted');
@@ -130,6 +128,7 @@ async function runAgent({
           : 'Oops! Something went wrong, try again later.',
     };
   } finally {
+    await cleanup?.().catch(() => undefined);
     clearAbortController(ctxId);
   }
 }

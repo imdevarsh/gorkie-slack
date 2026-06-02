@@ -37,7 +37,7 @@ export async function execute({
   await ack();
   const server = await createMcpServer({
     authType: payload.data.auth,
-    enabled: payload.data.auth === 'bearer',
+    enabled: false,
     name: payload.data.name,
     teamId: body.team?.id ?? null,
     transport: payload.data.transport,
@@ -70,6 +70,15 @@ export async function execute({
         server,
         teamId: body.team?.id,
         userId: body.user.id,
+      });
+      await updateMcpServerForUser({
+        id: server.id,
+        userId: body.user.id,
+        values: {
+          enabled: true,
+          lastConnectedAt: new Date(),
+          lastError: null,
+        },
       });
     } catch (error) {
       await updateMcpServerForUser({

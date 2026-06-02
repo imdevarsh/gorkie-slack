@@ -15,8 +15,5 @@ export function mdText(value: string): string {
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
-    .replaceAll('*', '\\*')
-    .replaceAll('_', '\\_')
-    .replaceAll('`', "'")
-    .replaceAll('~', '\\~');
+    .replaceAll('`', "'");
 }

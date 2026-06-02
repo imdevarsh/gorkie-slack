@@ -23,6 +23,9 @@ function serverBlocks(server: McpServerWithConnection) {
     : '';
 
   const canToggle = connected && !(failed && !server.enabled);
+  const primaryAction =
+    failed || !connected ? actions.connect : actions.disconnect;
+  const primaryText = failed || !connected ? 'Connect' : 'Disconnect';
   const section = Blocks.Section({
     text: [
       `*${mdText(truncate(server.name, appHome.maxMcpNameDisplay))}*`,
@@ -44,10 +47,19 @@ function serverBlocks(server: McpServerWithConnection) {
     section,
     Blocks.Actions().elements(
       Elements.Button({
-        actionId: connected ? actions.disconnect : actions.connect,
-        text: connected ? 'Disconnect' : 'Connect',
+        actionId: primaryAction,
+        text: primaryText,
         value: server.id,
       }),
+      ...(failed && connected
+        ? [
+            Elements.Button({
+              actionId: actions.disconnect,
+              text: 'Disconnect',
+              value: server.id,
+            }),
+          ]
+        : []),
       ...(connected && server.enabled
         ? [
             Elements.Button({

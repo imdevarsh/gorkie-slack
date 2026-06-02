@@ -37,13 +37,6 @@ The Pi coding agent inside the sandbox uses a single provider/model. It should h
 Currently `prepareStep` always creates a "Thinking…" task, after terminal tool firing show just show "Replied" / "Skipping" / "Left channel" directly as the task title
 - File: `apps/bot/src/lib/ai/agents/orchestrator.ts`
 
-### Improve: `askUser` should support interactive option cards
-The current `askUser` tool renders choice options as text bullets and relies on a threaded text reply. Upgrade it to support multiple selectable options with Slack card-style actions, similar to the MCP approval card pattern.
-- Add persistent question IDs with an ascending `que...` style identifier, following the same idea as OpenCode's `QuestionID` newtype pattern.
-- Store question state so button/select answers can resume the original thread cleanly.
-- Keep schemas tidy and colocated with the feature/tool rather than adding more ad hoc inline shapes.
-- Files: `apps/bot/src/lib/ai/tools/chat/ask-user.ts`, `apps/bot/src/types/ai/`
-
 ### Improve: Auto-commit at checkpoints
 Add an explicit checkpoint flow for larger agent tasks so meaningful working states can be committed automatically when the user opts into that workflow.
 - Keep commits scoped to the current task and avoid mixing unrelated dirty worktree changes.

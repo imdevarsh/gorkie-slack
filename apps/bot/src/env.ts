@@ -23,7 +23,6 @@ export const env = createEnv({
     AGENTMAIL_API_KEY: z.string().min(1).startsWith('am_'),
     SERVER_BASE_URL: z.url(),
     MCP_TOKEN_ENCRYPTION_KEY: z.string().min(32),
-    MCP_MAX_SERVERS_PER_REQUEST: z.coerce.number().int().positive().optional(),
     LANGFUSE_BASEURL: z.url().optional(),
     LANGFUSE_PUBLIC_KEY: z.string().min(1).optional(),
     LANGFUSE_SECRET_KEY: z.string().min(1).optional(),

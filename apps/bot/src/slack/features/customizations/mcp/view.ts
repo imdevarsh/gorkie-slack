@@ -236,8 +236,8 @@ export function toolsModal({
           type: 'section',
           block_id: `tool_${permission.id}`,
           text: {
-            type: 'mrkdwn',
-            text: `\`${mdText(permission.toolName).slice(0, 180)}\``,
+            type: 'plain_text',
+            text: permission.toolName.slice(0, 180),
           },
           accessory: {
             type: 'static_select',

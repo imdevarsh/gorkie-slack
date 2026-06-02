@@ -75,7 +75,7 @@ export async function execute({
     id: serverId,
     userId: body.user.id,
     values: {
-      enabled: true,
+      enabled: false,
       lastConnectedAt: null,
       lastError: null,
     },
@@ -90,6 +90,15 @@ export async function execute({
         server: updatedServer,
         teamId: body.team?.id,
         userId: body.user.id,
+      });
+      await updateMcpServerForUser({
+        id: serverId,
+        userId: body.user.id,
+        values: {
+          enabled: true,
+          lastConnectedAt: new Date(),
+          lastError: null,
+        },
       });
     } catch (error) {
       await updateMcpServerForUser({
