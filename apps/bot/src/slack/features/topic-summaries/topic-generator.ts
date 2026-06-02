@@ -1,6 +1,7 @@
 import { provider } from '@repo/ai';
 import { getConfig } from '@repo/db/queries/topic-summaries';
 import {
+  checkAndSetCooldown,
   getCachedEnabled,
   incrementMessageCount,
   setCachedEnabled,
@@ -39,6 +40,12 @@ export async function runTopicHeuristic(
     const count = await incrementMessageCount(channelId);
 
     if (count % 20 === 0) {
+      const canRun = await checkAndSetCooldown(channelId, 120);
+      if (!canRun) {
+        logger.info({ channelId }, 'Topic summary skipped due to cooldown');
+        return;
+      }
+
       generateAndSetTopic(context, channelId).catch((error) => {
         logger.error(
           { ...toLogError(error), channelId },

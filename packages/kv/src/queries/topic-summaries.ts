@@ -4,6 +4,22 @@ const enabledKey = (channelId: string) =>
   `channel:${channelId}:topic_summaries_enabled`;
 const countKey = (channelId: string) =>
   `channel:${channelId}:topic_summaries_count`;
+const cooldownKey = (channelId: string) =>
+  `channel:${channelId}:topic_summaries_cooldown`;
+
+export async function checkAndSetCooldown(
+  channelId: string,
+  seconds: number
+): Promise<boolean> {
+  const result = await redis.set(
+    cooldownKey(channelId),
+    '1',
+    'EX',
+    seconds.toString(),
+    'NX'
+  );
+  return result === 'OK';
+}
 
 export async function getCachedEnabled(
   channelId: string
