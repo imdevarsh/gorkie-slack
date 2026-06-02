@@ -78,6 +78,21 @@
       background: var(--accent-bg);
       border-radius: 999px;
     }
+    .badge::before {
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      font-size: 13px;
+      line-height: 1;
+      color: var(--accent);
+      content: "!";
+      background: var(--accent-bg);
+      border-radius: 999px;
+    }
+    .success .badge::before {
+      content: "✓";
+    }
     h1 {
       margin-bottom: 10px;
       font-size: 26px;
@@ -94,7 +109,7 @@
   </head>
   <body>
     <main>
-      <div class="badge">{{ icon }}{{ badge }}</div>
+      <div class="badge">{{ badge }}</div>
       <h1>{{ title }}</h1>
       <p>{{ message }}</p>
     </main>

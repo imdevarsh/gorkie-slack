@@ -1,41 +1,21 @@
 import { type Persona, personas } from '@repo/ai/prompts/chat/presets';
 import { Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
-import { z } from 'zod';
 
 export interface ModalState {
-  presetsOpen: boolean;
-}
-
-const modalStateSchema = z
-  .object({ presetsOpen: z.boolean() })
-  .catch({ presetsOpen: false });
-
-export function defaultModalState(): ModalState {
-  return { presetsOpen: false };
-}
-
-export function parseModalState(raw: string | undefined): ModalState {
-  if (!raw) {
-    return defaultModalState();
-  }
-  try {
-    return modalStateSchema.parse(JSON.parse(raw));
-  } catch {
-    return defaultModalState();
-  }
+  showPresets: boolean;
 }
 
 export function buildPromptModal({
   currentPrompt,
-  state = defaultModalState(),
+  state = { showPresets: false },
 }: {
   currentPrompt: string | null;
   state?: ModalState;
 }): SlackModalDto {
-  const { presetsOpen } = state;
+  const { showPresets } = state;
 
-  const presetBlocks = presetsOpen
+  const presetBlocks = showPresets
     ? personas.map((p) =>
         Blocks.Section({ text: `*${p.name}:* ${p.description}` }).accessory(
           Elements.Button({
@@ -56,10 +36,10 @@ export function buildPromptModal({
   })
     .blocks(
       Blocks.Section({
-        text: presetsOpen ? '*Presets*' : '*Presets*: load a persona',
+        text: showPresets ? '*Presets*' : '*Presets*: load a persona',
       }).accessory(
         Elements.Button({
-          text: presetsOpen ? '▴ Close' : '▾ Open',
+          text: showPresets ? 'Close' : 'Open',
           actionId: 'modal_toggle_presets',
         })
       ),

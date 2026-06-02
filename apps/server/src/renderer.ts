@@ -5,6 +5,7 @@ import {
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { createGuardedFetch, parseMcpOAuthState } from '@repo/utils';
+import escapeHtml from 'escape-html';
 import { defineHandler, getQuery, getRequestURL } from 'nitro/h3';
 import { useStorage } from 'nitro/storage';
 import { z } from 'zod';
@@ -17,11 +18,6 @@ const querySchema = z.looseObject({
   state: z.string().optional(),
 });
 
-const ICON_SUCCESS =
-  '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor" opacity=".12"/><path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const ICON_ERROR =
-  '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor" opacity=".12"/><path d="M10 6v4.5M10 13.5h.01" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>';
-
 const guardedFetch = Object.assign(
   createGuardedFetch({
     maxResponseBytes: 10 * 1024 * 1024,
@@ -29,14 +25,6 @@ const guardedFetch = Object.assign(
   }),
   { preconnect: fetch.preconnect }
 );
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
-}
 
 async function renderPage({
   message,
@@ -48,7 +36,7 @@ async function renderPage({
   title: string;
 }): Promise<string> {
   const template = await useStorage('assets:templates').getItem<string>(
-    'mcp-oauth-callback.html'
+    'oauth-callback.html'
   );
   if (!template) {
     throw new Error('Missing OAuth callback template.');
@@ -58,8 +46,7 @@ async function renderPage({
     .replaceAll('{{status}}', status)
     .replaceAll('{{title}}', escapeHtml(title))
     .replaceAll('{{message}}', escapeHtml(message))
-    .replaceAll('{{badge}}', isSuccess ? 'Connected' : 'Error')
-    .replaceAll('{{icon}}', isSuccess ? ICON_SUCCESS : ICON_ERROR);
+    .replaceAll('{{badge}}', isSuccess ? 'Connected' : 'Error');
 }
 
 export default defineHandler(async (event) => {
