@@ -11,6 +11,29 @@ export async function createAskUserApproval(approval: NewAskUserApproval) {
   return rows[0] ?? null;
 }
 
+export function expirePendingAskUserApprovals({
+  channelId,
+  threadTs,
+  userId,
+}: {
+  channelId: string;
+  threadTs: string;
+  userId: string;
+}): Promise<AskUserApproval[]> {
+  return db
+    .update(askUserApprovals)
+    .set({ status: 'expired', updatedAt: new Date() })
+    .where(
+      and(
+        eq(askUserApprovals.channelId, channelId),
+        eq(askUserApprovals.threadTs, threadTs),
+        eq(askUserApprovals.userId, userId),
+        eq(askUserApprovals.status, 'pending')
+      )
+    )
+    .returning();
+}
+
 export function getAskUserApproval({
   approvalId,
   userId,

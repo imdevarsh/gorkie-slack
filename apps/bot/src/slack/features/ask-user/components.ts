@@ -302,3 +302,19 @@ export function askUserAnsweredBlocks({
     },
   ] satisfies ChannelAndBlocks['blocks'];
 }
+
+export function askUserExpiredBlocks() {
+  return [
+    {
+      type: 'card',
+      title: {
+        type: 'mrkdwn',
+        text: 'Question expired',
+      },
+      body: {
+        type: 'mrkdwn',
+        text: 'A newer question replaced this one.',
+      },
+    },
+  ] satisfies ChannelAndBlocks['blocks'];
+}

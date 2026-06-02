@@ -41,6 +41,7 @@ export interface AskUserApprovalState {
   messages: ModelMessage[];
   questions: AskUserQuestion[];
   requestHints: ChatRequestHints;
+  status?: string;
 }
 
 function encodeApprovalState({
@@ -113,6 +114,7 @@ export async function createAskUserApprovalState({
   return {
     ...approval,
     id: record.approvalId,
+    status: record.status,
   };
 }
 

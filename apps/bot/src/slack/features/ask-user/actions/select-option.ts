@@ -7,6 +7,7 @@ import { getContextId } from '@/utils/context';
 import {
   askUserAnsweredBlocks,
   askUserBlocks,
+  askUserExpiredBlocks,
   askUserModal,
 } from '../components';
 import { actions } from '../ids';
@@ -70,6 +71,30 @@ export async function execute({
     : null;
   const question = approval?.questions[approval.index];
   if (!approval) {
+    return;
+  }
+
+  if (command === 'open' && approval.completed) {
+    const container = asRecord(body.container);
+    const message = asRecord(body.message);
+    const channel = approval.message?.channel ?? container?.channel_id;
+    const ts = approval.message?.ts ?? message?.ts;
+    if (typeof channel === 'string' && typeof ts === 'string') {
+      await client.chat
+        .update({
+          channel,
+          ts,
+          text:
+            approval.status === 'expired'
+              ? 'Question expired'
+              : 'Thanks, got it',
+          blocks:
+            approval.status === 'expired'
+              ? askUserExpiredBlocks()
+              : askUserAnsweredBlocks({ approval }),
+        })
+        .catch(() => undefined);
+    }
     return;
   }
 

@@ -1,7 +1,11 @@
+import { expirePendingAskUserApprovals } from '@repo/db/queries';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask } from '@/lib/ai/utils/task';
-import { askUserBlocks } from '@/slack/features/ask-user/components';
+import {
+  askUserBlocks,
+  askUserExpiredBlocks,
+} from '@/slack/features/ask-user/components';
 import {
   type AskUserQuestion,
   createAskUserApprovalState,
@@ -70,6 +74,25 @@ export const askUser = ({
     ) => {
       const channel = context.event.channel;
       const threadTs = context.event.thread_ts ?? context.event.ts;
+      const expiredApprovals = await expirePendingAskUserApprovals({
+        channelId: channel,
+        threadTs,
+        userId: context.event.user ?? '',
+      });
+      await Promise.all(
+        expiredApprovals.map((expired) =>
+          expired.messageTs
+            ? context.client.chat
+                .update({
+                  channel: expired.channelId,
+                  ts: expired.messageTs,
+                  text: 'Question expired',
+                  blocks: askUserExpiredBlocks(),
+                })
+                .catch(() => undefined)
+            : Promise.resolve()
+        )
+      );
       const rawQuestions = questions?.length
         ? questions
         : [
