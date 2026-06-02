@@ -76,7 +76,6 @@ export const mcpOauthConnections = pgTable(
       .references(() => mcpServers.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
     teamId: text('team_id'),
-    serverUrl: text('server_url'),
     clientId: text('client_id'),
     tokens: text('tokens'),
     clientInformation: text('client_information'),

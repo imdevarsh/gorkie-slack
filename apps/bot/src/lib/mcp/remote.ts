@@ -168,7 +168,7 @@ async function listTools({
     server,
   });
   try {
-    return client.listTools();
+    return await client.listTools();
   } finally {
     await client.close();
   }

@@ -41,6 +41,15 @@ export async function execute({
         teamId: body.team?.id,
         userId: body.user.id,
       });
+      await updateMcpServerForUser({
+        id: server.id,
+        userId: body.user.id,
+        values: {
+          enabled: true,
+          lastConnectedAt: new Date(),
+          lastError: null,
+        },
+      });
     } catch (error) {
       await updateMcpServerForUser({
         id: server.id,

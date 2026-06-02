@@ -20,7 +20,6 @@ const querySchema = z.looseObject({
 
 const guardedFetch = Object.assign(
   createGuardedFetch({
-    maxResponseBytes: 10 * 1024 * 1024,
     timeoutMs: 15_000,
   }),
   { preconnect: fetch.preconnect }
@@ -125,8 +124,7 @@ export default defineHandler(async (event) => {
       id: server.id,
       userId: server.userId,
       values: {
-        enabled: true,
-        lastConnectedAt: new Date(),
+        enabled: false,
         lastError: null,
       },
     });

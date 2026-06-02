@@ -22,7 +22,7 @@ function serverBlocks(server: McpServerWithConnection) {
     ? `\n\n*Error:*\n${codeBlock({ value: server.lastError, maxLength: 900 })}`
     : '';
 
-  const canToggle = connected;
+  const canToggle = connected && !(failed && !server.enabled);
   const section = Blocks.Section({
     text: [
       `*${mdText(truncate(server.name, appHome.maxMcpNameDisplay))}*`,

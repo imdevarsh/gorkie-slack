@@ -17,8 +17,6 @@ export function createMcpOAuthProvider({
 }): OAuthClientProvider {
   let currentConnection: McpOauthConnection | null = connection;
   const redirectUrl = new URL('/mcp/oauth/callback', env.SERVER_BASE_URL);
-  const currentServerConnection = () =>
-    currentConnection?.serverUrl === server.url ? currentConnection : null;
   const clientMetadata: OAuthClientMetadata = {
     client_name: 'Gorkie MCP',
     grant_types: ['authorization_code', 'refresh_token'],
@@ -32,7 +30,7 @@ export function createMcpOAuthProvider({
     currentConnection = await patchMcpOAuthConnection({
       serverId: server.id,
       userId: server.userId,
-      values: { serverUrl: server.url, teamId: server.teamId, ...values },
+      values: { teamId: server.teamId, ...values },
     });
   };
 
@@ -44,9 +42,8 @@ export function createMcpOAuthProvider({
       return redirectUrl.toString();
     },
     tokens() {
-      const connection = currentServerConnection();
       return parseEncrypted({
-        encrypted: connection?.tokens ?? null,
+        encrypted: currentConnection?.tokens ?? null,
         schema: mcpOAuthTokensSchema,
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
@@ -57,7 +54,7 @@ export function createMcpOAuthProvider({
         expiresAt: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
           : null,
-        scopes: tokens.scope ?? currentServerConnection()?.scopes ?? null,
+        scopes: tokens.scope ?? currentConnection?.scopes ?? null,
         state: null,
         tokens: encryptSecret({
           plaintext: JSON.stringify(tokens),
@@ -68,39 +65,36 @@ export function createMcpOAuthProvider({
     redirectToAuthorization: () => undefined,
     saveCodeVerifier: () => undefined,
     codeVerifier() {
-      const connection = currentServerConnection();
-      if (!connection?.codeVerifier) {
+      if (!currentConnection?.codeVerifier) {
         throw new Error('Missing OAuth code verifier.');
       }
       return decryptSecret({
-        encrypted: connection.codeVerifier,
+        encrypted: currentConnection.codeVerifier,
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },
     clientInformation() {
-      const connection = currentServerConnection();
-      if (connection?.clientId) {
+      if (currentConnection?.clientId) {
         const fromDb = parseEncrypted({
-          encrypted: connection.clientInformation ?? null,
+          encrypted: currentConnection.clientInformation ?? null,
           schema: mcpOAuthClientInformationSchema,
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         });
-        return fromDb ?? { client_id: connection.clientId };
+        return fromDb ?? { client_id: currentConnection.clientId };
       }
       return parseEncrypted({
-        encrypted: connection?.clientInformation ?? null,
+        encrypted: currentConnection?.clientInformation ?? null,
         schema: mcpOAuthClientInformationSchema,
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },
     saveClientInformation: () => undefined,
     storedState() {
-      const connection = currentServerConnection();
-      if (!connection?.state) {
+      if (!currentConnection?.state) {
         return;
       }
       return decryptSecret({
-        encrypted: connection.state,
+        encrypted: currentConnection.state,
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },

@@ -86,6 +86,5 @@ export const sandbox = {
 export const mcp = {
   defaultToolMode: 'ask',
   requestTimeoutMs: 15_000,
-  maxResponseBytes: 10 * 1024 * 1024,
   taskOutputMaxChars: 260,
 };

@@ -60,7 +60,6 @@ export async function execute({
     await upsertMcpOAuthConnection({
       clientId: payload.data.clientId,
       serverId: server.id,
-      serverUrl: server.url,
       teamId: body.team?.id ?? null,
       userId: body.user.id,
     });

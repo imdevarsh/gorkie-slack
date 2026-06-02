@@ -115,12 +115,12 @@ export function oauthModal({
     callbackId: views.oauth,
     close: 'Done',
     privateMetaData: JSON.stringify({ serverId }),
-    title: 'Connect to Gorkie',
+    title: 'Connect MCP',
   })
     .notifyOnClose()
     .blocks(
       Blocks.Section({
-        text: `*Connect MCP to Gorkie*\n\n<${authorizationUrl}|Authenticate>`,
+        text: `*Connect MCP*\n\n<${authorizationUrl}|Authenticate>`,
       })
     )
     .buildToObject();
