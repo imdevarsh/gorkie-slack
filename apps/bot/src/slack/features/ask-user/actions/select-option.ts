@@ -24,6 +24,7 @@ export async function execute({
   action,
   body,
   client,
+  context: boltContext,
 }: ActionArgs): Promise<void> {
   await ack();
 
@@ -54,7 +55,15 @@ export async function execute({
     }
   }
 
-  const flow = flowId ? getAskUserFlow({ id: flowId }) : null;
+  const flow = flowId
+    ? await getAskUserFlow({
+        botUserId: boltContext.botUserId,
+        client,
+        id: flowId,
+        teamId: body.team?.id,
+        userId: body.user.id,
+      })
+    : null;
   const question = flow?.questions[flow.index];
   if (!flow) {
     return;
@@ -97,7 +106,7 @@ export async function execute({
   if (shouldContinue) {
     flow.completed = true;
   }
-  saveAskUserFlow({ flow });
+  await saveAskUserFlow({ flow });
 
   const view = asRecord(body.view);
   if (typeof view?.id === 'string') {

@@ -88,7 +88,7 @@ export const askUser = ({
               allowOther: mode === 'freeform',
             },
           ];
-      const flow = createAskUserFlow({
+      const flow = await createAskUserFlow({
         context,
         messages,
         questions: normalizedQuestions.map((item) => {
@@ -122,7 +122,7 @@ export const askUser = ({
           channel: posted.channel ?? channel,
           ts: posted.ts,
         };
-        saveAskUserFlow({ flow });
+        await saveAskUserFlow({ flow });
       }
       await finishTask(stream, {
         taskId: toolCallId,
