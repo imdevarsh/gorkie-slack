@@ -74,12 +74,41 @@ async function generateAndSetTopic(
     return;
   }
 
-  const transcript = history.messages
-    .filter((m) => m.text && !m.bot_id)
-    .reverse()
-    .map((m) => `${m.user}: ${m.text}`)
-    .join('\n');
+  const messagesWithReplies = await Promise.all(
+    history.messages
+      .filter((m) => m.text && !m.bot_id)
+      .reverse()
+      .map(async (m) => {
+        let text = `${m.user}: ${m.text}`;
+        if (m.thread_ts && m.thread_ts === m.ts && (m.reply_count ?? 0) > 0) {
+          try {
+            const replies = await context.client.conversations.replies({
+              channel: channelId,
+              ts: m.thread_ts,
+              limit: 10,
+            });
+            if (replies.messages) {
+              const threadText = replies.messages
+                .filter((r) => r.ts !== m.ts && r.text && !r.bot_id)
+                .map((r) => `  [Thread] ${r.user}: ${r.text}`)
+                .join('\n');
+              if (threadText) {
+                text += `\n${threadText}`;
+              }
+            }
+          } catch (error) {
+            logger.warn(
+              { ...toLogError(error), channelId, ts: m.ts },
+              'Failed to fetch thread replies for topic summary'
+            );
+          }
+        }
+        return text;
+      })
+  );
 
+  const transcript = messagesWithReplies.join('\n');
+console.log(transcript)
   if (!transcript.trim()) {
     return;
   }
