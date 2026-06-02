@@ -164,9 +164,8 @@ export const orchestratorAgent = async ({
         'No taskId found in taskMap'
       );
     },
-    async onFinish() {
+    onFinish() {
       taskMap.delete(context.event.event_ts);
-      await cleanup();
     },
     experimental_telemetry: {
       isEnabled: true,
