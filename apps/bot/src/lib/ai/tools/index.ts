@@ -50,7 +50,21 @@ export async function createToolset({
     skip: skip({ context, stream }),
     summariseThread: summariseThread({ context, stream }),
   };
-  const mcpTools = await createMcpToolset({ context, stream });
+  const mcpTools = await createMcpToolset({ context, stream }).catch(
+    (error: unknown) => {
+      logger.warn(
+        {
+          ...toLogError(error),
+          userId: context.event.user,
+        },
+        'Failed to initialize MCP toolset'
+      );
+      return {
+        cleanup: async () => undefined,
+        tools: {},
+      };
+    }
+  );
   const tools: ToolSet = { ...nativeTools, ...mcpTools.tools };
 
   for (const [toolName, currentTool] of Object.entries(tools)) {
