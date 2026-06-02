@@ -70,7 +70,7 @@ export async function execute({
         lastError: discoveryError,
       },
     });
-    await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
+    await publishHome({ client, userId: body.user.id });
   }
   const permissions = await listMcpToolPermissions({
     serverId,

@@ -14,7 +14,6 @@ export async function publishHome({
 }: {
   client: WebClient;
   userId: string;
-  teamId?: string | null;
 }): Promise<void> {
   const [tasks, customization, mcpServers] = await Promise.all([
     listScheduledTasksByUser(userId),
@@ -30,12 +29,10 @@ export async function publishHome({
 export async function applyPrompt({
   client,
   userId,
-  teamId,
   prompt,
 }: {
   client: WebClient;
   userId: string;
-  teamId?: string | null;
   prompt: string;
 }): Promise<void> {
   if (prompt) {
@@ -43,5 +40,5 @@ export async function applyPrompt({
   } else {
     await clearUserCustomization(userId);
   }
-  await publishHome({ client, userId, teamId });
+  await publishHome({ client, userId });
 }

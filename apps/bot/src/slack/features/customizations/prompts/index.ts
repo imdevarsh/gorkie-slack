@@ -47,7 +47,7 @@ async function clearPrompt({
   await ack();
   const userId = body.user.id;
   try {
-    await applyPrompt({ client, userId, teamId: body.team?.id, prompt: '' });
+    await applyPrompt({ client, userId, prompt: '' });
   } catch (error) {
     logger.warn({ ...toLogError(error), userId }, 'Failed to clear prompt');
   }
@@ -117,7 +117,7 @@ async function savePrompt({
   const prompt =
     view.state.values.prompt_block?.prompt_input?.value?.trim() ?? '';
   try {
-    await applyPrompt({ client, userId, teamId: body.team?.id, prompt });
+    await applyPrompt({ client, userId, prompt });
   } catch (error) {
     logger.warn({ ...toLogError(error), userId }, 'Failed to save prompt');
   }
@@ -135,7 +135,7 @@ async function savePresetPrompt({
   const prompt =
     view.state.values.prompt_block?.prompt_input?.value?.trim() ?? '';
   try {
-    await applyPrompt({ client, userId, teamId: body.team?.id, prompt });
+    await applyPrompt({ client, userId, prompt });
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId },

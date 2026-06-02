@@ -35,5 +35,5 @@ export async function execute({
     userId: body.user.id,
     values: { enabled: false, lastConnectedAt: null, lastError: null },
   });
-  await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
+  await publishHome({ client, userId: body.user.id });
 }

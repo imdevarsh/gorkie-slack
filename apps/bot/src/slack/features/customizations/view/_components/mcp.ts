@@ -1,7 +1,7 @@
 import type { McpServerWithConnection } from '@repo/db/queries';
 import { Bits, Blocks, Elements } from 'slack-block-builder';
 import { appHome } from '@/config';
-import { codeBlock } from '@/slack/blocks';
+import { codeBlock, mrkdwnText } from '@/slack/blocks';
 import { actions } from '../../mcp/ids';
 
 function truncate(value: string, max: number): string {
@@ -24,8 +24,8 @@ function serverBlocks(server: McpServerWithConnection) {
   const canToggle = connected;
   const section = Blocks.Section({
     text: [
-      `*${truncate(server.name, appHome.maxMcpNameDisplay)}*`,
-      `\`${truncate(server.url, appHome.maxMcpUrlDisplay)}\``,
+      `*${mrkdwnText(truncate(server.name, appHome.maxMcpNameDisplay))}*`,
+      `\`${mrkdwnText(truncate(server.url, appHome.maxMcpUrlDisplay))}\``,
       `${status}${lastError}`,
     ].join('\n'),
   });

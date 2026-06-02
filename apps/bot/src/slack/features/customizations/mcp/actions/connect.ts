@@ -97,7 +97,7 @@ export async function execute({
         text: 'Could not start OAuth. Return to Slack App Home and try again.',
       }),
     });
-    await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
+    await publishHome({ client, userId: body.user.id });
     return;
   }
 
@@ -118,7 +118,7 @@ export async function execute({
         },
       });
     }
-    await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
+    await publishHome({ client, userId: body.user.id });
     await client.views.update({
       view_id: viewId,
       view: statusModal({

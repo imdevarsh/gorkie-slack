@@ -21,7 +21,7 @@ async function cancelTask({
   const taskId = typeof action.value === 'string' ? action.value : '';
   try {
     await cancelScheduledTaskForUser(taskId, userId);
-    await publishHome({ client, userId, teamId: body.team?.id });
+    await publishHome({ client, userId });
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId, taskId },

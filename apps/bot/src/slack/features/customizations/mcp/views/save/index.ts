@@ -45,7 +45,7 @@ export async function execute({
     userId: body.user.id,
   });
   if (!server) {
-    await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
+    await publishHome({ client, userId: body.user.id });
     return;
   }
   if (token) {
@@ -82,5 +82,5 @@ export async function execute({
       });
     }
   }
-  await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
+  await publishHome({ client, userId: body.user.id });
 }
