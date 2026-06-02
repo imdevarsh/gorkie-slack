@@ -124,6 +124,7 @@ export const orchestratorAgent = async ({
     }),
     providerOptions: {
       openrouter: {
+        parallelToolCalls: false,
         reasoning: { enabled: true, exclude: false, effort: 'medium' },
       },
       google: {
@@ -137,7 +138,6 @@ export const orchestratorAgent = async ({
     tools: toolset.tools,
     stopWhen: [
       stepCountIs(40),
-      successToolCall('askUser'),
       successToolCall('leaveChannel'),
       successToolCall('reply'),
       successToolCall('skip'),

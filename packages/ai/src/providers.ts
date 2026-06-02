@@ -64,12 +64,13 @@ const retry = (model: LanguageModel): Retry<LanguageModel> => ({
 const chatModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3-flash-preview'),
   retries: [
+    requestNotRetryable(hackclub.languageModel('openai/gpt-5.4-mini')),
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3-flash-preview')
     ),
-    retry(hackclub.languageModel('openai/gpt-5-mini')),
+    retry(hackclub.languageModel('openai/gpt-5.4-mini')),
     retry(openrouter.languageModel('google/gemini-3-flash-preview')),
-    retry(openrouter.languageModel('openai/gpt-5-mini')),
+    retry(openrouter.languageModel('openai/gpt-5.4-mini')),
   ],
   onError: onModelError,
 });

@@ -8,16 +8,6 @@ If an MCP tool returns "Tool is blocked by your settings.", do not tell the user
 If the user asks to retry a blocked MCP request ("again", "try again", etc.), call the relevant MCP tool again instead of replying from memory.
 
 <tool>
-<name>askUser</name>
-<description>Ask the user a required follow-up question and pause the task until they answer in Slack.</description>
-<rules>
-- Use this when a task cannot continue without missing user input such as an address, account choice, approval detail, or preference.
-- Do not use reply for required mid-task questions; use askUser so Gorkie can continue when the user answers.
-- THIS ENDS THE LOOP. Do NOT call any other tools after askUser.
-</rules>
-</tool>
-
-<tool>
 <name>searchSlack</name>
 <description>
 Search across the entire Slack workspace for messages, files, or discussions.
