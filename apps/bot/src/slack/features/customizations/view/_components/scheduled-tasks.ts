@@ -2,7 +2,7 @@ import type { ScheduledTask } from '@repo/db/schema';
 import { formatDistanceToNowStrict, isPast } from 'date-fns';
 import { Bits, Blocks, Elements, setIfTruthy } from 'slack-block-builder';
 import { appHome } from '@/config';
-import { mrkdwnText } from '@/slack/blocks';
+import { mdText } from '@/slack/blocks';
 
 function buildTaskBlock(task: ScheduledTask) {
   const destination =
@@ -35,8 +35,8 @@ function buildTaskBlock(task: ScheduledTask) {
 
   return Blocks.Section({
     text: [
-      `*${mrkdwnText(title)}*`,
-      `\`${mrkdwnText(task.cronExpression)}\` (${mrkdwnText(task.timezone)}) -> ${destination}`,
+      `*${mdText(title)}*`,
+      `\`${mdText(task.cronExpression)}\` (${mdText(task.timezone)}) -> ${destination}`,
       `Next: ${nextRunText} · Last: ${lastRunText}`,
     ].join('\n'),
   }).accessory(

@@ -1,6 +1,6 @@
 import { Bits, Blocks, Elements, setIfTruthy } from 'slack-block-builder';
 import { appHome } from '@/config';
-import { mrkdwnText } from '@/slack/blocks';
+import { mdText } from '@/slack/blocks';
 
 export function customInstructionsBlocks(
   customization: { prompt?: string } | null
@@ -16,7 +16,7 @@ export function customInstructionsBlocks(
 
   return [
     Blocks.Section({
-      text: `*Custom Instructions*\n${mrkdwnText(promptDisplay)}`,
+      text: `*Custom Instructions*\n${mdText(promptDisplay)}`,
     }).accessory(
       Elements.Button({
         text: userPrompt ? 'Edit' : 'Add',

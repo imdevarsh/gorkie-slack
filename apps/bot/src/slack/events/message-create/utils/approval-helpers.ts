@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
-import { codeBlock, mrkdwnText } from '@/slack/blocks';
+import { codeBlock, mdText } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type {
   ChatRequestHints,
@@ -105,7 +105,7 @@ export async function postApprovalRequest({
       type: 'card',
       title: {
         type: 'mrkdwn',
-        text: `Approve: ${mrkdwnText(approval.serverName)} / ${mrkdwnText(approval.toolName)}`,
+        text: `Approve: ${mdText(approval.serverName)} / ${mdText(approval.toolName)}`,
       },
       body: {
         type: 'mrkdwn',

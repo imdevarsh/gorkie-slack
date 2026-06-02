@@ -4,7 +4,7 @@ import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
 import { mcp as mcpConfig } from '@/config';
-import { codeBlock, mrkdwnText } from '@/slack/blocks';
+import { codeBlock, mdText } from '@/slack/blocks';
 import { blocks, inputs, views } from './ids';
 import type { ModalState } from './types';
 
@@ -143,7 +143,7 @@ export function bearerModal({
   })
     .blocks(
       Blocks.Section({
-        text: `*Connect ${mrkdwnText(serverName)} to Gorkie*\nEnter a bearer token for this MCP server.`,
+        text: `*Connect ${mdText(serverName)} to Gorkie*\nEnter a bearer token for this MCP server.`,
       }),
       Blocks.Input({
         blockId: blocks.bearer,
@@ -240,7 +240,7 @@ export function toolsModal({
           block_id: `tool_${permission.id}`,
           text: {
             type: 'mrkdwn',
-            text: `\`${mrkdwnText(permission.toolName).slice(0, 180)}\``,
+            text: `\`${mdText(permission.toolName).slice(0, 180)}\``,
           },
           accessory: {
             type: 'static_select',
@@ -275,7 +275,7 @@ export function toolsModal({
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `*${mrkdwnText(serverName)}*\nChoose which tools are allowed always, ask first, or stay blocked.${error ? `\n\nTool discovery warning: ${mrkdwnText(error)}` : ''}`,
+                text: `*${mdText(serverName)}*\nChoose which tools are allowed always, ask first, or stay blocked.${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
               },
             },
             ...groupedBlocks,
@@ -286,8 +286,8 @@ export function toolsModal({
               text: {
                 type: 'mrkdwn',
                 text: error
-                  ? `*${mrkdwnText(serverName)}*\n\n*Error:*\n${codeBlock({ value: error, maxLength: 1200 })}`
-                  : `*${mrkdwnText(serverName)}*\nNo tools were found for this server yet.`,
+                  ? `*${mdText(serverName)}*\n\n*Error:*\n${codeBlock({ value: error, maxLength: 1200 })}`
+                  : `*${mdText(serverName)}*\nNo tools were found for this server yet.`,
               },
             },
           ],

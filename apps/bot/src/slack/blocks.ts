@@ -10,7 +10,7 @@ export function codeBlock({
   return `\`\`\`${clampText(value.replaceAll('```', "'''"), maxLength)}\`\`\``;
 }
 
-export function mrkdwnText(value: string): string {
+export function mdText(value: string): string {
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
