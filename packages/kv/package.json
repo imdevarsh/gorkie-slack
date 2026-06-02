@@ -4,8 +4,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./client": "./src/client.ts",
     "./keys": "./src/keys.ts",
-    "./redis": "./src/redis.ts"
+    "./redis": "./src/redis.ts",
+    "./queries/*": "./src/queries/*.ts"
   },
   "scripts": {
     "clean": "git clean -xdf .turbo dist node_modules",
