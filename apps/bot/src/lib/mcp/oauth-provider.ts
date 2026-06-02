@@ -25,6 +25,8 @@ export function createMcpOAuthProvider({
 }): OAuthClientProvider {
   let currentConnection = connection;
   const redirectUrl = new URL('/mcp/oauth/callback', env.SERVER_BASE_URL);
+  const currentServerConnection = () =>
+    currentConnection?.serverUrl === server.url ? currentConnection : null;
   const clientMetadata: OAuthClientMetadata = {
     client_name: 'Gorkie MCP',
     grant_types: ['authorization_code', 'refresh_token'],
@@ -38,7 +40,7 @@ export function createMcpOAuthProvider({
     currentConnection = await patchMcpOAuthConnection({
       serverId: server.id,
       userId: server.userId,
-      values: { teamId: server.teamId, ...values },
+      values: { serverUrl: server.url, teamId: server.teamId, ...values },
     });
   };
 
@@ -50,8 +52,9 @@ export function createMcpOAuthProvider({
       return redirectUrl.toString();
     },
     tokens() {
+      const connection = currentServerConnection();
       return parseEncrypted({
-        encrypted: currentConnection?.tokens ?? null,
+        encrypted: connection?.tokens ?? null,
         schema: mcpOAuthTokensSchema,
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
@@ -62,7 +65,7 @@ export function createMcpOAuthProvider({
         expiresAt: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
           : null,
-        scopes: tokens.scope ?? currentConnection?.scopes ?? null,
+        scopes: tokens.scope ?? currentServerConnection()?.scopes ?? null,
         state: null,
         tokens: encryptSecret({
           plaintext: JSON.stringify(tokens),
@@ -84,25 +87,27 @@ export function createMcpOAuthProvider({
       });
     },
     codeVerifier() {
-      if (!currentConnection?.codeVerifier) {
+      const connection = currentServerConnection();
+      if (!connection?.codeVerifier) {
         throw new Error('Missing OAuth code verifier.');
       }
       return decryptSecret({
-        encrypted: currentConnection.codeVerifier,
+        encrypted: connection.codeVerifier,
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },
     clientInformation() {
-      if (currentConnection?.clientId) {
+      const connection = currentServerConnection();
+      if (connection?.clientId) {
         const fromDb = parseEncrypted({
-          encrypted: currentConnection?.clientInformation ?? null,
+          encrypted: connection.clientInformation ?? null,
           schema: mcpOAuthClientInformationSchema,
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         });
-        return fromDb ?? { client_id: currentConnection.clientId };
+        return fromDb ?? { client_id: connection.clientId };
       }
       return parseEncrypted({
-        encrypted: currentConnection?.clientInformation ?? null,
+        encrypted: connection?.clientInformation ?? null,
         schema: mcpOAuthClientInformationSchema,
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
@@ -136,25 +141,29 @@ export function createMcpOAuthProvider({
       });
     },
     storedState() {
-      if (!currentConnection?.state) {
+      const connection = currentServerConnection();
+      if (!connection?.state) {
         return;
       }
       return decryptSecret({
-        encrypted: currentConnection.state,
+        encrypted: connection.state,
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },
     async invalidateCredentials(scope) {
       if (scope === 'all' || scope === 'tokens') {
         await saveConnection({
-          clientId: scope === 'all' ? null : currentConnection?.clientId,
+          clientId:
+            scope === 'all' ? null : currentServerConnection()?.clientId,
           clientInformation:
-            scope === 'all' ? null : currentConnection?.clientInformation,
+            scope === 'all'
+              ? null
+              : currentServerConnection()?.clientInformation,
           codeVerifier:
-            scope === 'all' ? null : currentConnection?.codeVerifier,
+            scope === 'all' ? null : currentServerConnection()?.codeVerifier,
           expiresAt: null,
           scopes: null,
-          state: scope === 'all' ? null : currentConnection?.state,
+          state: scope === 'all' ? null : currentServerConnection()?.state,
           tokens: null,
         });
       }
