@@ -1,5 +1,6 @@
 import {
-  getMcpToolApproval,
+  claimMcpToolApproval,
+  getMcpToolApprovalStatus,
   updateMcpToolApproval,
   upsertMcpToolPermission,
 } from '@repo/db/queries';
@@ -69,18 +70,25 @@ export async function execute(args: ButtonArgs): Promise<void> {
     return;
   }
 
-  const approval = await getMcpToolApproval({
+  const status = await getMcpToolApprovalStatus({
     approvalId,
   });
-  if (approval && approval.userId !== body.user.id) {
-    await updateApprovalMessage({
-      ...args,
-      text: 'This MCP approval request is not yours.',
-    });
+  if (status && status.userId !== body.user.id) {
+    const container = asRecord(body.container);
+    const channel = container?.channel_id;
+    if (typeof channel === 'string') {
+      await client.chat
+        .postEphemeral({
+          channel,
+          text: 'This MCP approval request is not yours.',
+          user: body.user.id,
+        })
+        .catch(() => undefined);
+    }
     return;
   }
 
-  if (!approval || approval.status !== 'pending') {
+  if (!status || status.status !== 'pending') {
     await updateApprovalMessage({
       ...args,
       text: 'This MCP approval request has already been handled.',
@@ -90,18 +98,16 @@ export async function execute(args: ButtonArgs): Promise<void> {
 
   const approved = action.action_id !== denyName;
   const alwaysInThread = action.action_id === alwaysThreadName;
-
-  if (approved && alwaysInThread) {
-    await upsertMcpToolPermission({
-      mode: 'allow',
-      scope: 'thread',
-      serverId: approval.serverId,
-      source: 'user',
-      teamId: approval.teamId,
-      threadTs: approval.threadTs,
-      toolName: approval.toolName,
-      userId: approval.userId,
+  const approval = await claimMcpToolApproval({
+    approvalId,
+    userId: body.user.id,
+  });
+  if (!approval) {
+    await updateApprovalMessage({
+      ...args,
+      text: 'This MCP approval request has already been handled.',
     });
+    return;
   }
 
   let resultText = `Denied ${approval.toolName}.`;
@@ -135,21 +141,43 @@ export async function execute(args: ButtonArgs): Promise<void> {
       user: approval.userId,
     },
   };
-  await getQueue(getContextId(resumeContext)).add(() =>
-    resumeResponse({
-      approvalId,
-      approved,
-      context: resumeContext,
-      messages,
-      reason: approved ? undefined : 'Denied by the user in Slack.',
-      requestHints,
-    })
-  );
+  try {
+    if (approved && alwaysInThread) {
+      await upsertMcpToolPermission({
+        mode: 'allow',
+        scope: 'thread',
+        serverId: approval.serverId,
+        source: 'user',
+        teamId: approval.teamId,
+        threadTs: approval.threadTs,
+        toolName: approval.toolName,
+        userId: approval.userId,
+      });
+    }
 
-  await updateMcpToolApproval({
-    approvalId,
-    userId: body.user.id,
-    values: { status: approved ? 'approved' : 'denied' },
-  });
+    await getQueue(getContextId(resumeContext)).add(() =>
+      resumeResponse({
+        approvalId,
+        approved,
+        context: resumeContext,
+        messages,
+        reason: approved ? undefined : 'Denied by the user in Slack.',
+        requestHints,
+      })
+    );
+
+    await updateMcpToolApproval({
+      approvalId,
+      userId: body.user.id,
+      values: { status: approved ? 'approved' : 'denied' },
+    });
+  } catch (error) {
+    await updateMcpToolApproval({
+      approvalId,
+      userId: body.user.id,
+      values: { status: 'pending' },
+    });
+    throw error;
+  }
   await updateApprovalMessage({ ...args, input, text: resultText });
 }

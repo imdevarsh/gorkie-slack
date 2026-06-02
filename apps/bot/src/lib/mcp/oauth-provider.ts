@@ -1,11 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { OAuthClientMetadata, OAuthClientProvider } from '@ai-sdk/mcp';
-import { upsertMcpOAuthConnection } from '@repo/db/queries';
-import type {
-  McpOauthConnection,
-  McpServer,
-  NewMcpOauthConnection,
-} from '@repo/db/schema';
+import { patchMcpOAuthConnection } from '@repo/db/queries';
+import type { McpOauthConnection, McpServer } from '@repo/db/schema';
 import {
   createMcpOAuthState,
   decryptSecret,
@@ -36,19 +32,13 @@ export function createMcpOAuthProvider({
     response_types: ['code'],
     token_endpoint_auth_method: 'none',
   };
-  const saveConnection = async (values: Partial<NewMcpOauthConnection>) => {
-    currentConnection = await upsertMcpOAuthConnection({
-      clientId: currentConnection?.clientId ?? null,
-      clientInformation: currentConnection?.clientInformation ?? null,
-      codeVerifier: currentConnection?.codeVerifier ?? null,
-      expiresAt: currentConnection?.expiresAt ?? null,
-      scopes: currentConnection?.scopes ?? null,
+  const saveConnection = async (
+    values: Parameters<typeof patchMcpOAuthConnection>[0]['values']
+  ) => {
+    currentConnection = await patchMcpOAuthConnection({
       serverId: server.id,
-      state: currentConnection?.state ?? null,
-      teamId: server.teamId,
-      tokens: currentConnection?.tokens ?? null,
       userId: server.userId,
-      ...values,
+      values: { teamId: server.teamId, ...values },
     });
   };
 
@@ -68,10 +58,12 @@ export function createMcpOAuthProvider({
     },
     async saveTokens(tokens) {
       await saveConnection({
+        codeVerifier: null,
         expiresAt: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
           : null,
         scopes: tokens.scope ?? currentConnection?.scopes ?? null,
+        state: null,
         tokens: encryptSecret({
           plaintext: JSON.stringify(tokens),
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,

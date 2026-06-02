@@ -3,7 +3,8 @@ import type { McpToolPermission } from '@repo/db/schema';
 import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
-import { codeBlock } from '@/slack/blocks';
+import { mcp as mcpConfig } from '@/config';
+import { codeBlock, mrkdwnText } from '@/slack/blocks';
 import { blocks, inputs, views } from './ids';
 import type { ModalState } from './types';
 
@@ -142,7 +143,7 @@ export function bearerModal({
   })
     .blocks(
       Blocks.Section({
-        text: `*Connect ${serverName} to Gorkie*\nEnter a bearer token for this MCP server.`,
+        text: `*Connect ${mrkdwnText(serverName)} to Gorkie*\nEnter a bearer token for this MCP server.`,
       }),
       Blocks.Input({
         blockId: blocks.bearer,
@@ -158,6 +159,26 @@ export function bearerModal({
 }
 
 type ModalView = ViewsOpenArguments['view'];
+
+export function statusModal({
+  text,
+  title,
+}: {
+  text: string;
+  title: string;
+}): ModalView {
+  return {
+    type: 'modal',
+    title: { type: 'plain_text', text: title },
+    close: { type: 'plain_text', text: 'Done' },
+    blocks: [
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text },
+      },
+    ],
+  };
+}
 
 export function toolsModal({
   error,
@@ -179,7 +200,9 @@ export function toolsModal({
     { text: { type: 'plain_text', text: 'Block' }, value: 'block' },
   ];
   const toolByName = new Map(tools.map((tool) => [tool.name, tool]));
-  const visiblePermissions = error ? [] : permissions.slice(0, 20);
+  const visiblePermissions = error
+    ? []
+    : permissions.slice(0, mcpConfig.maxToolsPerServer);
   const groupedBlocks: ModalView['blocks'] = visiblePermissions
     .map((permission) => {
       const annotations = toolByName.get(permission.toolName)?.annotations;
@@ -217,7 +240,7 @@ export function toolsModal({
           block_id: `tool_${permission.id}`,
           text: {
             type: 'mrkdwn',
-            text: `\`${permission.toolName.slice(0, 180)}\``,
+            text: `\`${mrkdwnText(permission.toolName).slice(0, 180)}\``,
           },
           accessory: {
             type: 'static_select',
@@ -252,7 +275,7 @@ export function toolsModal({
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `*${serverName}*\nChoose which tools are allowed always, ask first, or stay blocked.${error ? `\n\nTool discovery warning: ${error}` : ''}`,
+                text: `*${mrkdwnText(serverName)}*\nChoose which tools are allowed always, ask first, or stay blocked.${error ? `\n\nTool discovery warning: ${mrkdwnText(error)}` : ''}`,
               },
             },
             ...groupedBlocks,
@@ -263,8 +286,8 @@ export function toolsModal({
               text: {
                 type: 'mrkdwn',
                 text: error
-                  ? `*${serverName}*\n\n*Error:*\n${codeBlock({ value: error, maxLength: 1200 })}`
-                  : `*${serverName}*\nNo tools were found for this server yet.`,
+                  ? `*${mrkdwnText(serverName)}*\n\n*Error:*\n${codeBlock({ value: error, maxLength: 1200 })}`
+                  : `*${mrkdwnText(serverName)}*\nNo tools were found for this server yet.`,
               },
             },
           ],

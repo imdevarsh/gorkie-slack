@@ -9,3 +9,14 @@ export function codeBlock({
 }): string {
   return `\`\`\`${clampText(value.replaceAll('```', "'''"), maxLength)}\`\`\``;
 }
+
+export function mrkdwnText(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('*', '\\*')
+    .replaceAll('_', '\\_')
+    .replaceAll('`', "'")
+    .replaceAll('~', '\\~');
+}

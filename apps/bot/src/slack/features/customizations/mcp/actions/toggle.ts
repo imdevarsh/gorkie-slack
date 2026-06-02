@@ -1,7 +1,6 @@
 import {
-  getMcpBearerConnection,
-  getMcpOAuthConnection,
   getMcpServerByIdForUser,
+  hasMcpConnection,
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
@@ -34,15 +33,11 @@ export async function execute({
       return;
     }
 
-    const hasCredentials = await (server.authType === 'bearer'
-      ? getMcpBearerConnection({
-          serverId,
-          userId: body.user.id,
-        }).then((connection) => Boolean(connection?.token))
-      : getMcpOAuthConnection({
-          serverId,
-          userId: body.user.id,
-        }).then((connection) => Boolean(connection?.tokens)));
+    const hasCredentials = await hasMcpConnection({
+      authType: server.authType,
+      serverId,
+      userId: body.user.id,
+    });
     if (!hasCredentials) {
       await updateMcpServerForUser({
         id: serverId,

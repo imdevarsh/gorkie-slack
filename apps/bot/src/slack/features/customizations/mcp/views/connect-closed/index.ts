@@ -1,5 +1,6 @@
 import {
   getMcpServerByIdForUser,
+  hasMcpConnection,
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
@@ -26,7 +27,14 @@ export async function execute({
   const server = serverId
     ? await getMcpServerByIdForUser({ id: serverId, userId: body.user.id })
     : null;
-  if (server) {
+  const hasCredentials = server
+    ? await hasMcpConnection({
+        authType: server.authType,
+        serverId: server.id,
+        userId: body.user.id,
+      })
+    : false;
+  if (server && hasCredentials) {
     try {
       await syncMcpPermissions({
         server,

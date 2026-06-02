@@ -9,7 +9,7 @@ import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
-import { toolsModal } from '../view';
+import { statusModal, toolsModal } from '../view';
 
 export const name = actions.configure;
 
@@ -24,12 +24,30 @@ export async function execute({
   if (!serverId) {
     return;
   }
+  const opened = await client.views.open({
+    trigger_id: body.trigger_id,
+    view: statusModal({
+      title: 'MCP Tools',
+      text: 'Loading tools...',
+    }),
+  });
+  const viewId = opened.view?.id;
+  if (!viewId) {
+    return;
+  }
 
   const server = await getMcpServerByIdForUser({
     id: serverId,
     userId: body.user.id,
   });
   if (!server) {
+    await client.views.update({
+      view_id: viewId,
+      view: statusModal({
+        title: 'MCP Tools',
+        text: 'Could not find this MCP server.',
+      }),
+    });
     return;
   }
 
@@ -59,8 +77,8 @@ export async function execute({
     userId: body.user.id,
   });
 
-  await client.views.open({
-    trigger_id: body.trigger_id,
+  await client.views.update({
+    view_id: viewId,
     view: toolsModal({
       error: discoveryError,
       permissions: permissions.filter(

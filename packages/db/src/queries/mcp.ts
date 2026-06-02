@@ -1,10 +1,9 @@
-import { and, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { db } from '../index';
 import {
   type McpBearerConnection,
   type McpOauthConnection,
   type McpServer,
-  type McpToolApproval,
   type McpToolPermission,
   mcpBearerConnections,
   mcpOauthConnections,
@@ -45,14 +44,16 @@ export function listMcpServersByUser({
       mcpBearerConnections,
       and(
         eq(mcpBearerConnections.serverId, mcpServers.id),
-        eq(mcpBearerConnections.userId, userId)
+        eq(mcpBearerConnections.userId, userId),
+        isNotNull(mcpBearerConnections.token)
       )
     )
     .leftJoin(
       mcpOauthConnections,
       and(
         eq(mcpOauthConnections.serverId, mcpServers.id),
-        eq(mcpOauthConnections.userId, userId)
+        eq(mcpOauthConnections.userId, userId),
+        isNotNull(mcpOauthConnections.tokens)
       )
     )
     .where(eq(mcpServers.userId, userId))
@@ -123,7 +124,6 @@ export async function deleteMcpServerForUser({
   id: string;
   userId: string;
 }) {
-  await deleteMcpConnections({ serverId: id, userId });
   const rows = await db
     .delete(mcpServers)
     .where(and(eq(mcpServers.id, id), eq(mcpServers.userId, userId)))
@@ -149,6 +149,35 @@ export function getMcpBearerConnection({
     )
     .limit(1)
     .then((rows) => rows[0] ?? null);
+}
+
+export function hasMcpConnection({
+  authType,
+  serverId,
+  userId,
+}: {
+  authType: string;
+  serverId: string;
+  userId: string;
+}): Promise<boolean> {
+  const table =
+    authType === 'bearer' ? mcpBearerConnections : mcpOauthConnections;
+  const credential =
+    authType === 'bearer'
+      ? mcpBearerConnections.token
+      : mcpOauthConnections.tokens;
+  return db
+    .select({ id: table.id })
+    .from(table)
+    .where(
+      and(
+        eq(table.serverId, serverId),
+        eq(table.userId, userId),
+        isNotNull(credential)
+      )
+    )
+    .limit(1)
+    .then((rows) => rows.length > 0);
 }
 
 export async function upsertMcpBearerConnection(
@@ -226,6 +255,31 @@ export async function upsertMcpOAuthConnection(
         tokens: values.tokens,
         updatedAt: new Date(),
       },
+    })
+    .returning();
+  return rows[0] ?? null;
+}
+
+export async function patchMcpOAuthConnection({
+  serverId,
+  userId,
+  values,
+}: {
+  serverId: string;
+  userId: string;
+  values: Partial<NewMcpOauthConnection>;
+}) {
+  const rows = await db
+    .insert(mcpOauthConnections)
+    .values({
+      serverId,
+      teamId: values.teamId ?? null,
+      userId,
+      ...values,
+    })
+    .onConflictDoUpdate({
+      target: [mcpOauthConnections.serverId, mcpOauthConnections.userId],
+      set: { ...values, updatedAt: new Date() },
     })
     .returning();
   return rows[0] ?? null;
@@ -371,7 +425,25 @@ export async function ensureMcpToolPermissions({
     .values(rows)
     .onConflictDoNothing()
     .returning();
-  return [...existing, ...inserted];
+  if (inserted.length === rows.length) {
+    return [...existing, ...inserted];
+  }
+
+  return db
+    .select()
+    .from(mcpToolPermissions)
+    .where(
+      and(
+        eq(mcpToolPermissions.serverId, serverId),
+        eq(mcpToolPermissions.userId, userId),
+        eq(mcpToolPermissions.scope, 'global'),
+        eq(mcpToolPermissions.threadTs, ''),
+        inArray(
+          mcpToolPermissions.toolName,
+          tools.map((tool) => tool.toolName)
+        )
+      )
+    );
 }
 
 export async function createMcpToolApproval(approval: NewMcpToolApproval) {
@@ -379,17 +451,41 @@ export async function createMcpToolApproval(approval: NewMcpToolApproval) {
   return rows[0] ?? null;
 }
 
-export function getMcpToolApproval({
+export function getMcpToolApprovalStatus({
   approvalId,
 }: {
   approvalId: string;
-}): Promise<McpToolApproval | null> {
+}): Promise<{ status: string; userId: string } | null> {
   return db
-    .select()
+    .select({
+      status: mcpToolApprovals.status,
+      userId: mcpToolApprovals.userId,
+    })
     .from(mcpToolApprovals)
     .where(eq(mcpToolApprovals.approvalId, approvalId))
     .limit(1)
     .then((rows) => rows[0] ?? null);
+}
+
+export async function claimMcpToolApproval({
+  approvalId,
+  userId,
+}: {
+  approvalId: string;
+  userId: string;
+}) {
+  const rows = await db
+    .update(mcpToolApprovals)
+    .set({ status: 'handling', updatedAt: new Date() })
+    .where(
+      and(
+        eq(mcpToolApprovals.approvalId, approvalId),
+        eq(mcpToolApprovals.userId, userId),
+        eq(mcpToolApprovals.status, 'pending')
+      )
+    )
+    .returning();
+  return rows[0] ?? null;
 }
 
 export async function updateMcpToolApproval({

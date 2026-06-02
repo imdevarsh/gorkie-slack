@@ -5,33 +5,15 @@ import {
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
-import type { ViewsOpenArguments } from '@slack/web-api';
 import { guardedMcpFetch } from '@/lib/mcp/guarded-fetch';
 import { createMcpOAuthProvider } from '@/lib/mcp/oauth-provider';
 import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
-import { bearerModal, oauthModal } from '../view';
+import { bearerModal, oauthModal, statusModal } from '../view';
 
 export const name = actions.connect;
-
-type ModalView = ViewsOpenArguments['view'];
-
-function statusModal({ text, title }: { text: string; title: string }) {
-  const view: ModalView = {
-    type: 'modal',
-    title: { type: 'plain_text', text: title },
-    close: { type: 'plain_text', text: 'Done' },
-    blocks: [
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text },
-      },
-    ],
-  };
-  return view;
-}
 
 export async function execute({
   ack,
