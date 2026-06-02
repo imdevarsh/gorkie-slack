@@ -46,7 +46,7 @@ export async function resolveOrchestratorTask({
   });
 }
 
-export async function consumeOrchestratorReasoningStream({
+export async function collectToolApprovalsFromStream({
   context,
   stream,
   fullStream,
@@ -114,7 +114,7 @@ export const orchestratorAgent = async ({
   files?: SlackFile[];
   stream: Stream;
 }): Promise<{ agent: ToolLoopAgent; cleanup: () => Promise<void> }> => {
-  const toolset = await createToolset({ context, files, stream });
+  const { cleanup, tools } = await createToolset({ context, files, stream });
   const agent = new ToolLoopAgent({
     model: provider.languageModel('chat-model'),
     instructions: systemPrompt({
@@ -135,7 +135,7 @@ export const orchestratorAgent = async ({
       },
     },
     toolChoice: 'required',
-    tools: toolset.tools,
+    tools,
     stopWhen: [
       stepCountIs(40),
       successToolCall('leaveChannel'),
@@ -166,12 +166,12 @@ export const orchestratorAgent = async ({
     },
     async onFinish() {
       taskMap.delete(context.event.event_ts);
-      await toolset.cleanup();
+      await cleanup();
     },
     experimental_telemetry: {
       isEnabled: true,
       functionId: 'orchestrator',
     },
   });
-  return { agent, cleanup: toolset.cleanup };
+  return { agent, cleanup };
 };

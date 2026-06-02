@@ -1,40 +1,4 @@
-import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
-import ipaddr from 'ipaddr.js';
-
-export async function assertSafeHttpsUrl(input: string | URL): Promise<URL> {
-  const url = input instanceof URL ? input : new URL(input);
-  if (url.protocol !== 'https:') {
-    throw new Error('MCP server URL must use https.');
-  }
-
-  const hostname = url.hostname;
-  const parsedIp = isIP(hostname);
-  const addresses =
-    parsedIp === 0
-      ? await lookup(hostname, { all: true, verbatim: true })
-      : [{ address: hostname, family: parsedIp }];
-
-  for (const address of addresses) {
-    if (
-      [
-        'broadcast',
-        'carrierGradeNat',
-        'linkLocal',
-        'loopback',
-        'multicast',
-        'private',
-        'reserved',
-        'unspecified',
-        'uniqueLocal',
-      ].includes(ipaddr.process(address.address).range())
-    ) {
-      throw new Error('MCP server URL resolves to a blocked network address.');
-    }
-  }
-
-  return url;
-}
+import { mcpServerUrlSchema } from '@repo/validators';
 
 export type GuardedFetch = (
   input: string | URL | Request,
@@ -49,9 +13,12 @@ export function createGuardedFetch({
   maxResponseBytes: number;
 }): GuardedFetch {
   return async (input, init) => {
-    const url = await assertSafeHttpsUrl(
-      typeof input === 'string' || input instanceof URL ? input : input.url
+    const url = await mcpServerUrlSchema.parseAsync(
+      typeof input === 'string' || input instanceof URL
+        ? input.toString()
+        : input.url
     );
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {

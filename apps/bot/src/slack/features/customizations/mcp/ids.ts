@@ -7,9 +7,11 @@ export const actions = {
   disable: 'home_mcp_disable',
   disconnect: 'home_mcp_disconnect',
   enable: 'home_mcp_enable',
-  approvalApprove: 'mcp_approval_approve',
-  approvalAlwaysThread: 'mcp_approval_always_thread',
-  approvalDeny: 'mcp_approval_deny',
+  approval: {
+    allow: 'mcp_approval_allow',
+    always: 'mcp_approval_always',
+    deny: 'mcp_approval_deny',
+  },
 };
 
 export const views = {

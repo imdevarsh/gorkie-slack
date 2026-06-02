@@ -1,3 +1,4 @@
+import type { ListToolsResult } from '@ai-sdk/mcp';
 import {
   getMcpServerByIdForUser,
   listMcpToolPermissions,
@@ -33,12 +34,14 @@ export async function execute({
   }
 
   let discoveryError: string | undefined;
+  let definitions: ListToolsResult | undefined;
   try {
-    await syncMcpPermissions({
+    const synced = await syncMcpPermissions({
       server,
       teamId: body.team?.id,
       userId: body.user.id,
     });
+    definitions = synced.definitions;
   } catch (error) {
     discoveryError = errorMessage(error);
     await updateMcpServerForUser({
@@ -65,6 +68,7 @@ export async function execute({
       ),
       serverId,
       serverName: server.name,
+      tools: definitions?.tools ?? [],
     }),
   });
 }

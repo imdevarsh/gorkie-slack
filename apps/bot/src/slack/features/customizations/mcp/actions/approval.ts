@@ -18,9 +18,9 @@ import type { ButtonArgs } from '../types';
 
 type SlackBlocks = ChannelAndBlocks['blocks'];
 
-export const approveName = actions.approvalApprove;
-export const alwaysThreadName = actions.approvalAlwaysThread;
-export const denyName = actions.approvalDeny;
+export const approveName = actions.approval.allow;
+export const alwaysThreadName = actions.approval.always;
+export const denyName = actions.approval.deny;
 
 async function updateApprovalMessage({
   body,

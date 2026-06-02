@@ -26,7 +26,7 @@ export default defineHandler(async (event) => {
   const requestIp = getRequestIP(event, { xForwardedFor: true }) ?? null;
   const token = getBearerToken(event.req.headers.get('authorization'));
   const session = await (token
-    ? validateSandboxToken(token, requestIp)
+    ? validateSandboxToken({ requestIp, token })
     : Promise.resolve(null)
   ).catch((error: unknown) => {
     logger.error(

@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { mcpOAuthStatePayloadSchema } from '@repo/validators';
 
 interface McpOAuthStatePayload {
   nonce: string;
@@ -47,15 +48,11 @@ export function parseMcpOAuthState({
   }
 
   try {
-    const parsed = JSON.parse(
-      Buffer.from(payload, 'base64url').toString('utf8')
+    const result = mcpOAuthStatePayloadSchema.safeParse(
+      JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
     );
-    if (
-      typeof parsed?.nonce === 'string' &&
-      typeof parsed.serverId === 'string' &&
-      typeof parsed.userId === 'string'
-    ) {
-      return parsed;
+    if (result.success) {
+      return result.data;
     }
   } catch {
     return null;

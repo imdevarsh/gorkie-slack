@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "ipaddr.js": "^2.4.0",
     "zod": "catalog:"
   },
   "devDependencies": {

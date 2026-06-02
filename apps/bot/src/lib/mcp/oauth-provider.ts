@@ -1,10 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type {
-  OAuthClientInformation,
-  OAuthClientMetadata,
-  OAuthClientProvider,
-  OAuthTokens,
-} from '@ai-sdk/mcp';
+import type { OAuthClientMetadata, OAuthClientProvider } from '@ai-sdk/mcp';
 import { upsertMcpOAuthConnection } from '@repo/db/queries';
 import type {
   McpOauthConnection,
@@ -12,16 +7,12 @@ import type {
   NewMcpOauthConnection,
 } from '@repo/db/schema';
 import { createMcpOAuthState, decryptSecret, encryptSecret } from '@repo/utils';
+import {
+  mcpOAuthClientInformationSchema,
+  mcpOAuthTokensSchema,
+} from '@repo/validators';
 import { env } from '@/env';
-
-function parseEncryptedJson<T>(value: string | null): T | undefined {
-  if (!value) {
-    return;
-  }
-  return JSON.parse(
-    decryptSecret({ encrypted: value, secret: env.MCP_TOKEN_ENCRYPTION_KEY })
-  );
-}
+import { parseEncryptedMcpJson } from './secret';
 
 export function createMcpOAuthProvider({
   authorizationUrlRef,
@@ -65,7 +56,10 @@ export function createMcpOAuthProvider({
       return redirectUrl.toString();
     },
     tokens() {
-      return parseEncryptedJson<OAuthTokens>(currentConnection?.tokens ?? null);
+      return parseEncryptedMcpJson({
+        encrypted: currentConnection?.tokens ?? null,
+        schema: mcpOAuthTokensSchema,
+      });
     },
     async saveTokens(tokens) {
       await saveConnection({
@@ -103,14 +97,16 @@ export function createMcpOAuthProvider({
     },
     clientInformation() {
       if (currentConnection?.clientId) {
-        const fromDb = parseEncryptedJson<OAuthClientInformation>(
-          currentConnection?.clientInformation ?? null
-        );
+        const fromDb = parseEncryptedMcpJson({
+          encrypted: currentConnection?.clientInformation ?? null,
+          schema: mcpOAuthClientInformationSchema,
+        });
         return fromDb ?? { client_id: currentConnection.clientId };
       }
-      return parseEncryptedJson<OAuthClientInformation>(
-        currentConnection?.clientInformation ?? null
-      );
+      return parseEncryptedMcpJson({
+        encrypted: currentConnection?.clientInformation ?? null,
+        schema: mcpOAuthClientInformationSchema,
+      });
     },
     async saveClientInformation(clientInformation) {
       await saveConnection({

@@ -71,6 +71,7 @@
         "@repo/db": "workspace:*",
         "@repo/logging": "workspace:*",
         "@repo/utils": "workspace:*",
+        "@repo/validators": "workspace:*",
         "@t3-oss/env-core": "catalog:",
         "dotenv": "catalog:",
         "nitro": "catalog:",
@@ -147,7 +148,7 @@
     "packages/utils": {
       "name": "@repo/utils",
       "dependencies": {
-        "ipaddr.js": "^2.4.0",
+        "@repo/validators": "workspace:*",
         "strip-ansi": "^7.2.0",
       },
       "devDependencies": {
@@ -159,6 +160,7 @@
     "packages/validators": {
       "name": "@repo/validators",
       "dependencies": {
+        "ipaddr.js": "^2.4.0",
         "zod": "catalog:",
       },
       "devDependencies": {

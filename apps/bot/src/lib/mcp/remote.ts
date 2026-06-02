@@ -19,9 +19,9 @@ import type { ToolExecutionOptions, ToolSet } from 'ai';
 import { mcp } from '@/config';
 import { env } from '@/env';
 import { createTask, finishTask } from '@/lib/ai/utils/task';
+import { formatToolInput } from '@/lib/ai/utils/tool-input';
 import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
-import { formatToolInput } from './format-tool-input';
 import { guardedMcpFetch } from './guarded-fetch';
 import { createMcpOAuthProvider } from './oauth-provider';
 
@@ -207,7 +207,7 @@ export async function syncMcpPermissions({
   userId: string;
 }) {
   const definitions = await listTools({ server, userId });
-  return ensureMcpToolPermissions({
+  const permissions = await ensureMcpToolPermissions({
     serverId: server.id,
     teamId,
     userId,
@@ -216,6 +216,7 @@ export async function syncMcpPermissions({
       toolName: definition.name,
     })),
   });
+  return { definitions, permissions };
 }
 
 export async function createMcpToolset({

@@ -1,12 +1,13 @@
 import { createMcpToolApproval } from '@repo/db/queries';
-import { decryptSecret, encryptSecret } from '@repo/utils';
+import { encryptSecret } from '@repo/utils';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
 import { z } from 'zod';
 import { env } from '@/env';
 import { updateTask } from '@/lib/ai/utils/task';
-import { formatToolInput } from '@/lib/mcp/format-tool-input';
+import { formatToolInput } from '@/lib/ai/utils/tool-input';
+import { parseEncryptedMcpJson } from '@/lib/mcp/secret';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type {
   ChatRequestHints,
@@ -35,14 +36,14 @@ export function decodeApprovalState({ state }: { state: string }): {
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
 } {
-  return approvalStateSchema.parse(
-    JSON.parse(
-      decryptSecret({
-        encrypted: state,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-      })
-    )
-  );
+  const parsed = parseEncryptedMcpJson({
+    encrypted: state,
+    schema: approvalStateSchema,
+  });
+  if (!parsed) {
+    throw new Error('Missing MCP approval state.');
+  }
+  return parsed;
 }
 
 export async function recordApprovalTask({
@@ -114,7 +115,7 @@ export async function postApprovalRequest({
           type: 'button',
           text: { type: 'plain_text', text: 'Approve once', emoji: false },
           style: 'primary',
-          action_id: actions.approvalApprove,
+          action_id: actions.approval.allow,
           value: approval.approvalId,
         },
         {
@@ -124,14 +125,14 @@ export async function postApprovalRequest({
             text: 'Always in thread',
             emoji: false,
           },
-          action_id: actions.approvalAlwaysThread,
+          action_id: actions.approval.always,
           value: approval.approvalId,
         },
         {
           type: 'button',
           text: { type: 'plain_text', text: 'Deny', emoji: false },
           style: 'danger',
-          action_id: actions.approvalDeny,
+          action_id: actions.approval.deny,
           value: approval.approvalId,
         },
       ],

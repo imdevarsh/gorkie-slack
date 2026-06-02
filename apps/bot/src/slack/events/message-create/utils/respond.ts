@@ -6,7 +6,7 @@ import {
 } from 'ai';
 import { clearAbortController, createAbortController } from '@/lib/abort';
 import {
-  consumeOrchestratorReasoningStream,
+  collectToolApprovalsFromStream,
   orchestratorAgent,
   resolveOrchestratorTask,
 } from '@/lib/ai/agents/orchestrator';
@@ -49,7 +49,7 @@ async function runAgent({
       messages,
       abortSignal: controller.signal,
     });
-    const approvals = await consumeOrchestratorReasoningStream({
+    const approvals = await collectToolApprovalsFromStream({
       context,
       stream,
       fullStream: streamResult.fullStream,
@@ -86,7 +86,7 @@ async function runAgent({
   } catch (error) {
     await cleanup?.().catch(() => undefined);
 
-    if ((error as Error)?.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       if (stream) {
         await setPlanTitle(stream, 'Interrupted');
         await resolveOrchestratorTask({
@@ -211,10 +211,7 @@ export async function generateResponse(
 
     const currentMessageContent: UserContent =
       imageContents.length > 0
-        ? ([
-            { type: 'text', text: replyPrompt },
-            ...imageContents,
-          ] as UserContent)
+        ? [{ type: 'text', text: replyPrompt }, ...imageContents]
         : replyPrompt;
 
     return await runAgent({

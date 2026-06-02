@@ -1,15 +1,11 @@
 import type { McpServerWithConnection } from '@repo/db/queries';
-import { clampText } from '@repo/utils/text';
 import { Bits, Blocks, Elements } from 'slack-block-builder';
 import { appHome } from '@/config';
+import { codeBlock } from '@/slack/blocks';
 import { actions } from '../../mcp/ids';
 
 function truncate(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}...` : value;
-}
-
-function codeBlock(value: string): string {
-  return `\`\`\`${clampText(value.replaceAll('```', "'''"), 900)}\`\`\``;
 }
 
 function serverBlocks(server: McpServerWithConnection) {
@@ -22,7 +18,7 @@ function serverBlocks(server: McpServerWithConnection) {
   }
   const status = `${server.enabled ? 'Enabled' : 'Disabled'} · ${authStatus}`;
   const lastError = server.lastError
-    ? `\n\n*Error:*\n${codeBlock(server.lastError)}`
+    ? `\n\n*Error:*\n${codeBlock({ value: server.lastError, maxLength: 900 })}`
     : '';
 
   const canToggle = connected;

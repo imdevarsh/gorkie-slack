@@ -13,8 +13,9 @@
   "dependencies": {
     "@ai-sdk/mcp": "catalog:",
     "@repo/db": "workspace:*",
-    "@repo/utils": "workspace:*",
     "@repo/logging": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "@repo/validators": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "dotenv": "catalog:",
     "nitro": "catalog:",

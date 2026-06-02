@@ -161,10 +161,13 @@ export async function issueSandboxToken({
   return { expiresAt, token };
 }
 
-export async function validateSandboxToken(
-  token: string,
-  requestIp?: string | null
-): Promise<{ sandboxId: string } | null> {
+export async function validateSandboxToken({
+  requestIp,
+  token,
+}: {
+  requestIp?: string | null;
+  token: string;
+}): Promise<{ sandboxId: string } | null> {
   const rows = await db
     .select({
       allowedIp: sandboxTokens.allowedIp,

@@ -1,8 +1,9 @@
+import type { ListToolsResult } from '@ai-sdk/mcp';
 import type { McpToolPermission } from '@repo/db/schema';
-import { clampText } from '@repo/utils/text';
 import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
+import { codeBlock } from '@/slack/blocks';
 import { blocks, inputs, views } from './ids';
 import type { ModalState } from './types';
 
@@ -10,9 +11,6 @@ const httpOption = Bits.Option({ text: 'HTTP', value: 'http' });
 const sseOption = Bits.Option({ text: 'SSE', value: 'sse' });
 const oauthOption = Bits.Option({ text: 'OAuth', value: 'oauth' });
 const bearerOption = Bits.Option({ text: 'Token', value: 'bearer' });
-const READ_TOOL_PATTERN = /^(get|list|search|find|read)_?/i;
-const WRITE_TOOL_PATTERN =
-  /^(create|add|update|edit|set|delete|remove|send|post)_?/i;
 
 export function addModal(state: ModalState = {}): SlackModalDto {
   const auth = state.auth ?? 'oauth';
@@ -168,30 +166,18 @@ function modeOption({ text, value }: { text: string; value: string }) {
   };
 }
 
-function toolGroup(toolName: string): 'Other' | 'Read' | 'Write' {
-  if (READ_TOOL_PATTERN.test(toolName)) {
-    return 'Read';
-  }
-  if (WRITE_TOOL_PATTERN.test(toolName)) {
-    return 'Write';
-  }
-  return 'Other';
-}
-
-function codeBlock(value: string): string {
-  return `\`\`\`${clampText(value.replaceAll('```', "'''"), 1200)}\`\`\``;
-}
-
 export function toolsModal({
   error,
   permissions,
   serverId,
   serverName,
+  tools,
 }: {
   error?: string;
   permissions: McpToolPermission[];
   serverId: string;
   serverName: string;
+  tools: ListToolsResult['tools'];
 }): ModalView {
   const canSave = !error && permissions.length > 0;
   const options = [
@@ -199,25 +185,35 @@ export function toolsModal({
     modeOption({ text: 'Ask', value: 'ask' }),
     modeOption({ text: 'Block', value: 'block' }),
   ];
+  const toolByName = new Map(tools.map((tool) => [tool.name, tool]));
   const visiblePermissions = error ? [] : permissions.slice(0, 20);
   const groupedBlocks: ModalView['blocks'] = visiblePermissions
+    .map((permission) => {
+      const annotations = toolByName.get(permission.toolName)?.annotations;
+      let group = 'Tools';
+      if (annotations?.readOnlyHint === true) {
+        group = 'Read-only tools';
+      } else if (annotations?.destructiveHint === true) {
+        group = 'Destructive tools';
+      }
+      return { group, permission };
+    })
     .sort((a, b) =>
-      `${toolGroup(a.toolName)}:${a.toolName}`.localeCompare(
-        `${toolGroup(b.toolName)}:${b.toolName}`
+      `${a.group}:${a.permission.toolName}`.localeCompare(
+        `${b.group}:${b.permission.toolName}`
       )
     )
-    .flatMap((permission, index, sorted) => {
-      const group = toolGroup(permission.toolName);
+    .flatMap(({ group, permission }, index, sorted) => {
       const previous = sorted[index - 1];
       const header =
-        previous && toolGroup(previous.toolName) === group
+        previous?.group === group
           ? []
           : [
               {
                 type: 'section',
                 text: {
                   type: 'mrkdwn',
-                  text: `*${group} tools*`,
+                  text: `*${group}*`,
                 },
               },
             ];
@@ -274,7 +270,7 @@ export function toolsModal({
               text: {
                 type: 'mrkdwn',
                 text: error
-                  ? `*${serverName}*\n\n*Error:*\n${codeBlock(error)}`
+                  ? `*${serverName}*\n\n*Error:*\n${codeBlock({ value: error, maxLength: 1200 })}`
                   : `*${serverName}*\nNo tools were found for this server yet. Run a request that uses this MCP server, then reopen this modal.`,
               },
             },
