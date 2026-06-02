@@ -44,7 +44,11 @@ export async function execute({
     url: payload.data.url,
     userId: body.user.id,
   });
-  if (server && token) {
+  if (!server) {
+    await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
+    return;
+  }
+  if (token) {
     await upsertMcpBearerConnection({
       token,
       serverId: server.id,
@@ -52,7 +56,7 @@ export async function execute({
       userId: body.user.id,
     });
   }
-  if (server && payload.data.auth === 'oauth' && payload.data.clientId) {
+  if (payload.data.auth === 'oauth' && payload.data.clientId) {
     await upsertMcpOAuthConnection({
       clientId: payload.data.clientId,
       serverId: server.id,
@@ -60,7 +64,7 @@ export async function execute({
       userId: body.user.id,
     });
   }
-  if (server && payload.data.auth === 'bearer') {
+  if (payload.data.auth === 'bearer') {
     try {
       await syncMcpPermissions({
         server,
@@ -78,5 +82,5 @@ export async function execute({
       });
     }
   }
-  await publishHome(client, body.user.id);
+  await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
 }

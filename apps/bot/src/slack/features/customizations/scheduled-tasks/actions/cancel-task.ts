@@ -23,7 +23,7 @@ export async function execute({
   const taskId = typeof action.value === 'string' ? action.value : '';
   try {
     await cancelScheduledTaskForUser(taskId, userId);
-    await publishHome(client, userId);
+    await publishHome({ client, userId, teamId: body.team?.id });
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId, taskId },

@@ -25,6 +25,31 @@ import type { SlackMessageContext, Stream } from '@/types';
 import { guardedMcpFetch } from './guarded-fetch';
 import { createMcpOAuthProvider } from './oauth-provider';
 
+function extractResultText(result: unknown): string {
+  if (
+    result &&
+    typeof result === 'object' &&
+    'content' in result &&
+    Array.isArray(result.content)
+  ) {
+    const text = result.content
+      .map((item) =>
+        item &&
+        typeof item === 'object' &&
+        'type' in item &&
+        item.type === 'text' &&
+        'text' in item &&
+        typeof item.text === 'string'
+          ? item.text
+          : ''
+      )
+      .filter(Boolean)
+      .join('\n');
+    return text || JSON.stringify(result);
+  }
+  return JSON.stringify(result);
+}
+
 function slugify(value: string): string {
   const slug = value
     .toLowerCase()
@@ -233,6 +258,7 @@ export async function createMcpToolset({
 
   const servers = await listEnabledMcpServersByUser({
     limit: mcp.maxServersPerRequest,
+    teamId: context.teamId,
     userId,
   });
   const clients: MCPClient[] = [];
@@ -354,37 +380,11 @@ export async function createMcpToolset({
 
                   try {
                     const result = await execute(input, options);
-                    let output = 'Done';
-                    if (
-                      result &&
-                      typeof result === 'object' &&
-                      'content' in result &&
-                      Array.isArray(result.content)
-                    ) {
-                      const text = result.content
-                        .map((item) =>
-                          item &&
-                          typeof item === 'object' &&
-                          'type' in item &&
-                          item.type === 'text' &&
-                          'text' in item &&
-                          typeof item.text === 'string'
-                            ? item.text
-                            : ''
-                        )
-                        .filter(Boolean)
-                        .join('\n');
-                      if (text) {
-                        output = text;
-                      }
-                    } else {
-                      output = JSON.stringify(result);
-                    }
                     await finishTask(stream, {
                       taskId: options.toolCallId,
                       status: 'complete',
                       output: clampText(
-                        `Output:\n${output}`,
+                        `Output:\n${extractResultText(result)}`,
                         mcp.taskOutputMaxChars
                       ),
                     });

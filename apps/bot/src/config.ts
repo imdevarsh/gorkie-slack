@@ -3,6 +3,7 @@ export const appHome = {
   maxTaskPrompt: 80,
   maxMcpNameDisplay: 40,
   maxMcpUrlDisplay: 80,
+  mcpEmptyState: 'No MCP servers added yet. Add one to connect external tools.',
 };
 
 export const assistantThread = {

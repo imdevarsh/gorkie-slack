@@ -52,7 +52,7 @@ export async function execute({
         lastError: discoveryError,
       },
     });
-    await publishHome(client, body.user.id);
+    await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
   }
   const permissions = await listMcpToolPermissions({
     serverId,

@@ -19,7 +19,7 @@ export async function execute({
   await ack();
   const userId = body.user.id;
   try {
-    await applyPrompt(client, userId, '');
+    await applyPrompt({ client, userId, teamId: body.team?.id, prompt: '' });
   } catch (error) {
     logger.warn({ ...toLogError(error), userId }, 'Failed to clear prompt');
   }

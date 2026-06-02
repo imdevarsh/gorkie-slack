@@ -4,9 +4,9 @@ import logger from '@/lib/logger';
 import { publishHome } from '@/slack/features/customizations/publish';
 
 export function register(app: App): void {
-  app.event('app_home_opened', async ({ event, client }) => {
+  app.event('app_home_opened', async ({ body, client, event }) => {
     try {
-      await publishHome(client, event.user);
+      await publishHome({ client, userId: event.user, teamId: body.team_id });
     } catch (error) {
       logger.warn(
         { ...toLogError(error), userId: event.user },

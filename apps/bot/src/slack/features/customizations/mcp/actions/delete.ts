@@ -16,5 +16,5 @@ export async function execute({
     return;
   }
   await deleteMcpServerForUser({ id: action.value, userId: body.user.id });
-  await publishHome(client, body.user.id);
+  await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
 }

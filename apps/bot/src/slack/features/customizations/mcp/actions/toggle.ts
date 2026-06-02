@@ -55,7 +55,11 @@ export async function execute({
               : 'OAuth connection required before tools can be enabled.',
         },
       });
-      await publishHome(client, body.user.id);
+      await publishHome({
+        client,
+        userId: body.user.id,
+        teamId: body.team?.id,
+      });
       return;
     }
 
@@ -74,7 +78,11 @@ export async function execute({
           lastError: errorMessage(error),
         },
       });
-      await publishHome(client, body.user.id);
+      await publishHome({
+        client,
+        userId: body.user.id,
+        teamId: body.team?.id,
+      });
       return;
     }
   }
@@ -84,5 +92,5 @@ export async function execute({
     userId: body.user.id,
     values: { enabled, lastError: null },
   });
-  await publishHome(client, body.user.id);
+  await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
 }

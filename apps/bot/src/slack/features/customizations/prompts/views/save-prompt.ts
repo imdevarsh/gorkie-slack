@@ -21,7 +21,7 @@ export async function execute({
   const prompt =
     view.state.values.prompt_block?.prompt_input?.value?.trim() ?? '';
   try {
-    await applyPrompt(client, userId, prompt);
+    await applyPrompt({ client, userId, teamId: body.team?.id, prompt });
   } catch (error) {
     logger.warn({ ...toLogError(error), userId }, 'Failed to save prompt');
   }

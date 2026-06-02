@@ -172,11 +172,15 @@ export async function resumeResponse({
   });
 }
 
-export async function generateResponse(
-  context: SlackMessageContext,
-  messages: ModelMessage[],
-  requestHints: ChatRequestHints
-) {
+export async function generateResponse({
+  context,
+  messages,
+  requestHints,
+}: {
+  context: SlackMessageContext;
+  messages: ModelMessage[];
+  requestHints: ChatRequestHints;
+}) {
   try {
     await setStatus(context, {
       status: 'is thinking',

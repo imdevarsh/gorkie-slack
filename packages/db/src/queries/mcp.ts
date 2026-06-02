@@ -29,9 +29,11 @@ export async function createMcpServer(server: NewMcpServer) {
 
 export function listMcpServersByUser({
   userId,
+  teamId,
   limit = 20,
 }: {
   userId: string;
+  teamId?: string | null;
   limit?: number;
 }): Promise<McpServerWithConnection[]> {
   return db
@@ -55,7 +57,12 @@ export function listMcpServersByUser({
         eq(mcpOauthConnections.userId, userId)
       )
     )
-    .where(eq(mcpServers.userId, userId))
+    .where(
+      and(
+        eq(mcpServers.userId, userId),
+        teamId ? eq(mcpServers.teamId, teamId) : undefined
+      )
+    )
     .orderBy(desc(mcpServers.createdAt))
     .limit(limit)
     .then((rows) =>
@@ -71,15 +78,23 @@ export function listMcpServersByUser({
 
 export function listEnabledMcpServersByUser({
   userId,
+  teamId,
   limit,
 }: {
   userId: string;
+  teamId?: string | null;
   limit: number;
 }): Promise<McpServer[]> {
   return db
     .select()
     .from(mcpServers)
-    .where(and(eq(mcpServers.userId, userId), eq(mcpServers.enabled, true)))
+    .where(
+      and(
+        eq(mcpServers.userId, userId),
+        eq(mcpServers.enabled, true),
+        teamId ? eq(mcpServers.teamId, teamId) : undefined
+      )
+    )
     .orderBy(desc(mcpServers.createdAt))
     .limit(limit);
 }

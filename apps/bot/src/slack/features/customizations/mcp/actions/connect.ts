@@ -72,7 +72,7 @@ export async function execute({
         lastError: error instanceof Error ? error.message : 'OAuth failed',
       },
     });
-    await publishHome(client, body.user.id);
+    await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
     return;
   }
 
@@ -93,7 +93,7 @@ export async function execute({
         },
       });
     }
-    await publishHome(client, body.user.id);
+    await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
     return;
   }
 

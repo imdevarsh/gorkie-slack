@@ -85,12 +85,7 @@ export function mcpBlocks(servers: McpServerWithConnection[]) {
   );
 
   if (servers.length === 0) {
-    return [
-      header,
-      Blocks.Context().elements(
-        'No MCP servers added yet. Add one to connect external tools.'
-      ),
-    ];
+    return [header, Blocks.Context().elements(appHome.mcpEmptyState)];
   }
 
   return [

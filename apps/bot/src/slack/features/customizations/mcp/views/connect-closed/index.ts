@@ -41,5 +41,5 @@ export async function execute({
       });
     }
   }
-  await publishHome(client, body.user.id);
+  await publishHome({ client, userId: body.user.id, teamId: body.team?.id });
 }
