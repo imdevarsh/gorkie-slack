@@ -9,6 +9,7 @@ import { asRecord } from '@repo/utils/record';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import { env } from '@/env';
+import logger from '@/lib/logger';
 import { getQueue } from '@/lib/queue';
 import { codeBlock } from '@/slack/blocks';
 import { decodeApprovalState } from '@/slack/events/message-create/utils/approval-helpers';
@@ -157,22 +158,30 @@ export async function execute(args: ButtonArgs): Promise<void> {
       });
     }
 
-    await getQueue(getContextId(resumeContext)).add(() =>
-      resumeResponse({
-        approvalId,
-        approved,
-        context: resumeContext,
-        messages,
-        reason: approved ? undefined : 'Access denied by Slack approval.',
-        requestHints,
-      })
-    );
-
     await updateMcpToolApproval({
       approvalId,
       userId: body.user.id,
       values: { status: approved ? 'approved' : 'denied' },
     });
+    await updateApprovalMessage({ ...args, input, text: resultText });
+
+    getQueue(getContextId(resumeContext))
+      .add(() =>
+        resumeResponse({
+          approvalId,
+          approved,
+          context: resumeContext,
+          messages,
+          reason: approved ? undefined : 'Access denied by Slack approval.',
+          requestHints,
+        })
+      )
+      .catch((error: unknown) => {
+        logger.error(
+          { err: error, approvalId },
+          'Failed to resume MCP approval'
+        );
+      });
   } catch (error) {
     await updateMcpToolApproval({
       approvalId,
@@ -181,5 +190,4 @@ export async function execute(args: ButtonArgs): Promise<void> {
     });
     throw error;
   }
-  await updateApprovalMessage({ ...args, input, text: resultText });
 }
