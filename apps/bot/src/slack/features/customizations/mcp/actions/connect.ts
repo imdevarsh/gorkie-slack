@@ -8,6 +8,7 @@ import { errorMessage } from '@repo/utils/error';
 import { guardedMcpFetch } from '@/lib/mcp/guarded-fetch';
 import { createMcpOAuthProvider } from '@/lib/mcp/oauth-provider';
 import { syncMcpPermissions } from '@/lib/mcp/remote';
+import { codeBlock } from '@/slack/blocks';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -109,14 +110,24 @@ export async function execute({
         userId: body.user.id,
       });
     } catch (error) {
+      const message = errorMessage(error);
       await updateMcpServerForUser({
         id: server.id,
         userId: body.user.id,
         values: {
           enabled: false,
-          lastError: errorMessage(error),
+          lastError: message,
         },
       });
+      await publishHome({ client, userId: body.user.id });
+      await client.views.update({
+        view_id: viewId,
+        view: statusModal({
+          title: 'MCP Connection Failed',
+          text: `OAuth is saved, but Gorkie could not discover tools.\n\n${codeBlock({ value: message, maxLength: 900 })}`,
+        }),
+      });
+      return;
     }
     await publishHome({ client, userId: body.user.id });
     await client.views.update({

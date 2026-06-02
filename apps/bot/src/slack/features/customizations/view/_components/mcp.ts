@@ -10,11 +10,12 @@ function truncate(value: string, max: number): string {
 
 function serverBlocks(server: McpServerWithConnection) {
   const connected = server.hasConnection;
+  const failed = Boolean(server.lastError);
   let authStatus = 'OAuth required';
   if (server.authType === 'bearer') {
-    authStatus = connected ? 'Bearer token set' : 'Bearer token required';
+    authStatus = connected ? 'Bearer token saved' : 'Bearer token required';
   } else if (connected) {
-    authStatus = 'OAuth connected';
+    authStatus = failed ? 'OAuth saved, MCP failed' : 'OAuth saved';
   }
   const status = `${server.enabled ? 'Enabled' : 'Disabled'} · ${authStatus}`;
   const lastError = server.lastError
