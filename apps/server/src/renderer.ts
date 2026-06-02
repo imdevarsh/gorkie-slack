@@ -44,9 +44,9 @@ async function renderPage({
   const isSuccess = status === 'success';
   return template
     .replaceAll('{{status}}', status)
-    .replaceAll('{{title}}', escapeHtml(title))
-    .replaceAll('{{message}}', escapeHtml(message))
-    .replaceAll('{{badge}}', isSuccess ? 'Connected' : 'Error');
+    .replaceAll('{{ title }}', escapeHtml(title))
+    .replaceAll('{{ message }}', escapeHtml(message))
+    .replaceAll('{{ badge }}', isSuccess ? 'Connected' : 'Error');
 }
 
 export default defineHandler(async (event) => {

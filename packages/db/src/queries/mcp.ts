@@ -36,8 +36,8 @@ export function listMcpServersByUser({
 }): Promise<McpServerWithConnection[]> {
   return db
     .select({
-      bearerConnection: mcpBearerConnections,
-      oauthConnection: mcpOauthConnections,
+      bearerConnectionId: mcpBearerConnections.id,
+      oauthConnectionId: mcpOauthConnections.id,
       server: mcpServers,
     })
     .from(mcpServers)
@@ -59,12 +59,12 @@ export function listMcpServersByUser({
     .orderBy(desc(mcpServers.createdAt))
     .limit(limit)
     .then((rows) =>
-      rows.map(({ bearerConnection, oauthConnection, server }) => ({
+      rows.map(({ bearerConnectionId, oauthConnectionId, server }) => ({
         ...server,
         hasConnection:
           server.authType === 'bearer'
-            ? Boolean(bearerConnection?.token)
-            : Boolean(oauthConnection?.tokens),
+            ? Boolean(bearerConnectionId)
+            : Boolean(oauthConnectionId),
       }))
     );
 }

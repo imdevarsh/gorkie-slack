@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
+import { codeBlock } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type {
   ChatRequestHints,
@@ -108,7 +109,10 @@ export async function postApprovalRequest({
       },
       body: {
         type: 'mrkdwn',
-        text: clampText(`Input:\n\`\`\`${args || '{}'}\`\`\``, 200),
+        text: clampText(
+          `Input:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
+          200
+        ),
       },
       actions: [
         {

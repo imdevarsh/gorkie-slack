@@ -8,9 +8,13 @@ import { errorMessage } from '@repo/utils/error';
 import { env } from '@/env';
 import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../../publish';
-import { blocks, views } from '../../ids';
+import { blocks, inputs, views } from '../../ids';
+import {
+  parsePrivateMetadata,
+  serverMetaSchema,
+  viewValueSchema,
+} from '../../schema';
 import type { SubmitArgs } from '../../types';
-import { parseSaveBearerPayload } from './schema';
 
 export const name = views.bearer;
 
@@ -20,14 +24,32 @@ export async function execute({
   client,
   view,
 }: SubmitArgs): Promise<void> {
-  const payload = parseSaveBearerPayload({ view });
-  if (!payload.data) {
-    await ack({ errors: payload.errors, response_action: 'errors' });
+  const bearerToken =
+    viewValueSchema
+      .parse(view.state.values[blocks.bearer]?.[inputs.bearer])
+      .value?.trim() ?? '';
+  if (!bearerToken) {
+    await ack({
+      errors: { [blocks.bearer]: 'Enter a bearer token.' },
+      response_action: 'errors',
+    });
+    return;
+  }
+
+  const meta = serverMetaSchema.safeParse(
+    parsePrivateMetadata({ metadata: view.private_metadata })
+  );
+  const serverId = meta.success ? meta.data.serverId : null;
+  if (!serverId) {
+    await ack({
+      errors: { [blocks.bearer]: 'Could not identify this MCP server.' },
+      response_action: 'errors',
+    });
     return;
   }
 
   const server = await getMcpServerByIdForUser({
-    id: payload.data.serverId,
+    id: serverId,
     userId: body.user.id,
   });
   if (!server) {
@@ -39,18 +61,18 @@ export async function execute({
   }
 
   const token = encryptSecret({
-    plaintext: payload.data.bearerToken,
+    plaintext: bearerToken,
     secret: env.MCP_TOKEN_ENCRYPTION_KEY,
   });
   await ack();
   await upsertMcpBearerConnection({
     token,
-    serverId: payload.data.serverId,
+    serverId,
     teamId: body.team?.id ?? null,
     userId: body.user.id,
   });
   await updateMcpServerForUser({
-    id: payload.data.serverId,
+    id: serverId,
     userId: body.user.id,
     values: {
       enabled: true,
@@ -59,7 +81,7 @@ export async function execute({
     },
   });
   const updatedServer = await getMcpServerByIdForUser({
-    id: payload.data.serverId,
+    id: serverId,
     userId: body.user.id,
   });
   if (updatedServer) {
@@ -71,7 +93,7 @@ export async function execute({
       });
     } catch (error) {
       await updateMcpServerForUser({
-        id: payload.data.serverId,
+        id: serverId,
         userId: body.user.id,
         values: {
           enabled: false,

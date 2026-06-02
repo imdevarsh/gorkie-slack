@@ -21,10 +21,6 @@ async function addServer({ ack, body, client }: ButtonArgs): Promise<void> {
   });
 }
 
-async function acknowledgeToolMode({ ack }: SelectArgs): Promise<void> {
-  await ack();
-}
-
 export const mcp = {
   buttonActions: [
     { execute: addServer, name: actions.add },
@@ -40,7 +36,7 @@ export const mcp = {
   ],
   selectActions: [
     { execute: authChanged.execute, name: authChanged.name },
-    { execute: acknowledgeToolMode, name: inputs.toolMode },
+    { execute: ({ ack }: SelectArgs) => ack(), name: inputs.toolMode },
   ],
   submitViews: [
     { execute: saveBearer.execute, name: saveBearer.name },

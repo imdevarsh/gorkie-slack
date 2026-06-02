@@ -2,12 +2,23 @@ import {
   listMcpToolPermissions,
   upsertMcpToolPermission,
 } from '@repo/db/queries';
+import { z } from 'zod';
 import { publishHome } from '../../../publish';
-import { views } from '../../ids';
+import { inputs, views } from '../../ids';
+import { parsePrivateMetadata, serverMetaSchema } from '../../schema';
 import type { SubmitArgs } from '../../types';
-import { parseSaveToolsPayload } from './schema';
 
 export const name = views.configure;
+
+const toolModeSchema = z
+  .looseObject({
+    selected_option: z
+      .looseObject({
+        value: z.enum(['allow', 'ask', 'block']),
+      })
+      .nullish(),
+  })
+  .catch({});
 
 export async function execute({
   ack,
@@ -16,20 +27,41 @@ export async function execute({
   view,
 }: SubmitArgs): Promise<void> {
   await ack();
-  const payload = parseSaveToolsPayload({ view });
-  if (!payload.serverId) {
+  const meta = serverMetaSchema.safeParse(
+    parsePrivateMetadata({ metadata: view.private_metadata })
+  );
+  const serverId = meta.success ? meta.data.serverId : null;
+  if (!serverId) {
     return;
   }
+  const modes = Object.entries(view.state.values).flatMap(
+    ([blockId, fields]) => {
+      if (!blockId.startsWith('tool_')) {
+        return [];
+      }
+      const selected = toolModeSchema.parse(
+        fields[inputs.toolMode]
+      ).selected_option;
+      return selected?.value
+        ? [
+            {
+              mode: selected.value,
+              permissionId: blockId.slice('tool_'.length),
+            },
+          ]
+        : [];
+    }
+  );
 
   const permissions = await listMcpToolPermissions({
-    serverId: payload.serverId,
+    serverId,
     userId: body.user.id,
   });
   const permissionById = new Map(
     permissions.map((permission) => [permission.id, permission])
   );
 
-  for (const item of payload.modes) {
+  for (const item of modes) {
     const permission = permissionById.get(item.permissionId);
     if (!(permission && permission.mode !== item.mode)) {
       continue;
@@ -38,7 +70,7 @@ export async function execute({
     await upsertMcpToolPermission({
       mode: item.mode,
       scope: 'global',
-      serverId: payload.serverId,
+      serverId,
       source: 'user',
       teamId: body.team?.id,
       threadTs: '',

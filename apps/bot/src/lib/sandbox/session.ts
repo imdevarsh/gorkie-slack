@@ -98,6 +98,11 @@ async function createSandboxToken({
   sandboxId: string;
 }): Promise<string> {
   const allowedIp = await getOutboundIp(sandbox);
+  if (!allowedIp) {
+    throw new Error(
+      `[sandbox] Could not resolve outbound IP for sandbox ${sandboxId}`
+    );
+  }
   const { token } = await issueSandboxToken({
     allowedIp,
     sandboxId,
@@ -122,13 +127,14 @@ async function createSandbox(
 
   await sandbox.setTimeout(config.timeoutMs);
 
+  let client: Awaited<ReturnType<typeof boot>> | undefined;
   try {
     const sandboxToken = await createSandboxToken({
       sandbox,
       sandboxId: sandbox.sandboxId,
     });
     await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
-    const client = await boot({ sandbox, sessionToken: sandboxToken });
+    client = await boot({ sandbox, sessionToken: sandboxToken });
     const { sessionId } = await client.getState();
 
     await upsert({
@@ -144,6 +150,7 @@ async function createSandbox(
 
     return { client, sandbox };
   } catch (error) {
+    await client?.disconnect().catch(() => null);
     await revokeSandboxToken({ sandboxId: sandbox.sandboxId }).catch(
       () => null
     );
@@ -178,21 +185,25 @@ async function resumeSandbox(
       sessionId,
       sessionToken: sandboxToken,
     });
+    try {
+      const state = await client.getState();
+      logger.debug(
+        { threadId, sessionId: state.sessionId },
+        '[sandbox] Resumed session'
+      );
 
-    const state = await client.getState();
-    logger.debug(
-      { threadId, sessionId: state.sessionId },
-      '[sandbox] Resumed session'
-    );
+      await updateRuntime(threadId, {
+        sandboxId: sandbox.sandboxId,
+        sessionId: state.sessionId,
+        status: 'active',
+      });
+      await markActivity(threadId);
 
-    await updateRuntime(threadId, {
-      sandboxId: sandbox.sandboxId,
-      sessionId: state.sessionId,
-      status: 'active',
-    });
-    await markActivity(threadId);
-
-    return { client, sandbox };
+      return { client, sandbox };
+    } catch (error) {
+      await client.disconnect().catch(() => null);
+      throw error;
+    }
   } catch (error) {
     await revokeSandboxToken({ sandboxId: sandbox.sandboxId }).catch(
       () => null

@@ -159,13 +159,6 @@ export function bearerModal({
 
 type ModalView = ViewsOpenArguments['view'];
 
-function modeOption({ text, value }: { text: string; value: string }) {
-  return {
-    text: { type: 'plain_text', text },
-    value,
-  };
-}
-
 export function toolsModal({
   error,
   permissions,
@@ -181,9 +174,9 @@ export function toolsModal({
 }): ModalView {
   const canSave = !error && permissions.length > 0;
   const options = [
-    modeOption({ text: 'Allow always', value: 'allow' }),
-    modeOption({ text: 'Ask', value: 'ask' }),
-    modeOption({ text: 'Block', value: 'block' }),
+    { text: { type: 'plain_text', text: 'Allow always' }, value: 'allow' },
+    { text: { type: 'plain_text', text: 'Ask' }, value: 'ask' },
+    { text: { type: 'plain_text', text: 'Block' }, value: 'block' },
   ];
   const toolByName = new Map(tools.map((tool) => [tool.name, tool]));
   const visiblePermissions = error ? [] : permissions.slice(0, 20);
