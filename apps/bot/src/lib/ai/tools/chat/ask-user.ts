@@ -5,11 +5,12 @@ import { askUserBlocks } from '@/slack/features/ask-user/components';
 import {
   type AskUserQuestion,
   createAskUserApprovalState,
+  normalizeAskUserQuestion,
   saveAskUserApprovalState,
 } from '@/slack/features/ask-user/state';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 
-const optionSchema = z.union([
+const choiceSchema = z.union([
   z.string().min(1).max(80),
   z.object({
     id: z.string().min(1).max(80),
@@ -21,13 +22,12 @@ const optionSchema = z.union([
 const questionSchema = z.object({
   id: z.string().min(1).max(80),
   title: z.string().min(1).max(500),
-  mode: z.enum(['choice', 'text']).optional(),
-  multiSelect: z.boolean().optional(),
+  type: z.enum(['single_choice', 'multi_choice', 'text']).optional(),
   skippable: z.boolean().optional(),
   allowOther: z.boolean().optional(),
   otherPlaceholder: z.string().min(1).max(80).optional(),
   nextLabel: z.string().min(1).max(40).optional(),
-  options: z.array(optionSchema).max(5).optional(),
+  choices: z.array(choiceSchema).max(5).optional(),
 });
 
 export const askUser = ({
@@ -43,14 +43,14 @@ export const askUser = ({
     description:
       'Ask the user a necessary follow-up question when you cannot continue the task without their input. Use this instead of guessing missing private details.',
     inputSchema: z.object({
-      mode: z.enum(['choice', 'freeform']).default('freeform'),
+      type: z.enum(['single_choice', 'multi_choice', 'text']).default('text'),
       question: z.string().min(1).max(500).optional(),
-      options: z
-        .array(optionSchema)
+      choices: z
+        .array(choiceSchema)
         .min(2)
         .max(5)
         .optional()
-        .describe('Short choices to show when mode is choice.'),
+        .describe('Short choices to show for single_choice or multi_choice.'),
       questions: z
         .array(questionSchema)
         .min(1)
@@ -66,7 +66,7 @@ export const askUser = ({
       });
     },
     execute: async (
-      { mode, options, question, questions },
+      { choices, question, questions, type },
       { messages, toolCallId }
     ) => {
       const channel = context.event.channel;
@@ -77,9 +77,8 @@ export const askUser = ({
             {
               id: 'question',
               title: question ?? 'What should I know?',
-              mode: mode === 'freeform' ? 'text' : 'choice',
-              options: mode === 'choice' && options?.length ? options : [],
-              allowOther: mode === 'freeform',
+              type,
+              choices: type === 'text' ? [] : (choices ?? []),
             },
           ];
       const approval = await createAskUserApprovalState({
@@ -87,27 +86,47 @@ export const askUser = ({
         messages,
         questions: rawQuestions.map((item): AskUserQuestion => {
           const seenIds = new Set<string>();
-          let questionMode: AskUserQuestion['mode'] = 'text';
-          if (item.mode === 'choice' || item.mode === 'text') {
-            questionMode = item.mode;
-          } else if (item.options?.length) {
-            questionMode = 'choice';
-          }
-          return {
-            ...item,
-            mode: questionMode,
-            options: (item.options ?? []).map((option, index) => {
+          const normalizedChoices = (item.choices ?? []).map(
+            (choice, index) => {
               const normalized =
-                typeof option === 'string'
-                  ? { id: `option_${index + 1}`, title: option }
-                  : option;
+                typeof choice === 'string'
+                  ? { id: `choice_${index + 1}`, title: choice }
+                  : choice;
               if (seenIds.has(normalized.id)) {
                 return { ...normalized, id: `${normalized.id}_${index + 1}` };
               }
               seenIds.add(normalized.id);
               return normalized;
-            }),
-          };
+            }
+          );
+          const questionType =
+            item.type ??
+            (normalizedChoices.length > 0 ? 'single_choice' : 'text');
+          return normalizeAskUserQuestion({
+            question: {
+              id: item.id,
+              title: item.title,
+              type:
+                questionType === 'text' ||
+                normalizedChoices.length > 0 ||
+                item.allowOther
+                  ? questionType
+                  : 'text',
+              choices: normalizedChoices,
+              ...(item.allowOther === undefined
+                ? {}
+                : { allowOther: item.allowOther }),
+              ...(item.nextLabel === undefined
+                ? {}
+                : { nextLabel: item.nextLabel }),
+              ...(item.otherPlaceholder === undefined
+                ? {}
+                : { otherPlaceholder: item.otherPlaceholder }),
+              ...(item.skippable === undefined
+                ? {}
+                : { skippable: item.skippable }),
+            },
+          });
         }),
         requestHints,
       });

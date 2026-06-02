@@ -24,7 +24,7 @@ export interface AskUserButton {
   value: string;
 }
 
-export interface AskUserOptionElement {
+export interface AskUserChoiceElement {
   description?: {
     emoji: false;
     text: string;

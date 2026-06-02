@@ -3,7 +3,7 @@ import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ViewsOpenArguments } from '@slack/web-api/dist/types/request/views';
 import { actions, views } from './ids';
 import { type AskUserApprovalState, askUserAnswerSummary } from './state';
-import type { AskUserButton, AskUserOptionElement } from './types';
+import type { AskUserButton, AskUserChoiceElement } from './types';
 
 type AskUserModalView = ViewsOpenArguments['view'];
 
@@ -111,8 +111,8 @@ export function askUserModal({
     selected
       .find((value) => value.startsWith('other:'))
       ?.slice('other:'.length) ?? '';
-  const options = [
-    ...question.options,
+  const choices = [
+    ...question.choices,
     ...(question.allowOther
       ? [
           {
@@ -122,22 +122,22 @@ export function askUserModal({
         ]
       : []),
   ];
-  const optionElements: AskUserOptionElement[] = options.map((option) => ({
+  const choiceElements: AskUserChoiceElement[] = choices.map((choice) => ({
     text: {
       type: 'plain_text',
-      text: clampText(option.title, 75),
+      text: clampText(choice.title, 75),
       emoji: false,
     },
-    ...(option.description
+    ...(choice.description
       ? {
           description: {
             type: 'plain_text',
-            text: clampText(option.description, 75),
+            text: clampText(choice.description, 75),
             emoji: false,
           },
         }
       : {}),
-    value: clampText(option.id, 75),
+    value: clampText(choice.id, 75),
   }));
   const navButtons: AskUserButton[] = [];
 
@@ -175,7 +175,7 @@ export function askUserModal({
         text: `*Question ${approval.index + 1} of ${approval.questions.length}*\n${question.title}`,
       },
     },
-    ...(question.mode === 'text'
+    ...(question.type === 'text'
       ? [
           {
             type: 'input',
@@ -197,16 +197,16 @@ export function askUserModal({
       : [
           {
             type: 'actions',
-            block_id: `ask_user_options_${approval.index}`,
+            block_id: `ask_user_choices_${approval.index}`,
             elements: [
-              question.multiSelect
+              question.type === 'multi_choice'
                 ? {
                     type: 'checkboxes',
                     action_id: actionId({ action: 'toggle', approval }),
-                    options: optionElements,
+                    options: choiceElements,
                     ...(selectedOptionIds.length > 0
                       ? {
-                          initial_options: optionElements.filter((option) =>
+                          initial_options: choiceElements.filter((option) =>
                             selectedOptionIds.includes(option.value)
                           ),
                         }
@@ -215,10 +215,10 @@ export function askUserModal({
                 : {
                     type: 'radio_buttons',
                     action_id: actionId({ action: 'choose', approval }),
-                    options: optionElements,
+                    options: choiceElements,
                     ...(selectedOptionIds[0]
                       ? {
-                          initial_option: optionElements.find(
+                          initial_option: choiceElements.find(
                             (option) => option.value === selectedOptionIds[0]
                           ),
                         }

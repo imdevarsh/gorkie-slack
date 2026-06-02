@@ -9,22 +9,37 @@ import type { ModelMessage } from 'ai';
 import { env } from '@/env';
 import type { ChatRequestHints, SlackMessageContext } from '@/types';
 
-export interface AskUserOption {
+export interface AskUserChoice {
   description?: string;
   id: string;
   title: string;
 }
 
+export type AskUserQuestionType = 'multi_choice' | 'single_choice' | 'text';
+
 export interface AskUserQuestion {
   allowOther?: boolean;
+  choices: AskUserChoice[];
+  id: string;
+  nextLabel?: string;
+  otherPlaceholder?: string;
+  skippable?: boolean;
+  title: string;
+  type: AskUserQuestionType;
+}
+
+interface StoredAskUserQuestion {
+  allowOther?: boolean;
+  choices?: AskUserChoice[];
   id: string;
   mode?: 'choice' | 'text';
   multiSelect?: boolean;
   nextLabel?: string;
-  options: AskUserOption[];
+  options?: AskUserChoice[];
   otherPlaceholder?: string;
   skippable?: boolean;
   title: string;
+  type?: AskUserQuestionType;
 }
 
 export interface AskUserApprovalState {
@@ -66,12 +81,67 @@ function decodeApprovalState({ state }: { state: string }): {
   questions: AskUserQuestion[];
   requestHints: ChatRequestHints;
 } {
-  return JSON.parse(
+  const decoded: {
+    answers: Record<string, string[]>;
+    index: number;
+    messages: ModelMessage[];
+    questions: StoredAskUserQuestion[];
+    requestHints: ChatRequestHints;
+  } = JSON.parse(
     decryptSecret({
       encrypted: state,
       secret: env.MCP_TOKEN_ENCRYPTION_KEY,
     })
   );
+
+  return {
+    ...decoded,
+    questions: decoded.questions.map((question) =>
+      normalizeAskUserQuestion({ question })
+    ),
+  };
+}
+
+export function normalizeAskUserQuestion({
+  question,
+}: {
+  question: StoredAskUserQuestion;
+}): AskUserQuestion {
+  const choices = question.choices ?? question.options ?? [];
+  let requestedType = question.type ?? 'text';
+  if (!question.type && question.mode === 'text') {
+    requestedType = 'text';
+  } else if (!question.type && question.multiSelect) {
+    requestedType = 'multi_choice';
+  } else if (
+    !question.type &&
+    (question.mode === 'choice' || choices.length > 0)
+  ) {
+    requestedType = 'single_choice';
+  }
+  const type =
+    requestedType === 'text' || choices.length > 0 || question.allowOther
+      ? requestedType
+      : 'text';
+
+  return {
+    choices,
+    id: question.id,
+    title: question.title,
+    type,
+    ...(question.allowOther === undefined
+      ? {}
+      : { allowOther: question.allowOther }),
+    ...(question.nextLabel === undefined
+      ? {}
+      : { nextLabel: question.nextLabel }),
+    ...(question.otherPlaceholder === undefined
+      ? {}
+      : { otherPlaceholder: question.otherPlaceholder }),
+    ...(question.skippable === undefined
+      ? {}
+      : { skippable: question.skippable }),
+  };
 }
 
 export async function createAskUserApprovalState({
@@ -92,7 +162,9 @@ export async function createAskUserApprovalState({
     id: '',
     index: 0,
     messages,
-    questions,
+    questions: questions.map((question) =>
+      normalizeAskUserQuestion({ question })
+    ),
     requestHints,
   };
   const record = await createAskUserApproval({
@@ -188,14 +260,14 @@ export function askUserAnswerSummary({
       const selected = approval.answers[question.id] ?? [];
       const titles = selected
         .map((optionId) => {
-          if (question.mode === 'text') {
+          if (question.type === 'text') {
             return optionId;
           }
           if (optionId.startsWith('other:')) {
             return optionId.slice('other:'.length);
           }
           return (
-            question.options.find((option) => option.id === optionId)?.title ??
+            question.choices.find((option) => option.id === optionId)?.title ??
             (optionId === 'other'
               ? (question.otherPlaceholder ?? 'Other')
               : null) ??

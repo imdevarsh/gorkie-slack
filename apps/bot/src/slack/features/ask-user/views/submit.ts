@@ -53,7 +53,7 @@ export async function execute({
   }
 
   const values = view.state.values;
-  if (question.mode === 'text') {
+  if (question.type === 'text') {
     const text = firstInputValue({
       block: values[askUserTextBlockId({ index: approval.index })],
     });
