@@ -1,4 +1,3 @@
-import * as add from './actions/add';
 import * as approval from './actions/approval';
 import * as authChanged from './actions/auth-changed';
 import * as configure from './actions/configure';
@@ -6,12 +5,21 @@ import * as connect from './actions/connect';
 import * as deleteServer from './actions/delete';
 import * as disconnect from './actions/disconnect';
 import * as toggle from './actions/toggle';
-import { inputs } from './ids';
-import type { SelectArgs } from './types';
+import { actions, inputs } from './ids';
+import type { ButtonArgs, SelectArgs } from './types';
+import { addModal } from './view';
 import * as connectClosed from './views/connect-closed';
 import * as save from './views/save';
 import * as saveBearer from './views/save-bearer';
 import * as saveTools from './views/save-tools';
+
+async function addServer({ ack, body, client }: ButtonArgs): Promise<void> {
+  await ack();
+  await client.views.open({
+    trigger_id: body.trigger_id,
+    view: addModal(),
+  });
+}
 
 async function acknowledgeToolMode({ ack }: SelectArgs): Promise<void> {
   await ack();
@@ -19,7 +27,7 @@ async function acknowledgeToolMode({ ack }: SelectArgs): Promise<void> {
 
 export const mcp = {
   buttonActions: [
-    { execute: add.execute, name: add.name },
+    { execute: addServer, name: actions.add },
     { execute: approval.execute, name: approval.approveName },
     { execute: approval.execute, name: approval.alwaysThreadName },
     { execute: approval.execute, name: approval.denyName },

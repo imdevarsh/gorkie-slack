@@ -1,7 +1,15 @@
-export type { Provider } from '@/types';
-
-import type { ProviderConfig } from '@/types';
 import { env } from './env';
+
+export interface Provider {
+  apiKey: string;
+  url: string;
+}
+
+interface ProviderConfig {
+  apiKey: string | undefined;
+  name: string;
+  url: string;
+}
 
 const CONFIGS: ProviderConfig[] = [
   {

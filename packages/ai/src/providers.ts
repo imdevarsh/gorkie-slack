@@ -1,6 +1,6 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { createLogger } from '@repo/logging/log';
+import { createLogger } from '@repo/logging/logger';
 import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
 import { createRetryable, type LanguageModel, type Retry } from 'ai-retry';
 import { requestNotRetryable } from 'ai-retry/retryables';
