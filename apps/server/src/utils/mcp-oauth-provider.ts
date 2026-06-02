@@ -5,13 +5,16 @@ import type {
   McpServer,
   NewMcpOauthConnection,
 } from '@repo/db/schema';
-import { decryptSecret, encryptSecret } from '@repo/utils';
+import {
+  decryptSecret,
+  encryptSecret,
+  parseEncryptedMcpJson,
+} from '@repo/utils';
 import {
   mcpOAuthClientInformationSchema,
   mcpOAuthTokensSchema,
 } from '@repo/validators';
 import { env } from '@/env';
-import { parseEncryptedMcpJson } from './mcp-secret';
 
 export function createMcpOAuthProvider({
   connection,
@@ -56,6 +59,7 @@ export function createMcpOAuthProvider({
       return parseEncryptedMcpJson({
         encrypted: currentConnection?.tokens ?? null,
         schema: mcpOAuthTokensSchema,
+        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },
     async saveTokens(tokens) {
@@ -86,12 +90,14 @@ export function createMcpOAuthProvider({
         const fromDb = parseEncryptedMcpJson({
           encrypted: currentConnection?.clientInformation ?? null,
           schema: mcpOAuthClientInformationSchema,
+          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         });
         return fromDb ?? { client_id: currentConnection.clientId };
       }
       return parseEncryptedMcpJson({
         encrypted: currentConnection?.clientInformation ?? null,
         schema: mcpOAuthClientInformationSchema,
+        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },
     saveClientInformation: () => undefined,

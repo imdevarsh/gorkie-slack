@@ -1,13 +1,14 @@
-import { decryptSecret } from '@repo/utils';
 import type { z } from 'zod';
-import { env } from '@/env';
+import { decryptSecret } from './secret';
 
 export function parseEncryptedMcpJson<TSchema extends z.ZodType>({
   encrypted,
   schema,
+  secret,
 }: {
   encrypted: string | null;
   schema: TSchema;
+  secret: string;
 }): z.output<TSchema> | undefined {
   if (!encrypted) {
     return;
@@ -16,7 +17,7 @@ export function parseEncryptedMcpJson<TSchema extends z.ZodType>({
     JSON.parse(
       decryptSecret({
         encrypted,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+        secret,
       })
     )
   );

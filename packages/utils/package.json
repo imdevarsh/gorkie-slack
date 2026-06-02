@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@repo/validators": "workspace:*",
-    "strip-ansi": "^7.2.0"
+    "strip-ansi": "^7.2.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",

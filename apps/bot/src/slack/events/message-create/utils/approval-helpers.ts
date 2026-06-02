@@ -1,5 +1,5 @@
 import { createMcpToolApproval } from '@repo/db/queries';
-import { encryptSecret } from '@repo/utils';
+import { encryptSecret, parseEncryptedMcpJson } from '@repo/utils';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
-import { parseEncryptedMcpJson } from '@/lib/mcp/secret';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type {
   ChatRequestHints,
@@ -39,6 +38,7 @@ export function decodeApprovalState({ state }: { state: string }): {
   const parsed = parseEncryptedMcpJson({
     encrypted: state,
     schema: approvalStateSchema,
+    secret: env.MCP_TOKEN_ENCRYPTION_KEY,
   });
   if (!parsed) {
     throw new Error('Missing MCP approval state.');
