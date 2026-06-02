@@ -85,9 +85,6 @@ export const sandbox = {
 
 export const mcp = {
   defaultToolMode: 'ask',
-  maxServersPerRequest: 3,
-  maxToolsPerServer: 25,
-  maxSchemaBytesPerServer: 256 * 1024,
   requestTimeoutMs: 15_000,
   maxResponseBytes: 10 * 1024 * 1024,
   taskOutputMaxChars: 260,

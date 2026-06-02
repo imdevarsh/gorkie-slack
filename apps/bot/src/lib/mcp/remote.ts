@@ -1,8 +1,4 @@
-import {
-  createMCPClient,
-  type ListToolsResult,
-  type MCPClient,
-} from '@ai-sdk/mcp';
+import { createMCPClient, type MCPClient } from '@ai-sdk/mcp';
 import {
   ensureMcpToolPermissions,
   getMcpBearerConnection,
@@ -67,47 +63,6 @@ function normalizeToolMode(mode?: string | null): 'allow' | 'ask' | 'block' {
     return 'block';
   }
   return 'ask';
-}
-
-function limitTools({
-  definitions,
-  server,
-}: {
-  definitions: ListToolsResult;
-  server: McpServer;
-}): ListToolsResult {
-  let schemaBytes = 0;
-  const tools: ListToolsResult['tools'] = [];
-
-  for (const tool of definitions.tools) {
-    if (tools.length >= mcp.maxToolsPerServer) {
-      break;
-    }
-
-    const nextSchemaBytes = Buffer.byteLength(
-      JSON.stringify(tool.inputSchema ?? {}),
-      'utf8'
-    );
-    if (schemaBytes + nextSchemaBytes > mcp.maxSchemaBytesPerServer) {
-      break;
-    }
-
-    schemaBytes += nextSchemaBytes;
-    tools.push(tool);
-  }
-
-  if (tools.length !== definitions.tools.length) {
-    logger.info(
-      {
-        kept: tools.length,
-        serverId: server.id,
-        total: definitions.tools.length,
-      },
-      'Filtered MCP tools'
-    );
-  }
-
-  return { ...definitions, tools };
 }
 
 async function getMcpConnection({
@@ -213,10 +168,7 @@ async function listTools({
     server,
   });
   try {
-    return limitTools({
-      definitions: await client.listTools(),
-      server,
-    });
+    return client.listTools();
   } finally {
     await client.close();
   }
@@ -257,7 +209,6 @@ export async function createMcpToolset({
   }
 
   const servers = await listEnabledMcpServersByUser({
-    limit: mcp.maxServersPerRequest,
     userId,
   });
   const clients: MCPClient[] = [];
@@ -282,10 +233,7 @@ export async function createMcpToolset({
       });
       clients.push(client);
 
-      const definitions = limitTools({
-        definitions: await client.listTools(),
-        server,
-      });
+      const definitions = await client.listTools();
       const threadTs = context.event.thread_ts ?? context.event.ts;
       await ensureMcpToolPermissions({
         serverId: server.id,
@@ -353,7 +301,7 @@ export async function createMcpToolset({
                   );
 
                   if (mode === 'block') {
-                    const message = 'Tool is blocked by your settings.';
+                    const message = `Access denied by MCP settings for ${server.name}: ${toolName}.`;
                     await createTask(stream, {
                       taskId: options.toolCallId,
                       title: `Blocked ${server.name}: ${toolName}`,

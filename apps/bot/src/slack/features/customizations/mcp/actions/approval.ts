@@ -110,38 +110,40 @@ export async function execute(args: ButtonArgs): Promise<void> {
     return;
   }
 
-  let resultText = `Denied ${approval.toolName}.`;
+  let resultText = `Access denied for ${approval.toolName}.`;
   if (approved) {
     resultText = alwaysInThread
       ? `Approved ${approval.toolName} for this thread.`
       : `Approved ${approval.toolName} once.`;
   }
 
-  const input = approval.argsJson
-    ? decryptSecret({
-        encrypted: approval.argsJson,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-      })
-    : undefined;
-
-  const { messages, requestHints } = decodeApprovalState({
-    state: approval.state,
-  });
-
-  const resumeContext: SlackMessageContext = {
-    botUserId: context.botUserId,
-    client,
-    teamId: approval.teamId ?? body.team?.id,
-    event: {
-      channel: approval.channelId,
-      event_ts: approval.eventTs,
-      text: '',
-      thread_ts: approval.threadTs,
-      ts: approval.eventTs,
-      user: approval.userId,
-    },
-  };
+  let input: string | undefined;
   try {
+    input = approval.argsJson
+      ? decryptSecret({
+          encrypted: approval.argsJson,
+          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+        })
+      : undefined;
+
+    const { messages, requestHints } = decodeApprovalState({
+      state: approval.state,
+    });
+
+    const resumeContext: SlackMessageContext = {
+      botUserId: context.botUserId,
+      client,
+      teamId: approval.teamId ?? body.team?.id,
+      event: {
+        channel: approval.channelId,
+        event_ts: approval.eventTs,
+        text: '',
+        thread_ts: approval.threadTs,
+        ts: approval.eventTs,
+        user: approval.userId,
+      },
+    };
+
     if (approved && alwaysInThread) {
       await upsertMcpToolPermission({
         mode: 'allow',
@@ -161,7 +163,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
         approved,
         context: resumeContext,
         messages,
-        reason: approved ? undefined : 'Denied by the user in Slack.',
+        reason: approved ? undefined : 'Access denied by Slack approval.',
         requestHints,
       })
     );

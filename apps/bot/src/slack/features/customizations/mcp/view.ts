@@ -3,7 +3,6 @@ import type { McpToolPermission } from '@repo/db/schema';
 import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
-import { mcp as mcpConfig } from '@/config';
 import { codeBlock, mdText } from '@/slack/blocks';
 import { blocks, inputs, views } from './ids';
 import type { ModalState } from './types';
@@ -200,9 +199,7 @@ export function toolsModal({
     { text: { type: 'plain_text', text: 'Block' }, value: 'block' },
   ];
   const toolByName = new Map(tools.map((tool) => [tool.name, tool]));
-  const visiblePermissions = error
-    ? []
-    : permissions.slice(0, mcpConfig.maxToolsPerServer);
+  const visiblePermissions = error ? [] : permissions;
   const groupedBlocks: ModalView['blocks'] = visiblePermissions
     .map((permission) => {
       const annotations = toolByName.get(permission.toolName)?.annotations;

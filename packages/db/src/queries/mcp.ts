@@ -72,17 +72,14 @@ export function listMcpServersByUser({
 
 export function listEnabledMcpServersByUser({
   userId,
-  limit,
 }: {
   userId: string;
-  limit: number;
 }): Promise<McpServer[]> {
   return db
     .select()
     .from(mcpServers)
     .where(and(eq(mcpServers.userId, userId), eq(mcpServers.enabled, true)))
-    .orderBy(desc(mcpServers.createdAt))
-    .limit(limit);
+    .orderBy(desc(mcpServers.createdAt));
 }
 
 export function getMcpServerByIdForUser({
