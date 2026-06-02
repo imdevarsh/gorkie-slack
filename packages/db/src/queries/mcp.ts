@@ -28,10 +28,8 @@ export async function createMcpServer(server: NewMcpServer) {
 
 export function listMcpServersByUser({
   userId,
-  limit = 20,
 }: {
   userId: string;
-  limit?: number;
 }): Promise<McpServerWithConnection[]> {
   return db
     .select({
@@ -58,7 +56,6 @@ export function listMcpServersByUser({
     )
     .where(eq(mcpServers.userId, userId))
     .orderBy(desc(mcpServers.createdAt))
-    .limit(limit)
     .then((rows) =>
       rows.map(({ bearerConnectionId, oauthConnectionId, server }) => ({
         ...server,
