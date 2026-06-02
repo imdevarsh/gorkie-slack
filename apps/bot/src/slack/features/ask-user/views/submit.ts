@@ -6,6 +6,7 @@ import { continueAfterAskUser } from '@/slack/events/message-create/utils/respon
 import { getContextId } from '@/utils/context';
 import {
   askUserAnsweredBlocks,
+  askUserChoicesBlockId,
   askUserModal,
   askUserOtherBlockId,
   askUserTextBlockId,
@@ -58,7 +59,31 @@ export async function execute({
       block: values[askUserTextBlockId({ index: approval.index })],
     });
     approval.answers[question.id] = text ? [text] : [];
-  } else if (question.allowOther) {
+  } else {
+    const choiceBlock = asRecord(
+      values[askUserChoicesBlockId({ index: approval.index })]
+    );
+    const choiceInput = Object.values(choiceBlock ?? {})
+      .map((value) => asRecord(value))
+      .find(
+        (value) =>
+          value?.type === 'radio_buttons' || value?.type === 'checkboxes'
+      );
+    const selectedOption = asRecord(choiceInput?.selected_option);
+    if (question.type === 'single_choice') {
+      approval.answers[question.id] =
+        typeof selectedOption?.value === 'string' ? [selectedOption.value] : [];
+    } else if (Array.isArray(choiceInput?.selected_options)) {
+      approval.answers[question.id] = choiceInput.selected_options.flatMap(
+        (option) => {
+          const selected = asRecord(option);
+          return typeof selected?.value === 'string' ? [selected.value] : [];
+        }
+      );
+    }
+  }
+
+  if (question.type !== 'text' && question.allowOther) {
     const selected = approval.answers[question.id] ?? [];
     if (selected.some((value) => value === 'other')) {
       const text = firstInputValue({

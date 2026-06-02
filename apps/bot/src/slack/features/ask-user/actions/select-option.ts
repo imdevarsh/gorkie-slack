@@ -90,6 +90,11 @@ export async function execute({
     optionId = selectedOption.value;
   }
 
+  const previousAnswer = approval.answers[question.id] ?? [];
+  const hadOther = previousAnswer.some((value) => value === 'other');
+  let shouldUpdateView =
+    command === 'back' || command === 'skip' || command === 'continue';
+
   if (command === 'back') {
     approval.index = Math.max(0, approval.index - 1);
   } else if (command === 'skip' || command === 'continue') {
@@ -105,12 +110,22 @@ export async function execute({
       return typeof selected?.value === 'string' ? [selected.value] : [];
     });
   }
+  if (command === 'choose' || command === 'toggle') {
+    const hasOther = (approval.answers[question.id] ?? []).some(
+      (value) => value === 'other'
+    );
+    shouldUpdateView = question.allowOther ? hadOther !== hasOther : false;
+  }
   const shouldContinue =
     approval.index >= approval.questions.length && !approval.completed;
   if (shouldContinue) {
     approval.completed = true;
   }
   await saveAskUserApprovalState({ approval });
+
+  if (!(shouldUpdateView || shouldContinue)) {
+    return;
+  }
 
   const view = asRecord(body.view);
   if (typeof view?.id === 'string') {

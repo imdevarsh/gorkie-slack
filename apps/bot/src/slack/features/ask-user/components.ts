@@ -25,6 +25,10 @@ export function askUserOtherBlockId({ index }: { index: number }) {
   return `ask_user_other_${index}`;
 }
 
+export function askUserChoicesBlockId({ index }: { index: number }) {
+  return `ask_user_choices_${index}`;
+}
+
 export function askUserBlocks({
   approval,
 }: {
@@ -197,7 +201,7 @@ export function askUserModal({
       : [
           {
             type: 'actions',
-            block_id: `ask_user_choices_${approval.index}`,
+            block_id: askUserChoicesBlockId({ index: approval.index }),
             elements: [
               question.type === 'multi_choice'
                 ? {
