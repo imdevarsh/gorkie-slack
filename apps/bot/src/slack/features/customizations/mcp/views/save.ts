@@ -4,11 +4,10 @@ import {
   upsertMcpBearerConnection,
   upsertMcpOAuthConnection,
 } from '@repo/db/queries';
-import { encryptSecret } from '@repo/utils';
+import { encryptSecret, validateHttpsUrlForServer } from '@repo/utils';
 import { errorMessage } from '@repo/utils/error';
 import { env } from '@/env';
-import { validateHttpsUrlForServer } from '@/lib/mcp/guarded-fetch';
-import { syncMcpToolPermissions } from '@/lib/mcp/remote';
+import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { blocks, inputs, views } from '../ids';
 import type { Auth, SubmitArgs, Transport } from '../types';
@@ -102,7 +101,7 @@ export async function execute({
   }
   if (server && auth === 'bearer') {
     try {
-      await syncMcpToolPermissions({
+      await syncMcpPermissions({
         server,
         teamId: body.team?.id,
         userId: body.user.id,

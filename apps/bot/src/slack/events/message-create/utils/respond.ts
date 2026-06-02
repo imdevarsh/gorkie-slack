@@ -172,6 +172,31 @@ export async function resumeResponse({
   });
 }
 
+export async function continueAfterAskUser({
+  answers,
+  context,
+  messages,
+  requestHints,
+}: {
+  answers: string;
+  context: SlackMessageContext;
+  messages: ModelMessage[];
+  requestHints: ChatRequestHints;
+}) {
+  await setStatus(context, { status: 'is continuing' });
+  return runAgent({
+    context,
+    messages: [
+      ...messages,
+      {
+        role: 'user',
+        content: `The user answered the askUser questions:\n${answers}\n\nContinue the original request using these answers. Do not ask these same questions again.`,
+      },
+    ],
+    requestHints,
+  });
+}
+
 export async function generateResponse(
   context: SlackMessageContext,
   messages: ModelMessage[],

@@ -6,7 +6,7 @@ import {
 import { encryptSecret } from '@repo/utils';
 import { errorMessage } from '@repo/utils/error';
 import { env } from '@/env';
-import { syncMcpToolPermissions } from '@/lib/mcp/remote';
+import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { blocks, inputs, views } from '../ids';
 import type { ServerMeta, SubmitArgs } from '../types';
@@ -83,7 +83,7 @@ export async function execute({
   });
   if (updatedServer) {
     try {
-      await syncMcpToolPermissions({
+      await syncMcpPermissions({
         server: updatedServer,
         teamId: body.team?.id,
         userId: body.user.id,

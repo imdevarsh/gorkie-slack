@@ -1,3 +1,4 @@
+import { errorMessage, toLogError } from '@repo/utils/error';
 import type { ToolSet } from 'ai';
 import { askUser } from '@/lib/ai/tools/chat/ask-user';
 import { cancelScheduledTask } from '@/lib/ai/tools/chat/cancel-scheduled-task';
@@ -17,20 +18,29 @@ import { searchSlack } from '@/lib/ai/tools/chat/search-slack';
 import { searchWeb } from '@/lib/ai/tools/chat/search-web';
 import { skip } from '@/lib/ai/tools/chat/skip';
 import { summariseThread } from '@/lib/ai/tools/chat/summarise-thread';
+import logger from '@/lib/logger';
 import { createMcpToolset } from '@/lib/mcp/toolset';
-import type { SlackFile, SlackMessageContext, Stream } from '@/types';
+import type {
+  ChatRequestHints,
+  SlackFile,
+  SlackMessageContext,
+  Stream,
+} from '@/types';
+import { finishTask } from '../utils/task';
 
 export async function createToolset({
   context,
   files,
+  requestHints,
   stream,
 }: {
   context: SlackMessageContext;
   files?: SlackFile[];
+  requestHints: ChatRequestHints;
   stream: Stream;
 }): Promise<{ cleanup: () => Promise<void>; tools: ToolSet }> {
   const nativeTools = {
-    askUser: askUser({ context, stream }),
+    askUser: askUser({ context, requestHints, stream }),
     cancelScheduledTask: cancelScheduledTask({ context, stream }),
     generateImage: generateImageTool({ context, files, stream }),
     getUserInfo: getUserInfo({ context, stream }),
@@ -50,9 +60,62 @@ export async function createToolset({
     summariseThread: summariseThread({ context, stream }),
   };
   const mcpTools = await createMcpToolset({ context, stream });
+  const tools: ToolSet = { ...nativeTools, ...mcpTools.tools };
+
+  for (const [toolName, currentTool] of Object.entries(tools)) {
+    const execute = currentTool.execute;
+    if (typeof execute !== 'function') {
+      continue;
+    }
+
+    tools[toolName] = {
+      ...currentTool,
+      execute: async (input, options) => {
+        try {
+          const result = await execute(input, options);
+          const task = stream.tasks.get(options.toolCallId);
+          const isFailure =
+            result &&
+            typeof result === 'object' &&
+            'success' in result &&
+            result.success === false;
+          if (task && task.status !== 'complete') {
+            await finishTask(stream, {
+              taskId: options.toolCallId,
+              status: isFailure ? 'error' : 'complete',
+              ...(isFailure ? { output: 'Tool failed.' } : {}),
+            });
+          }
+          return result;
+        } catch (error) {
+          const message = errorMessage(error);
+          logger.warn(
+            {
+              ...toLogError(error),
+              toolCallId: options.toolCallId,
+              toolName,
+            },
+            'Tool execution failed'
+          );
+          const task = stream.tasks.get(options.toolCallId);
+          if (task && task.status !== 'complete') {
+            await finishTask(stream, {
+              taskId: options.toolCallId,
+              status: 'error',
+              output: message,
+            });
+          }
+          return {
+            success: false,
+            error: 'Oops! An error occurred.',
+          };
+        }
+      },
+    };
+  }
 
   return {
     cleanup: mcpTools.cleanup,
-    tools: { ...nativeTools, ...mcpTools.tools },
+    tools,
   };
 }

@@ -9,10 +9,13 @@ import { defineHandler, getQuery } from 'nitro/h3';
 import { env } from '@/env';
 import { createMcpOAuthProvider } from '@/utils/mcp-oauth-provider';
 
-const guardedFetch = createGuardedFetch({
-  maxResponseBytes: 10 * 1024 * 1024,
-  timeoutMs: 15_000,
-});
+const guardedFetch = Object.assign(
+  createGuardedFetch({
+    maxResponseBytes: 10 * 1024 * 1024,
+    timeoutMs: 15_000,
+  }),
+  { preconnect: fetch.preconnect }
+);
 
 function html({
   message,
@@ -180,7 +183,7 @@ export default defineHandler(async (event) => {
     await auth(createMcpOAuthProvider({ connection, server }), {
       authorizationCode: code,
       callbackState: state,
-      fetchFn: guardedFetch as typeof fetch,
+      fetchFn: guardedFetch,
       serverUrl: server.url,
     });
     await updateMcpServerForUser({
