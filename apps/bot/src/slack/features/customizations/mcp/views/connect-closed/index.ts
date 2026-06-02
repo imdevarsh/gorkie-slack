@@ -7,7 +7,7 @@ import { errorMessage } from '@repo/utils/error';
 import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../../publish';
 import { views } from '../../ids';
-import { parsePrivateMetadata, serverMetaSchema } from '../../schema';
+import { parseServerMeta } from '../../schema';
 import type { CloseArgs } from '../../types';
 
 export const name = views.oauth;
@@ -19,10 +19,8 @@ export async function execute({
   view,
 }: CloseArgs): Promise<void> {
   await ack();
-  const meta = serverMetaSchema.safeParse(
-    parsePrivateMetadata({ metadata: view.private_metadata })
-  );
-  const serverId = meta.success ? (meta.data.serverId ?? null) : null;
+  const serverId =
+    parseServerMeta({ metadata: view.private_metadata }).serverId ?? null;
 
   const server = serverId
     ? await getMcpServerByIdForUser({ id: serverId, userId: body.user.id })

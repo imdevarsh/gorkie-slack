@@ -18,13 +18,13 @@ export const viewSelectedSchema = z
   })
   .catch({});
 
-export function parsePrivateMetadata({
+export function parseServerMeta({
   metadata,
 }: {
   metadata: string;
-}): unknown {
+}): z.output<typeof serverMetaSchema> {
   try {
-    return JSON.parse(metadata || '{}');
+    return serverMetaSchema.parse(JSON.parse(metadata || '{}'));
   } catch {
     return {};
   }

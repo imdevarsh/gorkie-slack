@@ -34,3 +34,11 @@ export const providers = Object.fromEntries(
     apiKey ? [[name, { apiKey, url }]] : []
   )
 );
+
+export const proxy = {
+  requestTimeoutMs: 240_000,
+};
+
+export const mcp = {
+  requestTimeoutMs: 15_000,
+};

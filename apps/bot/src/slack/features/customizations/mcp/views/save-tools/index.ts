@@ -5,7 +5,7 @@ import {
 import { z } from 'zod';
 import { publishHome } from '../../../publish';
 import { inputs, views } from '../../ids';
-import { parsePrivateMetadata, serverMetaSchema } from '../../schema';
+import { parseServerMeta } from '../../schema';
 import type { SubmitArgs } from '../../types';
 
 export const name = views.configure;
@@ -27,10 +27,8 @@ export async function execute({
   view,
 }: SubmitArgs): Promise<void> {
   await ack();
-  const meta = serverMetaSchema.safeParse(
-    parsePrivateMetadata({ metadata: view.private_metadata })
-  );
-  const serverId = meta.success ? meta.data.serverId : null;
+  const serverId =
+    parseServerMeta({ metadata: view.private_metadata }).serverId ?? null;
   if (!serverId) {
     return;
   }

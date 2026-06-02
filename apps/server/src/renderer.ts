@@ -9,6 +9,7 @@ import escapeHtml from 'escape-html';
 import { defineHandler, getQuery, getRequestURL } from 'nitro/h3';
 import { useStorage } from 'nitro/storage';
 import { z } from 'zod';
+import { mcp } from '@/config';
 import { env } from '@/env';
 import { createMcpOAuthProvider } from '@/utils/mcp-oauth-provider';
 
@@ -20,7 +21,7 @@ const querySchema = z.looseObject({
 
 const guardedFetch = Object.assign(
   createGuardedFetch({
-    timeoutMs: 15_000,
+    timeoutMs: mcp.requestTimeoutMs,
   }),
   { preconnect: fetch.preconnect }
 );

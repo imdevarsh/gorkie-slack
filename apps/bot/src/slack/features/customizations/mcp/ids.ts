@@ -8,9 +8,9 @@ export const actions = {
   disconnect: 'home_mcp_disconnect',
   enable: 'home_mcp_enable',
   approval: {
-    allow: 'mcp_approval_allow',
-    always: 'mcp_approval_always',
-    deny: 'mcp_approval_deny',
+    allow: 'approval.allow',
+    always: 'approval.always',
+    deny: 'approval.deny',
   },
 };
 

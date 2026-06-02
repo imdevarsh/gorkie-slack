@@ -1,6 +1,6 @@
 import { validateSandboxToken } from '@repo/db/queries';
 import { defineHandler, getRequestIP, getRequestURL } from 'nitro/h3';
-import { providers } from '@/config';
+import { providers, proxy } from '@/config';
 import logger from '@/utils/logger';
 
 function getBearerToken(header: string | null): string | null {
@@ -77,7 +77,7 @@ export default defineHandler(async (event) => {
     body: requestBody ?? undefined,
     headers,
     method: event.req.method,
-    signal: AbortSignal.timeout(240_000),
+    signal: AbortSignal.timeout(proxy.requestTimeoutMs),
   }).catch((error: unknown) => {
     logger.error(
       { err: error, provider, upstreamUrl },

@@ -11,7 +11,7 @@ import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import { env } from '@/env';
 import logger from '@/lib/logger';
 import { getQueue } from '@/lib/queue';
-import { codeBlock } from '@/slack/blocks';
+import { codeBlock, mdText } from '@/slack/blocks';
 import { decodeApprovalState } from '@/slack/events/message-create/utils/approval-helpers';
 import { resumeResponse } from '@/slack/events/message-create/utils/respond';
 import type { SlackMessageContext } from '@/types';
@@ -44,7 +44,7 @@ async function updateApprovalMessage({
       type: 'card',
       title: {
         type: 'mrkdwn',
-        text,
+        text: mdText(text),
       },
       body: {
         type: 'mrkdwn',
@@ -53,7 +53,7 @@ async function updateApprovalMessage({
               `Input:\n${codeBlock({ value: input, maxLength: 180 })}`,
               200
             )
-          : text,
+          : mdText(text),
       },
     },
   ];

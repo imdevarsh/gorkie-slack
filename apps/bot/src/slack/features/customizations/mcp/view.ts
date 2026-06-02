@@ -120,8 +120,14 @@ export function oauthModal({
     .notifyOnClose()
     .blocks(
       Blocks.Section({
-        text: `*Connect MCP*\n\n<${authorizationUrl}|Authenticate>`,
-      })
+        text: '*Connect MCP*\n\nAuthenticate with this MCP server, then return to Slack.',
+      }),
+      Blocks.Actions().elements(
+        Elements.Button({
+          text: 'Authenticate',
+          url: authorizationUrl,
+        })
+      )
     )
     .buildToObject();
 }

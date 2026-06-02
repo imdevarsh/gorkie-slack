@@ -41,9 +41,9 @@ function extractResultText(result: unknown): string {
       )
       .filter(Boolean)
       .join('\n');
-    return text || JSON.stringify(result);
+    return text || (JSON.stringify(result) ?? String(result));
   }
-  return JSON.stringify(result);
+  return JSON.stringify(result) ?? String(result);
 }
 
 function slugify(value: string): string {

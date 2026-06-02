@@ -57,7 +57,7 @@ async function sendFallbackFailureMessage(
   try {
     await client.chat.postMessage({
       channel: task.destinationId,
-      markdown_text: `Scheduled task failed: ${message}`,
+      text: `Scheduled task failed: ${message}`,
       thread_ts: task.threadTs ?? undefined,
     });
   } catch (error) {

@@ -9,11 +9,7 @@ import { env } from '@/env';
 import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../../publish';
 import { blocks, inputs, views } from '../../ids';
-import {
-  parsePrivateMetadata,
-  serverMetaSchema,
-  viewValueSchema,
-} from '../../schema';
+import { parseServerMeta, viewValueSchema } from '../../schema';
 import type { SubmitArgs } from '../../types';
 
 export const name = views.bearer;
@@ -36,10 +32,8 @@ export async function execute({
     return;
   }
 
-  const meta = serverMetaSchema.safeParse(
-    parsePrivateMetadata({ metadata: view.private_metadata })
-  );
-  const serverId = meta.success ? meta.data.serverId : null;
+  const serverId =
+    parseServerMeta({ metadata: view.private_metadata }).serverId ?? null;
   if (!serverId) {
     await ack({
       errors: { [blocks.bearer]: 'Could not identify this MCP server.' },

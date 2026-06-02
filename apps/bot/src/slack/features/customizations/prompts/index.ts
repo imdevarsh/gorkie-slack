@@ -11,6 +11,7 @@ import type {
 } from '@slack/bolt';
 import logger from '@/lib/logger';
 import { applyPrompt } from '../publish';
+import { parseModalState, parsePromptValue } from './schema';
 import { buildPresetModal, buildPromptModal } from './view';
 
 async function editPrompt({
@@ -64,23 +65,16 @@ async function togglePresets({
   if (!viewId) {
     return;
   }
-  let state = { showPresets: false };
-  if (body.view?.private_metadata) {
-    try {
-      const parsed = JSON.parse(body.view.private_metadata);
-      if (parsed && typeof parsed.showPresets === 'boolean') {
-        state = { showPresets: parsed.showPresets };
-      }
-    } catch {
-      state = { showPresets: false };
-    }
-  }
-  const currentPrompt =
-    body.view?.state.values.prompt_block?.prompt_input?.value?.trim() ?? null;
+  const state = parseModalState({
+    metadata: body.view?.private_metadata,
+  });
+  const currentPrompt = parsePromptValue({
+    values: body.view?.state.values,
+  });
   await client.views.update({
     view_id: viewId,
     view: buildPromptModal({
-      currentPrompt,
+      currentPrompt: currentPrompt || null,
       state: { showPresets: !state.showPresets },
     }),
   });
@@ -114,8 +108,7 @@ async function savePrompt({
   AllMiddlewareArgs): Promise<void> {
   await ack();
   const userId = body.user.id;
-  const prompt =
-    view.state.values.prompt_block?.prompt_input?.value?.trim() ?? '';
+  const prompt = parsePromptValue({ values: view.state.values });
   try {
     await applyPrompt({ client, userId, prompt });
   } catch (error) {
@@ -132,8 +125,7 @@ async function savePresetPrompt({
   AllMiddlewareArgs): Promise<void> {
   await ack({ response_action: 'clear' });
   const userId = body.user.id;
-  const prompt =
-    view.state.values.prompt_block?.prompt_input?.value?.trim() ?? '';
+  const prompt = parsePromptValue({ values: view.state.values });
   try {
     await applyPrompt({ client, userId, prompt });
   } catch (error) {
