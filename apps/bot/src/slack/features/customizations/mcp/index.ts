@@ -6,11 +6,16 @@ import * as connect from './actions/connect';
 import * as deleteServer from './actions/delete';
 import * as disconnect from './actions/disconnect';
 import * as toggle from './actions/toggle';
-import * as toolMode from './actions/tool-mode';
+import { inputs } from './ids';
+import type { SelectArgs } from './types';
 import * as connectClosed from './views/connect-closed';
 import * as save from './views/save';
 import * as saveBearer from './views/save-bearer';
 import * as saveTools from './views/save-tools';
+
+async function acknowledgeToolMode({ ack }: SelectArgs): Promise<void> {
+  await ack();
+}
 
 export const mcp = {
   buttonActions: [
@@ -27,7 +32,7 @@ export const mcp = {
   ],
   selectActions: [
     { execute: authChanged.execute, name: authChanged.name },
-    { execute: toolMode.execute, name: toolMode.name },
+    { execute: acknowledgeToolMode, name: inputs.toolMode },
   ],
   submitViews: [
     { execute: saveBearer.execute, name: saveBearer.name },
