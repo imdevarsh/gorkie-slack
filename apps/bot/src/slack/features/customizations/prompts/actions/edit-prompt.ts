@@ -30,6 +30,8 @@ export async function execute({
   );
   await client.views.open({
     trigger_id: body.trigger_id,
-    view: buildPromptModal(currentCustomization?.prompt ?? null),
+    view: buildPromptModal({
+      currentPrompt: currentCustomization?.prompt ?? null,
+    }),
   });
 }

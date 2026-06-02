@@ -1,10 +1,15 @@
 import { type Persona, personas } from '@repo/ai/prompts/chat/presets';
 import { Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
+import { z } from 'zod';
 
 export interface ModalState {
   presetsOpen: boolean;
 }
+
+const modalStateSchema = z
+  .object({ presetsOpen: z.boolean() })
+  .catch({ presetsOpen: false });
 
 export function defaultModalState(): ModalState {
   return { presetsOpen: false };
@@ -15,17 +20,19 @@ export function parseModalState(raw: string | undefined): ModalState {
     return defaultModalState();
   }
   try {
-    const parsed = JSON.parse(raw) as Partial<ModalState>;
-    return { presetsOpen: Boolean(parsed.presetsOpen) };
+    return modalStateSchema.parse(JSON.parse(raw));
   } catch {
     return defaultModalState();
   }
 }
 
-export function buildPromptModal(
-  currentPrompt: string | null,
-  state: ModalState = defaultModalState()
-): SlackModalDto {
+export function buildPromptModal({
+  currentPrompt,
+  state = defaultModalState(),
+}: {
+  currentPrompt: string | null;
+  state?: ModalState;
+}): SlackModalDto {
   const { presetsOpen } = state;
 
   const presetBlocks = presetsOpen

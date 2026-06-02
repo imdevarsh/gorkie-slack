@@ -22,6 +22,9 @@ export async function execute({
   const state = parseModalState(body.view?.private_metadata);
   await client.views.update({
     view_id: viewId,
-    view: buildPromptModal(null, { presetsOpen: !state.presetsOpen }),
+    view: buildPromptModal({
+      currentPrompt: null,
+      state: { presetsOpen: !state.presetsOpen },
+    }),
   });
 }
