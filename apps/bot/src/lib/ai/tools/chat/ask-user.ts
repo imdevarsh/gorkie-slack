@@ -2,8 +2,11 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createTask, finishTask } from '@/lib/ai/utils/task';
 import { askUserBlocks } from '@/slack/features/ask-user/components';
-import { createAskUserFlow } from '@/slack/features/ask-user/state';
-import type { SlackMessageContext, Stream } from '@/types';
+import {
+  createAskUserFlow,
+  saveAskUserFlow,
+} from '@/slack/features/ask-user/state';
+import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 
 const optionSchema = z.union([
   z.string().min(1).max(80),
@@ -27,9 +30,11 @@ const questionSchema = z.object({
 
 export const askUser = ({
   context,
+  requestHints,
   stream,
 }: {
   context: SlackMessageContext;
+  requestHints: ChatRequestHints;
   stream: Stream;
 }) =>
   tool({
@@ -58,7 +63,10 @@ export const askUser = ({
         status: 'pending',
       });
     },
-    execute: async ({ mode, options, question, questions }, { toolCallId }) => {
+    execute: async (
+      { mode, options, question, questions },
+      { messages, toolCallId }
+    ) => {
       const channel = context.event.channel;
       const threadTs = context.event.thread_ts ?? context.event.ts;
       const normalizedQuestions = questions?.length
@@ -81,6 +89,8 @@ export const askUser = ({
             },
           ];
       const flow = createAskUserFlow({
+        context,
+        messages,
         questions: normalizedQuestions.map((item) => {
           const seenIds = new Set<string>();
           return {
@@ -98,14 +108,22 @@ export const askUser = ({
             }),
           };
         }),
+        requestHints,
       });
 
-      await context.client.chat.postMessage({
+      const posted = await context.client.chat.postMessage({
         channel,
         thread_ts: threadTs,
         text: flow.questions[0]?.title ?? 'Question for you',
         blocks: askUserBlocks({ flow }),
       });
+      if (posted.ts) {
+        flow.message = {
+          channel: posted.channel ?? channel,
+          ts: posted.ts,
+        };
+        saveAskUserFlow({ flow });
+      }
       await finishTask(stream, {
         taskId: toolCallId,
         status: 'complete',

@@ -20,20 +20,27 @@ import { skip } from '@/lib/ai/tools/chat/skip';
 import { summariseThread } from '@/lib/ai/tools/chat/summarise-thread';
 import logger from '@/lib/logger';
 import { createMcpToolset } from '@/lib/mcp/toolset';
-import type { SlackFile, SlackMessageContext, Stream } from '@/types';
+import type {
+  ChatRequestHints,
+  SlackFile,
+  SlackMessageContext,
+  Stream,
+} from '@/types';
 import { finishTask } from '../utils/task';
 
 export async function createToolset({
   context,
   files,
+  requestHints,
   stream,
 }: {
   context: SlackMessageContext;
   files?: SlackFile[];
+  requestHints: ChatRequestHints;
   stream: Stream;
 }): Promise<{ cleanup: () => Promise<void>; tools: ToolSet }> {
   const nativeTools = {
-    askUser: askUser({ context, stream }),
+    askUser: askUser({ context, requestHints, stream }),
     cancelScheduledTask: cancelScheduledTask({ context, stream }),
     generateImage: generateImageTool({ context, files, stream }),
     getUserInfo: getUserInfo({ context, stream }),
