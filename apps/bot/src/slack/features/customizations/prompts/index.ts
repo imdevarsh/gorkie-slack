@@ -6,13 +6,13 @@ import * as savePresetPrompt from './views/save-preset-prompt';
 import * as savePrompt from './views/save-prompt';
 
 export const prompts = {
-  actions: [
+  buttonActions: [
     { name: editPrompt.name, execute: editPrompt.execute },
     { name: clearPrompt.name, execute: clearPrompt.execute },
     { name: modalTogglePresets.name, execute: modalTogglePresets.execute },
     { name: modalLoadPreset.name, execute: modalLoadPreset.execute },
   ],
-  views: [
+  submitViews: [
     { name: savePrompt.name, execute: savePrompt.execute },
     { name: savePresetPrompt.name, execute: savePresetPrompt.execute },
   ],

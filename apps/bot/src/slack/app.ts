@@ -1,40 +1,14 @@
-import {
-  type AllMiddlewareArgs,
-  App,
-  type BlockAction,
-  type ButtonAction,
-  ExpressReceiver,
-  LogLevel,
-  type SlackActionMiddlewareArgs,
-  type SlackViewMiddlewareArgs,
-  type StaticSelectAction,
-  type ViewClosedAction,
-  type ViewSubmitAction,
-} from '@slack/bolt';
+import { App, ExpressReceiver, LogLevel } from '@slack/bolt';
 import { env } from '@/env';
 import { buildCache } from '@/lib/allowed-users';
 import logger from '@/lib/logger';
 import type { SlackApp } from '@/types';
-import { actions } from './actions';
+import { buttonActions, selectActions } from './actions';
 import { events } from './events';
 import { register as registerAppHomeOpened } from './events/app-home-opened';
 import { register as registerAssistantThreadContextChanged } from './events/assistant-thread-context-changed';
 import { register as registerAssistantThreadStarted } from './events/assistant-thread-started';
-import { views } from './views';
-
-type ButtonActionHandler = (
-  args: SlackActionMiddlewareArgs<BlockAction<ButtonAction>> & AllMiddlewareArgs
-) => Promise<void>;
-type SelectActionHandler = (
-  args: SlackActionMiddlewareArgs<BlockAction<StaticSelectAction>> &
-    AllMiddlewareArgs
-) => Promise<void>;
-type ViewSubmitHandler = (
-  args: SlackViewMiddlewareArgs<ViewSubmitAction> & AllMiddlewareArgs
-) => Promise<void>;
-type ViewClosedHandler = (
-  args: SlackViewMiddlewareArgs<ViewClosedAction> & AllMiddlewareArgs
-) => Promise<void>;
+import { closedViews, submitViews } from './views';
 
 function registerApp(app: App) {
   buildCache(app);
@@ -47,23 +21,20 @@ function registerApp(app: App) {
   registerAssistantThreadContextChanged(app);
   registerAppHomeOpened(app);
 
-  for (const action of actions) {
-    if ('actionType' in action && action.actionType === 'select') {
-      app.action(action.name, action.execute as SelectActionHandler);
-    } else {
-      app.action(action.name, action.execute as ButtonActionHandler);
-    }
+  for (const action of buttonActions) {
+    app.action(action.name, action.execute);
   }
 
-  for (const view of views) {
-    if ('viewType' in view && view.viewType === 'view_closed') {
-      app.view(
-        { callback_id: view.name, type: 'view_closed' },
-        view.execute as ViewClosedHandler
-      );
-    } else {
-      app.view(view.name, view.execute as ViewSubmitHandler);
-    }
+  for (const action of selectActions) {
+    app.action(action.name, action.execute);
+  }
+
+  for (const view of submitViews) {
+    app.view(view.name, view.execute);
+  }
+
+  for (const view of closedViews) {
+    app.view({ callback_id: view.name, type: 'view_closed' }, view.execute);
   }
 }
 

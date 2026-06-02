@@ -9,7 +9,7 @@ import { env } from '@/env';
 import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { blocks, inputs, views } from '../ids';
-import type { ServerMeta, SubmitArgs } from '../types';
+import { parseServerMeta, type SubmitArgs } from '../types';
 
 export const name = views.bearer;
 
@@ -29,13 +29,9 @@ export async function execute({
     return;
   }
 
-  let serverId = '';
-  try {
-    const meta = JSON.parse(view.private_metadata || '{}') as ServerMeta;
-    serverId = typeof meta.serverId === 'string' ? meta.serverId : '';
-  } catch {
-    serverId = '';
-  }
+  const { serverId = '' } = parseServerMeta({
+    metadata: view.private_metadata,
+  });
 
   if (!serverId) {
     await ack({

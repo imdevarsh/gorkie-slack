@@ -1,5 +1,6 @@
 import type { McpToolPermission } from '@repo/db/schema';
 import { clampText } from '@repo/utils/text';
+import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
 import { blocks, inputs, views } from './ids';
@@ -158,6 +159,8 @@ export function bearerModal({
     .buildToObject();
 }
 
+type ModalView = ViewsOpenArguments['view'];
+
 function modeOption({ text, value }: { text: string; value: string }) {
   return {
     text: { type: 'plain_text', text },
@@ -189,7 +192,7 @@ export function toolsModal({
   permissions: McpToolPermission[];
   serverId: string;
   serverName: string;
-}): SlackModalDto {
+}): ModalView {
   const canSave = !error && permissions.length > 0;
   const options = [
     modeOption({ text: 'Allow always', value: 'allow' }),
@@ -197,7 +200,7 @@ export function toolsModal({
     modeOption({ text: 'Block', value: 'block' }),
   ];
   const visiblePermissions = error ? [] : permissions.slice(0, 20);
-  const groupedBlocks = visiblePermissions
+  const groupedBlocks: ModalView['blocks'] = visiblePermissions
     .sort((a, b) =>
       `${toolGroup(a.toolName)}:${a.toolName}`.localeCompare(
         `${toolGroup(b.toolName)}:${b.toolName}`
@@ -246,7 +249,7 @@ export function toolsModal({
       ];
     });
 
-  const modal = {
+  const modal: ModalView = {
     type: 'modal',
     callback_id: views.configure,
     private_metadata: JSON.stringify({ serverId }),
@@ -278,5 +281,5 @@ export function toolsModal({
           ],
   };
 
-  return modal as SlackModalDto;
+  return modal;
 }

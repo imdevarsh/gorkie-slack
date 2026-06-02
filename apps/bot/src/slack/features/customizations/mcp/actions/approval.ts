@@ -6,17 +6,17 @@ import {
 import { decryptSecret } from '@repo/utils';
 import { asRecord } from '@repo/utils/record';
 import { clampText } from '@repo/utils/text';
+import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import { env } from '@/env';
 import { getQueue } from '@/lib/queue';
-import {
-  asSlackBlocks,
-  decodeApprovalState,
-} from '@/slack/events/message-create/utils/approval-helpers';
+import { decodeApprovalState } from '@/slack/events/message-create/utils/approval-helpers';
 import { resumeResponse } from '@/slack/events/message-create/utils/respond';
 import type { SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
+
+type SlackBlocks = ChannelAndBlocks['blocks'];
 
 export const approveName = actions.approvalApprove;
 export const alwaysThreadName = actions.approvalAlwaysThread;
@@ -36,7 +36,7 @@ async function updateApprovalMessage({
     return;
   }
 
-  const blocks = asSlackBlocks([
+  const blocks: SlackBlocks = [
     {
       type: 'card',
       title: {
@@ -53,16 +53,14 @@ async function updateApprovalMessage({
           : text,
       },
     },
-  ]);
+  ];
 
   await client.chat
-    .update({ channel, ts, text, blocks } as unknown as Parameters<
-      typeof client.chat.update
-    >[0])
+    .update({ channel, ts, text, blocks })
     .catch(() => undefined);
 }
 
-async function handleApproval(args: ButtonArgs, approved: boolean) {
+export async function execute(args: ButtonArgs): Promise<void> {
   const { ack, action, body, client, context } = args;
   await ack();
   const approvalId = action.value;
@@ -82,6 +80,7 @@ async function handleApproval(args: ButtonArgs, approved: boolean) {
     return;
   }
 
+  const approved = action.action_id !== denyName;
   const alwaysInThread = action.action_id === alwaysThreadName;
 
   if (approved && alwaysInThread) {
@@ -97,12 +96,6 @@ async function handleApproval(args: ButtonArgs, approved: boolean) {
     });
   }
 
-  await updateMcpToolApproval({
-    approvalId,
-    userId: body.user.id,
-    values: { status: approved ? 'approved' : 'denied' },
-  });
-
   let resultText = `Denied ${approval.toolName}.`;
   if (approved) {
     resultText = alwaysInThread
@@ -116,7 +109,6 @@ async function handleApproval(args: ButtonArgs, approved: boolean) {
         secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       })
     : undefined;
-  await updateApprovalMessage({ ...args, input, text: resultText });
 
   const { messages, requestHints } = decodeApprovalState({
     state: approval.state,
@@ -145,8 +137,11 @@ async function handleApproval(args: ButtonArgs, approved: boolean) {
       requestHints,
     })
   );
-}
 
-export function execute(args: ButtonArgs): Promise<void> {
-  return handleApproval(args, args.action.action_id !== denyName);
+  await updateMcpToolApproval({
+    approvalId,
+    userId: body.user.id,
+    values: { status: approved ? 'approved' : 'denied' },
+  });
+  await updateApprovalMessage({ ...args, input, text: resultText });
 }

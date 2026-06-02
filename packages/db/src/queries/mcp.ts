@@ -154,24 +154,24 @@ export function getMcpBearerConnection({
 export async function upsertMcpBearerConnection(
   connection: NewMcpBearerConnection
 ) {
-  const values = Object.fromEntries(
-    Object.entries(connection).filter(([, value]) => value !== undefined)
-  ) as NewMcpBearerConnection;
-  const existing = await getMcpBearerConnection({
+  const values = {
     serverId: connection.serverId,
+    teamId: connection.teamId ?? null,
+    token: connection.token ?? null,
     userId: connection.userId,
-  });
-
-  if (existing) {
-    const rows = await db
-      .update(mcpBearerConnections)
-      .set({ ...values, updatedAt: new Date() })
-      .where(eq(mcpBearerConnections.id, existing.id))
-      .returning();
-    return rows[0] ?? null;
-  }
-
-  const rows = await db.insert(mcpBearerConnections).values(values).returning();
+  };
+  const rows = await db
+    .insert(mcpBearerConnections)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [mcpBearerConnections.serverId, mcpBearerConnections.userId],
+      set: {
+        teamId: values.teamId,
+        token: values.token,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
   return rows[0] ?? null;
 }
 
@@ -198,24 +198,36 @@ export function getMcpOAuthConnection({
 export async function upsertMcpOAuthConnection(
   connection: NewMcpOauthConnection
 ) {
-  const values = Object.fromEntries(
-    Object.entries(connection).filter(([, value]) => value !== undefined)
-  ) as NewMcpOauthConnection;
-  const existing = await getMcpOAuthConnection({
+  const values = {
+    clientId: connection.clientId ?? null,
+    clientInformation: connection.clientInformation ?? null,
+    codeVerifier: connection.codeVerifier ?? null,
+    expiresAt: connection.expiresAt ?? null,
+    scopes: connection.scopes ?? null,
     serverId: connection.serverId,
+    state: connection.state ?? null,
+    teamId: connection.teamId ?? null,
+    tokens: connection.tokens ?? null,
     userId: connection.userId,
-  });
-
-  if (existing) {
-    const rows = await db
-      .update(mcpOauthConnections)
-      .set({ ...values, updatedAt: new Date() })
-      .where(eq(mcpOauthConnections.id, existing.id))
-      .returning();
-    return rows[0] ?? null;
-  }
-
-  const rows = await db.insert(mcpOauthConnections).values(values).returning();
+  };
+  const rows = await db
+    .insert(mcpOauthConnections)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [mcpOauthConnections.serverId, mcpOauthConnections.userId],
+      set: {
+        clientId: values.clientId,
+        clientInformation: values.clientInformation,
+        codeVerifier: values.codeVerifier,
+        expiresAt: values.expiresAt,
+        scopes: values.scopes,
+        state: values.state,
+        teamId: values.teamId,
+        tokens: values.tokens,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
   return rows[0] ?? null;
 }
 

@@ -5,7 +5,7 @@ import {
 import { asRecord } from '@repo/utils/record';
 import { publishHome } from '../../publish';
 import { inputs, views } from '../ids';
-import type { ServerMeta, SubmitArgs } from '../types';
+import { parseServerMeta, type SubmitArgs } from '../types';
 
 export const name = views.configure;
 const TOOL_BLOCK_PREFIX = /^tool_/;
@@ -17,7 +17,7 @@ export async function execute({
   view,
 }: SubmitArgs): Promise<void> {
   await ack();
-  const meta = JSON.parse(view.private_metadata || '{}') as ServerMeta;
+  const meta = parseServerMeta({ metadata: view.private_metadata });
   if (!meta.serverId) {
     return;
   }

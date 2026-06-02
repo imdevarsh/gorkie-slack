@@ -3,6 +3,7 @@ import { decryptSecret, encryptSecret } from '@repo/utils';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
+import { z } from 'zod';
 import { env } from '@/env';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/mcp/format-tool-input';
@@ -16,19 +17,31 @@ import type {
 
 type SlackBlocks = ChannelAndBlocks['blocks'];
 
-export function asSlackBlocks(blocks: unknown[]): SlackBlocks {
-  return blocks as SlackBlocks;
-}
+const approvalStateSchema = z.object({
+  messages: z.array(z.custom<ModelMessage>()),
+  requestHints: z.object({
+    channel: z.string(),
+    customization: z
+      .object({
+        prompt: z.string(),
+      })
+      .optional(),
+    server: z.string(),
+    time: z.string(),
+  }),
+});
 
 export function decodeApprovalState({ state }: { state: string }): {
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
 } {
-  return JSON.parse(
-    decryptSecret({
-      encrypted: state,
-      secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-    })
+  return approvalStateSchema.parse(
+    JSON.parse(
+      decryptSecret({
+        encrypted: state,
+        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+      })
+    )
   );
 }
 
@@ -85,48 +98,50 @@ export async function postApprovalRequest({
     userId: context.event.user ?? '',
   });
 
+  const blocks: SlackBlocks = [
+    {
+      type: 'card',
+      title: {
+        type: 'mrkdwn',
+        text: `Approve: ${approval.serverName} · ${approval.toolName}`,
+      },
+      body: {
+        type: 'mrkdwn',
+        text: clampText(`Input:\n\`\`\`${args || '{}'}\`\`\``, 200),
+      },
+      actions: [
+        {
+          type: 'button',
+          text: { type: 'plain_text', text: 'Approve once', emoji: false },
+          style: 'primary',
+          action_id: actions.approvalApprove,
+          value: approval.approvalId,
+        },
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: 'Always in thread',
+            emoji: false,
+          },
+          action_id: actions.approvalAlwaysThread,
+          value: approval.approvalId,
+        },
+        {
+          type: 'button',
+          text: { type: 'plain_text', text: 'Deny', emoji: false },
+          style: 'danger',
+          action_id: actions.approvalDeny,
+          value: approval.approvalId,
+        },
+      ],
+    },
+  ];
+
   await context.client.chat.postMessage({
     channel,
     thread_ts: threadTs,
     text: `Approve ${approval.serverName}: ${approval.toolName}`,
-    blocks: asSlackBlocks([
-      {
-        type: 'card',
-        title: {
-          type: 'mrkdwn',
-          text: `Approve: ${approval.serverName} · ${approval.toolName}`,
-        },
-        body: {
-          type: 'mrkdwn',
-          text: clampText(`Input:\n\`\`\`${args || '{}'}\`\`\``, 200),
-        },
-        actions: [
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: 'Approve once', emoji: false },
-            style: 'primary',
-            action_id: actions.approvalApprove,
-            value: approval.approvalId,
-          },
-          {
-            type: 'button',
-            text: {
-              type: 'plain_text',
-              text: 'Always in thread',
-              emoji: false,
-            },
-            action_id: actions.approvalAlwaysThread,
-            value: approval.approvalId,
-          },
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: 'Deny', emoji: false },
-            style: 'danger',
-            action_id: actions.approvalDeny,
-            value: approval.approvalId,
-          },
-        ],
-      },
-    ]),
+    blocks,
   });
 }

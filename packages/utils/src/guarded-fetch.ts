@@ -1,43 +1,21 @@
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import ipaddr from 'ipaddr.js';
 
-function isBlockedIpv4(address: string): boolean {
-  const parts = address.split('.').map((part) => Number(part));
-  const [a, b] = parts;
-  if (
-    parts.length !== 4 ||
-    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
-  ) {
-    return true;
-  }
+const BLOCKED_IP_RANGES = new Set([
+  'broadcast',
+  'carrierGradeNat',
+  'linkLocal',
+  'loopback',
+  'multicast',
+  'private',
+  'reserved',
+  'unspecified',
+  'uniqueLocal',
+]);
 
-  return (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b !== undefined && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    (a === 100 && b !== undefined && b >= 64 && b <= 127) ||
-    (a === 198 && (b === 18 || b === 19)) ||
-    a === 224 ||
-    (a !== undefined && a >= 225) ||
-    address === '255.255.255.255' ||
-    address === '169.254.169.254'
-  );
-}
-
-function isBlockedIpv6(address: string): boolean {
-  const normalized = address.toLowerCase();
-  return (
-    normalized === '::' ||
-    normalized === '::1' ||
-    normalized.startsWith('fc') ||
-    normalized.startsWith('fd') ||
-    normalized.startsWith('fe80:') ||
-    normalized.startsWith('ff') ||
-    normalized.includes('169.254.169.254')
-  );
+function isBlockedIp(address: string): boolean {
+  return BLOCKED_IP_RANGES.has(ipaddr.process(address).range());
 }
 
 async function assertSafeHttpsUrl(input: string | URL): Promise<URL> {
@@ -54,10 +32,7 @@ async function assertSafeHttpsUrl(input: string | URL): Promise<URL> {
       : [{ address: hostname, family: parsedIp }];
 
   for (const address of addresses) {
-    if (
-      (address.family === 4 && isBlockedIpv4(address.address)) ||
-      (address.family === 6 && isBlockedIpv6(address.address))
-    ) {
+    if (isBlockedIp(address.address)) {
       throw new Error('MCP server URL resolves to a blocked network address.');
     }
   }

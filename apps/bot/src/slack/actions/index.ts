@@ -1,3 +1,4 @@
 import { customizations } from '../features/customizations';
 
-export const actions = [...customizations.actions];
+export const buttonActions = [...customizations.buttonActions];
+export const selectActions = [...customizations.selectActions];

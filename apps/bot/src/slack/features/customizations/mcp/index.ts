@@ -13,32 +13,26 @@ import * as saveBearer from './views/save-bearer';
 import * as saveTools from './views/save-tools';
 
 export const mcp = {
-  actions: [
+  buttonActions: [
     { execute: add.execute, name: add.name },
     { execute: approval.execute, name: approval.approveName },
     { execute: approval.execute, name: approval.alwaysThreadName },
     { execute: approval.execute, name: approval.denyName },
-    {
-      actionType: 'select',
-      execute: authChanged.execute,
-      name: authChanged.name,
-    },
     { execute: configure.execute, name: configure.name },
     { execute: connect.execute, name: connect.name },
     { execute: deleteServer.execute, name: deleteServer.name },
     { execute: disconnect.execute, name: disconnect.name },
     { execute: toggle.execute, name: toggle.enableName },
     { execute: toggle.execute, name: toggle.disableName },
-    { actionType: 'select', execute: toolMode.execute, name: toolMode.name },
   ],
-  views: [
+  selectActions: [
+    { execute: authChanged.execute, name: authChanged.name },
+    { execute: toolMode.execute, name: toolMode.name },
+  ],
+  submitViews: [
     { execute: saveBearer.execute, name: saveBearer.name },
     { execute: saveTools.execute, name: saveTools.name },
     { execute: save.execute, name: save.name },
-    {
-      execute: connectClosed.execute,
-      name: connectClosed.name,
-      viewType: connectClosed.viewType,
-    },
   ],
+  closedViews: [{ execute: connectClosed.execute, name: connectClosed.name }],
 };
