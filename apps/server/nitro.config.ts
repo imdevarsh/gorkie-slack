@@ -15,4 +15,6 @@ export default defineConfig({
   scheduledTasks: {
     '0 0 * * *': ['cleanup:sandbox-tokens'],
   },
+  renderer: { handler: './src/renderer' },
+  serverAssets: [{ baseName: 'templates', dir: './src/templates' }],
 });

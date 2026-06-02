@@ -1,4 +1,3 @@
-import { errorMessage, toLogError } from '@repo/utils/error';
 import type { ToolSet } from 'ai';
 import { cancelScheduledTask } from '@/lib/ai/tools/chat/cancel-scheduled-task';
 import { generateImageTool } from '@/lib/ai/tools/chat/generate-image';
@@ -18,9 +17,8 @@ import { searchWeb } from '@/lib/ai/tools/chat/search-web';
 import { skip } from '@/lib/ai/tools/chat/skip';
 import { summariseThread } from '@/lib/ai/tools/chat/summarise-thread';
 import logger from '@/lib/logger';
-import { createMcpToolset } from '@/lib/mcp/toolset';
+import { createMcpToolset } from '@/lib/mcp/remote';
 import type { SlackFile, SlackMessageContext, Stream } from '@/types';
-import { finishTask } from '../utils/task';
 
 export async function createToolset({
   context,
@@ -54,8 +52,8 @@ export async function createToolset({
     (error: unknown) => {
       logger.warn(
         {
-          ...toLogError(error),
           userId: context.event.user,
+          err: error,
         },
         'Failed to initialize MCP toolset'
       );
@@ -65,62 +63,9 @@ export async function createToolset({
       };
     }
   );
-  const tools: ToolSet = { ...nativeTools, ...mcpTools.tools };
-
-  for (const [toolName, currentTool] of Object.entries(tools)) {
-    const execute = currentTool.execute;
-    if (typeof execute !== 'function') {
-      continue;
-    }
-
-    tools[toolName] = {
-      ...currentTool,
-      execute: async (input, options) => {
-        try {
-          const result = await execute(input, options);
-          const task = stream.tasks.get(options.toolCallId);
-          const isFailure =
-            result &&
-            typeof result === 'object' &&
-            'success' in result &&
-            result.success === false;
-          if (task && task.status !== 'complete') {
-            await finishTask(stream, {
-              taskId: options.toolCallId,
-              status: isFailure ? 'error' : 'complete',
-              ...(isFailure ? { output: 'Tool failed.' } : {}),
-            });
-          }
-          return result;
-        } catch (error) {
-          const message = errorMessage(error);
-          logger.warn(
-            {
-              ...toLogError(error),
-              toolCallId: options.toolCallId,
-              toolName,
-            },
-            'Tool execution failed'
-          );
-          const task = stream.tasks.get(options.toolCallId);
-          if (task && task.status !== 'complete') {
-            await finishTask(stream, {
-              taskId: options.toolCallId,
-              status: 'error',
-              output: message,
-            });
-          }
-          return {
-            success: false,
-            error: 'Oops! An error occurred.',
-          };
-        }
-      },
-    };
-  }
 
   return {
     cleanup: mcpTools.cleanup,
-    tools,
+    tools: { ...nativeTools, ...mcpTools.tools },
   };
 }

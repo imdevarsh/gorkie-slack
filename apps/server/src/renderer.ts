@@ -5,13 +5,22 @@ import {
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { createGuardedFetch, parseMcpOAuthState } from '@repo/utils';
-import { defineHandler, getQuery } from 'nitro/h3';
+import { defineHandler, getQuery, getRequestURL } from 'nitro/h3';
+import { useStorage } from 'nitro/storage';
+import { z } from 'zod';
 import { env } from '@/env';
-import {
-  parseMcpOAuthCallbackQuery,
-  renderMcpOAuthCallbackPage,
-} from '@/utils/mcp-oauth-callback';
 import { createMcpOAuthProvider } from '@/utils/mcp-oauth-provider';
+
+const querySchema = z.looseObject({
+  code: z.string().optional(),
+  error: z.string().optional(),
+  state: z.string().optional(),
+});
+
+const ICON_SUCCESS =
+  '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor" opacity=".12"/><path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_ERROR =
+  '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="10" fill="currentColor" opacity=".12"/><path d="M10 6v4.5M10 13.5h.01" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>';
 
 const guardedFetch = Object.assign(
   createGuardedFetch({
@@ -21,16 +30,55 @@ const guardedFetch = Object.assign(
   { preconnect: fetch.preconnect }
 );
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+async function renderPage({
+  message,
+  status,
+  title,
+}: {
+  message: string;
+  status: 'error' | 'success';
+  title: string;
+}): Promise<string> {
+  const template = await useStorage('assets:templates').getItem<string>(
+    'mcp-oauth-callback.html'
+  );
+  if (!template) {
+    throw new Error('Missing OAuth callback template.');
+  }
+  const isSuccess = status === 'success';
+  return template
+    .replaceAll('{{status}}', status)
+    .replaceAll('{{title}}', escapeHtml(title))
+    .replaceAll('{{message}}', escapeHtml(message))
+    .replaceAll('{{badge}}', isSuccess ? 'Connected' : 'Error')
+    .replaceAll('{{icon}}', isSuccess ? ICON_SUCCESS : ICON_ERROR);
+}
+
 export default defineHandler(async (event) => {
-  const { code, oauthError, state } = parseMcpOAuthCallbackQuery({
-    query: getQuery(event),
-  });
+  const url = getRequestURL(event);
+  if (url.pathname !== '/mcp/oauth/callback') {
+    event.res.status = 404;
+    return;
+  }
+
+  const parsed = querySchema.parse(getQuery(event));
+  const code = parsed.code ?? null;
+  const oauthError = parsed.error ?? null;
+  const state = parsed.state ?? null;
 
   event.res.headers.set('content-type', 'text/html; charset=utf-8');
 
   if (oauthError) {
     event.res.status = 400;
-    return renderMcpOAuthCallbackPage({
+    return renderPage({
       message: oauthError,
       status: 'error',
       title: 'MCP OAuth Failed',
@@ -39,7 +87,7 @@ export default defineHandler(async (event) => {
 
   if (!(code && state)) {
     event.res.status = 400;
-    return renderMcpOAuthCallbackPage({
+    return renderPage({
       message: 'Missing OAuth code or state.',
       status: 'error',
       title: 'MCP OAuth Failed',
@@ -52,7 +100,7 @@ export default defineHandler(async (event) => {
   });
   if (!parsedState) {
     event.res.status = 400;
-    return renderMcpOAuthCallbackPage({
+    return renderPage({
       message: 'OAuth state was invalid.',
       status: 'error',
       title: 'MCP OAuth Failed',
@@ -72,7 +120,7 @@ export default defineHandler(async (event) => {
 
   if (!(server && connection)) {
     event.res.status = 404;
-    return renderMcpOAuthCallbackPage({
+    return renderPage({
       message: 'MCP server or OAuth connection was not found.',
       status: 'error',
       title: 'MCP OAuth Failed',
@@ -105,7 +153,7 @@ export default defineHandler(async (event) => {
       },
     });
     event.res.status = 400;
-    return renderMcpOAuthCallbackPage({
+    return renderPage({
       message:
         'Could not complete OAuth. Return to Slack App Home and try again.',
       status: 'error',
@@ -113,7 +161,7 @@ export default defineHandler(async (event) => {
     });
   }
 
-  return renderMcpOAuthCallbackPage({
+  return renderPage({
     message: 'You can close this tab and go back to Slack.',
     status: 'success',
     title: 'Connected to Gorkie',
