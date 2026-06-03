@@ -280,41 +280,36 @@ export function toolsModal({
                 type: 'mrkdwn',
                 text: `*${mdText(serverName)}*\nChoose which tools are allowed always, ask first, or stay blocked.${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
               },
-            },
-            ...groupedBlocks,
-            {
-              type: 'actions',
-              elements: [
-                {
-                  type: 'button',
+              accessory: {
+                type: 'button',
+                text: {
+                  type: 'plain_text',
+                  text: 'Reset',
+                },
+                style: 'danger',
+                action_id: actions.resetTools,
+                value: serverId,
+                confirm: {
+                  title: {
+                    type: 'plain_text',
+                    text: 'Reset tool modes?',
+                  },
                   text: {
+                    type: 'plain_text',
+                    text: 'This will reset every tool on this MCP server to the default mode.',
+                  },
+                  confirm: {
                     type: 'plain_text',
                     text: 'Reset',
                   },
-                  style: 'danger',
-                  action_id: actions.resetTools,
-                  value: serverId,
-                  confirm: {
-                    title: {
-                      type: 'plain_text',
-                      text: 'Reset tool modes?',
-                    },
-                    text: {
-                      type: 'plain_text',
-                      text: 'This will reset every tool on this MCP server to the default mode.',
-                    },
-                    confirm: {
-                      type: 'plain_text',
-                      text: 'Reset',
-                    },
-                    deny: {
-                      type: 'plain_text',
-                      text: 'Cancel',
-                    },
+                  deny: {
+                    type: 'plain_text',
+                    text: 'Cancel',
                   },
                 },
-              ],
+              },
             },
+            ...groupedBlocks,
           ]
         : [
             {
