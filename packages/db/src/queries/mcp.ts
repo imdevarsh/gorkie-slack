@@ -445,7 +445,7 @@ export async function createMcpToolApproval(approval: NewMcpToolApproval) {
   return rows[0] ?? null;
 }
 
-export async function supersedePendingMcpToolApprovals({
+export function supersedePendingMcpToolApprovals({
   channelId,
   threadTs,
   userId,
@@ -454,7 +454,7 @@ export async function supersedePendingMcpToolApprovals({
   threadTs?: string | null;
   userId: string;
 }) {
-  const rows = await db
+  return db
     .update(mcpToolApprovals)
     .set({ status: 'superseded', updatedAt: new Date() })
     .where(
@@ -465,8 +465,14 @@ export async function supersedePendingMcpToolApprovals({
         threadTs ? eq(mcpToolApprovals.threadTs, threadTs) : undefined
       )
     )
-    .returning({ id: mcpToolApprovals.id });
-  return rows.length;
+    .returning({
+      channelId: mcpToolApprovals.channelId,
+      exposedName: mcpToolApprovals.exposedName,
+      messageTs: mcpToolApprovals.messageTs,
+      serverId: mcpToolApprovals.serverId,
+      toolName: mcpToolApprovals.toolName,
+      userId: mcpToolApprovals.userId,
+    });
 }
 
 export function getMcpToolApprovalStatus({

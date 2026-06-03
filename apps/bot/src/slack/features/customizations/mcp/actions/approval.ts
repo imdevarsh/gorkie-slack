@@ -7,20 +7,18 @@ import {
 } from '@repo/db/queries';
 import { decryptSecret } from '@repo/utils';
 import { asRecord } from '@repo/utils/record';
-import { clampText } from '@repo/utils/text';
-import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import { env } from '@/env';
 import logger from '@/lib/logger';
 import { getQueue } from '@/lib/queue';
-import { codeBlock, inlineCode, mdText } from '@/slack/blocks';
-import { decodeApprovalState } from '@/slack/events/message-create/utils/approval-helpers';
+import {
+  decodeApprovalState,
+  handledApprovalBlocks,
+} from '@/slack/events/message-create/utils/approval-helpers';
 import { resumeResponse } from '@/slack/events/message-create/utils/respond';
 import type { SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
-
-type SlackBlocks = ChannelAndBlocks['blocks'];
 
 export const approveName = actions.approval.allow;
 export const alwaysThreadName = actions.approval.always;
@@ -47,35 +45,13 @@ async function updateApprovalMessage({
     return;
   }
 
-  const blocks: SlackBlocks = [
-    {
-      type: 'card',
-      title: {
-        type: 'mrkdwn',
-        text: 'MCP approval handled',
-      },
-      body: {
-        type: 'mrkdwn',
-        text: clampText(
-          [
-            serverName && toolName
-              ? `${mdText(serverName)} / ${inlineCode(toolName)}`
-              : null,
-            mdText(text),
-            input
-              ? `Input:\n${codeBlock({ value: input, maxLength: 180 })}`
-              : null,
-          ]
-            .filter(Boolean)
-            .join('\n'),
-          260
-        ),
-      },
-    },
-  ];
-
   await client.chat
-    .update({ channel, ts, text, blocks })
+    .update({
+      channel,
+      ts,
+      text,
+      blocks: handledApprovalBlocks({ input, serverName, text, toolName }),
+    })
     .catch(() => undefined);
 }
 
@@ -117,7 +93,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
       serverName: server?.name ?? status?.exposedName,
       text:
         status?.status === 'superseded'
-          ? 'This MCP approval request was replaced by a newer message.'
+          ? 'Approval expired because you sent a newer message.'
           : 'This MCP approval request has already been handled.',
       toolName: status?.toolName,
     });

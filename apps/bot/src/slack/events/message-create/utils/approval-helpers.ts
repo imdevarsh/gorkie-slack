@@ -1,4 +1,4 @@
-import { createMcpToolApproval } from '@repo/db/queries';
+import { createMcpToolApproval, updateMcpToolApproval } from '@repo/db/queries';
 import { encryptSecret, parseEncrypted } from '@repo/utils';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
@@ -61,6 +61,45 @@ export async function recordApprovalTask({
     status: 'complete',
     output: 'Approval needed',
   });
+}
+
+export function handledApprovalBlocks({
+  input,
+  serverName,
+  text,
+  toolName,
+}: {
+  input?: string;
+  serverName?: string;
+  text: string;
+  toolName?: string;
+}): SlackBlocks {
+  return [
+    {
+      type: 'card',
+      title: {
+        type: 'mrkdwn',
+        text: 'MCP approval handled',
+      },
+      body: {
+        type: 'mrkdwn',
+        text: clampText(
+          [
+            serverName && toolName
+              ? `${mdText(serverName)} / ${inlineCode(toolName)}`
+              : null,
+            mdText(text),
+            input
+              ? `Input:\n${codeBlock({ value: input, maxLength: 180 })}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          260
+        ),
+      },
+    },
+  ];
 }
 
 export async function postApprovalRequest({
@@ -143,10 +182,17 @@ export async function postApprovalRequest({
     },
   ];
 
-  await context.client.chat.postMessage({
+  const message = await context.client.chat.postMessage({
     channel,
     thread_ts: threadTs,
     text: `Approve ${approval.serverName}: ${approval.toolName}`,
     blocks,
   });
+  if (message.ts) {
+    await updateMcpToolApproval({
+      approvalId: approval.approvalId,
+      userId: context.event.user ?? '',
+      values: { messageTs: message.ts },
+    });
+  }
 }

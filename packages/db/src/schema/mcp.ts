@@ -153,6 +153,7 @@ export const mcpToolApprovals = pgTable(
     channelId: text('channel_id').notNull(),
     threadTs: text('thread_ts').notNull(),
     eventTs: text('event_ts').notNull(),
+    messageTs: text('message_ts'),
     toolName: text('tool_name').notNull(),
     exposedName: text('exposed_name').notNull(),
     toolCallId: text('tool_call_id').notNull(),

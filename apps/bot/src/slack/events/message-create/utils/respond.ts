@@ -1,4 +1,7 @@
-import { supersedePendingMcpToolApprovals } from '@repo/db/queries';
+import {
+  getMcpServerByIdForUser,
+  supersedePendingMcpToolApprovals,
+} from '@repo/db/queries';
 import { getErrorDetails } from '@repo/utils/error';
 import {
   type ModelMessage,
@@ -24,7 +27,11 @@ import type {
 import { getContextId } from '@/utils/context';
 import { processSlackFiles } from '@/utils/images';
 import { getSlackUser } from '@/utils/users';
-import { postApprovalRequest, recordApprovalTask } from './approval-helpers';
+import {
+  handledApprovalBlocks,
+  postApprovalRequest,
+  recordApprovalTask,
+} from './approval-helpers';
 
 async function runAgent({
   context,
@@ -221,7 +228,7 @@ export async function generateResponse({
     const messageText = context.event.text ?? '';
     const channelId = context.event.channel;
     if (userId && channelId) {
-      await supersedePendingMcpToolApprovals({
+      const expiredApprovals = await supersedePendingMcpToolApprovals({
         channelId,
         threadTs:
           context.event.channel_type === 'im'
@@ -229,6 +236,29 @@ export async function generateResponse({
             : (context.event.thread_ts ?? context.event.ts),
         userId,
       });
+      await Promise.all(
+        expiredApprovals.map(async (approval) => {
+          if (!approval.messageTs) {
+            return;
+          }
+          const server = await getMcpServerByIdForUser({
+            id: approval.serverId,
+            userId: approval.userId,
+          });
+          await context.client.chat
+            .update({
+              channel: approval.channelId,
+              ts: approval.messageTs,
+              text: 'This MCP approval request expired.',
+              blocks: handledApprovalBlocks({
+                serverName: server?.name ?? approval.exposedName,
+                text: 'Approval expired because you sent a newer message.',
+                toolName: approval.toolName,
+              }),
+            })
+            .catch(() => undefined);
+        })
+      );
     }
 
     if (messages.length === 0) {
