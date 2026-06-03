@@ -1,10 +1,6 @@
-import {
-  getMcpServerByIdForUser,
-  hasMcpConnection,
-  updateMcpServerForUser,
-} from '@repo/db/queries';
-import { errorMessage } from '@repo/utils/error';
-import { syncMcpPermissions } from '@/lib/mcp/remote';
+import { getMcpServerByIdForUser, hasMcpConnection } from '@repo/db/queries';
+import logger from '@/lib/logger';
+import { finalizeOAuthServer } from '@/lib/mcp/connection';
 import { publishHome } from '../../../publish';
 import { views } from '../../ids';
 import { parseServerMeta } from '../../schema';
@@ -25,39 +21,27 @@ export async function execute({
   const server = serverId
     ? await getMcpServerByIdForUser({ id: serverId, userId: body.user.id })
     : null;
-  const hasCredentials = server
-    ? await hasMcpConnection({
-        authType: server.authType,
-        serverId: server.id,
-        userId: body.user.id,
-      })
-    : false;
-  if (server && hasCredentials) {
-    try {
-      await syncMcpPermissions({
+
+  // Only finalize OAuth servers that actually completed the token exchange.
+  if (server?.authType === 'oauth') {
+    const hasCredentials = await hasMcpConnection({
+      authType: server.authType,
+      serverId: server.id,
+      userId: body.user.id,
+    });
+    if (hasCredentials) {
+      await finalizeOAuthServer({
         server,
         teamId: body.team?.id,
         userId: body.user.id,
-      });
-      await updateMcpServerForUser({
-        id: server.id,
-        userId: body.user.id,
-        values: {
-          enabled: true,
-          lastConnectedAt: new Date(),
-          lastError: null,
-        },
-      });
-    } catch (error) {
-      await updateMcpServerForUser({
-        id: server.id,
-        userId: body.user.id,
-        values: {
-          enabled: false,
-          lastError: errorMessage(error),
-        },
+      }).catch((error: unknown) => {
+        logger.warn(
+          { err: error, serverId: server.id },
+          'MCP OAuth finalize failed'
+        );
       });
     }
   }
+
   await publishHome({ client, userId: body.user.id });
 }

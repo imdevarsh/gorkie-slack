@@ -3,8 +3,9 @@ import type { McpToolPermission } from '@repo/db/schema';
 import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
-import { formatMcpError } from '@/lib/mcp/format-error';
+import { formatMCPError } from '@/lib/mcp/format-error';
 import { codeBlock, mdText } from '@/slack/blocks';
+import { groupBlock, renderNonce, toolBlock } from './block-id';
 import { actions, blocks, inputs, views } from './ids';
 import type { ModalState } from './types';
 
@@ -136,34 +137,46 @@ export function oauthModal({
 }
 
 export function bearerModal({
+  error,
   serverId,
   serverName,
 }: {
+  error?: string;
   serverId: string;
   serverName: string;
 }): SlackModalDto {
-  return Modal({
+  const modal = Modal({
     callbackId: views.bearer,
     close: 'Cancel',
     privateMetaData: JSON.stringify({ serverId }),
     submit: 'Save',
     title: 'Connect MCP',
-  })
-    .blocks(
+  });
+
+  if (error) {
+    modal.blocks(
       Blocks.Section({
-        text: `*Connect ${mdText(serverName)} to Gorkie*\nEnter a bearer token for this MCP server.`,
-      }),
-      Blocks.Input({
-        blockId: blocks.bearer,
-        label: 'Token',
-      }).element(
-        Elements.TextInput({
-          actionId: inputs.bearer,
-          placeholder: 'Token',
-        })
-      )
+        text: `*Could not connect — token not saved*\n${codeBlock({ value: formatMCPError(error), maxLength: 900 })}`,
+      })
+    );
+  }
+
+  modal.blocks(
+    Blocks.Section({
+      text: `*Connect ${mdText(serverName)} to Gorkie*\nEnter a bearer token for this MCP server.`,
+    }),
+    Blocks.Input({
+      blockId: blocks.bearer,
+      label: 'Token',
+    }).element(
+      Elements.TextInput({
+        actionId: inputs.bearer,
+        placeholder: 'Token',
+      })
     )
-    .buildToObject();
+  );
+
+  return modal.buildToObject();
 }
 
 type ModalView = ViewsOpenArguments['view'];
@@ -202,6 +215,7 @@ export function toolsModal({
   tools: ListToolsResult['tools'];
 }): ModalView {
   const canSave = !error && permissions.length > 0;
+  const nonce = renderNonce();
   const options = [
     { text: { type: 'plain_text', text: 'Allow always' }, value: 'allow' },
     { text: { type: 'plain_text', text: 'Ask' }, value: 'ask' },
@@ -209,7 +223,19 @@ export function toolsModal({
   ];
   const toolByName = new Map(tools.map((tool) => [tool.name, tool]));
   const visiblePermissions = error ? [] : permissions;
-  const groupedBlocks: ModalView['blocks'] = visiblePermissions
+
+  type GroupSlug = 'ro' | 'dt' | 'gn';
+  const groupSlugOf = (group: string): GroupSlug => {
+    if (group === 'Read-only tools') {
+      return 'ro';
+    }
+    if (group === 'Destructive tools') {
+      return 'dt';
+    }
+    return 'gn';
+  };
+
+  const sortedItems = visiblePermissions
     .map((permission) => {
       const annotations = toolByName.get(permission.toolName)?.annotations;
       let group = 'Tools';
@@ -224,18 +250,30 @@ export function toolsModal({
       `${a.group}:${a.permission.toolName}`.localeCompare(
         `${b.group}:${b.permission.toolName}`
       )
-    )
-    .flatMap(({ group, permission }, index, sorted) => {
+    );
+
+  const groups: Record<string, GroupSlug> = {};
+  for (const { group, permission } of sortedItems) {
+    groups[permission.id] = groupSlugOf(group);
+  }
+
+  const groupedBlocks: ModalView['blocks'] = sortedItems.flatMap(
+    ({ group, permission }, index, sorted) => {
       const previous = sorted[index - 1];
+      const slug = groupSlugOf(group);
       const header =
         previous?.group === group
           ? []
           : [
               {
                 type: 'section',
-                text: {
-                  type: 'mrkdwn',
-                  text: `*${group}*`,
+                block_id: groupBlock.encode(nonce, slug),
+                text: { type: 'mrkdwn', text: `*${group}*` },
+                accessory: {
+                  type: 'static_select',
+                  action_id: actions.setGroupMode,
+                  placeholder: { type: 'plain_text', text: 'Set all…' },
+                  options,
                 },
               },
             ];
@@ -243,7 +281,7 @@ export function toolsModal({
         ...header,
         {
           type: 'section',
-          block_id: `tool_${permission.id}`,
+          block_id: toolBlock.encode(nonce, permission.id),
           text: {
             type: 'plain_text',
             text: permission.toolName.slice(0, 180),
@@ -265,12 +303,13 @@ export function toolsModal({
           },
         },
       ];
-    });
+    }
+  );
 
   const modal: ModalView = {
     type: 'modal',
     callback_id: views.configure,
-    private_metadata: JSON.stringify({ serverId }),
+    private_metadata: JSON.stringify({ serverId, groups, nonce }),
     title: { type: 'plain_text', text: 'MCP Tools' },
     ...(canSave ? { submit: { type: 'plain_text', text: 'Save' } } : {}),
     close: { type: 'plain_text', text: canSave ? 'Cancel' : 'Done' },
@@ -320,7 +359,7 @@ export function toolsModal({
               text: {
                 type: 'mrkdwn',
                 text: error
-                  ? `*${mdText(serverName)}*\n\n*Error:*\n${codeBlock({ value: formatMcpError(error), maxLength: 1200 })}`
+                  ? `*${mdText(serverName)}*\n\nThis server rejected the connection, so it has been disabled. Reconnect it from the App Home with a valid credential.\n\n*Error:*\n${codeBlock({ value: formatMCPError(error), maxLength: 1200 })}`
                   : `*${mdText(serverName)}*\nNo tools were found for this server yet.`,
               },
             },

@@ -1,18 +1,12 @@
-import {
-  getMcpServerByIdForUser,
-  updateMcpServerForUser,
-  upsertMcpBearerConnection,
-} from '@repo/db/queries';
-import { encryptSecret } from '@repo/utils';
+import { getMcpServerByIdForUser } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
-import { env } from '@/env';
-import { formatMcpError } from '@/lib/mcp/format-error';
-import { syncMcpPermissions } from '@/lib/mcp/remote';
+import { connectBearerServer } from '@/lib/mcp/connection';
+import { mdText } from '@/slack/blocks';
 import { publishHome } from '../../../publish';
 import { blocks, inputs, views } from '../../ids';
 import { parseServerMeta, viewValueSchema } from '../../schema';
 import type { SubmitArgs } from '../../types';
-import { statusModal } from '../../view';
+import { bearerModal, statusModal } from '../../view';
 
 export const name = views.bearer;
 
@@ -48,7 +42,7 @@ export async function execute({
     id: serverId,
     userId: body.user.id,
   });
-  if (!server) {
+  if (!server || server.authType !== 'bearer') {
     await ack({
       errors: { [blocks.bearer]: 'Could not find this MCP server.' },
       response_action: 'errors',
@@ -56,66 +50,40 @@ export async function execute({
     return;
   }
 
-  const token = encryptSecret({
-    plaintext: bearerToken,
-    secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-  });
   await ack({
     response_action: 'update',
-    view: statusModal({
-      title: `Connect ${server.name}`,
-      text: 'Saving token and connecting…',
-    }),
+    view: statusModal({ title: 'Connect MCP', text: 'Connecting…' }),
   });
-  await upsertMcpBearerConnection({
-    token,
-    serverId,
-    teamId: body.team?.id ?? null,
-    userId: body.user.id,
-  });
-  await updateMcpServerForUser({
-    id: serverId,
-    userId: body.user.id,
-    values: { enabled: false, lastConnectedAt: null, lastError: null },
-  });
-  const updatedServer = await getMcpServerByIdForUser({
-    id: serverId,
-    userId: body.user.id,
-  });
-  if (updatedServer) {
-    try {
-      await syncMcpPermissions({
-        server: updatedServer,
-        teamId: body.team?.id,
-        userId: body.user.id,
-      });
-      await updateMcpServerForUser({
-        id: serverId,
-        userId: body.user.id,
-        values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
-      });
-      await client.views.update({
-        view_id: view.id,
+
+  try {
+    await connectBearerServer({
+      rawToken: bearerToken,
+      server,
+      teamId: body.team?.id,
+      userId: body.user.id,
+    });
+    await client.views
+      .update({
+        view_id: view.id ?? '',
         view: statusModal({
-          title: `Connect ${server.name}`,
-          text: 'Connected successfully.',
+          title: 'Connect MCP',
+          text: `*${mdText(server.name)} is connected and enabled.*\nIts tools are ready to use. You can close this.`,
         }),
-      });
-    } catch (error) {
-      const message = errorMessage(error);
-      await updateMcpServerForUser({
-        id: serverId,
-        userId: body.user.id,
-        values: { enabled: false, lastError: message },
-      });
-      await client.views.update({
-        view_id: view.id,
-        view: statusModal({
-          title: 'Connection Failed',
-          text: `Token saved, but Gorkie could not connect:\n\`\`\`${formatMcpError(message)}\`\`\``,
+      })
+      .catch(() => undefined);
+  } catch (error) {
+    // Re-show the token field with the error so the user can retry in place.
+    await client.views
+      .update({
+        view_id: view.id ?? '',
+        view: bearerModal({
+          error: errorMessage(error),
+          serverId: server.id,
+          serverName: server.name,
         }),
-      });
-    }
+      })
+      .catch(() => undefined);
   }
+
   await publishHome({ client, userId: body.user.id });
 }

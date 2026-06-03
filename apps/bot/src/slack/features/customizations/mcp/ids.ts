@@ -1,13 +1,15 @@
 export const actions = {
   add: 'home_mcp_add',
   auth: 'auth_input',
-  connect: 'home_mcp_connect',
+  connectBearer: 'home_mcp_connect_bearer',
+  connectOAuth: 'home_mcp_connect_oauth',
   configure: 'home_mcp_configure',
   delete: 'home_mcp_delete',
   disable: 'home_mcp_disable',
   disconnect: 'home_mcp_disconnect',
   enable: 'home_mcp_enable',
   resetTools: 'home_mcp_reset_tools',
+  setGroupMode: 'home_mcp_set_group_mode',
   approval: {
     allow: 'approval.allow',
     always: 'approval.always',

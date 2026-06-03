@@ -4,6 +4,7 @@ import {
 } from '@repo/db/queries';
 import { z } from 'zod';
 import { publishHome } from '../../../publish';
+import { toolBlock } from '../../block-id';
 import { inputs, views } from '../../ids';
 import { parseServerMeta } from '../../schema';
 import type { SubmitArgs } from '../../types';
@@ -34,20 +35,14 @@ export async function execute({
   }
   const modes = Object.entries(view.state.values).flatMap(
     ([blockId, fields]) => {
-      if (!blockId.startsWith('tool_')) {
+      const permissionId = toolBlock.decode(blockId);
+      if (!permissionId) {
         return [];
       }
       const selected = toolModeSchema.parse(
         fields[inputs.toolMode]
       ).selected_option;
-      return selected?.value
-        ? [
-            {
-              mode: selected.value,
-              permissionId: blockId.slice('tool_'.length),
-            },
-          ]
-        : [];
+      return selected?.value ? [{ mode: selected.value, permissionId }] : [];
     }
   );
 

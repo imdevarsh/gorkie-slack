@@ -1,18 +1,11 @@
-import {
-  createMcpServer,
-  updateMcpServerForUser,
-  upsertMcpBearerConnection,
-  upsertMcpOAuthConnection,
-} from '@repo/db/queries';
-import { encryptSecret } from '@repo/utils';
+import { createMcpServer, upsertMcpOAuthConnection } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
-import { env } from '@/env';
-import { formatMcpError } from '@/lib/mcp/format-error';
-import { syncMcpPermissions } from '@/lib/mcp/remote';
+import { connectBearerServer } from '@/lib/mcp/connection';
+import { mdText } from '@/slack/blocks';
 import { publishHome } from '../../../publish';
 import { views } from '../../ids';
 import type { SubmitArgs } from '../../types';
-import { statusModal } from '../../view';
+import { bearerModal, statusModal } from '../../view';
 import { parseSavePayload } from './schema';
 
 export const name = views.add;
@@ -29,21 +22,12 @@ export async function execute({
     return;
   }
 
-  const token =
-    payload.data.auth === 'bearer'
-      ? encryptSecret({
-          plaintext: payload.data.bearerToken,
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-        })
-      : null;
-
+  // Bearer: hold the modal open to report the validation result inline.
+  // OAuth: close immediately — connection happens via the Connect button.
   if (payload.data.auth === 'bearer') {
     await ack({
       response_action: 'update',
-      view: statusModal({
-        title: `Connect ${payload.data.name}`,
-        text: 'Saving token and connecting…',
-      }),
+      view: statusModal({ title: 'Connect MCP', text: 'Connecting…' }),
     });
   } else {
     await ack();
@@ -62,60 +46,49 @@ export async function execute({
     await publishHome({ client, userId: body.user.id });
     return;
   }
-  if (token) {
-    await upsertMcpBearerConnection({
-      token,
-      serverId: server.id,
-      teamId: body.team?.id ?? null,
-      userId: body.user.id,
-    });
-  }
-  if (payload.data.auth === 'oauth' && payload.data.clientId) {
-    await upsertMcpOAuthConnection({
-      clientId: payload.data.clientId,
-      serverId: server.id,
-      teamId: body.team?.id ?? null,
-      userId: body.user.id,
-    });
-  }
-  if (payload.data.auth === 'bearer') {
-    try {
-      await syncMcpPermissions({
-        server,
-        teamId: body.team?.id,
+
+  if (payload.data.auth === 'oauth') {
+    if (payload.data.clientId) {
+      await upsertMcpOAuthConnection({
+        clientId: payload.data.clientId,
+        serverId: server.id,
+        teamId: body.team?.id ?? null,
         userId: body.user.id,
       });
-      await updateMcpServerForUser({
-        id: server.id,
-        userId: body.user.id,
-        values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
-      });
-      await client.views
-        .update({
-          view_id: view.id ?? '',
-          view: statusModal({
-            title: 'Connect MCP',
-            text: 'Connected successfully.',
-          }),
-        })
-        .catch(() => undefined);
-    } catch (error) {
-      const message = errorMessage(error);
-      await updateMcpServerForUser({
-        id: server.id,
-        userId: body.user.id,
-        values: { enabled: false, lastError: message },
-      });
-      await client.views
-        .update({
-          view_id: view.id ?? '',
-          view: statusModal({
-            title: 'Connection Failed',
-            text: `Token saved, but Gorkie could not connect:\n\`\`\`${formatMcpError(message)}\`\`\``,
-          }),
-        })
-        .catch(() => undefined);
     }
+    await publishHome({ client, userId: body.user.id });
+    return;
+  }
+
+  // Bearer: validate-then-persist (SOP). The token is only stored if it works.
+  try {
+    await connectBearerServer({
+      rawToken: payload.data.bearerToken,
+      server,
+      teamId: body.team?.id,
+      userId: body.user.id,
+    });
+    await client.views
+      .update({
+        view_id: view.id ?? '',
+        view: statusModal({
+          title: 'Connect MCP',
+          text: `*${mdText(server.name)} is connected and enabled.*\nIts tools are ready to use. You can close this.`,
+        }),
+      })
+      .catch(() => undefined);
+  } catch (error) {
+    // Re-show the token field with the error so the user can retry in place.
+    await client.views
+      .update({
+        view_id: view.id ?? '',
+        view: bearerModal({
+          error: errorMessage(error),
+          serverId: server.id,
+          serverName: server.name,
+        }),
+      })
+      .catch(() => undefined);
   }
   await publishHome({ client, userId: body.user.id });
 }

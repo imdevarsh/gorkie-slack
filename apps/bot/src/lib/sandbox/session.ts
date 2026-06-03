@@ -99,12 +99,13 @@ async function createSandboxToken({
 }): Promise<string> {
   const allowedIp = await getOutboundIp(sandbox);
   if (!allowedIp) {
-    throw new Error(
-      `[sandbox] Could not resolve outbound IP for sandbox ${sandboxId}`
+    logger.warn(
+      { sandboxId },
+      '[sandbox] Could not resolve outbound IP — issuing unrestricted token'
     );
   }
   const { token } = await issueSandboxToken({
-    allowedIp,
+    allowedIp: allowedIp ?? null,
     sandboxId,
     ttlMs: config.runtime.executionTimeoutMs,
   });

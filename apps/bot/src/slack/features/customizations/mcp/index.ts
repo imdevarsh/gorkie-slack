@@ -1,10 +1,12 @@
 import * as approval from './actions/approval';
 import * as authChanged from './actions/auth-changed';
 import * as configure from './actions/configure';
-import * as connect from './actions/connect';
+import * as connectBearer from './actions/connect-bearer';
+import * as connectOAuth from './actions/connect-oauth';
 import * as deleteServer from './actions/delete';
 import * as disconnect from './actions/disconnect';
 import * as resetTools from './actions/reset-tools';
+import * as setGroupMode from './actions/set-group-mode';
 import * as toggle from './actions/toggle';
 import { actions, inputs } from './ids';
 import type { ButtonArgs, SelectArgs } from './types';
@@ -29,7 +31,8 @@ export const mcp = {
     { execute: approval.execute, name: approval.alwaysThreadName },
     { execute: approval.execute, name: approval.denyName },
     { execute: configure.execute, name: configure.name },
-    { execute: connect.execute, name: connect.name },
+    { execute: connectBearer.execute, name: connectBearer.name },
+    { execute: connectOAuth.execute, name: connectOAuth.name },
     { execute: deleteServer.execute, name: deleteServer.name },
     { execute: disconnect.execute, name: disconnect.name },
     { execute: resetTools.execute, name: resetTools.name },
@@ -38,6 +41,7 @@ export const mcp = {
   ],
   selectActions: [
     { execute: authChanged.execute, name: authChanged.name },
+    { execute: setGroupMode.execute, name: setGroupMode.name },
     { execute: ({ ack }: SelectArgs) => ack(), name: inputs.toolMode },
   ],
   submitViews: [

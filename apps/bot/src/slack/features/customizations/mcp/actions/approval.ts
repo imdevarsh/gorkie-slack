@@ -5,10 +5,9 @@ import {
   updateMcpToolApproval,
   upsertMcpToolPermission,
 } from '@repo/db/queries';
-import { decryptSecret } from '@repo/utils';
 import { asRecord } from '@repo/utils/record';
-import { env } from '@/env';
 import logger from '@/lib/logger';
+import { decrypt } from '@/lib/mcp/secret';
 import { getQueue } from '@/lib/queue';
 import {
   decodeApprovalState,
@@ -103,7 +102,10 @@ export async function execute(args: ButtonArgs): Promise<void> {
         status?.status === 'superseded'
           ? 'Replaced by a newer message.'
           : 'Already handled.',
-      title: status?.status === 'superseded' ? 'Expired' : 'Already handled',
+      title:
+        status?.status === 'superseded'
+          ? 'Approval Expired'
+          : 'Already handled',
       toolName: status?.toolName,
     });
     return;
@@ -146,12 +148,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
 
   let input: string | undefined;
   try {
-    input = approval.argsJson
-      ? decryptSecret({
-          encrypted: approval.argsJson,
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-        })
-      : undefined;
+    input = approval.argsJson ? decrypt(approval.argsJson) : undefined;
 
     const { messages, requestHints } = decodeApprovalState({
       state: approval.state,
@@ -171,7 +168,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
       },
     };
 
-    if (approved && alwaysInThread) {
+    if (approved && alwaysInThread && approval.threadTs) {
       await upsertMcpToolPermission({
         mode: 'allow',
         scope: 'thread',
@@ -201,22 +198,18 @@ export async function execute(args: ButtonArgs): Promise<void> {
     getQueue(getContextId(resumeContext))
       .add(() =>
         resumeResponse({
-          approvalId,
-          approved,
+          approval: {
+            approvalId,
+            approved,
+            reason: approved ? undefined : 'Access denied by Slack approval.',
+            tool: {
+              serverName,
+              toolCallId: approval.toolCallId,
+              toolName: approval.toolName,
+            },
+          },
           context: resumeContext,
-          deniedApproval: approved
-            ? undefined
-            : {
-                approvalId,
-                exposedName: approval.exposedName,
-                input: input ?? '',
-                serverId: approval.serverId,
-                serverName,
-                toolCallId: approval.toolCallId,
-                toolName: approval.toolName,
-              },
           messages,
-          reason: approved ? undefined : 'Access denied by Slack approval.',
           requestHints,
         })
       )
@@ -225,6 +218,13 @@ export async function execute(args: ButtonArgs): Promise<void> {
           { err: error, approvalId },
           'Failed to resume MCP approval'
         );
+        resumeContext.client.chat
+          .postMessage({
+            channel: resumeContext.event.channel,
+            thread_ts: resumeContext.event.thread_ts ?? undefined,
+            text: 'Something went wrong resuming after your approval. Please try again.',
+          })
+          .catch(() => undefined);
       });
   } catch (error) {
     await updateMcpToolApproval({

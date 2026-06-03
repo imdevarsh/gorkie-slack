@@ -2,19 +2,15 @@ import { randomUUID } from 'node:crypto';
 import type { OAuthClientMetadata, OAuthClientProvider } from '@ai-sdk/mcp';
 import { patchMcpOAuthConnection } from '@repo/db/queries';
 import type { McpOauthConnection, McpServer } from '@repo/db/schema';
-import {
-  createMcpOAuthState,
-  decryptSecret,
-  encryptSecret,
-  parseEncrypted,
-} from '@repo/utils';
+import { createMcpOAuthState } from '@repo/utils';
 import {
   mcpOAuthClientInformationSchema,
   mcpOAuthTokensSchema,
 } from '@repo/validators';
 import { env } from '@/env';
+import { decrypt, encrypt, parseEncrypted } from './secret';
 
-export function createMcpOAuthProvider({
+export function createMCPOAuthProvider({
   authorizationUrlRef,
   connection,
   server,
@@ -50,11 +46,10 @@ export function createMcpOAuthProvider({
       return redirectUrl.toString();
     },
     tokens() {
-      return parseEncrypted({
-        encrypted: currentConnection?.tokens ?? null,
-        schema: mcpOAuthTokensSchema,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-      });
+      return parseEncrypted(
+        currentConnection?.tokens ?? null,
+        mcpOAuthTokensSchema
+      );
     },
     async saveTokens(tokens) {
       await saveConnection({
@@ -64,10 +59,7 @@ export function createMcpOAuthProvider({
           : null,
         scopes: tokens.scope ?? currentConnection?.scopes ?? null,
         state: null,
-        tokens: encryptSecret({
-          plaintext: JSON.stringify(tokens),
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-        }),
+        tokens: encrypt(JSON.stringify(tokens)),
       });
     },
     redirectToAuthorization(authorizationUrl) {
@@ -77,42 +69,31 @@ export function createMcpOAuthProvider({
     },
     async saveCodeVerifier(codeVerifier) {
       await saveConnection({
-        codeVerifier: encryptSecret({
-          plaintext: codeVerifier,
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-        }),
+        codeVerifier: encrypt(codeVerifier),
       });
     },
     codeVerifier() {
       if (!currentConnection?.codeVerifier) {
         throw new Error('Missing OAuth code verifier.');
       }
-      return decryptSecret({
-        encrypted: currentConnection.codeVerifier,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-      });
+      return decrypt(currentConnection.codeVerifier);
     },
     clientInformation() {
       if (currentConnection?.clientId) {
-        const fromDb = parseEncrypted({
-          encrypted: currentConnection.clientInformation ?? null,
-          schema: mcpOAuthClientInformationSchema,
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-        });
+        const fromDb = parseEncrypted(
+          currentConnection.clientInformation ?? null,
+          mcpOAuthClientInformationSchema
+        );
         return fromDb ?? { client_id: currentConnection.clientId };
       }
-      return parseEncrypted({
-        encrypted: currentConnection?.clientInformation ?? null,
-        schema: mcpOAuthClientInformationSchema,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-      });
+      return parseEncrypted(
+        currentConnection?.clientInformation ?? null,
+        mcpOAuthClientInformationSchema
+      );
     },
     async saveClientInformation(clientInformation) {
       await saveConnection({
-        clientInformation: encryptSecret({
-          plaintext: JSON.stringify(clientInformation),
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-        }),
+        clientInformation: encrypt(JSON.stringify(clientInformation)),
       });
     },
     state() {
@@ -128,10 +109,7 @@ export function createMcpOAuthProvider({
         codeVerifier: null,
         expiresAt: null,
         scopes: null,
-        state: encryptSecret({
-          plaintext: state,
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-        }),
+        state: encrypt(state),
         tokens: null,
       });
     },
@@ -139,10 +117,7 @@ export function createMcpOAuthProvider({
       if (!currentConnection?.state) {
         return;
       }
-      return decryptSecret({
-        encrypted: currentConnection.state,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-      });
+      return decrypt(currentConnection.state);
     },
     async invalidateCredentials(scope) {
       if (scope === 'all' || scope === 'tokens') {

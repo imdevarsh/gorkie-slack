@@ -1,7 +1,7 @@
 import { createGuardedFetch } from '@repo/utils';
 import { mcp } from '@/config';
 
-export const guardedMcpFetch = Object.assign(
+export const guardedMCPFetch = Object.assign(
   createGuardedFetch({
     timeoutMs: mcp.requestTimeoutMs,
   }),

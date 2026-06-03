@@ -17,7 +17,7 @@ import { searchWeb } from '@/lib/ai/tools/chat/search-web';
 import { skip } from '@/lib/ai/tools/chat/skip';
 import { summariseThread } from '@/lib/ai/tools/chat/summarise-thread';
 import logger from '@/lib/logger';
-import { createMcpToolset } from '@/lib/mcp/remote';
+import { createMCPToolset } from '@/lib/mcp/remote';
 import type { SlackFile, SlackMessageContext, Stream } from '@/types';
 
 export async function createToolset({
@@ -48,7 +48,7 @@ export async function createToolset({
     skip: skip({ context, stream }),
     summariseThread: summariseThread({ context, stream }),
   };
-  const mcpTools = await createMcpToolset({ context, stream }).catch(
+  const mcpTools = await createMCPToolset({ context, stream }).catch(
     (error: unknown) => {
       logger.warn(
         {

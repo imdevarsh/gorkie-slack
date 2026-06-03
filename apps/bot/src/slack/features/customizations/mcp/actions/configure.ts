@@ -5,7 +5,7 @@ import {
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
-import { syncMcpPermissions } from '@/lib/mcp/remote';
+import { syncMCPPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -54,7 +54,7 @@ export async function execute({
   let discoveryError: string | undefined;
   let definitions: ListToolsResult | undefined;
   try {
-    const synced = await syncMcpPermissions({
+    const synced = await syncMCPPermissions({
       server,
       teamId: body.team?.id,
       userId: body.user.id,

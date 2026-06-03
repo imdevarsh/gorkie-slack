@@ -1,5 +1,7 @@
-export function formatMcpError(message: string): string {
-  const match = message.match(/\(HTTP (\d+)\):\s*([^\n]+)/);
+const HTTP_ERROR_RE = /\(HTTP (\d+)\):\s*([^\n]+)/;
+
+export function formatMCPError(message: string): string {
+  const match = message.match(HTTP_ERROR_RE);
   if (!match) {
     return message;
   }
@@ -14,6 +16,8 @@ export function formatMcpError(message: string): string {
         return `HTTP ${status}: ${desc}`;
       }
     }
-  } catch {}
+  } catch {
+    // Body wasn't JSON — fall through to the raw status + body.
+  }
   return `HTTP ${status}: ${body.trim()}`;
 }

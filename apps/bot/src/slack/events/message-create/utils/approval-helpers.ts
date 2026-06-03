@@ -1,12 +1,11 @@
 import { createMcpToolApproval, updateMcpToolApproval } from '@repo/db/queries';
-import { encryptSecret, parseEncrypted } from '@repo/utils';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
 import { z } from 'zod';
-import { env } from '@/env';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
+import { encrypt, parseEncrypted } from '@/lib/mcp/secret';
 import { codeBlock } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type {
@@ -36,11 +35,7 @@ export function decodeApprovalState({ state }: { state: string }): {
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
 } {
-  const parsed = parseEncrypted({
-    encrypted: state,
-    schema: approvalStateSchema,
-    secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-  });
+  const parsed = parseEncrypted(state, approvalStateSchema);
   if (!parsed) {
     throw new Error('Missing MCP approval state.');
   }
@@ -122,17 +117,11 @@ export async function postApprovalRequest({
 
   await createMcpToolApproval({
     approvalId: approval.approvalId,
-    argsJson: encryptSecret({
-      plaintext: clampText(args, 8000),
-      secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-    }),
+    argsJson: encrypt(clampText(args, 8000)),
     channelId: channel,
     eventTs: context.event.ts,
     exposedName: approval.exposedName,
-    state: encryptSecret({
-      plaintext: JSON.stringify({ messages, requestHints }),
-      secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-    }),
+    state: encrypt(JSON.stringify({ messages, requestHints })),
     serverId: approval.serverId,
     status: 'pending',
     teamId: context.teamId ?? null,

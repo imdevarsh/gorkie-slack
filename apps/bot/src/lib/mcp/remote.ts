@@ -1,4 +1,8 @@
-import { createMCPClient, type MCPClient } from '@ai-sdk/mcp';
+import {
+  createMCPClient,
+  type ListToolsResult,
+  type MCPClient,
+} from '@ai-sdk/mcp';
 import {
   ensureMcpToolPermissions,
   getMcpBearerConnection,
@@ -7,19 +11,18 @@ import {
   listMcpToolPermissions,
   updateMcpServerForUser,
 } from '@repo/db/queries';
-import type { McpServer } from '@repo/db/schema';
-import { decryptSecret } from '@repo/utils';
+import type { McpOauthConnection, McpServer } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
 import { clampText } from '@repo/utils/text';
 import type { ToolExecutionOptions, ToolSet } from 'ai';
 import { mcp } from '@/config';
-import { env } from '@/env';
 import { createTask, finishTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
 import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
-import { guardedMcpFetch } from './guarded-fetch';
-import { createMcpOAuthProvider } from './oauth-provider';
+import { guardedMCPFetch } from './guarded-fetch';
+import { createMCPOAuthProvider } from './oauth-provider';
+import { decrypt } from './secret';
 
 function extractResultText(result: unknown): string {
   if (
@@ -65,72 +68,70 @@ function normalizeToolMode(mode?: string | null): 'allow' | 'ask' | 'block' {
   return 'ask';
 }
 
-async function getMcpConnection({
+/**
+ * One credential for a server, regardless of auth type. `bearer` carries the
+ * ready-to-send (decrypted) token; `oauth` carries the stored connection the
+ * provider reads tokens from. This is the single thing the rest of the file
+ * threads around — no more bearerConnection/oauthConnection/hasCredentials.
+ */
+export type MCPCredential =
+  | { type: 'bearer'; token: string }
+  | { type: 'oauth'; connection: McpOauthConnection };
+
+/**
+ * Resolve a server's usable credential, or null if it has none yet. A plaintext
+ * `bearerToken` (probe path) short-circuits the DB read.
+ */
+export async function resolveMCPCredential({
+  bearerToken,
   server,
   userId,
 }: {
+  bearerToken?: string;
   server: McpServer;
   userId: string;
-}) {
-  const isBearer = server.authType === 'bearer';
-  const bearerConnection = isBearer
-    ? await getMcpBearerConnection({
-        serverId: server.id,
-        userId,
-      })
-    : null;
-  const oauthConnection = isBearer
-    ? null
-    : await getMcpOAuthConnection({
-        serverId: server.id,
-        userId,
-      });
-
-  return {
-    bearerConnection,
-    hasCredentials: isBearer
-      ? Boolean(bearerConnection?.token)
-      : Boolean(oauthConnection?.tokens),
-    oauthConnection,
-  };
+}): Promise<MCPCredential | null> {
+  if (server.authType === 'bearer') {
+    if (bearerToken) {
+      return { type: 'bearer', token: bearerToken };
+    }
+    const connection = await getMcpBearerConnection({
+      serverId: server.id,
+      userId,
+    });
+    return connection?.token
+      ? { type: 'bearer', token: decrypt(connection.token) }
+      : null;
+  }
+  const connection = await getMcpOAuthConnection({
+    serverId: server.id,
+    userId,
+  });
+  return connection?.tokens ? { type: 'oauth', connection } : null;
 }
 
-function openMcpClient({
-  bearerConnection,
-  bearerToken,
-  oauthConnection,
+function openMCPClient({
+  credential,
   server,
 }: {
-  bearerConnection?: Awaited<ReturnType<typeof getMcpBearerConnection>>;
-  bearerToken?: string;
-  oauthConnection?: Awaited<ReturnType<typeof getMcpOAuthConnection>>;
+  credential: MCPCredential;
   server: McpServer;
 }) {
-  const isBearer = server.authType === 'bearer';
-  const headers = isBearer
-    ? {
-        Authorization: `Bearer ${
-          bearerToken ??
-          decryptSecret({
-            encrypted: bearerConnection?.token ?? '',
-            secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-          })
-        }`,
-      }
-    : undefined;
+  const auth =
+    credential.type === 'bearer'
+      ? { headers: { Authorization: `Bearer ${credential.token}` } }
+      : {
+          authProvider: createMCPOAuthProvider({
+            connection: credential.connection,
+            server,
+          }),
+        };
 
   return createMCPClient({
     clientName: 'gorkie',
     transport: {
-      ...(isBearer
-        ? { headers }
-        : {
-            authProvider: createMcpOAuthProvider({
-              connection: oauthConnection ?? null,
-              server,
-            }),
-          }),
-      fetch: guardedMcpFetch,
+      ...auth,
+      fetch: guardedMCPFetch,
       redirect: 'error',
       type: server.transport === 'sse' ? 'sse' : 'http',
       url: server.url,
@@ -138,43 +139,26 @@ function openMcpClient({
   });
 }
 
-async function listTools({
-  bearerToken,
+/**
+ * List a server's tools with a known credential, closing the client after.
+ * Used both to probe before persisting and to discover after connecting.
+ */
+export async function fetchTools({
+  credential,
   server,
-  userId,
 }: {
-  bearerToken?: string;
+  credential: MCPCredential;
   server: McpServer;
-  userId: string;
-}) {
-  const isBearer = server.authType === 'bearer';
-  const { bearerConnection, hasCredentials, oauthConnection } =
-    await getMcpConnection({
-      server,
-      userId,
-    });
-  if (!(bearerToken || hasCredentials)) {
-    throw new Error(
-      isBearer
-        ? 'Bearer token required before tools can be used.'
-        : 'OAuth connection required before tools can be used.'
-    );
-  }
-
-  const client = await openMcpClient({
-    bearerConnection,
-    bearerToken,
-    oauthConnection,
-    server,
-  });
+}): Promise<ListToolsResult> {
+  const client = await openMCPClient({ credential, server });
   try {
     return await client.listTools();
   } finally {
-    await client.close();
+    await client.close().catch(() => undefined);
   }
 }
 
-export async function syncMcpPermissions({
+export async function syncMCPPermissions({
   server,
   teamId,
   userId,
@@ -183,7 +167,11 @@ export async function syncMcpPermissions({
   teamId?: string | null;
   userId: string;
 }) {
-  const definitions = await listTools({ server, userId });
+  const credential = await resolveMCPCredential({ server, userId });
+  if (!credential) {
+    throw new Error('Connect this MCP server before using its tools.');
+  }
+  const definitions = await fetchTools({ credential, server });
   const permissions = await ensureMcpToolPermissions({
     serverId: server.id,
     teamId,
@@ -196,7 +184,7 @@ export async function syncMcpPermissions({
   return { definitions, permissions };
 }
 
-export async function createMcpToolset({
+export async function createMCPToolset({
   context,
   stream,
 }: {
@@ -217,23 +205,21 @@ export async function createMcpToolset({
 
   for (const server of servers) {
     try {
-      const { bearerConnection, hasCredentials, oauthConnection } =
-        await getMcpConnection({
-          server,
-          userId,
-        });
-      if (!hasCredentials) {
+      const credential = await resolveMCPCredential({ server, userId });
+      if (!credential) {
         continue;
       }
 
-      const client = await openMcpClient({
-        bearerConnection,
-        oauthConnection,
-        server,
-      });
-      clients.push(client);
+      const client = await openMCPClient({ credential, server });
 
-      const definitions = await client.listTools();
+      let definitions: Awaited<ReturnType<typeof client.listTools>>;
+      try {
+        definitions = await client.listTools();
+      } catch (err) {
+        await client.close().catch(() => undefined);
+        throw err;
+      }
+      clients.push(client);
       const threadTs = context.event.thread_ts ?? context.event.ts;
       await ensureMcpToolPermissions({
         serverId: server.id,

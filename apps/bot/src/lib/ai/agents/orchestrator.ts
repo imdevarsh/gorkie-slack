@@ -1,6 +1,7 @@
 import { systemPrompt } from '@repo/ai/prompts';
 import { provider } from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
+import { clampText } from '@repo/utils/text';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
@@ -89,7 +90,7 @@ export async function collectToolApprovalsFromStream({
     }
 
     reasoningText += part.text;
-    const output = reasoningText.trim();
+    const output = clampText(reasoningText.trim(), 1500);
     if (!output) {
       continue;
     }

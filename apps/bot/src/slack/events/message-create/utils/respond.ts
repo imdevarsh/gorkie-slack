@@ -18,12 +18,7 @@ import { setStatus } from '@/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '@/lib/ai/utils/stream';
 import { finishTask } from '@/lib/ai/utils/task';
 import { setConversationTitle } from '@/lib/ai/utils/title';
-import type {
-  ChatRequestHints,
-  SlackMessageContext,
-  Stream,
-  ToolApprovalRequest,
-} from '@/types';
+import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 import { processSlackFiles } from '@/utils/images';
 import { getSlackUser } from '@/utils/users';
@@ -33,15 +28,25 @@ import {
   recordApprovalTask,
 } from './approval-helpers';
 
+// The single shape an approval decision flows through (mirrors how opencode
+// keeps the tool info on the request and the decision as one value). `tool` is
+// always present; it's only rendered when the call was denied.
+interface ApprovalOutcome {
+  approvalId: string;
+  approved: boolean;
+  reason?: string;
+  tool: { serverName: string; toolCallId: string; toolName: string };
+}
+
 async function runAgent({
+  approval,
   context,
-  deniedApproval,
   files,
   messages,
   requestHints,
 }: {
+  approval?: ApprovalOutcome;
   context: SlackMessageContext;
-  deniedApproval?: ToolApprovalRequest;
   files?: Parameters<typeof orchestratorAgent>[0]['files'];
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
@@ -53,10 +58,10 @@ async function runAgent({
 
   try {
     stream = await initStream(context);
-    if (deniedApproval) {
+    if (approval && !approval.approved) {
       await finishTask(stream, {
-        taskId: deniedApproval.toolCallId,
-        title: `Using ${deniedApproval.serverName} MCP: ${deniedApproval.toolName}`,
+        taskId: approval.tool.toolCallId,
+        title: `Using ${approval.tool.serverName} MCP: ${approval.tool.toolName}`,
         status: 'complete',
         output: 'Access denied by Slack approval.',
       });
@@ -158,28 +163,22 @@ async function runAgent({
 }
 
 export async function resumeResponse({
-  approved,
+  approval,
   context,
-  deniedApproval,
   messages,
   requestHints,
-  approvalId,
-  reason,
 }: {
-  approved: boolean;
-  approvalId: string;
+  approval: ApprovalOutcome;
   context: SlackMessageContext;
-  deniedApproval?: ToolApprovalRequest;
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
-  reason?: string;
 }) {
   await setStatus(context, {
-    status: approved ? 'is continuing' : 'is handling the denial',
+    status: approval.approved ? 'is continuing' : 'is handling the denial',
   });
   return runAgent({
+    approval,
     context,
-    deniedApproval,
     messages: [
       ...messages,
       {
@@ -187,9 +186,9 @@ export async function resumeResponse({
         content: [
           {
             type: 'tool-approval-response',
-            approvalId,
-            approved,
-            ...(reason ? { reason } : {}),
+            approvalId: approval.approvalId,
+            approved: approval.approved,
+            ...(approval.reason ? { reason: approval.reason } : {}),
           },
         ],
       },
