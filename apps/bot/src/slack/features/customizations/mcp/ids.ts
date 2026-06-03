@@ -7,6 +7,7 @@ export const actions = {
   disable: 'home_mcp_disable',
   disconnect: 'home_mcp_disconnect',
   enable: 'home_mcp_enable',
+  resetTools: 'home_mcp_reset_tools',
   approval: {
     allow: 'approval.allow',
     always: 'approval.always',

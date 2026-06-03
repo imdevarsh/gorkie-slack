@@ -366,6 +366,25 @@ export async function upsertMcpToolPermission(
   return rows[0] ?? null;
 }
 
+export function resetMcpToolPermissions({
+  serverId,
+  userId,
+}: {
+  serverId: string;
+  userId: string;
+}) {
+  return db
+    .delete(mcpToolPermissions)
+    .where(
+      and(
+        eq(mcpToolPermissions.serverId, serverId),
+        eq(mcpToolPermissions.userId, userId),
+        eq(mcpToolPermissions.scope, 'global'),
+        eq(mcpToolPermissions.threadTs, '')
+      )
+    );
+}
+
 export async function ensureMcpToolPermissions({
   serverId,
   userId,

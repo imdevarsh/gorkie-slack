@@ -4,7 +4,7 @@ import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
 import { codeBlock, mdText } from '@/slack/blocks';
-import { blocks, inputs, views } from './ids';
+import { actions, blocks, inputs, views } from './ids';
 import type { ModalState } from './types';
 
 const httpOption = Bits.Option({ text: 'HTTP', value: 'http' });
@@ -282,6 +282,39 @@ export function toolsModal({
               },
             },
             ...groupedBlocks,
+            {
+              type: 'actions',
+              elements: [
+                {
+                  type: 'button',
+                  text: {
+                    type: 'plain_text',
+                    text: 'Reset',
+                  },
+                  style: 'danger',
+                  action_id: actions.resetTools,
+                  value: serverId,
+                  confirm: {
+                    title: {
+                      type: 'plain_text',
+                      text: 'Reset tool modes?',
+                    },
+                    text: {
+                      type: 'plain_text',
+                      text: 'This will reset every tool on this MCP server to the default mode.',
+                    },
+                    confirm: {
+                      type: 'plain_text',
+                      text: 'Reset',
+                    },
+                    deny: {
+                      type: 'plain_text',
+                      text: 'Cancel',
+                    },
+                  },
+                },
+              ],
+            },
           ]
         : [
             {

@@ -4,6 +4,7 @@ import * as configure from './actions/configure';
 import * as connect from './actions/connect';
 import * as deleteServer from './actions/delete';
 import * as disconnect from './actions/disconnect';
+import * as resetTools from './actions/reset-tools';
 import * as toggle from './actions/toggle';
 import { actions, inputs } from './ids';
 import type { ButtonArgs, SelectArgs } from './types';
@@ -31,6 +32,7 @@ export const mcp = {
     { execute: connect.execute, name: connect.name },
     { execute: deleteServer.execute, name: deleteServer.name },
     { execute: disconnect.execute, name: disconnect.name },
+    { execute: resetTools.execute, name: resetTools.name },
     { execute: toggle.execute, name: toggle.enableName },
     { execute: toggle.execute, name: toggle.disableName },
   ],
