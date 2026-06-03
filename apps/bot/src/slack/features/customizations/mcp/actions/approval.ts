@@ -36,7 +36,7 @@ async function updateApprovalMessage({
   input?: string;
   serverName?: string;
   text: string;
-  title?: string;
+  title: string;
   toolName?: string;
 }) {
   const container = asRecord(body.container);
@@ -101,10 +101,9 @@ export async function execute(args: ButtonArgs): Promise<void> {
       serverName: server?.name ?? status?.exposedName,
       text:
         status?.status === 'superseded'
-          ? 'Approval expired because you sent a newer message.'
-          : 'This MCP approval request has already been handled.',
-      title:
-        status?.status === 'superseded' ? 'MCP Approval Expired' : undefined,
+          ? 'Replaced by a newer message.'
+          : 'Already handled.',
+      title: status?.status === 'superseded' ? 'Expired' : 'Already handled',
       toolName: status?.toolName,
     });
     return;
@@ -124,7 +123,8 @@ export async function execute(args: ButtonArgs): Promise<void> {
     await updateApprovalMessage({
       ...args,
       serverName: server?.name ?? status.exposedName,
-      text: 'This MCP approval request has already been handled.',
+      text: 'Already handled.',
+      title: 'Already handled',
       toolName: status.toolName,
     });
     return;
@@ -136,10 +136,12 @@ export async function execute(args: ButtonArgs): Promise<void> {
   });
   const serverName = server?.name ?? approval.exposedName;
   let resultText = 'Access denied.';
+  let resultTitle = 'Access denied';
   if (approved) {
     resultText = alwaysInThread
       ? 'Approved for this thread.'
       : 'Approved once.';
+    resultTitle = alwaysInThread ? 'Approved for thread' : 'Approved once';
   }
 
   let input: string | undefined;
@@ -192,6 +194,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
       input,
       serverName,
       text: resultText,
+      title: resultTitle,
       toolName: approval.toolName,
     });
 

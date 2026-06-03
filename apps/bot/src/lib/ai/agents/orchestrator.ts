@@ -89,10 +89,7 @@ export async function collectToolApprovalsFromStream({
     }
 
     reasoningText += part.text;
-    const output = reasoningText
-      .replace(/\s*\n+\s*/g, ' ')
-      .replace(/[ \t]{2,}/g, ' ')
-      .trim();
+    const output = reasoningText.trim();
     if (!output) {
       continue;
     }

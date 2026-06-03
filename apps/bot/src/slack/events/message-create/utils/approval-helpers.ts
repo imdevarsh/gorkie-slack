@@ -67,28 +67,27 @@ export function handledApprovalBlocks({
   input,
   serverName,
   text,
-  title = 'MCP Approval Handled',
+  title,
   toolName,
 }: {
   input?: string;
   serverName?: string;
   text: string;
-  title?: string;
+  title: string;
   toolName?: string;
 }): SlackBlocks {
+  const cardTitle =
+    serverName && toolName ? `${title}: ${serverName} / ${toolName}` : title;
+
   return [
     {
       type: 'card',
-      title: {
-        type: 'mrkdwn',
-        text: title,
-      },
+      title: { type: 'mrkdwn', text: cardTitle },
       body: {
         type: 'mrkdwn',
         text: clampText(
           [
-            serverName && toolName ? `${serverName} / ${toolName}` : null,
-            text,
+            serverName && toolName && input ? null : text,
             input
               ? `Input:\n${codeBlock({ value: input, maxLength: 180 })}`
               : null,

@@ -36,7 +36,7 @@ function buildTaskBlock(task: ScheduledTask) {
   return Blocks.Section({
     text: [
       `*${mdText(title)}*`,
-      `\`${mdText(task.cronExpression)}\` (${mdText(task.timezone)}) -> ${destination}`,
+      `\`${task.cronExpression}\` (${task.timezone}) -> ${destination}`,
       `Next: ${nextRunText} · Last: ${lastRunText}`,
     ].join('\n'),
   }).accessory(

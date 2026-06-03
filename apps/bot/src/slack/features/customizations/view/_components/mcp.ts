@@ -29,7 +29,7 @@ function serverBlocks(server: McpServerWithConnection) {
   const section = Blocks.Section({
     text: [
       `*${mdText(truncate(server.name, appHome.maxMcpNameDisplay))}*`,
-      `\`${mdText(truncate(server.url, appHome.maxMcpUrlDisplay))}\``,
+      `\`${truncate(server.url, appHome.maxMcpUrlDisplay)}\``,
       `${status}${lastError}`,
     ].join('\n'),
   });

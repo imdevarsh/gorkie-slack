@@ -45,6 +45,12 @@ Rules:
       openrouter: {
         parallelToolCalls: false,
       },
+      hackclub: {
+        parallelToolCalls: false,
+      },
+      google: {
+        parallelToolCalls: false,
+      },
     },
     toolChoice: 'required',
     tools: {
