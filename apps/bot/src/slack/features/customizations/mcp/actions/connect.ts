@@ -154,6 +154,7 @@ export async function execute({
     view: oauthModal({
       authorizationUrl: authorizationUrlRef.value.toString(),
       serverId: server.id,
+      serverName: server.name,
     }),
   });
 }

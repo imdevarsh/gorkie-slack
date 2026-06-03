@@ -51,15 +51,6 @@ function serverBlocks(server: McpServerWithConnection) {
         text: primaryText,
         value: server.id,
       }),
-      ...(failed && connected
-        ? [
-            Elements.Button({
-              actionId: actions.disconnect,
-              text: 'Disconnect',
-              value: server.id,
-            }),
-          ]
-        : []),
       ...(connected && server.enabled
         ? [
             Elements.Button({

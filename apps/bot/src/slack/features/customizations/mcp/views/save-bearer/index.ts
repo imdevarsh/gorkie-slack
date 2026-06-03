@@ -11,6 +11,7 @@ import { publishHome } from '../../../publish';
 import { blocks, inputs, views } from '../../ids';
 import { parseServerMeta, viewValueSchema } from '../../schema';
 import type { SubmitArgs } from '../../types';
+import { statusModal } from '../../view';
 
 export const name = views.bearer;
 
@@ -58,7 +59,13 @@ export async function execute({
     plaintext: bearerToken,
     secret: env.MCP_TOKEN_ENCRYPTION_KEY,
   });
-  await ack();
+  await ack({
+    response_action: 'update',
+    view: statusModal({
+      title: `Connect ${server.name}`,
+      text: 'Saving token and connecting…',
+    }),
+  });
   await upsertMcpBearerConnection({
     token,
     serverId,
@@ -68,11 +75,7 @@ export async function execute({
   await updateMcpServerForUser({
     id: serverId,
     userId: body.user.id,
-    values: {
-      enabled: false,
-      lastConnectedAt: null,
-      lastError: null,
-    },
+    values: { enabled: false, lastConnectedAt: null, lastError: null },
   });
   const updatedServer = await getMcpServerByIdForUser({
     id: serverId,
@@ -88,20 +91,28 @@ export async function execute({
       await updateMcpServerForUser({
         id: serverId,
         userId: body.user.id,
-        values: {
-          enabled: true,
-          lastConnectedAt: new Date(),
-          lastError: null,
-        },
+        values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
+      });
+      await client.views.update({
+        view_id: view.id,
+        view: statusModal({
+          title: `Connect ${server.name}`,
+          text: 'Connected successfully.',
+        }),
       });
     } catch (error) {
+      const message = errorMessage(error);
       await updateMcpServerForUser({
         id: serverId,
         userId: body.user.id,
-        values: {
-          enabled: false,
-          lastError: errorMessage(error),
-        },
+        values: { enabled: false, lastError: message },
+      });
+      await client.views.update({
+        view_id: view.id,
+        view: statusModal({
+          title: 'Connection Failed',
+          text: `Token saved, but Gorkie could not connect:\n\`\`\`${message}\`\`\``,
+        }),
       });
     }
   }

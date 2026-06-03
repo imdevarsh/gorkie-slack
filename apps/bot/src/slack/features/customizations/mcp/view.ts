@@ -107,20 +107,22 @@ export function addModal(state: ModalState = {}): SlackModalDto {
 export function oauthModal({
   authorizationUrl,
   serverId,
+  serverName,
 }: {
   authorizationUrl: string;
   serverId: string;
+  serverName: string;
 }): SlackModalDto {
   return Modal({
     callbackId: views.oauth,
     close: 'Done',
     privateMetaData: JSON.stringify({ serverId }),
-    title: 'Connect MCP',
+    title: `Connect ${serverName}`,
   })
     .notifyOnClose()
     .blocks(
       Blocks.Section({
-        text: '*Connect MCP*\n\nAuthenticate with this MCP server, then return to Slack.',
+        text: `*Connect ${mdText(serverName)} to Gorkie*\n\nAuthenticate with this MCP server, then return to Slack.`,
       }),
       Blocks.Actions().elements(
         Elements.Button({
@@ -144,7 +146,7 @@ export function bearerModal({
     close: 'Cancel',
     privateMetaData: JSON.stringify({ serverId }),
     submit: 'Save',
-    title: 'Connect MCP',
+    title: `Connect ${serverName}`,
   })
     .blocks(
       Blocks.Section({

@@ -11,6 +11,7 @@ import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../../publish';
 import { views } from '../../ids';
 import type { SubmitArgs } from '../../types';
+import { statusModal } from '../../view';
 import { parseSavePayload } from './schema';
 
 export const name = views.add;
@@ -34,7 +35,19 @@ export async function execute({
           secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         })
       : null;
-  await ack();
+
+  if (payload.data.auth === 'bearer') {
+    await ack({
+      response_action: 'update',
+      view: statusModal({
+        title: `Connect ${payload.data.name}`,
+        text: 'Saving token and connecting…',
+      }),
+    });
+  } else {
+    await ack();
+  }
+
   const server = await createMcpServer({
     authType: payload.data.auth,
     enabled: false,
@@ -74,20 +87,28 @@ export async function execute({
       await updateMcpServerForUser({
         id: server.id,
         userId: body.user.id,
-        values: {
-          enabled: true,
-          lastConnectedAt: new Date(),
-          lastError: null,
-        },
+        values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
+      });
+      await client.views.update({
+        view_id: view.id,
+        view: statusModal({
+          title: `Connect ${payload.data.name}`,
+          text: 'Connected successfully.',
+        }),
       });
     } catch (error) {
+      const message = errorMessage(error);
       await updateMcpServerForUser({
         id: server.id,
         userId: body.user.id,
-        values: {
-          enabled: false,
-          lastError: errorMessage(error),
-        },
+        values: { enabled: false, lastError: message },
+      });
+      await client.views.update({
+        view_id: view.id,
+        view: statusModal({
+          title: 'Connection Failed',
+          text: `Token saved, but Gorkie could not connect:\n\`\`\`${message}\`\`\``,
+        }),
       });
     }
   }
