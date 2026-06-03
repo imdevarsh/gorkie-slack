@@ -12,7 +12,7 @@ import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import { env } from '@/env';
 import logger from '@/lib/logger';
 import { getQueue } from '@/lib/queue';
-import { codeBlock, mdText } from '@/slack/blocks';
+import { codeBlock, inlineCode, mdText } from '@/slack/blocks';
 import { decodeApprovalState } from '@/slack/events/message-create/utils/approval-helpers';
 import { resumeResponse } from '@/slack/events/message-create/utils/respond';
 import type { SlackMessageContext } from '@/types';
@@ -30,8 +30,15 @@ async function updateApprovalMessage({
   body,
   client,
   input,
+  serverName,
   text,
-}: ButtonArgs & { input?: string; text: string }) {
+  toolName,
+}: ButtonArgs & {
+  input?: string;
+  serverName?: string;
+  text: string;
+  toolName?: string;
+}) {
   const container = asRecord(body.container);
   const message = asRecord(body.message);
   const channel = container?.channel_id;
@@ -45,16 +52,24 @@ async function updateApprovalMessage({
       type: 'card',
       title: {
         type: 'mrkdwn',
-        text: mdText(text),
+        text: 'MCP approval handled',
       },
       body: {
         type: 'mrkdwn',
-        text: input
-          ? clampText(
-              `Input:\n${codeBlock({ value: input, maxLength: 180 })}`,
-              200
-            )
-          : mdText(text),
+        text: clampText(
+          [
+            serverName && toolName
+              ? `${mdText(serverName)} / ${inlineCode(toolName)}`
+              : null,
+            mdText(text),
+            input
+              ? `Input:\n${codeBlock({ value: input, maxLength: 180 })}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          260
+        ),
       },
     },
   ];
@@ -91,12 +106,20 @@ export async function execute(args: ButtonArgs): Promise<void> {
   }
 
   if (!status || status.status !== 'pending') {
+    const server = status
+      ? await getMcpServerByIdForUser({
+          id: status.serverId,
+          userId: body.user.id,
+        })
+      : null;
     await updateApprovalMessage({
       ...args,
+      serverName: server?.name ?? status?.exposedName,
       text:
         status?.status === 'superseded'
           ? 'This MCP approval request was replaced by a newer message.'
           : 'This MCP approval request has already been handled.',
+      toolName: status?.toolName,
     });
     return;
   }
@@ -108,9 +131,15 @@ export async function execute(args: ButtonArgs): Promise<void> {
     userId: body.user.id,
   });
   if (!approval) {
+    const server = await getMcpServerByIdForUser({
+      id: status.serverId,
+      userId: body.user.id,
+    });
     await updateApprovalMessage({
       ...args,
+      serverName: server?.name ?? status.exposedName,
       text: 'This MCP approval request has already been handled.',
+      toolName: status.toolName,
     });
     return;
   }
@@ -120,11 +149,11 @@ export async function execute(args: ButtonArgs): Promise<void> {
     userId: body.user.id,
   });
   const serverName = server?.name ?? approval.exposedName;
-  let resultText = `Access denied for ${approval.toolName}.`;
+  let resultText = 'Access denied.';
   if (approved) {
     resultText = alwaysInThread
-      ? `Approved ${approval.toolName} for this thread.`
-      : `Approved ${approval.toolName} once.`;
+      ? 'Approved for this thread.'
+      : 'Approved once.';
   }
 
   let input: string | undefined;
@@ -172,7 +201,13 @@ export async function execute(args: ButtonArgs): Promise<void> {
       userId: body.user.id,
       values: { status: approved ? 'approved' : 'denied' },
     });
-    await updateApprovalMessage({ ...args, input, text: resultText });
+    await updateApprovalMessage({
+      ...args,
+      input,
+      serverName,
+      text: resultText,
+      toolName: approval.toolName,
+    });
 
     getQueue(getContextId(resumeContext))
       .add(() =>

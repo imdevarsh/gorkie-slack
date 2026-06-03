@@ -10,6 +10,10 @@ export function codeBlock({
   return `\`\`\`${clampText(value.replaceAll('```', "'''"), maxLength)}\`\`\``;
 }
 
+export function inlineCode(value: string): string {
+  return `\`${mdText(value.replaceAll('`', "'"))}\``;
+}
+
 export function mdText(value: string): string {
   return value
     .replaceAll('&', '&amp;')

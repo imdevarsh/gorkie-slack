@@ -473,10 +473,19 @@ export function getMcpToolApprovalStatus({
   approvalId,
 }: {
   approvalId: string;
-}): Promise<{ status: string; userId: string } | null> {
+}): Promise<{
+  exposedName: string;
+  serverId: string;
+  status: string;
+  toolName: string;
+  userId: string;
+} | null> {
   return db
     .select({
+      exposedName: mcpToolApprovals.exposedName,
+      serverId: mcpToolApprovals.serverId,
       status: mcpToolApprovals.status,
+      toolName: mcpToolApprovals.toolName,
       userId: mcpToolApprovals.userId,
     })
     .from(mcpToolApprovals)
