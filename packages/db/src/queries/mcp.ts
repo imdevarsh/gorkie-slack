@@ -445,6 +445,30 @@ export async function createMcpToolApproval(approval: NewMcpToolApproval) {
   return rows[0] ?? null;
 }
 
+export async function supersedePendingMcpToolApprovals({
+  channelId,
+  threadTs,
+  userId,
+}: {
+  channelId: string;
+  threadTs?: string | null;
+  userId: string;
+}) {
+  const rows = await db
+    .update(mcpToolApprovals)
+    .set({ status: 'superseded', updatedAt: new Date() })
+    .where(
+      and(
+        eq(mcpToolApprovals.userId, userId),
+        eq(mcpToolApprovals.channelId, channelId),
+        eq(mcpToolApprovals.status, 'pending'),
+        threadTs ? eq(mcpToolApprovals.threadTs, threadTs) : undefined
+      )
+    )
+    .returning({ id: mcpToolApprovals.id });
+  return rows.length;
+}
+
 export function getMcpToolApprovalStatus({
   approvalId,
 }: {

@@ -1,5 +1,6 @@
 import {
   claimMcpToolApproval,
+  getMcpServerByIdForUser,
   getMcpToolApprovalStatus,
   updateMcpToolApproval,
   upsertMcpToolPermission,
@@ -92,7 +93,10 @@ export async function execute(args: ButtonArgs): Promise<void> {
   if (!status || status.status !== 'pending') {
     await updateApprovalMessage({
       ...args,
-      text: 'This MCP approval request has already been handled.',
+      text:
+        status?.status === 'superseded'
+          ? 'This MCP approval request was replaced by a newer message.'
+          : 'This MCP approval request has already been handled.',
     });
     return;
   }
@@ -111,6 +115,11 @@ export async function execute(args: ButtonArgs): Promise<void> {
     return;
   }
 
+  const server = await getMcpServerByIdForUser({
+    id: approval.serverId,
+    userId: body.user.id,
+  });
+  const serverName = server?.name ?? approval.exposedName;
   let resultText = `Access denied for ${approval.toolName}.`;
   if (approved) {
     resultText = alwaysInThread
@@ -171,6 +180,17 @@ export async function execute(args: ButtonArgs): Promise<void> {
           approvalId,
           approved,
           context: resumeContext,
+          deniedApproval: approved
+            ? undefined
+            : {
+                approvalId,
+                exposedName: approval.exposedName,
+                input: input ?? '',
+                serverId: approval.serverId,
+                serverName,
+                toolCallId: approval.toolCallId,
+                toolName: approval.toolName,
+              },
           messages,
           reason: approved ? undefined : 'Access denied by Slack approval.',
           requestHints,

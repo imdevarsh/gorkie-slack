@@ -57,6 +57,7 @@ export async function collectToolApprovalsFromStream({
 }): Promise<ToolApprovalRequest[]> {
   const eventTs = context.event.event_ts;
   const approvals: ToolApprovalRequest[] = [];
+  let reasoningText = '';
 
   for await (const part of fullStream) {
     if (part.type === 'tool-approval-request' && 'toolCall' in part) {
@@ -87,6 +88,15 @@ export async function collectToolApprovalsFromStream({
       continue;
     }
 
+    reasoningText += part.text;
+    const output = reasoningText
+      .replace(/\s*\n+\s*/g, ' ')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim();
+    if (!output) {
+      continue;
+    }
+
     const entry = taskMap.get(eventTs);
     if (!entry) {
       logger.warn({ eventTs }, 'No taskId found in taskMap');
@@ -96,7 +106,7 @@ export async function collectToolApprovalsFromStream({
     await updateTask(stream, {
       taskId: entry.taskId,
       status: 'in_progress',
-      output: part.text,
+      output,
     });
   }
 

@@ -1,3 +1,4 @@
+import { supersedePendingMcpToolApprovals } from '@repo/db/queries';
 import { getErrorDetails } from '@repo/utils/error';
 import {
   type ModelMessage,
@@ -12,8 +13,14 @@ import {
 } from '@/lib/ai/agents/orchestrator';
 import { setStatus } from '@/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '@/lib/ai/utils/stream';
+import { finishTask } from '@/lib/ai/utils/task';
 import { setConversationTitle } from '@/lib/ai/utils/title';
-import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
+import type {
+  ChatRequestHints,
+  SlackMessageContext,
+  Stream,
+  ToolApprovalRequest,
+} from '@/types';
 import { getContextId } from '@/utils/context';
 import { processSlackFiles } from '@/utils/images';
 import { getSlackUser } from '@/utils/users';
@@ -21,11 +28,13 @@ import { postApprovalRequest, recordApprovalTask } from './approval-helpers';
 
 async function runAgent({
   context,
+  deniedApproval,
   files,
   messages,
   requestHints,
 }: {
   context: SlackMessageContext;
+  deniedApproval?: ToolApprovalRequest;
   files?: Parameters<typeof orchestratorAgent>[0]['files'];
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
@@ -37,6 +46,14 @@ async function runAgent({
 
   try {
     stream = await initStream(context);
+    if (deniedApproval) {
+      await finishTask(stream, {
+        taskId: deniedApproval.toolCallId,
+        title: `Using ${deniedApproval.serverName} MCP: ${deniedApproval.toolName}`,
+        status: 'complete',
+        output: 'Access denied by Slack approval.',
+      });
+    }
     const result = await orchestratorAgent({
       context,
       requestHints,
@@ -136,6 +153,7 @@ async function runAgent({
 export async function resumeResponse({
   approved,
   context,
+  deniedApproval,
   messages,
   requestHints,
   approvalId,
@@ -144,6 +162,7 @@ export async function resumeResponse({
   approved: boolean;
   approvalId: string;
   context: SlackMessageContext;
+  deniedApproval?: ToolApprovalRequest;
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
   reason?: string;
@@ -153,6 +172,7 @@ export async function resumeResponse({
   });
   return runAgent({
     context,
+    deniedApproval,
     messages: [
       ...messages,
       {
@@ -199,6 +219,17 @@ export async function generateResponse({
 
     const userId = context.event.user;
     const messageText = context.event.text ?? '';
+    const channelId = context.event.channel;
+    if (userId && channelId) {
+      await supersedePendingMcpToolApprovals({
+        channelId,
+        threadTs:
+          context.event.channel_type === 'im'
+            ? null
+            : (context.event.thread_ts ?? context.event.ts),
+        userId,
+      });
+    }
 
     if (messages.length === 0) {
       setConversationTitle(context, messageText).catch(() => undefined);
