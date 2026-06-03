@@ -112,6 +112,10 @@ export async function postApprovalRequest({
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
 }) {
+  const userId = context.event.user;
+  if (!userId) {
+    return;
+  }
   const channel = context.event.channel;
   const threadTs = context.event.thread_ts ?? context.event.ts;
   const args = JSON.stringify(approval.input, null, 2) ?? '';
@@ -135,7 +139,7 @@ export async function postApprovalRequest({
     threadTs,
     toolCallId: approval.toolCallId,
     toolName: approval.toolName,
-    userId: context.event.user ?? '',
+    userId,
   });
 
   const blocks: SlackBlocks = [
@@ -190,7 +194,7 @@ export async function postApprovalRequest({
   if (message.ts) {
     await updateMcpToolApproval({
       approvalId: approval.approvalId,
-      userId: context.event.user ?? '',
+      userId,
       values: { messageTs: message.ts },
     });
   }
