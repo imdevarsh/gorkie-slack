@@ -30,11 +30,13 @@ async function updateApprovalMessage({
   input,
   serverName,
   text,
+  title,
   toolName,
 }: ButtonArgs & {
   input?: string;
   serverName?: string;
   text: string;
+  title?: string;
   toolName?: string;
 }) {
   const container = asRecord(body.container);
@@ -50,7 +52,13 @@ async function updateApprovalMessage({
       channel,
       ts,
       text,
-      blocks: handledApprovalBlocks({ input, serverName, text, toolName }),
+      blocks: handledApprovalBlocks({
+        input,
+        serverName,
+        text,
+        title,
+        toolName,
+      }),
     })
     .catch(() => undefined);
 }
@@ -95,6 +103,8 @@ export async function execute(args: ButtonArgs): Promise<void> {
         status?.status === 'superseded'
           ? 'Approval expired because you sent a newer message.'
           : 'This MCP approval request has already been handled.',
+      title:
+        status?.status === 'superseded' ? 'MCP Approval Expired' : undefined,
       toolName: status?.toolName,
     });
     return;

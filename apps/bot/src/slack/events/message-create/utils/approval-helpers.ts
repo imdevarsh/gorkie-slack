@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
-import { codeBlock, inlineCode, mdText } from '@/slack/blocks';
+import { codeBlock } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type {
   ChatRequestHints,
@@ -67,11 +67,13 @@ export function handledApprovalBlocks({
   input,
   serverName,
   text,
+  title = 'MCP Approval Handled',
   toolName,
 }: {
   input?: string;
   serverName?: string;
   text: string;
+  title?: string;
   toolName?: string;
 }): SlackBlocks {
   return [
@@ -79,16 +81,14 @@ export function handledApprovalBlocks({
       type: 'card',
       title: {
         type: 'mrkdwn',
-        text: 'MCP approval handled',
+        text: title,
       },
       body: {
         type: 'mrkdwn',
         text: clampText(
           [
-            serverName && toolName
-              ? `${mdText(serverName)} / ${inlineCode(toolName)}`
-              : null,
-            mdText(text),
+            serverName && toolName ? `${serverName} / ${toolName}` : null,
+            text,
             input
               ? `Input:\n${codeBlock({ value: input, maxLength: 180 })}`
               : null,
@@ -144,12 +144,12 @@ export async function postApprovalRequest({
       type: 'card',
       title: {
         type: 'mrkdwn',
-        text: 'MCP approval needed',
+        text: `Approve: ${approval.serverName} / ${approval.toolName}`,
       },
       body: {
         type: 'mrkdwn',
         text: clampText(
-          `${mdText(approval.serverName)} / ${inlineCode(approval.toolName)}\nInput:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
+          `Input:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
           200
         ),
       },

@@ -253,6 +253,7 @@ export async function generateResponse({
               blocks: handledApprovalBlocks({
                 serverName: server?.name ?? approval.exposedName,
                 text: 'Approval expired because you sent a newer message.',
+                title: 'MCP Approval Expired',
                 toolName: approval.toolName,
               }),
             })
