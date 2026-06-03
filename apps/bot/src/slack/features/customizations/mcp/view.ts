@@ -278,7 +278,7 @@ export function toolsModal({
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `*${mdText(serverName)}*\nChoose which tools are allowed always, ask first, or stay blocked.${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
+                text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or blocked.${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
               },
               accessory: {
                 type: 'button',
