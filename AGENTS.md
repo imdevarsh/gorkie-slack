@@ -71,14 +71,25 @@ logReply({ ctxId, author, result, reason });
 ```
 
 ### No `as const` on type discriminants
-When building objects that need a literal type for a discriminant field (e.g. `type: 'text'`), cast the whole expression to the SDK type instead of using `as const` on the property.
+When building objects that need a literal type for a discriminant field (e.g. `type: 'text'`), prefer assigning the whole expression to an SDK-typed variable or returning through a typed function. Do not use `as const` on the property.
 
 ```ts
 // bad
 { type: 'text' as const, text }
 
-// good — use the SDK's UserContent type
-[{ type: 'text', text }, ...images] as UserContent
+// good — use the SDK's UserContent type as an annotation
+const content: UserContent = [{ type: 'text', text }, ...images];
+```
+
+### Avoid type casting
+Do not use type casts to silence TypeScript. Prefer schema parsing, typed builders, narrower function signatures, or explicit runtime checks. A cast is acceptable only at a real external boundary where TypeScript cannot know the shape after validation, and the validation should live next to the cast.
+
+```ts
+// bad
+const meta = JSON.parse(view.private_metadata || '{}') as ServerMeta;
+
+// good
+const meta = serverMetaSchema.parse(JSON.parse(view.private_metadata || '{}'));
 ```
 
 ### No comments explaining what code does
@@ -92,6 +103,9 @@ Anything that could reasonably change per deployment (thresholds, message lists,
 
 ### Feature-enclosed architecture
 Slack features live under `apps/bot/src/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts` when applicable. Keep feature-specific UI/actions near the feature that owns them.
+
+### Review cleanup findings
+When addressing review comments, prefer deleting compatibility wrappers and one-shot helpers over renaming them. Keep MCP naming direct (`OAuth`, `URL`, concise function names), parse Slack modal metadata with schemas, and avoid adding files that only re-export another module without real ownership.
 
 ## Formatting and Linting (Ultracite)
 

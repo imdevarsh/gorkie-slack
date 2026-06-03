@@ -1,7 +1,14 @@
+import { mcp } from './mcp';
 import { prompts } from './prompts';
 import { scheduledTasks } from './scheduled-tasks';
 
 export const customizations = {
-  actions: [...prompts.actions, ...scheduledTasks.actions],
-  views: [...prompts.views],
+  buttonActions: [
+    ...prompts.buttonActions,
+    ...scheduledTasks.buttonActions,
+    ...mcp.buttonActions,
+  ],
+  closedViews: [...mcp.closedViews],
+  selectActions: [...mcp.selectActions],
+  submitViews: [...prompts.submitViews, ...mcp.submitViews],
 };

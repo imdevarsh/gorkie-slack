@@ -1,4 +1,4 @@
 export * from './customizations';
-export * from './proxy';
+export * from './mcp';
 export * from './sandbox';
 export * from './scheduled-tasks';

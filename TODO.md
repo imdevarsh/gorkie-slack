@@ -16,12 +16,31 @@ Active task list for gorkie-turbo. Kept in sync as issues are found and resolved
 
 ## Open
 
+### Bug: AI provider fallback ends on OpenRouter max_tokens credit failure
+Production logs show HackClub and OpenRouter calls failing during fallback:
+- HackClub sometimes returns a Cloudflare `504 Gateway time-out` HTML response.
+- OpenRouter then rejects the fallback request with:
+`Agent failed: 402 This request requires more credits, or fewer max_tokens. You requested up to 65536 tokens...`
+
+The request body in one trace has `max_tokens: undefined`, so OpenRouter appears to reserve the model's default max output budget (`65536`) rather than a value explicitly set by Gorkie. Add a configurable output cap for chat and sandbox model calls so fallback requests do not reserve unaffordable output budgets.
+- Files: `packages/ai/src/providers.ts`, `apps/bot/src/config.ts`, `apps/bot/src/lib/sandbox/config/index.ts`
+- Validation: confirm HackClub `504` responses retry to the next provider and OpenRouter/HackClub requests no longer reserve `65536` output tokens by default.
+
+### Improve: MCP tool task display
+MCP tool tasks should show the normalized MCP tool name in the title, plus concise input and output details. For example, use `Using Fathom: list_meetings` instead of only `Using Fathom MCP`, then include a clamped JSON input preview and a clamped text/JSON output preview.
+- File: `apps/bot/src/lib/mcp/remote.ts`
+
 ### Improve: Multi-provider retry for Pi sandbox agent
 The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the orchestrator (`createRetryable`) so it falls back to alternative providers on failure rather than erroring out.
 
 ### Improve: Orchestrator — show terminal tool as task when no reasoning was shown
 Currently `prepareStep` always creates a "Thinking…" task, after terminal tool firing show just show "Replied" / "Skipping" / "Left channel" directly as the task title
 - File: `apps/bot/src/lib/ai/agents/orchestrator.ts`
+
+### Improve: Auto-commit at checkpoints
+Add an explicit checkpoint flow for larger agent tasks so meaningful working states can be committed automatically when the user opts into that workflow.
+- Keep commits scoped to the current task and avoid mixing unrelated dirty worktree changes.
+- Consider where checkpoint metadata belongs before adding more one-off state fields.
 
 ### Bug: Task stream is intermittent — thinking sometimes missing
 The "Thinking…" task created in `prepareStep` of `orchestratorAgent` and its reasoning text (`consumeOrchestratorReasoningStream`) are sometimes not shown in Slack. Possibly a race condition in task creation vs. stream consumption, or the reasoning stream arriving after the step task is already resolved.
@@ -44,6 +63,13 @@ The `agent-browser` npm package is installed globally by the sandbox, but `agent
 - Audit `triggers.ts` for any leftover priming logic
 - Tighten types in `message-context.ts` now that `getAuthorName` no longer takes `ctxId`
 - Files: `apps/bot/src/slack/conversations.ts`, `apps/bot/src/slack/events/message-create/utils/message-context.ts`, `apps/bot/src/utils/triggers.ts`, `apps/bot/src/utils/context.ts`
+
+### Refactor: Reduce schema and type clutter
+The codebase is accumulating inline schemas, duplicated DTO shapes, and large files that mix Slack UI, persistence, and orchestration concerns. Do a cleanup pass guided by `AGENTS.md`:
+- Move reusable types into `apps/bot/src/types/` or package-level type files.
+- Keep feature-owned Slack actions/views inside their feature folders.
+- Split genuinely shared logic into small feature utilities, but avoid one-shot helpers.
+- Prefer dict params for functions with multiple inputs.
 
 ### Bug: Slack search errors mark entire task as failed + pinned items shown incorrectly
 When the bot performs a Slack search (e.g. searching for pinned messages or user-pinned items), errors from the search API bubble up and mark the whole task as a failure in the task list. The user sees the entire task as red/failed even if the core work succeeded. Additionally, pinned item detection doesn't correctly identify items the user has pinned — it may be checking the wrong field or returning all pins regardless of who pinned them.

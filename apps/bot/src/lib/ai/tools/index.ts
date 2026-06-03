@@ -1,3 +1,4 @@
+import type { ToolSet } from 'ai';
 import { cancelScheduledTask } from '@/lib/ai/tools/chat/cancel-scheduled-task';
 import { generateImageTool } from '@/lib/ai/tools/chat/generate-image';
 import { getUserInfo } from '@/lib/ai/tools/chat/get-user-info';
@@ -15,9 +16,11 @@ import { searchSlack } from '@/lib/ai/tools/chat/search-slack';
 import { searchWeb } from '@/lib/ai/tools/chat/search-web';
 import { skip } from '@/lib/ai/tools/chat/skip';
 import { summariseThread } from '@/lib/ai/tools/chat/summarise-thread';
+import logger from '@/lib/logger';
+import { createMcpToolset } from '@/lib/mcp/remote';
 import type { SlackFile, SlackMessageContext, Stream } from '@/types';
 
-export function createToolset({
+export async function createToolset({
   context,
   files,
   stream,
@@ -25,8 +28,8 @@ export function createToolset({
   context: SlackMessageContext;
   files?: SlackFile[];
   stream: Stream;
-}) {
-  return {
+}): Promise<{ cleanup: () => Promise<void>; tools: ToolSet }> {
+  const nativeTools = {
     cancelScheduledTask: cancelScheduledTask({ context, stream }),
     generateImage: generateImageTool({ context, files, stream }),
     getUserInfo: getUserInfo({ context, stream }),
@@ -44,5 +47,25 @@ export function createToolset({
     searchWeb: searchWeb({ context, stream }),
     skip: skip({ context, stream }),
     summariseThread: summariseThread({ context, stream }),
+  };
+  const mcpTools = await createMcpToolset({ context, stream }).catch(
+    (error: unknown) => {
+      logger.warn(
+        {
+          userId: context.event.user,
+          err: error,
+        },
+        'Failed to initialize MCP toolset'
+      );
+      return {
+        cleanup: async () => undefined,
+        tools: {},
+      };
+    }
+  );
+
+  return {
+    cleanup: mcpTools.cleanup,
+    tools: { ...nativeTools, ...mcpTools.tools },
   };
 }

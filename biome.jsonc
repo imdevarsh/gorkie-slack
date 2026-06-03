@@ -67,5 +67,10 @@
       "allowComments": true
     }
   },
+  "html": {
+    "parser": {
+      "interpolation": true
+    }
+  },
   "extends": ["ultracite/biome/core"]
 }

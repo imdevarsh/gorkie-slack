@@ -1,4 +1,4 @@
-import { createLogger, type Logger } from '@repo/logging/log';
+import { createLogger, type Logger } from '@repo/logging/logger';
 import { env } from '../env';
 
 const logger: Logger = await createLogger({

@@ -40,7 +40,18 @@ Rules:
 - Do not create new schedules or reminders.
 - Always end by calling sendScheduledMessage exactly once with the final user-facing result.
 - If the task cannot be completed, still call sendScheduledMessage with a concise failure summary and next step.
-`,
+    `,
+    providerOptions: {
+      openrouter: {
+        parallelToolCalls: false,
+      },
+      hackclub: {
+        parallelToolCalls: false,
+      },
+      google: {
+        parallelToolCalls: false,
+      },
+    },
     toolChoice: 'required',
     tools: {
       searchWeb: searchWeb({ context, stream }),

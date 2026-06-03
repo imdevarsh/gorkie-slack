@@ -83,11 +83,12 @@ export async function processSlackFiles(
       if (!result) {
         return null;
       }
-      return {
-        type: 'image' as const,
+      const image: ImagePart = {
+        type: 'image',
         image: result.data,
         mediaType: result.mimeType,
       };
+      return image;
     }
   );
 

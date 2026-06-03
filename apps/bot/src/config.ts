@@ -1,6 +1,9 @@
 export const appHome = {
   maxPromptDisplay: 200,
   maxTaskPrompt: 80,
+  maxMcpNameDisplay: 40,
+  maxMcpUrlDisplay: 80,
+  mcpEmptyState: 'No MCP servers added yet. Add one to connect external tools.',
 };
 
 export const assistantThread = {
@@ -78,4 +81,10 @@ export const sandbox = {
   attachments: {
     maxBytes: 1_000_000_000,
   },
+};
+
+export const mcp = {
+  defaultToolMode: 'ask',
+  requestTimeoutMs: 15_000,
+  taskOutputMaxChars: 260,
 };

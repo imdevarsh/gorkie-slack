@@ -3,14 +3,15 @@ import { systemPrompt } from '@repo/ai/prompts';
 import {
   clearDestroyed,
   getByThread,
-  issueProxyToken,
+  issueSandboxToken,
   markActivity,
-  revokeProxyToken,
+  revokeSandboxToken,
   updateRuntime,
   updateStatus,
   upsert,
 } from '@repo/db/queries';
 import { toLogError } from '@repo/utils/error';
+import { z } from 'zod';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
 import logger from '@/lib/logger';
@@ -18,6 +19,10 @@ import type { ResolvedSandboxSession, SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
 import { configureAgent } from './config';
 import { boot } from './rpc/boot';
+
+const outboundIpSchema = z.object({
+  ip: z.string().nullable(),
+});
 
 function isMissingSandboxError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
@@ -36,12 +41,15 @@ function getChannelId(context: SlackMessageContext): string {
   return channelId;
 }
 
-function getSandboxMetadata(context: SlackMessageContext, threadId: string) {
+function getSandboxMetadata(
+  context: SlackMessageContext,
+  threadId: string
+): { app: string; channelId: string; threadId: string } {
   return {
     threadId,
     channelId: getChannelId(context),
     app: 'gorkie-slack',
-  } as const;
+  };
 }
 
 function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
@@ -57,8 +65,9 @@ function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
 }
 
 async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
+  const ipUrl = new URL('/ip', env.SERVER_BASE_URL).toString();
   const result = await sandbox.commands
-    .run(`curl -fsS --max-time 5 ${env.PROXY_BASE_URL}/ip`, {
+    .run(`curl -fsS --max-time 5 ${JSON.stringify(ipUrl)}`, {
       timeoutMs: 10_000,
     })
     .catch((error: unknown) => {
@@ -74,14 +83,14 @@ async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
   }
 
   try {
-    const { ip } = JSON.parse(result.stdout) as { ip: string | null };
+    const { ip } = outboundIpSchema.parse(JSON.parse(result.stdout));
     return ip ?? null;
   } catch {
     return null;
   }
 }
 
-async function issueSandboxToken({
+async function createSandboxToken({
   sandbox,
   sandboxId,
 }: {
@@ -89,7 +98,12 @@ async function issueSandboxToken({
   sandboxId: string;
 }): Promise<string> {
   const allowedIp = await getOutboundIp(sandbox);
-  const { token } = await issueProxyToken({
+  if (!allowedIp) {
+    throw new Error(
+      `[sandbox] Could not resolve outbound IP for sandbox ${sandboxId}`
+    );
+  }
+  const { token } = await issueSandboxToken({
     allowedIp,
     sandboxId,
     ttlMs: config.runtime.executionTimeoutMs,
@@ -113,13 +127,14 @@ async function createSandbox(
 
   await sandbox.setTimeout(config.timeoutMs);
 
+  let client: Awaited<ReturnType<typeof boot>> | undefined;
   try {
-    const proxyToken = await issueSandboxToken({
+    const sandboxToken = await createSandboxToken({
       sandbox,
       sandboxId: sandbox.sandboxId,
     });
     await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
-    const client = await boot({ sandbox, proxyToken });
+    client = await boot({ sandbox, sessionToken: sandboxToken });
     const { sessionId } = await client.getState();
 
     await upsert({
@@ -135,7 +150,10 @@ async function createSandbox(
 
     return { client, sandbox };
   } catch (error) {
-    await revokeProxyToken({ sandboxId: sandbox.sandboxId }).catch(() => null);
+    await client?.disconnect().catch(() => null);
+    await revokeSandboxToken({ sandboxId: sandbox.sandboxId }).catch(
+      () => null
+    );
     await Sandbox.kill(sandbox.sandboxId, { apiKey: env.E2B_API_KEY }).catch(
       () => null
     );
@@ -155,35 +173,46 @@ async function resumeSandbox(
     throw new Error(`[sandbox] Sandbox ${sandboxId} not found`);
   }
 
-  await sandbox.setTimeout(config.timeoutMs);
+  try {
+    await sandbox.setTimeout(config.timeoutMs);
 
-  const proxyToken = await issueSandboxToken({
-    sandbox,
-    sandboxId: sandbox.sandboxId,
-  });
-  const client = await boot({ sandbox, sessionId, proxyToken }).catch(
-    async (error: unknown) => {
-      await revokeProxyToken({ sandboxId: sandbox.sandboxId }).catch(
-        () => null
+    const sandboxToken = await createSandboxToken({
+      sandbox,
+      sandboxId: sandbox.sandboxId,
+    });
+    const client = await boot({
+      sandbox,
+      sessionId,
+      sessionToken: sandboxToken,
+    });
+    try {
+      const state = await client.getState();
+      logger.debug(
+        { threadId, sessionId: state.sessionId },
+        '[sandbox] Resumed session'
       );
+
+      await updateRuntime(threadId, {
+        sandboxId: sandbox.sandboxId,
+        sessionId: state.sessionId,
+        status: 'active',
+      });
+      await markActivity(threadId);
+
+      return { client, sandbox };
+    } catch (error) {
+      await client.disconnect().catch(() => null);
       throw error;
     }
-  );
-
-  const state = await client.getState();
-  logger.debug(
-    { threadId, sessionId: state.sessionId },
-    '[sandbox] Resumed session'
-  );
-
-  await updateRuntime(threadId, {
-    sandboxId: sandbox.sandboxId,
-    sessionId: state.sessionId,
-    status: 'active',
-  });
-  await markActivity(threadId);
-
-  return { client, sandbox };
+  } catch (error) {
+    await revokeSandboxToken({ sandboxId: sandbox.sandboxId }).catch(
+      () => null
+    );
+    if (isMissingSandboxError(error)) {
+      await clearDestroyed(threadId);
+    }
+    throw error;
+  }
 }
 
 export async function resolveSession(

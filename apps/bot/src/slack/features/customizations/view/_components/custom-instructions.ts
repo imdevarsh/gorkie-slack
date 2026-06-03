@@ -1,17 +1,18 @@
 import { Bits, Blocks, Elements, setIfTruthy } from 'slack-block-builder';
 import { appHome } from '@/config';
+import { mdText } from '@/slack/blocks';
 
 export function customInstructionsBlocks(
   customization: { prompt?: string } | null
 ) {
   const userPrompt = customization?.prompt ?? null;
-  let promptDisplay = '_No custom instructions set._';
-  if (userPrompt) {
-    promptDisplay =
-      userPrompt.length > appHome.maxPromptDisplay
-        ? `${userPrompt.slice(0, appHome.maxPromptDisplay)}...`
-        : userPrompt;
-  }
+  const promptDisplay = userPrompt
+    ? mdText(
+        userPrompt.length > appHome.maxPromptDisplay
+          ? `${userPrompt.slice(0, appHome.maxPromptDisplay)}...`
+          : userPrompt
+      )
+    : '_No custom instructions set._';
 
   return [
     Blocks.Section({

@@ -3,30 +3,38 @@ import { env } from '@/env';
 import { buildCache } from '@/lib/allowed-users';
 import logger from '@/lib/logger';
 import type { SlackApp } from '@/types';
-import { actions } from './actions';
-import { events } from './events';
 import { register as registerAppHomeOpened } from './events/app-home-opened';
 import { register as registerAssistantThreadContextChanged } from './events/assistant-thread-context-changed';
 import { register as registerAssistantThreadStarted } from './events/assistant-thread-started';
-import { views } from './views';
+import {
+  execute as messageCreateExecute,
+  name as messageCreateName,
+} from './events/message-create';
+import { customizations } from './features/customizations';
 
 function registerApp(app: App) {
   buildCache(app);
 
-  for (const event of events) {
-    app.event(event.name, event.execute);
-  }
+  app.event(messageCreateName, messageCreateExecute);
 
   registerAssistantThreadStarted(app);
   registerAssistantThreadContextChanged(app);
   registerAppHomeOpened(app);
 
-  for (const action of actions) {
+  for (const action of customizations.buttonActions) {
     app.action(action.name, action.execute);
   }
 
-  for (const view of views) {
+  for (const action of customizations.selectActions) {
+    app.action(action.name, action.execute);
+  }
+
+  for (const view of customizations.submitViews) {
     app.view(view.name, view.execute);
+  }
+
+  for (const view of customizations.closedViews) {
+    app.view({ callback_id: view.name, type: 'view_closed' }, view.execute);
   }
 }
 

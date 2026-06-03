@@ -1,15 +1,19 @@
+import type { McpServerWithConnection } from '@repo/db/queries';
 import type { ScheduledTask } from '@repo/db/schema';
 import { Blocks, HomeTab } from 'slack-block-builder';
 import type { SlackHomeTabDto } from 'slack-block-builder/dist/internal';
 import { customInstructionsBlocks } from './_components/custom-instructions';
+import { mcpBlocks } from './_components/mcp';
 import { scheduledTasksBlocks } from './_components/scheduled-tasks';
 
 export function buildHomeView({
   tasks,
   customization,
+  mcpServers,
 }: {
   tasks: ScheduledTask[];
   customization: { prompt?: string } | null;
+  mcpServers: McpServerWithConnection[];
 }): SlackHomeTabDto {
   return HomeTab()
     .blocks(
@@ -19,6 +23,8 @@ export function buildHomeView({
       ),
       Blocks.Divider(),
       ...customInstructionsBlocks(customization),
+      Blocks.Divider(),
+      ...mcpBlocks(mcpServers),
       Blocks.Divider(),
       ...scheduledTasksBlocks(tasks)
     )

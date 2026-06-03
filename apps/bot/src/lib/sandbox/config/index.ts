@@ -41,7 +41,7 @@ export async function configureAgent(
         {
           providers: {
             [model.provider]: {
-              baseUrl: `${env.PROXY_BASE_URL}/provider/${model.provider}`,
+              baseUrl: `${env.SERVER_BASE_URL}/provider/${model.provider}`,
               api: model.api,
               apiKey: 'GORKIE_SESSION_TOKEN',
               authHeader: true,
