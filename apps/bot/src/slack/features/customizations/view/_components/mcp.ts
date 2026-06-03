@@ -1,6 +1,7 @@
 import type { McpServerWithConnection } from '@repo/db/queries';
 import { Bits, Blocks, Elements } from 'slack-block-builder';
 import { appHome } from '@/config';
+import { formatMcpError } from '@/lib/mcp/format-error';
 import { codeBlock, mdText } from '@/slack/blocks';
 import { actions } from '../../mcp/ids';
 
@@ -19,7 +20,7 @@ function serverBlocks(server: McpServerWithConnection) {
   }
   const status = `${server.enabled ? 'Enabled' : 'Disabled'} · ${authStatus}`;
   const lastError = server.lastError
-    ? `\n\n*Error:*\n${codeBlock({ value: server.lastError, maxLength: 900 })}`
+    ? `\n\n*Error:*\n${codeBlock({ value: formatMcpError(server.lastError), maxLength: 900 })}`
     : '';
 
   const canToggle = connected && !(failed && !server.enabled);

@@ -5,6 +5,7 @@ import {
   updateMcpServerForUser,
 } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
+import { formatMcpError } from '@/lib/mcp/format-error';
 import { guardedMcpFetch } from '@/lib/mcp/guarded-fetch';
 import { createMcpOAuthProvider } from '@/lib/mcp/oauth-provider';
 import { syncMcpPermissions } from '@/lib/mcp/remote';

@@ -3,6 +3,7 @@ import type { McpToolPermission } from '@repo/db/schema';
 import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
+import { formatMcpError } from '@/lib/mcp/format-error';
 import { codeBlock, mdText } from '@/slack/blocks';
 import { actions, blocks, inputs, views } from './ids';
 import type { ModalState } from './types';
@@ -319,7 +320,7 @@ export function toolsModal({
               text: {
                 type: 'mrkdwn',
                 text: error
-                  ? `*${mdText(serverName)}*\n\n*Error:*\n${codeBlock({ value: error, maxLength: 1200 })}`
+                  ? `*${mdText(serverName)}*\n\n*Error:*\n${codeBlock({ value: formatMcpError(error), maxLength: 1200 })}`
                   : `*${mdText(serverName)}*\nNo tools were found for this server yet.`,
               },
             },

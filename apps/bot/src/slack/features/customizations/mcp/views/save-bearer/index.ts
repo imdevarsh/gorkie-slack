@@ -6,6 +6,7 @@ import {
 import { encryptSecret } from '@repo/utils';
 import { errorMessage } from '@repo/utils/error';
 import { env } from '@/env';
+import { formatMcpError } from '@/lib/mcp/format-error';
 import { syncMcpPermissions } from '@/lib/mcp/remote';
 import { publishHome } from '../../../publish';
 import { blocks, inputs, views } from '../../ids';
@@ -111,7 +112,7 @@ export async function execute({
         view_id: view.id,
         view: statusModal({
           title: 'Connection Failed',
-          text: `Token saved, but Gorkie could not connect:\n\`\`\`${message}\`\`\``,
+          text: `Token saved, but Gorkie could not connect:\n\`\`\`${formatMcpError(message)}\`\`\``,
         }),
       });
     }
