@@ -118,7 +118,7 @@ export function oauthModal({
     callbackId: views.oauth,
     close: 'Done',
     privateMetaData: JSON.stringify({ serverId }),
-    title: `Connect ${serverName}`,
+    title: 'Connect MCP',
   })
     .notifyOnClose()
     .blocks(
@@ -147,7 +147,7 @@ export function bearerModal({
     close: 'Cancel',
     privateMetaData: JSON.stringify({ serverId }),
     submit: 'Save',
-    title: `Connect ${serverName}`,
+    title: 'Connect MCP',
   })
     .blocks(
       Blocks.Section({

@@ -17,6 +17,12 @@ import { bearerModal, oauthModal, statusModal } from '../view';
 
 export const name = actions.connect;
 
+const updateView = (
+  client: ButtonArgs['client'],
+  viewId: string,
+  view: ReturnType<typeof statusModal>
+) => client.views.update({ view_id: viewId, view }).catch(() => undefined);
+
 export async function execute({
   ack,
   action,
@@ -44,23 +50,23 @@ export async function execute({
     userId: body.user.id,
   });
   if (!server) {
-    await client.views.update({
-      view_id: viewId,
-      view: statusModal({
+    await updateView(
+      client,
+      viewId,
+      statusModal({
         title: 'Connect MCP',
         text: 'Could not find this MCP server.',
-      }),
-    });
+      })
+    );
     return;
   }
   if (server.authType === 'bearer') {
-    await client.views.update({
-      view_id: viewId,
-      view: bearerModal({
-        serverId: server.id,
-        serverName: server.name,
-      }),
-    });
+    await client.views
+      .update({
+        view_id: viewId,
+        view: bearerModal({ serverId: server.id, serverName: server.name }),
+      })
+      .catch(() => undefined);
     return;
   }
 
@@ -73,10 +79,7 @@ export async function execute({
   try {
     await auth(
       createMcpOAuthProvider({ authorizationUrlRef, connection, server }),
-      {
-        fetchFn: guardedMcpFetch,
-        serverUrl: server.url,
-      }
+      { fetchFn: guardedMcpFetch, serverUrl: server.url }
     );
     await updateMcpServerForUser({
       id: server.id,
@@ -92,13 +95,14 @@ export async function execute({
         lastError: error instanceof Error ? error.message : 'OAuth failed',
       },
     });
-    await client.views.update({
-      view_id: viewId,
-      view: statusModal({
+    await updateView(
+      client,
+      viewId,
+      statusModal({
         title: 'MCP OAuth Failed',
         text: 'Could not start OAuth. Return to Slack App Home and try again.',
-      }),
-    });
+      })
+    );
     await publishHome({ client, userId: body.user.id });
     return;
   }
@@ -113,49 +117,46 @@ export async function execute({
       await updateMcpServerForUser({
         id: server.id,
         userId: body.user.id,
-        values: {
-          enabled: true,
-          lastConnectedAt: new Date(),
-          lastError: null,
-        },
+        values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
       });
     } catch (error) {
       const message = errorMessage(error);
       await updateMcpServerForUser({
         id: server.id,
         userId: body.user.id,
-        values: {
-          enabled: false,
-          lastError: message,
-        },
+        values: { enabled: false, lastError: message },
       });
       await publishHome({ client, userId: body.user.id });
-      await client.views.update({
-        view_id: viewId,
-        view: statusModal({
+      await updateView(
+        client,
+        viewId,
+        statusModal({
           title: 'MCP Connection Failed',
-          text: `OAuth is saved, but Gorkie could not discover tools.\n\n${codeBlock({ value: message, maxLength: 900 })}`,
-        }),
-      });
+          text: `OAuth is saved, but Gorkie could not discover tools.\n\n${codeBlock({ value: formatMcpError(message), maxLength: 900 })}`,
+        })
+      );
       return;
     }
     await publishHome({ client, userId: body.user.id });
-    await client.views.update({
-      view_id: viewId,
-      view: statusModal({
+    await updateView(
+      client,
+      viewId,
+      statusModal({
         title: 'MCP Connected',
         text: 'This MCP server is connected. You can close this modal.',
-      }),
-    });
+      })
+    );
     return;
   }
 
-  await client.views.update({
-    view_id: viewId,
-    view: oauthModal({
-      authorizationUrl: authorizationUrlRef.value.toString(),
-      serverId: server.id,
-      serverName: server.name,
-    }),
-  });
+  await client.views
+    .update({
+      view_id: viewId,
+      view: oauthModal({
+        authorizationUrl: authorizationUrlRef.value.toString(),
+        serverId: server.id,
+        serverName: server.name,
+      }),
+    })
+    .catch(() => undefined);
 }

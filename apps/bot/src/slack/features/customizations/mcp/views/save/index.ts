@@ -90,13 +90,15 @@ export async function execute({
         userId: body.user.id,
         values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
       });
-      await client.views.update({
-        view_id: view.id,
-        view: statusModal({
-          title: `Connect ${payload.data.name}`,
-          text: 'Connected successfully.',
-        }),
-      });
+      await client.views
+        .update({
+          view_id: view.id ?? '',
+          view: statusModal({
+            title: 'Connect MCP',
+            text: 'Connected successfully.',
+          }),
+        })
+        .catch(() => undefined);
     } catch (error) {
       const message = errorMessage(error);
       await updateMcpServerForUser({
@@ -104,13 +106,15 @@ export async function execute({
         userId: body.user.id,
         values: { enabled: false, lastError: message },
       });
-      await client.views.update({
-        view_id: view.id,
-        view: statusModal({
-          title: 'Connection Failed',
-          text: `Token saved, but Gorkie could not connect:\n\`\`\`${formatMcpError(message)}\`\`\``,
-        }),
-      });
+      await client.views
+        .update({
+          view_id: view.id ?? '',
+          view: statusModal({
+            title: 'Connection Failed',
+            text: `Token saved, but Gorkie could not connect:\n\`\`\`${formatMcpError(message)}\`\`\``,
+          }),
+        })
+        .catch(() => undefined);
     }
   }
   await publishHome({ client, userId: body.user.id });
