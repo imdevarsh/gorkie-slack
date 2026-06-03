@@ -17,6 +17,7 @@ import { resumeResponse } from '@/slack/events/message-create/utils/respond';
 import type { SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
 import { actions } from '../ids';
+import { replyCard, replyFromActionId, replyStatus } from '../reply';
 import type { ButtonArgs } from '../types';
 
 export const approveName = actions.approval.allow;
@@ -111,8 +112,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
     return;
   }
 
-  const approved = action.action_id !== denyName;
-  const alwaysInThread = action.action_id === alwaysThreadName;
+  const reply = replyFromActionId(action.action_id);
   const approval = await claimMcpToolApproval({
     approvalId,
     userId: body.user.id,
@@ -137,14 +137,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
     userId: body.user.id,
   });
   const serverName = server?.name ?? approval.exposedName;
-  let resultText = 'Access denied.';
-  let resultTitle = 'Access denied';
-  if (approved) {
-    resultText = alwaysInThread
-      ? 'Approved for this thread.'
-      : 'Approved once.';
-    resultTitle = alwaysInThread ? 'Approved for thread' : 'Approved once';
-  }
+  const { text: resultText, title: resultTitle } = replyCard(reply);
 
   let input: string | undefined;
   try {
@@ -168,7 +161,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
       },
     };
 
-    if (approved && alwaysInThread && approval.threadTs) {
+    if (reply === 'always' && approval.threadTs) {
       await upsertMcpToolPermission({
         mode: 'allow',
         scope: 'thread',
@@ -184,7 +177,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
     await updateMcpToolApproval({
       approvalId,
       userId: body.user.id,
-      values: { status: approved ? 'approved' : 'denied' },
+      values: { status: replyStatus(reply) },
     });
     await updateApprovalMessage({
       ...args,
@@ -200,8 +193,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
         resumeResponse({
           approval: {
             approvalId,
-            approved,
-            reason: approved ? undefined : 'Access denied by Slack approval.',
+            reply,
             tool: {
               serverName,
               toolCallId: approval.toolCallId,

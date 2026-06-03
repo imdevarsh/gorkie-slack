@@ -18,6 +18,11 @@ import { setStatus } from '@/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '@/lib/ai/utils/stream';
 import { finishTask } from '@/lib/ai/utils/task';
 import { setConversationTitle } from '@/lib/ai/utils/title';
+import {
+  type ApprovalReply,
+  DENIAL_REASON,
+  isApproved,
+} from '@/slack/features/customizations/mcp/reply';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 import { processSlackFiles } from '@/utils/images';
@@ -29,12 +34,11 @@ import {
 } from './approval-helpers';
 
 // The single shape an approval decision flows through (mirrors how opencode
-// keeps the tool info on the request and the decision as one value). `tool` is
-// always present; it's only rendered when the call was denied.
+// keeps the tool info on the request and the decision as one `reply` value).
+// `approved`/`reason` are derived from `reply`, never passed alongside it.
 interface ApprovalOutcome {
   approvalId: string;
-  approved: boolean;
-  reason?: string;
+  reply: ApprovalReply;
   tool: { serverName: string; toolCallId: string; toolName: string };
 }
 
@@ -58,12 +62,12 @@ async function runAgent({
 
   try {
     stream = await initStream(context);
-    if (approval && !approval.approved) {
+    if (approval && !isApproved(approval.reply)) {
       await finishTask(stream, {
         taskId: approval.tool.toolCallId,
         title: `Using ${approval.tool.serverName} MCP: ${approval.tool.toolName}`,
         status: 'complete',
-        output: 'Access denied by Slack approval.',
+        output: DENIAL_REASON,
       });
     }
     const result = await orchestratorAgent({
@@ -173,8 +177,9 @@ export async function resumeResponse({
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
 }) {
+  const approved = isApproved(approval.reply);
   await setStatus(context, {
-    status: approval.approved ? 'is continuing' : 'is handling the denial',
+    status: approved ? 'is continuing' : 'is handling the denial',
   });
   return runAgent({
     approval,
@@ -187,8 +192,8 @@ export async function resumeResponse({
           {
             type: 'tool-approval-response',
             approvalId: approval.approvalId,
-            approved: approval.approved,
-            ...(approval.reason ? { reason: approval.reason } : {}),
+            approved,
+            ...(approved ? {} : { reason: DENIAL_REASON }),
           },
         ],
       },
