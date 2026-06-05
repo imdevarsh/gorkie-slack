@@ -1,5 +1,7 @@
-import { auth } from '@ai-sdk/mcp';
+import { auth, createMCPClient } from '@ai-sdk/mcp';
 import {
+  deleteMCPConnections,
+  ensureMCPToolModes,
   getMCPOAuthConnection,
   getMCPServerById,
   updateMCPServer,
@@ -108,21 +110,46 @@ export default defineHandler(async (event) => {
   }
 
   try {
-    await auth(createMCPOAuthCallbackProvider({ connection, server }), {
+    const authProvider = createMCPOAuthCallbackProvider({ connection, server });
+    await auth(authProvider, {
       authorizationCode: code,
       callbackState: state,
       fetchFn: guardedFetch,
       serverUrl: server.url,
     });
+    const client = await createMCPClient({
+      clientName: 'gorkie',
+      transport: {
+        authProvider,
+        fetch: guardedFetch,
+        redirect: 'error',
+        type: server.transport === 'sse' ? 'sse' : 'http',
+        url: server.url,
+      },
+    });
+    try {
+      const definitions = await client.listTools();
+      await ensureMCPToolModes({
+        defaultMode: mcp.defaultToolMode,
+        serverId: server.id,
+        teamId: server.teamId,
+        toolNames: definitions.tools.map((definition) => definition.name),
+        userId: server.userId,
+      });
+    } finally {
+      await client.close().catch(() => undefined);
+    }
     await updateMCPServer({
       id: server.id,
       userId: server.userId,
       values: {
-        enabled: false,
+        enabled: true,
+        lastConnectedAt: new Date(),
         lastError: null,
       },
     });
   } catch (error) {
+    await deleteMCPConnections({ serverId: server.id, userId: server.userId });
     await updateMCPServer({
       id: server.id,
       userId: server.userId,

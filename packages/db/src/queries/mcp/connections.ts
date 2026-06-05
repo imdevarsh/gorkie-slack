@@ -1,6 +1,7 @@
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { db } from '../../index';
 import {
+  type MCPAuthType,
   type MCPBearerConnection,
   type MCPOAuthConnection,
   mcpBearerConnections,
@@ -58,7 +59,7 @@ export async function getMCPConnection({
   serverId,
   userId,
 }: {
-  authType: string;
+  authType: MCPAuthType;
   serverId: string;
   userId: string;
 }): Promise<MCPConnection | null> {
@@ -67,8 +68,12 @@ export async function getMCPConnection({
     return connection?.token ? { authType: 'bearer', connection } : null;
   }
 
-  const connection = await getMCPOAuthConnection({ serverId, userId });
-  return connection?.tokens ? { authType: 'oauth', connection } : null;
+  if (authType === 'oauth') {
+    const connection = await getMCPOAuthConnection({ serverId, userId });
+    return connection?.tokens ? { authType: 'oauth', connection } : null;
+  }
+
+  return null;
 }
 
 export async function hasMCPConnection({
@@ -76,7 +81,7 @@ export async function hasMCPConnection({
   serverId,
   userId,
 }: {
-  authType: string;
+  authType: MCPAuthType;
   serverId: string;
   userId: string;
 }): Promise<boolean> {
@@ -95,18 +100,22 @@ export async function hasMCPConnection({
     return rows.length > 0;
   }
 
-  const rows = await db
-    .select({ id: mcpOAuthConnections.id })
-    .from(mcpOAuthConnections)
-    .where(
-      and(
-        eq(mcpOAuthConnections.serverId, serverId),
-        eq(mcpOAuthConnections.userId, userId),
-        isNotNull(mcpOAuthConnections.tokens)
+  if (authType === 'oauth') {
+    const rows = await db
+      .select({ id: mcpOAuthConnections.id })
+      .from(mcpOAuthConnections)
+      .where(
+        and(
+          eq(mcpOAuthConnections.serverId, serverId),
+          eq(mcpOAuthConnections.userId, userId),
+          isNotNull(mcpOAuthConnections.tokens)
+        )
       )
-    )
-    .limit(1);
-  return rows.length > 0;
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  return false;
 }
 
 export async function upsertMCPBearerConnection(
@@ -176,7 +185,19 @@ export async function patchMCPOAuthConnection({
 }: {
   serverId: string;
   userId: string;
-  values: Partial<NewMCPOAuthConnection>;
+  values: Partial<
+    Pick<
+      NewMCPOAuthConnection,
+      | 'clientId'
+      | 'clientInformation'
+      | 'codeVerifier'
+      | 'expiresAt'
+      | 'scopes'
+      | 'state'
+      | 'teamId'
+      | 'tokens'
+    >
+  >;
 }) {
   const rows = await db
     .insert(mcpOAuthConnections)

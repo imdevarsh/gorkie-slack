@@ -1,3 +1,4 @@
+import type { MCPToolMode } from '@repo/db/schema';
 import { env } from './env';
 
 export interface Provider {
@@ -39,6 +40,10 @@ export const proxy = {
   requestTimeoutMs: 240_000,
 };
 
-export const mcp = {
+export const mcp: {
+  defaultToolMode: MCPToolMode;
+  requestTimeoutMs: number;
+} = {
+  defaultToolMode: 'ask',
   requestTimeoutMs: 15_000,
 };

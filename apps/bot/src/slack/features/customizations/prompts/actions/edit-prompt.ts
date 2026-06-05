@@ -13,6 +13,16 @@ export async function execute({
 }: ButtonArgs): Promise<void> {
   await ack();
   const userId = body.user.id;
+  const opened = await client.views.open({
+    trigger_id: body.trigger_id,
+    view: buildPromptModal({
+      currentPrompt: null,
+    }),
+  });
+  const viewId = opened.view?.id;
+  if (!viewId) {
+    return;
+  }
   const currentCustomization = await getUserCustomization(userId).catch(
     (error) => {
       logger.warn(
@@ -22,8 +32,9 @@ export async function execute({
       return null;
     }
   );
-  await client.views.open({
-    trigger_id: body.trigger_id,
+  await client.views.update({
+    hash: opened.view?.hash,
+    view_id: viewId,
     view: buildPromptModal({
       currentPrompt: currentCustomization?.prompt ?? null,
     }),

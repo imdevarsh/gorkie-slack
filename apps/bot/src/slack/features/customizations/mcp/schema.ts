@@ -29,9 +29,17 @@ export const toolModeInputSchema = z
   .catch({});
 
 export const toolsMetaSchema = z.object({
-  groups: z.record(z.string(), z.enum(['ro', 'dt', 'gn'])).optional(),
   nonce: z.string().optional(),
   serverId: z.string().optional(),
+  tools: z
+    .record(
+      z.string(),
+      z.object({
+        group: z.enum(['ro', 'dt', 'gn']),
+        name: z.string(),
+      })
+    )
+    .optional(),
 });
 
 export function parseServerMeta({

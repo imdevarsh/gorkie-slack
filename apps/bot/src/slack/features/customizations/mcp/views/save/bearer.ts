@@ -33,16 +33,39 @@ export async function executeBearerSave({
     view: statusModal({ title: 'Connect MCP', text: 'Connecting…' }),
   });
 
-  const server = await createMCPServer({
-    authType: 'bearer',
-    enabled: false,
-    name: base.data.name,
-    teamId: body.team?.id ?? null,
-    transport: base.data.transport,
-    url: base.data.url,
-    userId: body.user.id,
-  });
+  let server: Awaited<ReturnType<typeof createMCPServer>>;
+  try {
+    server = await createMCPServer({
+      authType: 'bearer',
+      enabled: false,
+      name: base.data.name,
+      teamId: body.team?.id ?? null,
+      transport: base.data.transport,
+      url: base.data.url,
+      userId: body.user.id,
+    });
+  } catch (error) {
+    await client.views
+      .update({
+        view_id: view.id ?? '',
+        view: statusModal({
+          title: 'Connect MCP',
+          text: `Could not save this MCP server.\n\n${errorMessage(error)}`,
+        }),
+      })
+      .catch(() => undefined);
+    return;
+  }
   if (!server) {
+    await client.views
+      .update({
+        view_id: view.id ?? '',
+        view: statusModal({
+          title: 'Connect MCP',
+          text: 'Could not save this MCP server.',
+        }),
+      })
+      .catch(() => undefined);
     await publishHome({ client, userId: body.user.id });
     return;
   }

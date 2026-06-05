@@ -46,10 +46,10 @@ export function createMCPOAuthProvider({
       return redirectURL.toString();
     },
     tokens() {
-      return parseEncrypted(
-        storedConnection?.tokens ?? null,
-        mcpOAuthTokensSchema
-      );
+      return parseEncrypted({
+        encrypted: storedConnection?.tokens ?? null,
+        schema: mcpOAuthTokensSchema,
+      });
     },
     async saveTokens(tokens) {
       await saveConnection({
@@ -80,16 +80,16 @@ export function createMCPOAuthProvider({
     },
     clientInformation() {
       if (storedConnection?.clientId) {
-        const fromDb = parseEncrypted(
-          storedConnection.clientInformation ?? null,
-          mcpOAuthClientInformationSchema
-        );
+        const fromDb = parseEncrypted({
+          encrypted: storedConnection.clientInformation ?? null,
+          schema: mcpOAuthClientInformationSchema,
+        });
         return fromDb ?? { client_id: storedConnection.clientId };
       }
-      return parseEncrypted(
-        storedConnection?.clientInformation ?? null,
-        mcpOAuthClientInformationSchema
-      );
+      return parseEncrypted({
+        encrypted: storedConnection?.clientInformation ?? null,
+        schema: mcpOAuthClientInformationSchema,
+      });
     },
     async saveClientInformation(clientInformation) {
       await saveConnection({

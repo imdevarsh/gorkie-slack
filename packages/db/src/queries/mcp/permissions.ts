@@ -12,6 +12,23 @@ export interface MCPToolModes {
   thread: MCPToolModeMap;
 }
 
+type SetMCPToolModesInput =
+  | {
+      modes: MCPToolModeMap;
+      scope: 'global';
+      serverId: string;
+      teamId?: string | null;
+      userId: string;
+    }
+  | {
+      modes: MCPToolModeMap;
+      scope: 'thread';
+      serverId: string;
+      teamId?: string | null;
+      threadTs: string;
+      userId: string;
+    };
+
 export async function getMCPToolModes({
   serverId,
   threadTs,
@@ -57,28 +74,16 @@ export async function getMCPToolModes({
   return result;
 }
 
-export async function setMCPToolModes({
-  modes,
-  scope,
-  serverId,
-  teamId,
-  threadTs,
-  userId,
-}: {
-  modes: MCPToolModeMap;
-  scope: 'global' | 'thread';
-  serverId: string;
-  teamId?: string | null;
-  threadTs?: string | null;
-  userId: string;
-}): Promise<MCPToolPermission | null> {
+export async function setMCPToolModes(
+  input: SetMCPToolModesInput
+): Promise<MCPToolPermission | null> {
   const values = {
-    modes,
-    scope,
-    serverId,
-    teamId: teamId ?? null,
-    threadTs: scope === 'thread' ? (threadTs ?? '') : '',
-    userId,
+    modes: input.modes,
+    scope: input.scope,
+    serverId: input.serverId,
+    teamId: input.teamId ?? null,
+    threadTs: input.scope === 'thread' ? input.threadTs : '',
+    userId: input.userId,
   };
   const rows = await db
     .insert(mcpToolPermissions)
@@ -100,34 +105,34 @@ export async function setMCPToolModes({
   return rows[0] ?? null;
 }
 
-export async function patchMCPToolModes({
-  modes,
-  scope,
-  serverId,
-  teamId,
-  threadTs,
-  userId,
-}: {
-  modes: MCPToolModeMap;
-  scope: 'global' | 'thread';
-  serverId: string;
-  teamId?: string | null;
-  threadTs?: string | null;
-  userId: string;
-}) {
-  const current = await getMCPToolModes({ serverId, threadTs, userId });
-  const merged = {
-    ...(scope === 'thread' ? current.thread : current.global),
-    ...modes,
-  };
-  return setMCPToolModes({
-    modes: merged,
-    scope,
-    serverId,
-    teamId,
-    threadTs,
-    userId,
+export async function patchMCPToolModes(input: SetMCPToolModesInput) {
+  const current = await getMCPToolModes({
+    serverId: input.serverId,
+    threadTs: input.scope === 'thread' ? input.threadTs : null,
+    userId: input.userId,
   });
+  const merged = {
+    ...(input.scope === 'thread' ? current.thread : current.global),
+    ...input.modes,
+  };
+  const next =
+    input.scope === 'thread'
+      ? {
+          modes: merged,
+          scope: input.scope,
+          serverId: input.serverId,
+          teamId: input.teamId,
+          threadTs: input.threadTs,
+          userId: input.userId,
+        }
+      : {
+          modes: merged,
+          scope: input.scope,
+          serverId: input.serverId,
+          teamId: input.teamId,
+          userId: input.userId,
+        };
+  return setMCPToolModes(next);
 }
 
 export async function ensureMCPToolModes({
@@ -168,7 +173,7 @@ export async function ensureMCPToolModes({
   return next;
 }
 
-export function resetMCPToolModes({
+export function resetGlobalMCPToolModes({
   serverId,
   userId,
 }: {

@@ -2656,6 +2656,8 @@
     Why do we have newmcp and old mcps? we do not need any backward compatibility
     and no need for byUser prefix, we already know everyone is a user
 
+[x] Checkpoint: code symbols now use MCP/OAuth casing, the old mode scrubber is gone, MCP query files are split by ownership, OAuth upserts are atomic, and update inputs are narrowed so callers cannot overwrite identity fields.
+
 ---
 
 ## `packages/db/src/queries/sandbox.ts`
@@ -2673,6 +2675,8 @@
 ### 117. thread #5 **(PENDING)**
 
 [x] Infer types... as mentioned above, either drizzle zod or the drizzle orm type infer thing for both prompts, csutomization mcp etc
+
+[x] Checkpoint: MCP DB discriminants now use Drizzle enum typing for auth type, transport, permission scope, and approval status; schema-exported inferred types drive the query signatures instead of separate compatibility schemas.
 
 ---
 
@@ -2781,4 +2785,3 @@
 [x] check for a better way then matching by tool pattern, doesn't mcp declare this iirc? it declares if a tool is readonly or smth... you can check up the docs
 
 ---
-

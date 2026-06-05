@@ -1,8 +1,13 @@
 import { asRecord } from '@repo/utils/record';
+import { z } from 'zod';
 
-export interface ModalState {
-  showPresets: boolean;
-}
+export const modalStateSchema = z
+  .object({
+    showPresets: z.boolean().default(false),
+  })
+  .catch({ showPresets: false });
+
+export type ModalState = z.output<typeof modalStateSchema>;
 
 export function parseModalState({
   metadata,
@@ -10,8 +15,7 @@ export function parseModalState({
   metadata?: string;
 }): ModalState {
   try {
-    const parsed = asRecord(JSON.parse(metadata ?? '{}'));
-    return { showPresets: parsed?.showPresets === true };
+    return modalStateSchema.parse(JSON.parse(metadata ?? '{}'));
   } catch {
     return { showPresets: false };
   }

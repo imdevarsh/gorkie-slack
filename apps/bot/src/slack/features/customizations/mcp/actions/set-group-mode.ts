@@ -18,14 +18,15 @@ export async function execute({
 }: SelectArgs): Promise<void> {
   await ack();
 
-  const viewId = body.view?.id;
-  if (!viewId) {
+  const view = body.view;
+  if (!view?.id) {
     return;
   }
+  const viewId = view.id;
 
-  const meta = parseToolsMeta({ metadata: body.view?.private_metadata });
-  const { serverId, groups, nonce } = meta;
-  if (!(serverId && groups && nonce)) {
+  const meta = parseToolsMeta({ metadata: view.private_metadata });
+  const { serverId, nonce, tools } = meta;
+  if (!(serverId && nonce && tools)) {
     return;
   }
 
@@ -44,8 +45,8 @@ export async function execute({
   }
 
   const groupToolNames = new Set(
-    Object.entries(groups)
-      .filter(([, g]) => g === prefix)
+    Object.entries(tools)
+      .filter(([, tool]) => tool.group === prefix)
       .map(([id]) => id)
   );
 
@@ -60,32 +61,34 @@ export async function execute({
   }
 
   const toolModes: MCPToolModeMap = {};
-  for (const toolName of Object.keys(groups)) {
-    if (groupToolNames.has(toolName)) {
-      toolModes[toolName] = mode;
+  for (const [toolId, tool] of Object.entries(tools)) {
+    if (groupToolNames.has(toolId)) {
+      toolModes[tool.name] = mode;
       continue;
     }
-    const block = asRecord(stateValues[toolBlock.encode(nonce, toolName)]);
+    const block = asRecord(stateValues[toolBlock.encode(nonce, toolId)]);
     const selected = toolModeInputSchema.parse(
       block?.[inputs.toolMode]
     ).selected_option;
-    toolModes[toolName] = selected?.value ?? current.global[toolName] ?? 'ask';
+    toolModes[tool.name] =
+      selected?.value ?? current.global[tool.name] ?? 'ask';
   }
 
-  const syntheticTools: ListToolsResult['tools'] = Object.keys(groups).map(
-    (toolName) => ({
-      name: toolName,
+  const syntheticTools: ListToolsResult['tools'] = Object.values(tools).map(
+    (tool) => ({
+      name: tool.name,
       description: '',
       inputSchema: { type: 'object', properties: {} },
       annotations: {
-        readOnlyHint: groups[toolName] === 'ro',
-        destructiveHint: groups[toolName] === 'dt',
+        readOnlyHint: tool.group === 'ro',
+        destructiveHint: tool.group === 'dt',
       },
     })
   );
 
   await client.views
     .update({
+      hash: view.hash,
       view_id: viewId,
       view: toolsModal({
         serverId,

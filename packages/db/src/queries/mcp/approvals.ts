@@ -2,9 +2,14 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '../../index';
 import {
   type MCPToolApproval,
+  type MCPToolApprovalStatus,
   mcpToolApprovals,
   type NewMCPToolApproval,
 } from '../../schema';
+
+type MCPToolApprovalUpdate = Partial<
+  Pick<NewMCPToolApproval, 'messageTs' | 'status'>
+>;
 
 export async function createMCPToolApproval(approval: NewMCPToolApproval) {
   const rows = await db.insert(mcpToolApprovals).values(approval).returning();
@@ -46,7 +51,7 @@ export function getMCPToolApprovalStatus({
   approvalId: string;
 }): Promise<{
   serverId: string;
-  status: string;
+  status: MCPToolApprovalStatus;
   toolName: string;
   userId: string;
 } | null> {
@@ -91,7 +96,7 @@ export async function updateMCPToolApproval({
 }: {
   approvalId: string;
   userId: string;
-  values: Partial<NewMCPToolApproval>;
+  values: MCPToolApprovalUpdate;
 }) {
   const rows = await db
     .update(mcpToolApprovals)

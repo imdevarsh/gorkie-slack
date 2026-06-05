@@ -1,10 +1,7 @@
 import { type Persona, personas } from '@repo/ai/prompts/chat/presets';
 import { Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
-
-export interface ModalState {
-  showPresets: boolean;
-}
+import type { ModalState } from './schema';
 
 export function buildPromptModal({
   currentPrompt,

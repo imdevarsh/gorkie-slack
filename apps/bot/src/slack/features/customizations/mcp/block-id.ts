@@ -7,8 +7,7 @@ export function renderNonce(): string {
 
 export const toolBlock = {
   // Slack preserves select values across view updates when block ids do not change.
-  encode: (nonce: string, permissionId: string) =>
-    `tool_${nonce}_${permissionId}`,
+  encode: (nonce: string, toolId: string) => `tool_${nonce}_${toolId}`,
   decode: (blockId: string): string | null => blockId.match(TOOL)?.[1] ?? null,
 };
 

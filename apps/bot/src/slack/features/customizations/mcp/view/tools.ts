@@ -1,6 +1,7 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import type { ViewsOpenArguments } from '@slack/web-api';
+import { mcp } from '@/config';
 import { formatMCPError } from '@/lib/mcp/format-error';
 import { codeBlock, mdText } from '@/slack/blocks';
 import { groupBlock, renderNonce, toolBlock } from '../block-id';
@@ -8,6 +9,7 @@ import { actions, inputs, views } from '../ids';
 
 type ModalView = ViewsOpenArguments['view'];
 type GroupSlug = 'ro' | 'dt' | 'gn';
+type ToolMeta = Record<string, { group: GroupSlug; name: string }>;
 
 function groupSlugOf(group: string): GroupSlug {
   if (group === 'Read-only tools') {
@@ -32,7 +34,6 @@ export function toolsModal({
   toolModes: MCPToolModeMap;
   tools: ListToolsResult['tools'];
 }): ModalView {
-  const canSave = !error && tools.length > 0;
   const nonce = renderNonce();
   const options = [
     { text: { type: 'plain_text', text: 'Allow always' }, value: 'allow' },
@@ -60,13 +61,32 @@ export function toolsModal({
       `${a.group}:${a.tool.name}`.localeCompare(`${b.group}:${b.tool.name}`)
     );
 
-  const groups: Record<string, GroupSlug> = {};
-  for (const { group, tool } of sortedItems) {
-    groups[tool.name] = groupSlugOf(group);
+  const toolMeta: ToolMeta = {};
+  const visibleItems: Array<(typeof sortedItems)[number] & { id: string }> = [];
+  for (const item of sortedItems) {
+    if (visibleItems.length >= mcp.toolModalMaxTools) {
+      break;
+    }
+    const id = visibleItems.length.toString(36);
+    const meta = { group: groupSlugOf(item.group), name: item.tool.name };
+    const nextToolMeta = {
+      ...toolMeta,
+      [id]: meta,
+    };
+    if (
+      JSON.stringify({ nonce, serverId, tools: nextToolMeta }).length >
+      mcp.toolModalMetadataMaxChars
+    ) {
+      break;
+    }
+    toolMeta[id] = meta;
+    visibleItems.push({ ...item, id });
   }
+  const hiddenToolCount = sortedItems.length - visibleItems.length;
+  const canSave = !error && visibleItems.length > 0;
 
-  const groupedBlocks: ModalView['blocks'] = sortedItems.flatMap(
-    ({ group, mode, tool }, index, sorted) => {
+  const groupedBlocks: ModalView['blocks'] = visibleItems.flatMap(
+    ({ group, id, mode, tool }, index, sorted) => {
       const previous = sorted[index - 1];
       const slug = groupSlugOf(group);
       const header =
@@ -89,7 +109,7 @@ export function toolsModal({
         ...header,
         {
           type: 'section',
-          block_id: toolBlock.encode(nonce, tool.name),
+          block_id: toolBlock.encode(nonce, id),
           text: {
             type: 'plain_text',
             text: tool.name.slice(0, 180),
@@ -113,7 +133,7 @@ export function toolsModal({
   return {
     type: 'modal',
     callback_id: views.configure,
-    private_metadata: JSON.stringify({ serverId, groups, nonce }),
+    private_metadata: JSON.stringify({ nonce, serverId, tools: toolMeta }),
     title: { type: 'plain_text', text: 'MCP Tools' },
     ...(canSave ? { submit: { type: 'plain_text', text: 'Save' } } : {}),
     close: { type: 'plain_text', text: canSave ? 'Cancel' : 'Done' },
@@ -124,7 +144,7 @@ export function toolsModal({
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or blocked.${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
+                text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or blocked.${hiddenToolCount > 0 ? `\n\nShowing ${visibleItems.length} of ${sortedItems.length} tools.` : ''}${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
               },
               accessory: {
                 type: 'button',

@@ -1,9 +1,9 @@
-import { setMCPToolModes } from '@repo/db/queries';
+import { getMCPServerById, patchMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import { publishHome } from '../../../publish';
 import { toolBlock } from '../../block-id';
 import { inputs, views } from '../../ids';
-import { parseServerMeta, toolModeInputSchema } from '../../schema';
+import { parseToolsMeta, toolModeInputSchema } from '../../schema';
 import type { SubmitArgs } from '../../types';
 
 export const name = views.configure;
@@ -15,14 +15,20 @@ export async function execute({
   view,
 }: SubmitArgs): Promise<void> {
   await ack();
-  const serverId =
-    parseServerMeta({ metadata: view.private_metadata }).serverId ?? null;
-  if (!serverId) {
+  const { serverId, tools } = parseToolsMeta({
+    metadata: view.private_metadata,
+  });
+  if (!(serverId && tools)) {
+    return;
+  }
+  const server = await getMCPServerById({ id: serverId, userId: body.user.id });
+  if (!server) {
     return;
   }
   const modes = Object.entries(view.state.values).flatMap(
     ([blockId, fields]) => {
-      const toolName = toolBlock.decode(blockId);
+      const toolId = toolBlock.decode(blockId);
+      const toolName = toolId ? tools[toolId]?.name : null;
       if (!toolName) {
         return [];
       }
@@ -37,7 +43,7 @@ export async function execute({
   for (const item of modes) {
     toolModes[item.toolName] = item.mode;
   }
-  await setMCPToolModes({
+  await patchMCPToolModes({
     modes: toolModes,
     scope: 'global',
     serverId,

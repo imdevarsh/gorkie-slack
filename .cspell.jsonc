@@ -1,6 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "import": ["@repo/cspell-config"],
-  "ignorePaths": ["pr30-review-state.md"],
+  "ignorePaths": ["pr30-review-state.md", "agent-goal.md"],
+  "words": ["MCPO"],
   "useGitignore": true
 }

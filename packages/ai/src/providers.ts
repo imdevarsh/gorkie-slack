@@ -69,9 +69,7 @@ const summariserModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3.1-flash-lite-preview'),
   retries: [
     retry(openrouter.languageModel('google/gemini-3.1-flash-lite-preview')),
-    ...(google
-      ? [retry(google('gemini-3.1-flash-lite-preview'))]
-      : []),
+    ...(google ? [retry(google('gemini-3.1-flash-lite-preview'))] : []),
     retry(hackclub.languageModel('openai/gpt-5-nano')),
     retry(openrouter.languageModel('openai/gpt-5-nano')),
   ],

@@ -35,10 +35,20 @@ export async function applyPrompt({
   userId: string;
   prompt: string;
 }): Promise<void> {
+  await savePrompt({ prompt, userId });
+  await publishHome({ client, userId });
+}
+
+export async function savePrompt({
+  prompt,
+  userId,
+}: {
+  prompt: string;
+  userId: string;
+}): Promise<void> {
   if (prompt) {
     await setUserCustomization(userId, { prompt });
   } else {
     await clearUserCustomization(userId);
   }
-  await publishHome({ client, userId });
 }

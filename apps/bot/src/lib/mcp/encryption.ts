@@ -12,10 +12,13 @@ export function decrypt(encrypted: string): string {
   return decryptSecret({ encrypted, secret });
 }
 
-export function parseEncrypted<TSchema extends z.ZodType>(
-  encrypted: string | null,
-  schema: TSchema
-): z.output<TSchema> | undefined {
+export function parseEncrypted<TSchema extends z.ZodType>({
+  encrypted,
+  schema,
+}: {
+  encrypted: string | null;
+  schema: TSchema;
+}): z.output<TSchema> | undefined {
   if (!encrypted) {
     return;
   }

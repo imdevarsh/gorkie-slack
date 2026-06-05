@@ -12,6 +12,19 @@ export interface MCPServerWithConnection extends MCPServer {
   hasConnection: boolean;
 }
 
+type MCPServerUpdate = Partial<
+  Pick<
+    NewMCPServer,
+    | 'authType'
+    | 'enabled'
+    | 'lastConnectedAt'
+    | 'lastError'
+    | 'name'
+    | 'transport'
+    | 'url'
+  >
+>;
+
 export async function createMCPServer(server: NewMCPServer) {
   const rows = await db.insert(mcpServers).values(server).returning();
   return rows[0] ?? null;
@@ -92,7 +105,7 @@ export async function updateMCPServer({
 }: {
   id: string;
   userId: string;
-  values: Partial<NewMCPServer>;
+  values: MCPServerUpdate;
 }) {
   const rows = await db
     .update(mcpServers)

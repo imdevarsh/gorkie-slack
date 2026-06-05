@@ -72,7 +72,6 @@ export async function execute({
       })
       .catch(() => undefined);
   } catch (error) {
-    // Re-show the token field with the error so the user can retry in place.
     await client.views
       .update({
         view_id: view.id ?? '',

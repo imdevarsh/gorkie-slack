@@ -83,7 +83,9 @@ function serverBlocks(server: MCPServerWithConnection) {
   return [section, context, ...errorBlock, actionsBlock];
 }
 
-export function mcpBlocks(servers: MCPServerWithConnection[]) {
+export function buildMCPBlocks(servers: MCPServerWithConnection[]) {
+  const visibleServers = servers.slice(0, appHome.maxMCPServersDisplay);
+  const hiddenServerCount = servers.length - visibleServers.length;
   const header = Blocks.Section({
     text: `*MCP Servers*${servers.length > 0 ? ` (${servers.length})` : ''}`,
   }).accessory(
@@ -104,9 +106,12 @@ export function mcpBlocks(servers: MCPServerWithConnection[]) {
 
   return [
     header,
-    ...servers.flatMap((server, i) => [
+    ...visibleServers.flatMap((server, i) => [
       ...(i > 0 ? [Blocks.Divider()] : []),
       ...serverBlocks(server),
     ]),
+    ...(hiddenServerCount > 0
+      ? [Blocks.Context().elements(`${hiddenServerCount} more not shown.`)]
+      : []),
   ];
 }

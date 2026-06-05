@@ -1,3 +1,5 @@
+import { asRecord } from '@repo/utils/record';
+
 const HTTP_ERROR_RE = /\(HTTP (\d+)\):\s*([^\n]+)/;
 
 export function formatMCPError(message: string): string {
@@ -9,12 +11,10 @@ export function formatMCPError(message: string): string {
   const body = match[2] ?? '';
   try {
     const parsed: unknown = JSON.parse(body.trim());
-    if (parsed && typeof parsed === 'object') {
-      const obj = parsed as Record<string, unknown>;
-      const desc = obj.error_description ?? obj.error ?? obj.message;
-      if (typeof desc === 'string') {
-        return `HTTP ${status}: ${desc}`;
-      }
+    const obj = asRecord(parsed);
+    const desc = obj?.error_description ?? obj?.error ?? obj?.message;
+    if (typeof desc === 'string') {
+      return `HTTP ${status}: ${desc}`;
     }
   } catch {
     // Body wasn't JSON — fall through to the raw status + body.

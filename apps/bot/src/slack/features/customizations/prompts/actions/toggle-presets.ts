@@ -21,6 +21,7 @@ export async function execute({
     values: body.view?.state.values,
   });
   await client.views.update({
+    hash: body.view?.hash,
     view_id: viewId,
     view: buildPromptModal({
       currentPrompt: currentPrompt || null,

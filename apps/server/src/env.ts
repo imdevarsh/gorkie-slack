@@ -10,7 +10,7 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(['development', 'production', 'test'])
       .default('development'),
-    PORT: z.coerce.number().default(3001),
+    PORT: z.coerce.number().default(8000),
     CORS_ORIGIN: z.string().min(1),
     HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
     OPENROUTER_API_KEY: z.string().min(1).optional(),

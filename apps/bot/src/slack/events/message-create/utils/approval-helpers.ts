@@ -75,7 +75,10 @@ export function decodeApprovalState({ state }: { state: string }): {
   messages: ModelMessage[];
   requestHints: ChatRequestHints;
 } {
-  const parsed = parseEncrypted(state, approvalStateSchema);
+  const parsed = parseEncrypted({
+    encrypted: state,
+    schema: approvalStateSchema,
+  });
   if (!parsed) {
     throw new Error('Missing MCP approval state.');
   }

@@ -21,22 +21,22 @@ The SDK does **not** provide: timeout enforcement, response size caps, streaming
 
 LibreChat locks `url`, `auth`, and header fields by default with a permission system (`OBO_USER_EDITABLE_FIELDS`). Only cosmetic fields (name, description) are editable without elevated permissions. This prevents an attacker from modifying an existing server's URL to point at an internal network resource.
 
-**Current gap**: `updateMcpServerForUser` in `packages/db/src/queries/mcp.ts` accepts any field from the Slack modal payload. The `mcpServerUrlSchema` in `@repo/validators` validates the URL format but doesn't prevent a user from changing a previously-audited URL to a new one.
+**Current gap**: `updateMCPServer` in `packages/db/src/queries/mcp/servers.ts` should stay narrowly typed so Slack modal payloads cannot mutate ownership fields. The `mcpServerUrlSchema` in `@repo/validators` validates the URL format but doesn't prevent a user from changing a previously-audited URL to a new one.
 
 **Fix**: In `apps/bot/src/slack/features/customizations/mcp/views/save/index.ts` and `configure.ts`, restrict which fields can change after first creation. URL and auth type should be immutable once connected — require delete + re-add to change them.
 
 ### 2. Atomic OAuth upsert (correctness)
 
-`upsertMcpOAuthConnection` in `packages/db/src/queries/mcp.ts` does a select-then-insert. Two concurrent callback requests (e.g., user double-clicks) can both miss the `existing` row and attempt to insert duplicate rows.
+`upsertMCPOAuthConnection` in `packages/db/src/queries/mcp/connections.ts` should remain a single upsert. Two concurrent callback requests (e.g., user double-clicks) must not be able to insert duplicate rows.
 
 **Fix**: Add a unique constraint on `(serverId, userId)` to the `mcp_oauth_connections` table and replace the select+insert pattern with a single `onConflictDoUpdate`.
 
 ```ts
-// packages/db/src/queries/mcp.ts
-await db.insert(mcpOauthConnections)
+// packages/db/src/queries/mcp/connections.ts
+await db.insert(mcpOAuthConnections)
   .values(connection)
   .onConflictDoUpdate({
-    target: [mcpOauthConnections.serverId, mcpOauthConnections.userId],
+    target: [mcpOAuthConnections.serverId, mcpOAuthConnections.userId],
     set: values,
   });
 ```
@@ -49,13 +49,13 @@ uniqueIndex('mcp_oauth_connections_server_user_idx')
 
 ### 3. Scope MCP queries by teamId (security — multi-workspace)
 
-Every `getMcpServerByIdForUser`, `getMcpOAuthConnection`, and related query uses only `userId` as the predicate. If the same Slack user ID exists in two workspaces (possible in Slack Connect or Enterprise Grid), workspace A can read workspace B's MCP servers.
+Every `getMCPServerById`, `getMCPOAuthConnection`, and related query uses only `userId` as the predicate. If the same Slack user ID exists in two workspaces (possible in Slack Connect or Enterprise Grid), workspace A can read workspace B's MCP servers.
 
 **Fix**: Thread `teamId` through every query function and add it to every `WHERE` clause. The `teamId` is already stored in both the `mcp_servers` and `mcp_oauth_connections` tables.
 
 ```ts
 // All query functions need:
-export async function getMcpServerByIdForUser({
+export async function getMCPServerById({
   id,
   teamId,
   userId,
@@ -90,7 +90,7 @@ function isBlockedIpv6(address: string): boolean {
 
 ### 6. Approval-queue ordering (correctness)
 
-In `apps/bot/src/slack/features/customizations/mcp/actions/approval.ts`, `updateMcpToolApproval()` writes `status: approved` before the resume job is enqueued. If `getQueue(...).add()` throws, the approval is stuck in an approved-but-not-running state and future button clicks hit the "already handled" guard.
+In `apps/bot/src/slack/features/customizations/mcp/actions/approval.ts`, `updateMCPToolApproval()` writes `status: approved` before the resume job is enqueued. If `getQueue(...).add()` throws, the approval is stuck in an approved-but-not-running state and future button clicks hit the "already handled" guard.
 
 **Fix**: Enqueue the job first, then mark as approved. Or use a two-phase status: `approving → approved` with the DB update happening inside the job itself.
 

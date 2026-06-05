@@ -3,7 +3,7 @@ import type { ScheduledTask } from '@repo/db/schema';
 import { Blocks, HomeTab } from 'slack-block-builder';
 import type { SlackHomeTabDto } from 'slack-block-builder/dist/internal';
 import { customInstructionsBlocks } from './_components/custom-instructions';
-import { mcpBlocks } from './_components/mcp';
+import { buildMCPBlocks } from './_components/mcp';
 import { scheduledTasksBlocks } from './_components/scheduled-tasks';
 
 export function buildHomeView({
@@ -24,7 +24,7 @@ export function buildHomeView({
       Blocks.Divider(),
       ...customInstructionsBlocks(customization),
       Blocks.Divider(),
-      ...mcpBlocks(mcpServers),
+      ...buildMCPBlocks(mcpServers),
       Blocks.Divider(),
       ...scheduledTasksBlocks(tasks)
     )

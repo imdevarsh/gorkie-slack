@@ -1,7 +1,6 @@
 import { systemPrompt } from '@repo/ai/prompts';
 import { provider } from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
-import { clampText } from '@repo/utils/text';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
@@ -16,7 +15,6 @@ import type {
 import { createTask, finishTask, updateTask } from '../utils/task';
 
 const taskMap = new Map<string, { taskId: string; startTime: number }>();
-
 
 export async function resolveOrchestratorTask({
   context,

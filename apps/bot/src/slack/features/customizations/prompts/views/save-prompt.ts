@@ -1,6 +1,6 @@
 import { toLogError } from '@repo/utils/error';
 import logger from '@/lib/logger';
-import { applyPrompt } from '../../publish';
+import { publishHome, savePrompt } from '../../publish';
 import { parsePromptValue } from '../schema';
 import type { SubmitArgs } from '../types';
 
@@ -12,12 +12,20 @@ export async function execute({
   body,
   client,
 }: SubmitArgs): Promise<void> {
-  await ack();
   const userId = body.user.id;
   const prompt = parsePromptValue({ values: view.state.values });
   try {
-    await applyPrompt({ client, userId, prompt });
+    await savePrompt({ prompt, userId });
   } catch (error) {
     logger.warn({ ...toLogError(error), userId }, 'Failed to save prompt');
+    await ack({
+      errors: { prompt_block: 'Could not save custom instructions.' },
+      response_action: 'errors',
+    });
+    return;
   }
+  await ack();
+  await publishHome({ client, userId }).catch((error: unknown) => {
+    logger.warn({ ...toLogError(error), userId }, 'Failed to publish home');
+  });
 }

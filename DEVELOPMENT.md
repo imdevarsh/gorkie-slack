@@ -52,7 +52,7 @@ bun run dev:server
 In a second terminal, expose the proxy with a public tunnel:
 
 ```bash
-npx untun@latest tunnel http://localhost:3001
+npx untun@latest tunnel http://localhost:8000
 ```
 
 Copy the printed `https://...trycloudflare.com` URL into `apps/bot/.env` as `SERVER_BASE_URL`. It must point at the server root. The sandbox config appends paths like `/provider/hackclub` and calls `/ip` to resolve the sandbox outbound IP.

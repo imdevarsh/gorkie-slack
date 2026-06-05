@@ -2,6 +2,7 @@ export const appHome = {
   maxPromptDisplay: 200,
   maxTaskPrompt: 80,
   maxMCPNameDisplay: 40,
+  maxMCPServersDisplay: 12,
   maxMCPUrlDisplay: 80,
 };
 
@@ -86,4 +87,6 @@ export const mcp = {
   defaultToolMode: 'ask',
   requestTimeoutMs: 15_000,
   taskOutputMaxChars: 260,
+  toolModalMaxTools: 40,
+  toolModalMetadataMaxChars: 2800,
 };
