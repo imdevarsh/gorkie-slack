@@ -4,6 +4,7 @@ import {
   type McpBearerConnection,
   type McpOauthConnection,
   type McpServer,
+  type McpToolApproval,
   type McpToolPermission,
   mcpBearerConnections,
   mcpOauthConnections,
@@ -560,4 +561,87 @@ export async function updateMcpToolApproval({
     )
     .returning();
   return rows[0] ?? null;
+}
+
+const OPEN_APPROVAL_STATUSES = ['pending', 'handling'] as const;
+
+/**
+ * Finalize one approval and report whether its batch is now fully settled.
+ *
+ * A batch is every approval raised by the same turn — same user, channel,
+ * thread, and triggering message — which the model may emit several of at once
+ * (parallel tool calls). The whole turn can only resume after *all* of them are
+ * answered, so the click that settles the last open sibling is the one that
+ * resumes. The batch rows are locked for the duration so two near-simultaneous
+ * clicks serialize and exactly one observes the batch as complete.
+ */
+export function finalizeMcpToolApprovalInBatch({
+  approvalId,
+  status,
+  userId,
+}: {
+  approvalId: string;
+  status: 'approved' | 'denied';
+  userId: string;
+}): Promise<
+  | { batchComplete: false }
+  | { batchComplete: true; siblings: McpToolApproval[] }
+> {
+  return db.transaction(async (tx) => {
+    const current = await tx
+      .select({
+        channelId: mcpToolApprovals.channelId,
+        eventTs: mcpToolApprovals.eventTs,
+        threadTs: mcpToolApprovals.threadTs,
+      })
+      .from(mcpToolApprovals)
+      .where(
+        and(
+          eq(mcpToolApprovals.approvalId, approvalId),
+          eq(mcpToolApprovals.userId, userId)
+        )
+      )
+      .limit(1);
+    const key = current[0];
+    if (!key) {
+      return { batchComplete: false };
+    }
+
+    // Lock the whole batch in a single, id-ordered statement so concurrent
+    // clicks acquire row locks in the same order and cannot deadlock.
+    const siblings = await tx
+      .select()
+      .from(mcpToolApprovals)
+      .where(
+        and(
+          eq(mcpToolApprovals.userId, userId),
+          eq(mcpToolApprovals.channelId, key.channelId),
+          eq(mcpToolApprovals.threadTs, key.threadTs),
+          eq(mcpToolApprovals.eventTs, key.eventTs)
+        )
+      )
+      .orderBy(mcpToolApprovals.id)
+      .for('update');
+
+    await tx
+      .update(mcpToolApprovals)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(mcpToolApprovals.approvalId, approvalId));
+
+    const open = siblings.some(
+      (sibling) =>
+        sibling.approvalId !== approvalId &&
+        OPEN_APPROVAL_STATUSES.includes(
+          sibling.status as (typeof OPEN_APPROVAL_STATUSES)[number]
+        )
+    );
+    if (open) {
+      return { batchComplete: false };
+    }
+
+    const settled = siblings.map((sibling) =>
+      sibling.approvalId === approvalId ? { ...sibling, status } : sibling
+    );
+    return { batchComplete: true, siblings: settled };
+  });
 }

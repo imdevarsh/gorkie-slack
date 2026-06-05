@@ -1,5 +1,6 @@
 import {
   claimMcpToolApproval,
+  finalizeMcpToolApprovalInBatch,
   getMcpServerByIdForUser,
   getMcpToolApprovalStatus,
   updateMcpToolApproval,
@@ -17,6 +18,7 @@ import { resumeResponse } from '@/slack/events/message-create/utils/resume';
 import type { SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
 import { actions } from '../ids';
+import type { ApprovalReply } from '../reply';
 import { replyCard, replyFromActionId, replyStatus } from '../reply';
 import type { ButtonArgs } from '../types';
 
@@ -174,10 +176,10 @@ export async function execute(args: ButtonArgs): Promise<void> {
       });
     }
 
-    await updateMcpToolApproval({
+    const batch = await finalizeMcpToolApprovalInBatch({
       approvalId,
+      status: replyStatus(reply),
       userId: body.user.id,
-      values: { status: replyStatus(reply) },
     });
     await updateApprovalMessage({
       ...args,
@@ -188,20 +190,31 @@ export async function execute(args: ButtonArgs): Promise<void> {
       toolName: approval.toolName,
     });
 
+    // Parallel tool calls raise a batch of approvals for one turn; the run can
+    // only resume once every sibling is answered. Bail until this click settles
+    // the last one — and skip entirely if a sibling expired (batch abandoned).
+    if (!batch.batchComplete) {
+      return;
+    }
+    const approvals = batch.siblings
+      .filter((s) => s.status === 'approved' || s.status === 'denied')
+      .map((s) => ({
+        approvalId: s.approvalId,
+        reply: (s.status === 'denied' ? 'reject' : 'once') as ApprovalReply,
+        tool: {
+          serverName: s.exposedName,
+          toolCallId: s.toolCallId,
+          toolName: s.toolName,
+        },
+      }));
+    if (approvals.length !== batch.siblings.length) {
+      return;
+    }
+
     getQueue(getContextId(resumeContext))
       .add(() =>
         resumeResponse({
-          approvals: [
-            {
-              approvalId,
-              reply,
-              tool: {
-                serverName,
-                toolCallId: approval.toolCallId,
-                toolName: approval.toolName,
-              },
-            },
-          ],
+          approvals,
           context: resumeContext,
           messages,
           requestHints,
