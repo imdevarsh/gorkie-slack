@@ -23,6 +23,7 @@ import { createTask, finishTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
 import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
+import { getContextId } from '@/utils/context';
 import { decrypt } from './encryption';
 import { guardedMCPFetch } from './guarded-fetch';
 import { createMCPOAuthProvider } from './oauth-provider';
@@ -177,6 +178,7 @@ export async function createMCPToolset({
     return { cleanup: async () => undefined, tools: {} };
   }
 
+  const ctxId = getContextId(context);
   const servers = await listEnabledMCPServers({
     userId,
   });
@@ -249,13 +251,40 @@ export async function createMCPToolset({
                   input: unknown,
                   options: ToolExecutionOptions
                 ) => {
+                  const startedAt = Date.now();
                   const details = clampText(
                     formatToolInput(input),
                     mcp.taskOutputMaxChars
                   );
+                  logger.info(
+                    {
+                      ctxId,
+                      exposedName,
+                      input: details,
+                      mode,
+                      serverId: server.id,
+                      serverName: server.name,
+                      toolCallId: options.toolCallId,
+                      toolName,
+                    },
+                    '[mcp] Tool started'
+                  );
 
                   if (mode === 'block') {
                     const message = `Access denied by MCP settings for ${server.name}: ${toolName}.`;
+                    logger.warn(
+                      {
+                        ctxId,
+                        durationMs: Date.now() - startedAt,
+                        exposedName,
+                        mode,
+                        serverId: server.id,
+                        serverName: server.name,
+                        toolCallId: options.toolCallId,
+                        toolName,
+                      },
+                      '[mcp] Tool blocked'
+                    );
                     await createTask(stream, {
                       taskId: options.toolCallId,
                       title: `Blocked ${server.name}: ${toolName}`,
@@ -281,23 +310,54 @@ export async function createMCPToolset({
 
                   try {
                     const result = await execute(input, options);
+                    const output = clampText(
+                      `Output:\n${extractResultText(result)}`,
+                      mcp.taskOutputMaxChars
+                    );
+                    logger.info(
+                      {
+                        ctxId,
+                        durationMs: Date.now() - startedAt,
+                        exposedName,
+                        mode,
+                        output,
+                        serverId: server.id,
+                        serverName: server.name,
+                        toolCallId: options.toolCallId,
+                        toolName,
+                      },
+                      '[mcp] Tool completed'
+                    );
                     await finishTask(stream, {
                       taskId: options.toolCallId,
                       status: 'complete',
-                      output: clampText(
-                        `Output:\n${extractResultText(result)}`,
-                        mcp.taskOutputMaxChars
-                      ),
+                      output,
                     });
                     return result;
                   } catch (error) {
+                    const output = clampText(
+                      `Output:\n${errorMessage(error)}`,
+                      mcp.taskOutputMaxChars
+                    );
+                    logger.error(
+                      {
+                        err: error,
+                        ctxId,
+                        durationMs: Date.now() - startedAt,
+                        exposedName,
+                        mode,
+                        output,
+                        serverId: server.id,
+                        serverName: server.name,
+                        toolCallId: options.toolCallId,
+                        toolName,
+                      },
+                      '[mcp] Tool failed'
+                    );
                     await finishTask(stream, {
                       taskId: options.toolCallId,
                       status: 'error',
-                      output: clampText(
-                        `Output:\n${errorMessage(error)}`,
-                        mcp.taskOutputMaxChars
-                      ),
+                      output,
                     });
                     throw error;
                   }
