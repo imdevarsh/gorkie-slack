@@ -1,33 +1,33 @@
 import type { OAuthClientMetadata, OAuthClientProvider } from '@ai-sdk/mcp';
 import { patchMcpOAuthConnection } from '@repo/db/queries';
 import type { McpOauthConnection, McpServer } from '@repo/db/schema';
-import { decryptSecret, encryptSecret, parseEncrypted } from '@repo/utils';
 import {
   mcpOAuthClientInformationSchema,
   mcpOAuthTokensSchema,
 } from '@repo/validators';
 import { env } from '@/env';
+import { decrypt, encrypt, parseEncrypted } from './mcp-encryption';
 
-export function createMcpOAuthProvider({
+export function createMcpOAuthCallbackProvider({
   connection,
   server,
 }: {
   connection: McpOauthConnection;
   server: McpServer;
 }): OAuthClientProvider {
-  let currentConnection: McpOauthConnection | null = connection;
-  const redirectUrl = new URL('/mcp/oauth/callback', env.SERVER_BASE_URL);
+  let storedConnection: McpOauthConnection | null = connection;
+  const redirectURL = new URL('/mcp/oauth/callback', env.SERVER_BASE_URL);
   const clientMetadata: OAuthClientMetadata = {
     client_name: 'Gorkie MCP',
     grant_types: ['authorization_code', 'refresh_token'],
-    redirect_uris: [redirectUrl.toString()],
+    redirect_uris: [redirectURL.toString()],
     response_types: ['code'],
     token_endpoint_auth_method: 'none',
   };
   const saveConnection = async (
     values: Parameters<typeof patchMcpOAuthConnection>[0]['values']
   ) => {
-    currentConnection = await patchMcpOAuthConnection({
+    storedConnection = await patchMcpOAuthConnection({
       serverId: server.id,
       userId: server.userId,
       values: { teamId: server.teamId, ...values },
@@ -39,13 +39,12 @@ export function createMcpOAuthProvider({
       return clientMetadata;
     },
     get redirectUrl() {
-      return redirectUrl.toString();
+      return redirectURL.toString();
     },
     tokens() {
       return parseEncrypted({
-        encrypted: currentConnection?.tokens ?? null,
+        encrypted: storedConnection?.tokens ?? null,
         schema: mcpOAuthTokensSchema,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },
     async saveTokens(tokens) {
@@ -54,49 +53,38 @@ export function createMcpOAuthProvider({
         expiresAt: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
           : null,
-        scopes: tokens.scope ?? currentConnection?.scopes ?? null,
+        scopes: tokens.scope ?? storedConnection?.scopes ?? null,
         state: null,
-        tokens: encryptSecret({
-          plaintext: JSON.stringify(tokens),
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-        }),
+        tokens: encrypt(JSON.stringify(tokens)),
       });
     },
     redirectToAuthorization: () => undefined,
     saveCodeVerifier: () => undefined,
     codeVerifier() {
-      if (!currentConnection?.codeVerifier) {
+      if (!storedConnection?.codeVerifier) {
         throw new Error('Missing OAuth code verifier.');
       }
-      return decryptSecret({
-        encrypted: currentConnection.codeVerifier,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-      });
+      return decrypt(storedConnection.codeVerifier);
     },
     clientInformation() {
-      if (currentConnection?.clientId) {
+      if (storedConnection?.clientId) {
         const fromDb = parseEncrypted({
-          encrypted: currentConnection.clientInformation ?? null,
+          encrypted: storedConnection.clientInformation ?? null,
           schema: mcpOAuthClientInformationSchema,
-          secret: env.MCP_TOKEN_ENCRYPTION_KEY,
         });
-        return fromDb ?? { client_id: currentConnection.clientId };
+        return fromDb ?? { client_id: storedConnection.clientId };
       }
       return parseEncrypted({
-        encrypted: currentConnection?.clientInformation ?? null,
+        encrypted: storedConnection?.clientInformation ?? null,
         schema: mcpOAuthClientInformationSchema,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
       });
     },
     saveClientInformation: () => undefined,
     storedState() {
-      if (!currentConnection?.state) {
+      if (!storedConnection?.state) {
         return;
       }
-      return decryptSecret({
-        encrypted: currentConnection.state,
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
-      });
+      return decrypt(storedConnection.state);
     },
     validateResourceURL(serverUrl, resource) {
       const configured = new URL(server.url);

@@ -1,23 +1,16 @@
 import { auth } from '@ai-sdk/mcp';
 import {
   getMcpOAuthConnection,
-  getMcpServerByIdForUser,
-  updateMcpServerForUser,
+  getMcpServerById,
+  updateMcpServer,
 } from '@repo/db/queries';
 import { createGuardedFetch, parseMcpOAuthState } from '@repo/utils';
 import escapeHtml from 'escape-html';
 import { defineHandler, getQuery, getRequestURL } from 'nitro/h3';
 import { useStorage } from 'nitro/storage';
-import { z } from 'zod';
 import { mcp } from '@/config';
 import { env } from '@/env';
-import { createMcpOAuthProvider } from '@/utils/mcp-oauth-provider';
-
-const querySchema = z.looseObject({
-  code: z.string().optional(),
-  error: z.string().optional(),
-  state: z.string().optional(),
-});
+import { createMcpOAuthCallbackProvider } from '@/utils/mcp-oauth-callback-provider';
 
 const guardedFetch = Object.assign(
   createGuardedFetch({
@@ -56,10 +49,10 @@ export default defineHandler(async (event) => {
     return;
   }
 
-  const parsed = querySchema.parse(getQuery(event));
-  const code = parsed.code ?? null;
-  const oauthError = parsed.error ?? null;
-  const state = parsed.state ?? null;
+  const query = getQuery(event);
+  const code = typeof query.code === 'string' ? query.code : null;
+  const oauthError = typeof query.error === 'string' ? query.error : null;
+  const state = typeof query.state === 'string' ? query.state : null;
 
   event.res.headers.set('content-type', 'text/html; charset=utf-8');
 
@@ -82,7 +75,7 @@ export default defineHandler(async (event) => {
   }
 
   const parsedState = parseMcpOAuthState({
-    secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+    secret: env.MCP_ENCRYPTION_KEY,
     state,
   });
   if (!parsedState) {
@@ -95,7 +88,7 @@ export default defineHandler(async (event) => {
   }
 
   const [server, connection] = await Promise.all([
-    getMcpServerByIdForUser({
+    getMcpServerById({
       id: parsedState.serverId,
       userId: parsedState.userId,
     }),
@@ -115,13 +108,13 @@ export default defineHandler(async (event) => {
   }
 
   try {
-    await auth(createMcpOAuthProvider({ connection, server }), {
+    await auth(createMcpOAuthCallbackProvider({ connection, server }), {
       authorizationCode: code,
       callbackState: state,
       fetchFn: guardedFetch,
       serverUrl: server.url,
     });
-    await updateMcpServerForUser({
+    await updateMcpServer({
       id: server.id,
       userId: server.userId,
       values: {
@@ -130,7 +123,7 @@ export default defineHandler(async (event) => {
       },
     });
   } catch (error) {
-    await updateMcpServerForUser({
+    await updateMcpServer({
       id: server.id,
       userId: server.userId,
       values: {
@@ -150,6 +143,6 @@ export default defineHandler(async (event) => {
   return renderPage({
     message: 'You can close this tab and go back to Slack.',
     status: 'success',
-    title: 'Connected to Gorkie',
+    title: 'MCP Connected',
   });
 });

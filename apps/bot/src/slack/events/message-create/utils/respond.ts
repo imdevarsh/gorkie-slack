@@ -17,11 +17,8 @@ import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 import { processSlackFiles } from '@/utils/images';
 import { getSlackUser } from '@/utils/users';
-import {
-  postApprovalRequest,
-  recordApprovalTask,
-  supersedeExpiredApprovals,
-} from './approval-helpers';
+import { pauseForApprovals } from './approval-flow';
+import { supersedeExpiredApprovals } from './approval-helpers';
 
 export async function runAgent({
   context,
@@ -62,25 +59,13 @@ export async function runAgent({
     const responseMessages = [...messages, ...response.messages];
 
     if (approvals.length > 0) {
-      const activeStream = stream;
-      await setPlanTitle(stream, 'Needs Approval');
-      await resolveOrchestratorTask({
+      await pauseForApprovals({
+        approvals,
         context,
+        messages: responseMessages,
+        requestHints,
         stream,
-        title: 'Needs Approval',
-        details: 'Paused until you approve or deny the MCP tool call.',
       });
-      await Promise.all(
-        approvals.map(async (approval) => {
-          await recordApprovalTask({ approval, stream: activeStream });
-          await postApprovalRequest({
-            approval,
-            context,
-            messages: responseMessages,
-            requestHints,
-          });
-        })
-      );
     }
 
     const toolCalls = await streamResult.toolCalls;

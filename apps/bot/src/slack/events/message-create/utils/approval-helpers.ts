@@ -1,16 +1,16 @@
 import {
   createMcpToolApproval,
-  getMcpServerByIdForUser,
+  getMcpServerById,
   supersedePendingMcpToolApprovals,
   updateMcpToolApproval,
 } from '@repo/db/queries';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
-import { z } from 'zod';
+import { Blocks, Elements, Message } from 'slack-block-builder';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
-import { encrypt, parseEncrypted } from '@/lib/mcp/secret';
+import { encrypt, parseEncrypted } from '@/lib/mcp/encryption';
 import { codeBlock } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type { ApprovalReply } from '@/slack/features/customizations/mcp/reply';
@@ -20,25 +20,15 @@ import type {
   Stream,
   ToolApprovalRequest,
 } from '@/types';
+import { approvalStateSchema } from './schema';
 
 type SlackBlocks = ChannelAndBlocks['blocks'];
 
-/**
- * The whole approval decision as one value (opencode's permission `Reply`),
- * carried with the tool it refers to. `approved`/`reason` are derived from
- * `reply` by the resume path — never passed alongside it.
- */
 export interface ApprovalOutcome {
   approvalId: string;
   reply: ApprovalReply;
-  tool: { serverName: string; toolCallId: string; toolName: string };
 }
 
-/**
- * When a user sends a newer message, pending approvals in that channel/thread
- * are superseded and their cards flipped to "expired". Keeps approval lifecycle
- * out of the response path.
- */
 export async function supersedeExpiredApprovals(
   context: SlackMessageContext
 ): Promise<void> {
@@ -60,7 +50,7 @@ export async function supersedeExpiredApprovals(
       if (!approval.messageTs) {
         return;
       }
-      const server = await getMcpServerByIdForUser({
+      const server = await getMcpServerById({
         id: approval.serverId,
         userId: approval.userId,
       });
@@ -70,7 +60,7 @@ export async function supersedeExpiredApprovals(
           ts: approval.messageTs,
           text: 'This MCP approval request expired.',
           blocks: handledApprovalBlocks({
-            serverName: server?.name ?? approval.exposedName,
+            serverName: server?.name ?? approval.toolName,
             text: 'Approval expired because you sent a newer message.',
             title: 'Approval Expired',
             toolName: approval.toolName,
@@ -80,20 +70,6 @@ export async function supersedeExpiredApprovals(
     })
   );
 }
-
-const approvalStateSchema = z.object({
-  messages: z.array(z.custom<ModelMessage>()),
-  requestHints: z.object({
-    channel: z.string(),
-    customization: z
-      .object({
-        prompt: z.string(),
-      })
-      .optional(),
-    server: z.string(),
-    time: z.string(),
-  }),
-});
 
 export function decodeApprovalState({ state }: { state: string }): {
   messages: ModelMessage[];
@@ -138,26 +114,20 @@ export function handledApprovalBlocks({
   const cardTitle =
     serverName && toolName ? `${title}: ${serverName} / ${toolName}` : title;
 
-  return [
-    {
-      type: 'card',
-      title: { type: 'mrkdwn', text: cardTitle },
-      body: {
-        type: 'mrkdwn',
-        text: clampText(
-          [
-            serverName && toolName && input ? null : text,
-            input
-              ? `Input:\n${codeBlock({ value: input, maxLength: 180 })}`
-              : null,
-          ]
-            .filter(Boolean)
-            .join('\n'),
-          260
-        ),
-      },
-    },
-  ];
+  const body = clampText(
+    [
+      `*${cardTitle}*`,
+      serverName && toolName && input ? null : text,
+      input ? `Input:\n${codeBlock({ value: input, maxLength: 180 })}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    260
+  );
+
+  return Message()
+    .blocks(Blocks.Section({ text: body }))
+    .getBlocks();
 }
 
 export async function postApprovalRequest({
@@ -181,10 +151,9 @@ export async function postApprovalRequest({
 
   await createMcpToolApproval({
     approvalId: approval.approvalId,
-    argsJson: encrypt(clampText(args, 8000)),
+    args: encrypt(clampText(args, 8000)),
     channelId: channel,
     eventTs: context.event.ts,
-    exposedName: approval.exposedName,
     state: encrypt(JSON.stringify({ messages, requestHints })),
     serverId: approval.serverId,
     status: 'pending',
@@ -196,46 +165,33 @@ export async function postApprovalRequest({
   });
 
   const blocks: SlackBlocks = [
-    {
-      type: 'card',
-      title: {
-        type: 'mrkdwn',
-        text: `Approve: ${approval.serverName} / ${approval.toolName}`,
-      },
-      body: {
-        type: 'mrkdwn',
-        text: clampText(
-          `Input:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
-          200
-        ),
-      },
-      actions: [
-        {
-          type: 'button',
-          text: { type: 'plain_text', text: 'Approve once', emoji: false },
-          style: 'primary',
-          action_id: actions.approval.allow,
-          value: approval.approvalId,
-        },
-        {
-          type: 'button',
-          text: {
-            type: 'plain_text',
+    ...Message()
+      .blocks(
+        Blocks.Section({
+          text: clampText(
+            `*Approve: ${approval.serverName} / ${approval.toolName}*\nInput:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
+            260
+          ),
+        }),
+        Blocks.Actions().elements(
+          Elements.Button({
+            actionId: actions.approval.allow,
+            text: 'Approve once',
+            value: approval.approvalId,
+          }).primary(),
+          Elements.Button({
+            actionId: actions.approval.always,
             text: 'Always in thread',
-            emoji: false,
-          },
-          action_id: actions.approval.always,
-          value: approval.approvalId,
-        },
-        {
-          type: 'button',
-          text: { type: 'plain_text', text: 'Deny', emoji: false },
-          style: 'danger',
-          action_id: actions.approval.deny,
-          value: approval.approvalId,
-        },
-      ],
-    },
+            value: approval.approvalId,
+          }),
+          Elements.Button({
+            actionId: actions.approval.deny,
+            text: 'Deny',
+            value: approval.approvalId,
+          }).danger()
+        )
+      )
+      .getBlocks(),
   ];
 
   const message = await context.client.chat.postMessage({

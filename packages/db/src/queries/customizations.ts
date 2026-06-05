@@ -1,11 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../index';
-import { userCustomizations } from '../schema';
-
-export type UserCustomization = Pick<
-  typeof userCustomizations.$inferSelect,
-  'prompt'
->;
+import { type UserCustomization, userCustomizations } from '../schema';
 
 export async function getUserCustomization(
   userId: string

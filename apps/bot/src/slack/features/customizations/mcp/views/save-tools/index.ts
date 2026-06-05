@@ -1,7 +1,5 @@
-import {
-  listMcpToolPermissions,
-  upsertMcpToolPermission,
-} from '@repo/db/queries';
+import { setMcpToolModes } from '@repo/db/queries';
+import type { McpToolModeMap } from '@repo/db/schema';
 import { z } from 'zod';
 import { publishHome } from '../../../publish';
 import { toolBlock } from '../../block-id';
@@ -35,42 +33,28 @@ export async function execute({
   }
   const modes = Object.entries(view.state.values).flatMap(
     ([blockId, fields]) => {
-      const permissionId = toolBlock.decode(blockId);
-      if (!permissionId) {
+      const toolName = toolBlock.decode(blockId);
+      if (!toolName) {
         return [];
       }
       const selected = toolModeSchema.parse(
         fields[inputs.toolMode]
       ).selected_option;
-      return selected?.value ? [{ mode: selected.value, permissionId }] : [];
+      return selected?.value ? [{ mode: selected.value, toolName }] : [];
     }
   );
 
-  const permissions = await listMcpToolPermissions({
+  const toolModes: McpToolModeMap = {};
+  for (const item of modes) {
+    toolModes[item.toolName] = item.mode;
+  }
+  await setMcpToolModes({
+    modes: toolModes,
+    scope: 'global',
     serverId,
+    teamId: body.team?.id,
     userId: body.user.id,
   });
-  const permissionById = new Map(
-    permissions.map((permission) => [permission.id, permission])
-  );
-
-  for (const item of modes) {
-    const permission = permissionById.get(item.permissionId);
-    if (!(permission && permission.mode !== item.mode)) {
-      continue;
-    }
-
-    await upsertMcpToolPermission({
-      mode: item.mode,
-      scope: 'global',
-      serverId,
-      source: 'user',
-      teamId: body.team?.id,
-      threadTs: '',
-      toolName: permission.toolName,
-      userId: body.user.id,
-    });
-  }
 
   await publishHome({ client, userId: body.user.id });
 }

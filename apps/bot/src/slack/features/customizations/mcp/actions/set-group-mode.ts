@@ -1,7 +1,7 @@
-import {
-  getMcpServerByIdForUser,
-  listMcpToolPermissions,
-} from '@repo/db/queries';
+import type { ListToolsResult } from '@ai-sdk/mcp';
+import { getMcpServerById, getMcpToolModes } from '@repo/db/queries';
+import type { McpToolModeMap } from '@repo/db/schema';
+import { asRecord } from '@repo/utils/record';
 import { groupBlock, toolBlock } from '../block-id';
 import { actions, inputs } from '../ids';
 import type { SelectArgs } from '../types';
@@ -24,6 +24,19 @@ function parseMeta(raw: string | undefined): {
   }
 }
 
+function selectedMode(
+  values: Record<string, unknown>,
+  blockId: string
+): ToolMode | null {
+  const block = asRecord(values[blockId]);
+  const field = asRecord(block?.[inputs.toolMode]);
+  const selected = asRecord(field?.selected_option);
+  const value = selected?.value;
+  return value === 'allow' || value === 'ask' || value === 'block'
+    ? value
+    : null;
+}
+
 export async function execute({
   ack,
   action,
@@ -43,64 +56,67 @@ export async function execute({
     return;
   }
 
-  const prefix = groupBlock.decode(action.block_id) as GroupSlug | null;
-  const mode = action.selected_option?.value as ToolMode | undefined;
+  const prefix = groupBlock.decode(action.block_id);
+  const mode = action.selected_option?.value;
   if (!(prefix && mode)) {
     return;
   }
+  if (
+    !(
+      (prefix === 'ro' || prefix === 'dt' || prefix === 'gn') &&
+      (mode === 'allow' || mode === 'ask' || mode === 'block')
+    )
+  ) {
+    return;
+  }
 
-  const groupPermIds = new Set(
+  const groupToolNames = new Set(
     Object.entries(groups)
       .filter(([, g]) => g === prefix)
       .map(([id]) => id)
   );
 
-  const stateValues =
-    (body.view?.state?.values as
-      | Record<string, Record<string, { selected_option?: { value?: string } }>>
-      | undefined) ?? {};
+  const stateValues = asRecord(body.view?.state?.values) ?? {};
 
-  const [server, permissions] = await Promise.all([
-    getMcpServerByIdForUser({ id: serverId, userId: body.user.id }),
-    listMcpToolPermissions({ serverId, userId: body.user.id }),
+  const [server, current] = await Promise.all([
+    getMcpServerById({ id: serverId, userId: body.user.id }),
+    getMcpToolModes({ serverId, userId: body.user.id }),
   ]);
   if (!server) {
     return;
   }
 
-  const globalPerms = permissions.filter((p) => p.scope === 'global');
-
-  const overriddenPerms = globalPerms.map((p) => {
-    if (groupPermIds.has(p.id)) {
-      return { ...p, mode };
+  const toolModes: McpToolModeMap = {};
+  for (const toolName of Object.keys(groups)) {
+    if (groupToolNames.has(toolName)) {
+      toolModes[toolName] = mode;
+      continue;
     }
-    const currentMode =
-      stateValues[toolBlock.encode(nonce, p.id)]?.[inputs.toolMode]
-        ?.selected_option?.value;
-    return currentMode === 'allow' ||
-      currentMode === 'ask' ||
-      currentMode === 'block'
-      ? { ...p, mode: currentMode as ToolMode }
-      : p;
-  });
+    toolModes[toolName] =
+      selectedMode(stateValues, toolBlock.encode(nonce, toolName)) ??
+      current.global[toolName] ??
+      'ask';
+  }
 
-  const syntheticTools = permissions.map((p) => ({
-    name: p.toolName,
-    description: '',
-    inputSchema: { type: 'object' as const, properties: {} },
-    annotations: {
-      readOnlyHint: groups[p.id] === 'ro',
-      destructiveHint: groups[p.id] === 'dt',
-    },
-  }));
+  const syntheticTools: ListToolsResult['tools'] = Object.keys(groups).map(
+    (toolName) => ({
+      name: toolName,
+      description: '',
+      inputSchema: { type: 'object', properties: {} },
+      annotations: {
+        readOnlyHint: groups[toolName] === 'ro',
+        destructiveHint: groups[toolName] === 'dt',
+      },
+    })
+  );
 
   await client.views
     .update({
       view_id: viewId,
       view: toolsModal({
-        permissions: overriddenPerms,
         serverId,
         serverName: server.name,
+        toolModes,
         tools: syntheticTools,
       }),
     })

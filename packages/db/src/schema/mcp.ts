@@ -2,11 +2,15 @@ import { randomUUID } from 'node:crypto';
 import {
   boolean,
   index,
+  jsonb,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+
+export type McpToolMode = 'allow' | 'ask' | 'block';
+export type McpToolModeMap = Record<string, McpToolMode>;
 
 export const mcpServers = pgTable(
   'mcp_servers',
@@ -110,11 +114,9 @@ export const mcpToolPermissions = pgTable(
       .references(() => mcpServers.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
     teamId: text('team_id'),
-    toolName: text('tool_name').notNull(),
-    mode: text('mode').notNull(),
     scope: text('scope').notNull().default('global'),
     threadTs: text('thread_ts').notNull().default(''),
-    source: text('source').notNull().default('heuristic'),
+    modes: jsonb('modes').$type<McpToolModeMap>().notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -127,7 +129,6 @@ export const mcpToolPermissions = pgTable(
     uniqueIndex('mcp_tool_permissions_unique_idx').on(
       table.serverId,
       table.userId,
-      table.toolName,
       table.scope,
       table.threadTs
     ),
@@ -155,9 +156,8 @@ export const mcpToolApprovals = pgTable(
     eventTs: text('event_ts').notNull(),
     messageTs: text('message_ts'),
     toolName: text('tool_name').notNull(),
-    exposedName: text('exposed_name').notNull(),
     toolCallId: text('tool_call_id').notNull(),
-    argsJson: text('args_json'),
+    args: text('args'),
     state: text('state').notNull(),
     status: text('status').notNull().default('pending'),
     createdAt: timestamp('created_at', { withTimezone: true })

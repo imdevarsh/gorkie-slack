@@ -1,4 +1,4 @@
-import { getMcpServerByIdForUser, hasMcpConnection } from '@repo/db/queries';
+import { getMcpServerById, hasMcpConnection } from '@repo/db/queries';
 import logger from '@/lib/logger';
 import { finalizeOAuthServer } from '@/lib/mcp/connection';
 import { publishHome } from '../../../publish';
@@ -19,10 +19,9 @@ export async function execute({
     parseServerMeta({ metadata: view.private_metadata }).serverId ?? null;
 
   const server = serverId
-    ? await getMcpServerByIdForUser({ id: serverId, userId: body.user.id })
+    ? await getMcpServerById({ id: serverId, userId: body.user.id })
     : null;
 
-  // Only finalize OAuth servers that actually completed the token exchange.
   if (server?.authType === 'oauth') {
     const hasCredentials = await hasMcpConnection({
       authType: server.authType,

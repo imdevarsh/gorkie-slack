@@ -3,23 +3,15 @@ import { env } from '@/env';
 import { buildCache } from '@/lib/allowed-users';
 import logger from '@/lib/logger';
 import type { SlackApp } from '@/types';
-import { register as registerAppHomeOpened } from './events/app-home-opened';
-import { register as registerAssistantThreadContextChanged } from './events/assistant-thread-context-changed';
-import { register as registerAssistantThreadStarted } from './events/assistant-thread-started';
-import {
-  execute as messageCreateExecute,
-  name as messageCreateName,
-} from './events/message-create';
+import { eventRegisters } from './events';
 import { customizations } from './features/customizations';
 
 function registerApp(app: App) {
   buildCache(app);
 
-  app.event(messageCreateName, messageCreateExecute);
-
-  registerAssistantThreadStarted(app);
-  registerAssistantThreadContextChanged(app);
-  registerAppHomeOpened(app);
+  for (const register of eventRegisters) {
+    register(app);
+  }
 
   for (const action of customizations.buttonActions) {
     app.action(action.name, action.execute);

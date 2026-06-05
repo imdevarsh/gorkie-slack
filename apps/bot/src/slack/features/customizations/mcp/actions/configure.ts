@@ -1,11 +1,12 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
 import {
-  getMcpServerByIdForUser,
-  listMcpToolPermissions,
-  updateMcpServerForUser,
+  getMcpServerById,
+  getMcpToolModes,
+  updateMcpServer,
 } from '@repo/db/queries';
+import type { McpToolModeMap } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
-import { syncMCPPermissions } from '@/lib/mcp/remote';
+import { syncMcpToolModes } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -36,7 +37,7 @@ export async function execute({
     return;
   }
 
-  const server = await getMcpServerByIdForUser({
+  const server = await getMcpServerById({
     id: serverId,
     userId: body.user.id,
   });
@@ -51,41 +52,45 @@ export async function execute({
     return;
   }
 
-  let discoveryError: string | undefined;
+  let error: string | undefined;
   let definitions: ListToolsResult | undefined;
+  let toolModes: McpToolModeMap = {};
   try {
-    const synced = await syncMCPPermissions({
+    const synced = await syncMcpToolModes({
       server,
       teamId: body.team?.id,
       userId: body.user.id,
     });
     definitions = synced.definitions;
-  } catch (error) {
-    discoveryError = errorMessage(error);
-    await updateMcpServerForUser({
+    toolModes = synced.modes;
+  } catch (err) {
+    error = errorMessage(err);
+    await updateMcpServer({
       id: server.id,
       userId: body.user.id,
       values: {
         enabled: false,
-        lastError: discoveryError,
+        lastError: error,
       },
     });
     await publishHome({ client, userId: body.user.id });
   }
-  const permissions = await listMcpToolPermissions({
-    serverId,
-    userId: body.user.id,
-  });
+  if (!definitions) {
+    toolModes = (
+      await getMcpToolModes({
+        serverId,
+        userId: body.user.id,
+      })
+    ).global;
+  }
 
   await client.views.update({
     view_id: viewId,
     view: toolsModal({
-      error: discoveryError,
-      permissions: permissions.filter(
-        (permission) => permission.scope === 'global'
-      ),
+      error,
       serverId,
       serverName: server.name,
+      toolModes,
       tools: definitions?.tools ?? [],
     }),
   });

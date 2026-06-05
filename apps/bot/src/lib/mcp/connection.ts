@@ -2,39 +2,23 @@ import type { ListToolsResult } from '@ai-sdk/mcp';
 import { auth } from '@ai-sdk/mcp';
 import {
   deleteMcpConnections,
-  ensureMcpToolPermissions,
+  ensureMcpToolModes,
   getMcpOAuthConnection,
-  updateMcpServerForUser,
+  updateMcpServer,
   upsertMcpBearerConnection,
 } from '@repo/db/queries';
-import type { McpServer } from '@repo/db/schema';
+import type { McpServer, McpToolMode } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
 import { mcp } from '@/config';
+import { encrypt } from './encryption';
 import { guardedMCPFetch } from './guarded-fetch';
-import { createMCPOAuthProvider } from './oauth-provider';
-import { fetchTools, resolveMCPCredential } from './remote';
-import { encrypt } from './secret';
+import { createMcpOAuthProvider } from './oauth-provider';
+import { fetchTools, getMcpCredential } from './remote';
 
-/**
- * MCP Connection SOP — validate before persist, nuke on failure.
- *
- * A server is "connected" only after its credential is PROVEN to work by a
- * successful tool discovery. We never leave a half-saved state where a
- * credential is stored but the server is broken.
- *
- * Resulting DB states are mutually exclusive:
- *   - no connection row                 -> "… required" (needs Connect)
- *   - connection row, enabled, no error -> "… saved", ready
- *   - connection row WITH lastError     -> impossible; failure nukes the row
- *
- * Bearer: probe with the in-memory token (nothing written), then on success
- *   persist + enable; on failure nuke + disable.
- * OAuth: the handshake performs the token exchange, discovery proves it, then
- *   on success enable; on failure nuke + disable.
- *
- * Both flows funnel through finalizeFailure/finalizeSuccess so they can never
- * diverge or clash.
- */
+const defaultToolMode: McpToolMode =
+  mcp.defaultToolMode === 'allow' || mcp.defaultToolMode === 'block'
+    ? mcp.defaultToolMode
+    : 'ask';
 
 async function finalizeSuccess({
   definitions,
@@ -47,16 +31,14 @@ async function finalizeSuccess({
   teamId?: string | null;
   userId: string;
 }): Promise<void> {
-  await ensureMcpToolPermissions({
+  await ensureMcpToolModes({
+    defaultMode: defaultToolMode,
     serverId,
     teamId,
+    toolNames: definitions.tools.map((definition) => definition.name),
     userId,
-    tools: definitions.tools.map((definition) => ({
-      mode: mcp.defaultToolMode,
-      toolName: definition.name,
-    })),
   });
-  await updateMcpServerForUser({
+  await updateMcpServer({
     id: serverId,
     userId,
     values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
@@ -72,9 +54,8 @@ async function finalizeFailure({
   serverId: string;
   userId: string;
 }): Promise<void> {
-  // Nuke the credential — a failed connection never stays "saved".
   await deleteMcpConnections({ serverId, userId });
-  await updateMcpServerForUser({
+  await updateMcpServer({
     id: serverId,
     userId,
     values: {
@@ -85,10 +66,6 @@ async function finalizeFailure({
   });
 }
 
-/**
- * Validate a bearer token by probing tools, then persist + enable.
- * On failure the token is never stored. Throws the original error.
- */
 export async function connectBearerServer({
   rawToken,
   server,
@@ -118,21 +95,10 @@ export async function connectBearerServer({
   }
 }
 
-/**
- * Result of an OAuth connect attempt.
- * - `authorizationUrl` set  -> user must finish the browser flow, then the
- *   modal-closed handler calls finalizeOAuthServer().
- * - otherwise               -> already authorized + validated + enabled.
- */
 export type OAuthConnectResult =
   | { status: 'authorize'; authorizationUrl: string }
   | { status: 'connected' };
 
-/**
- * Run the OAuth handshake. If the server is already authorized, validate and
- * enable immediately; otherwise return the authorization URL for the browser
- * step. On failure the credential is nuked. Throws the original error.
- */
 export async function connectOAuthServer({
   server,
   teamId,
@@ -146,11 +112,11 @@ export async function connectOAuthServer({
     serverId: server.id,
     userId,
   });
-  const authorizationUrlRef: { value?: URL } = {};
+  const authorizationURLRef: { value?: URL } = {};
 
   try {
     await auth(
-      createMCPOAuthProvider({ authorizationUrlRef, connection, server }),
+      createMcpOAuthProvider({ authorizationURLRef, connection, server }),
       { fetchFn: guardedMCPFetch, serverUrl: server.url }
     );
   } catch (error) {
@@ -158,10 +124,10 @@ export async function connectOAuthServer({
     throw error;
   }
 
-  if (authorizationUrlRef.value) {
+  if (authorizationURLRef.value) {
     return {
       status: 'authorize',
-      authorizationUrl: authorizationUrlRef.value.toString(),
+      authorizationUrl: authorizationURLRef.value.toString(),
     };
   }
 
@@ -169,11 +135,6 @@ export async function connectOAuthServer({
   return { status: 'connected' };
 }
 
-/**
- * Validate + enable an OAuth server after its tokens are present (either the
- * silent path above, or after the browser flow completes). On failure the
- * credential is nuked. Throws the original error.
- */
 export async function finalizeOAuthServer({
   server,
   teamId,
@@ -184,7 +145,7 @@ export async function finalizeOAuthServer({
   userId: string;
 }): Promise<void> {
   try {
-    const credential = await resolveMCPCredential({ server, userId });
+    const credential = await getMcpCredential({ server, userId });
     if (!credential) {
       throw new Error('OAuth connection required before tools can be used.');
     }

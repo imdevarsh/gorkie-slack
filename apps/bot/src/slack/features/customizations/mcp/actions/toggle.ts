@@ -1,10 +1,10 @@
 import {
-  getMcpServerByIdForUser,
+  getMcpServerById,
   hasMcpConnection,
-  updateMcpServerForUser,
+  updateMcpServer,
 } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
-import { syncMCPPermissions } from '@/lib/mcp/remote';
+import { syncMcpToolModes } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -25,7 +25,7 @@ export async function execute({
   }
   const enabled = action.action_id === enableName;
   if (enabled) {
-    const server = await getMcpServerByIdForUser({
+    const server = await getMcpServerById({
       id: serverId,
       userId: body.user.id,
     });
@@ -39,7 +39,7 @@ export async function execute({
       userId: body.user.id,
     });
     if (!hasCredentials) {
-      await updateMcpServerForUser({
+      await updateMcpServer({
         id: serverId,
         userId: body.user.id,
         values: {
@@ -58,13 +58,13 @@ export async function execute({
     }
 
     try {
-      await syncMCPPermissions({
+      await syncMcpToolModes({
         server,
         teamId: body.team?.id,
         userId: body.user.id,
       });
     } catch (error) {
-      await updateMcpServerForUser({
+      await updateMcpServer({
         id: serverId,
         userId: body.user.id,
         values: {
@@ -80,7 +80,7 @@ export async function execute({
     }
   }
 
-  await updateMcpServerForUser({
+  await updateMcpServer({
     id: serverId,
     userId: body.user.id,
     values: { enabled, lastError: null },

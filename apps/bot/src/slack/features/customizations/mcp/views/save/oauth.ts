@@ -1,0 +1,49 @@
+import { createMcpServer, upsertMcpOAuthConnection } from '@repo/db/queries';
+import { publishHome } from '../../../publish';
+import { blocks, inputs } from '../../ids';
+import { viewValueSchema } from '../../schema';
+import type { SubmitArgs } from '../../types';
+import { parseBaseFields } from './base';
+
+export async function executeOAuthSave({
+  ack,
+  body,
+  client,
+  view,
+}: SubmitArgs): Promise<void> {
+  const base = await parseBaseFields({ view });
+  if (!base.data) {
+    await ack({ errors: base.errors, response_action: 'errors' });
+    return;
+  }
+
+  await ack();
+
+  const server = await createMcpServer({
+    authType: 'oauth',
+    enabled: false,
+    name: base.data.name,
+    teamId: body.team?.id ?? null,
+    transport: base.data.transport,
+    url: base.data.url,
+    userId: body.user.id,
+  });
+  if (!server) {
+    await publishHome({ client, userId: body.user.id });
+    return;
+  }
+
+  const clientId =
+    viewValueSchema
+      .parse(view.state.values[blocks.clientId]?.[inputs.clientId])
+      .value?.trim() ?? '';
+  if (clientId) {
+    await upsertMcpOAuthConnection({
+      clientId,
+      serverId: server.id,
+      teamId: body.team?.id ?? null,
+      userId: body.user.id,
+    });
+  }
+  await publishHome({ client, userId: body.user.id });
+}

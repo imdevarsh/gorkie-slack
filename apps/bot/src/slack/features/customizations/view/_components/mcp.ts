@@ -2,12 +2,8 @@ import type { McpServerWithConnection } from '@repo/db/queries';
 import { Bits, Blocks, Elements } from 'slack-block-builder';
 import { appHome } from '@/config';
 import { formatMCPError } from '@/lib/mcp/format-error';
-import { codeBlock, mdText } from '@/slack/blocks';
+import { codeBlock, mdText, truncateText } from '@/slack/blocks';
 import { actions } from '../../mcp/ids';
-
-function truncate(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max)}...` : value;
-}
 
 function serverBlocks(server: McpServerWithConnection) {
   const connected = server.hasConnection;
@@ -31,7 +27,7 @@ function serverBlocks(server: McpServerWithConnection) {
 
   // Name + the everyday toggle (Enable/Disable keeps the credential).
   const section = Blocks.Section({
-    text: `*${mdText(truncate(server.name, appHome.maxMcpNameDisplay))}*`,
+    text: `*${mdText(truncateText(server.name, appHome.maxMcpNameDisplay))}*`,
   });
   if (healthy) {
     section.accessory(
@@ -45,7 +41,7 @@ function serverBlocks(server: McpServerWithConnection) {
 
   // Muted one-line context: status · url.
   const context = Blocks.Context().elements(
-    `${statusLabel}  ·  \`${truncate(server.url, appHome.maxMcpUrlDisplay)}\``
+    `${statusLabel}  ·  \`${truncateText(server.url, appHome.maxMcpUrlDisplay)}\``
   );
 
   const errorBlock = server.lastError
@@ -67,7 +63,7 @@ function serverBlocks(server: McpServerWithConnection) {
       ? [
           Elements.Button({
             actionId: actions.configure,
-            text: 'Configure',
+            text: 'Update MCP Server',
             value: server.id,
           }),
         ]

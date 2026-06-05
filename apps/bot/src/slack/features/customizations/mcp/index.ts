@@ -11,25 +11,26 @@ import * as toggle from './actions/toggle';
 import { actions, inputs } from './ids';
 import type { ButtonArgs, SelectArgs } from './types';
 import { addModal } from './view';
-import * as connectClosed from './views/connect-closed';
+import * as oauthClosed from './views/oauth-closed';
 import * as save from './views/save';
 import * as saveBearer from './views/save-bearer';
 import * as saveTools from './views/save-tools';
 
-async function addServer({ ack, body, client }: ButtonArgs): Promise<void> {
-  await ack();
-  await client.views.open({
-    trigger_id: body.trigger_id,
-    view: addModal(),
-  });
-}
-
 export const mcp = {
   buttonActions: [
-    { execute: addServer, name: actions.add },
-    { execute: approval.execute, name: approval.approveName },
-    { execute: approval.execute, name: approval.alwaysThreadName },
-    { execute: approval.execute, name: approval.denyName },
+    {
+      execute: async ({ ack, body, client }: ButtonArgs) => {
+        await ack();
+        await client.views.open({
+          trigger_id: body.trigger_id,
+          view: addModal(),
+        });
+      },
+      name: actions.add,
+    },
+    { execute: approval.execute, name: actions.approval.allow },
+    { execute: approval.execute, name: actions.approval.always },
+    { execute: approval.execute, name: actions.approval.deny },
     { execute: configure.execute, name: configure.name },
     { execute: connectBearer.execute, name: connectBearer.name },
     { execute: connectOAuth.execute, name: connectOAuth.name },
@@ -49,5 +50,5 @@ export const mcp = {
     { execute: saveTools.execute, name: saveTools.name },
     { execute: save.execute, name: save.name },
   ],
-  closedViews: [{ execute: connectClosed.execute, name: connectClosed.name }],
+  closedViews: [{ execute: oauthClosed.execute, name: oauthClosed.name }],
 };

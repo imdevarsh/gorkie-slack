@@ -11,7 +11,7 @@ import {
   upsert,
 } from '@repo/db/queries';
 import { toLogError } from '@repo/utils/error';
-import { z } from 'zod';
+import { asRecord } from '@repo/utils/record';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
 import logger from '@/lib/logger';
@@ -19,10 +19,6 @@ import type { ResolvedSandboxSession, SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
 import { configureAgent } from './config';
 import { boot } from './rpc/boot';
-
-const outboundIpSchema = z.object({
-  ip: z.string().nullable(),
-});
 
 function isMissingSandboxError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
@@ -83,8 +79,8 @@ async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
   }
 
   try {
-    const { ip } = outboundIpSchema.parse(JSON.parse(result.stdout));
-    return ip ?? null;
+    const parsed = asRecord(JSON.parse(result.stdout));
+    return typeof parsed?.ip === 'string' ? parsed.ip : null;
   } catch {
     return null;
   }

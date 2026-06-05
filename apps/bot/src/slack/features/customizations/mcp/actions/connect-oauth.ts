@@ -1,4 +1,4 @@
-import { getMcpServerByIdForUser } from '@repo/db/queries';
+import { getMcpServerById } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
 import { connectOAuthServer } from '@/lib/mcp/connection';
 import { formatMCPError } from '@/lib/mcp/format-error';
@@ -36,7 +36,7 @@ export async function execute({
     return;
   }
 
-  const server = await getMcpServerByIdForUser({
+  const server = await getMcpServerById({
     id: action.value,
     userId: body.user.id,
   });

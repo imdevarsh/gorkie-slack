@@ -1,6 +1,5 @@
 export * from './error';
 export * from './guarded-fetch';
-export * from './mcp';
 export * from './mcp-oauth-state';
 export * from './record';
 export * from './secret';

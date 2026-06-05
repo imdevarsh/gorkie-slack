@@ -1,30 +1,25 @@
 import {
   claimMcpToolApproval,
   finalizeMcpToolApprovalInBatch,
-  getMcpServerByIdForUser,
+  getMcpServerById,
   getMcpToolApprovalStatus,
+  patchMcpToolModes,
   updateMcpToolApproval,
-  upsertMcpToolPermission,
 } from '@repo/db/queries';
 import { asRecord } from '@repo/utils/record';
 import logger from '@/lib/logger';
-import { decrypt } from '@/lib/mcp/secret';
+import { decrypt } from '@/lib/mcp/encryption';
 import { getQueue } from '@/lib/queue';
 import {
+  type ApprovalOutcome,
   decodeApprovalState,
   handledApprovalBlocks,
 } from '@/slack/events/message-create/utils/approval-helpers';
 import { resumeResponse } from '@/slack/events/message-create/utils/resume';
 import type { SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
-import { actions } from '../ids';
-import type { ApprovalReply } from '../reply';
 import { replyCard, replyFromActionId, replyStatus } from '../reply';
 import type { ButtonArgs } from '../types';
-
-export const approveName = actions.approval.allow;
-export const alwaysThreadName = actions.approval.always;
-export const denyName = actions.approval.deny;
 
 async function updateApprovalMessage({
   body,
@@ -93,14 +88,14 @@ export async function execute(args: ButtonArgs): Promise<void> {
 
   if (!status || status.status !== 'pending') {
     const server = status
-      ? await getMcpServerByIdForUser({
+      ? await getMcpServerById({
           id: status.serverId,
           userId: body.user.id,
         })
       : null;
     await updateApprovalMessage({
       ...args,
-      serverName: server?.name ?? status?.exposedName,
+      serverName: server?.name ?? status?.toolName,
       text:
         status?.status === 'superseded'
           ? 'Replaced by a newer message.'
@@ -120,13 +115,13 @@ export async function execute(args: ButtonArgs): Promise<void> {
     userId: body.user.id,
   });
   if (!approval) {
-    const server = await getMcpServerByIdForUser({
+    const server = await getMcpServerById({
       id: status.serverId,
       userId: body.user.id,
     });
     await updateApprovalMessage({
       ...args,
-      serverName: server?.name ?? status.exposedName,
+      serverName: server?.name ?? status.toolName,
       text: 'Already handled.',
       title: 'Already handled',
       toolName: status.toolName,
@@ -134,16 +129,16 @@ export async function execute(args: ButtonArgs): Promise<void> {
     return;
   }
 
-  const server = await getMcpServerByIdForUser({
+  const server = await getMcpServerById({
     id: approval.serverId,
     userId: body.user.id,
   });
-  const serverName = server?.name ?? approval.exposedName;
+  const serverName = server?.name ?? approval.toolName;
   const { text: resultText, title: resultTitle } = replyCard(reply);
 
   let input: string | undefined;
   try {
-    input = approval.argsJson ? decrypt(approval.argsJson) : undefined;
+    input = approval.args ? decrypt(approval.args) : undefined;
 
     const { messages, requestHints } = decodeApprovalState({
       state: approval.state,
@@ -164,14 +159,12 @@ export async function execute(args: ButtonArgs): Promise<void> {
     };
 
     if (reply === 'always' && approval.threadTs) {
-      await upsertMcpToolPermission({
-        mode: 'allow',
+      await patchMcpToolModes({
+        modes: { [approval.toolName]: 'allow' },
         scope: 'thread',
         serverId: approval.serverId,
-        source: 'user',
         teamId: approval.teamId,
         threadTs: approval.threadTs,
-        toolName: approval.toolName,
         userId: approval.userId,
       });
     }
@@ -196,16 +189,11 @@ export async function execute(args: ButtonArgs): Promise<void> {
     if (!batch.batchComplete) {
       return;
     }
-    const approvals = batch.siblings
+    const approvals: ApprovalOutcome[] = batch.siblings
       .filter((s) => s.status === 'approved' || s.status === 'denied')
       .map((s) => ({
         approvalId: s.approvalId,
-        reply: (s.status === 'denied' ? 'reject' : 'once') as ApprovalReply,
-        tool: {
-          serverName: s.exposedName,
-          toolCallId: s.toolCallId,
-          toolName: s.toolName,
-        },
+        reply: s.status === 'denied' ? 'reject' : 'once',
       }));
     if (approvals.length !== batch.siblings.length) {
       return;

@@ -3,15 +3,6 @@ import { defineHandler, getRequestIP, getRequestURL } from 'nitro/h3';
 import { providers, proxy } from '@/config';
 import logger from '@/utils/logger';
 
-function getBearerToken(header: string | null): string | null {
-  if (!header?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const token = header.slice('Bearer '.length).trim();
-  return token.length > 0 ? token : null;
-}
-
 export default defineHandler(async (event) => {
   const provider = event.context.params?.provider;
   const entry = provider ? providers[provider] : undefined;
@@ -24,7 +15,11 @@ export default defineHandler(async (event) => {
   }
 
   const requestIp = getRequestIP(event, { xForwardedFor: true }) ?? null;
-  const token = getBearerToken(event.req.headers.get('authorization'));
+  const authorization = event.req.headers.get('authorization');
+  const rawToken = authorization?.startsWith('Bearer ')
+    ? authorization.slice('Bearer '.length).trim()
+    : null;
+  const token = rawToken && rawToken.length > 0 ? rawToken : null;
   const session = await (token
     ? validateSandboxToken({ requestIp, token })
     : Promise.resolve(null)

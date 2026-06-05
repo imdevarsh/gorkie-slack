@@ -21,7 +21,6 @@ export type ReasoningStreamPart =
 
 export interface ToolApprovalRequest {
   approvalId: string;
-  exposedName: string;
   input: unknown;
   serverId: string;
   serverName: string;

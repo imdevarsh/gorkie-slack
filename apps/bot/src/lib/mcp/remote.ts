@@ -4,14 +4,17 @@ import {
   type MCPClient,
 } from '@ai-sdk/mcp';
 import {
-  ensureMcpToolPermissions,
-  getMcpBearerConnection,
-  getMcpOAuthConnection,
-  listEnabledMcpServersByUser,
-  listMcpToolPermissions,
-  updateMcpServerForUser,
+  ensureMcpToolModes,
+  getMcpConnection,
+  getMcpToolModes,
+  listEnabledMcpServers,
+  updateMcpServer,
 } from '@repo/db/queries';
-import type { McpOauthConnection, McpServer } from '@repo/db/schema';
+import type {
+  McpOauthConnection,
+  McpServer,
+  McpToolMode,
+} from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
 import { clampText } from '@repo/utils/text';
 import type { ToolExecutionOptions, ToolSet } from 'ai';
@@ -20,9 +23,9 @@ import { createTask, finishTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
 import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
+import { decrypt } from './encryption';
 import { guardedMCPFetch } from './guarded-fetch';
-import { createMCPOAuthProvider } from './oauth-provider';
-import { decrypt } from './secret';
+import { createMcpOAuthProvider } from './oauth-provider';
 
 function extractResultText(result: unknown): string {
   if (
@@ -58,31 +61,16 @@ function slugify(value: string): string {
   return slug || 'server';
 }
 
-function normalizeToolMode(mode?: string | null): 'allow' | 'ask' | 'block' {
-  if (mode === 'allow' || mode === 'auto') {
-    return 'allow';
-  }
-  if (mode === 'block') {
-    return 'block';
-  }
-  return 'ask';
-}
+const defaultToolMode: McpToolMode =
+  mcp.defaultToolMode === 'allow' || mcp.defaultToolMode === 'block'
+    ? mcp.defaultToolMode
+    : 'ask';
 
-/**
- * One credential for a server, regardless of auth type. `bearer` carries the
- * ready-to-send (decrypted) token; `oauth` carries the stored connection the
- * provider reads tokens from. This is the single thing the rest of the file
- * threads around — no more bearerConnection/oauthConnection/hasCredentials.
- */
-export type MCPCredential =
+export type McpCredential =
   | { type: 'bearer'; token: string }
   | { type: 'oauth'; connection: McpOauthConnection };
 
-/**
- * Resolve a server's usable credential, or null if it has none yet. A plaintext
- * `bearerToken` (probe path) short-circuits the DB read.
- */
-export async function resolveMCPCredential({
+export async function getMcpCredential({
   bearerToken,
   server,
   userId,
@@ -90,38 +78,37 @@ export async function resolveMCPCredential({
   bearerToken?: string;
   server: McpServer;
   userId: string;
-}): Promise<MCPCredential | null> {
-  if (server.authType === 'bearer') {
-    if (bearerToken) {
-      return { type: 'bearer', token: bearerToken };
-    }
-    const connection = await getMcpBearerConnection({
-      serverId: server.id,
-      userId,
-    });
-    return connection?.token
-      ? { type: 'bearer', token: decrypt(connection.token) }
-      : null;
+}): Promise<McpCredential | null> {
+  if (server.authType === 'bearer' && bearerToken) {
+    return { type: 'bearer', token: bearerToken };
   }
-  const connection = await getMcpOAuthConnection({
+
+  const result = await getMcpConnection({
+    authType: server.authType,
     serverId: server.id,
     userId,
   });
-  return connection?.tokens ? { type: 'oauth', connection } : null;
+  if (result?.authType === 'bearer') {
+    const token = result.connection.token;
+    return token ? { type: 'bearer', token: decrypt(token) } : null;
+  }
+  return result?.authType === 'oauth'
+    ? { type: 'oauth', connection: result.connection }
+    : null;
 }
 
 function openMCPClient({
   credential,
   server,
 }: {
-  credential: MCPCredential;
+  credential: McpCredential;
   server: McpServer;
 }) {
   const auth =
     credential.type === 'bearer'
       ? { headers: { Authorization: `Bearer ${credential.token}` } }
       : {
-          authProvider: createMCPOAuthProvider({
+          authProvider: createMcpOAuthProvider({
             connection: credential.connection,
             server,
           }),
@@ -147,7 +134,7 @@ export async function fetchTools({
   credential,
   server,
 }: {
-  credential: MCPCredential;
+  credential: McpCredential;
   server: McpServer;
 }): Promise<ListToolsResult> {
   const client = await openMCPClient({ credential, server });
@@ -158,7 +145,7 @@ export async function fetchTools({
   }
 }
 
-export async function syncMCPPermissions({
+export async function syncMcpToolModes({
   server,
   teamId,
   userId,
@@ -167,24 +154,22 @@ export async function syncMCPPermissions({
   teamId?: string | null;
   userId: string;
 }) {
-  const credential = await resolveMCPCredential({ server, userId });
+  const credential = await getMcpCredential({ server, userId });
   if (!credential) {
     throw new Error('Connect this MCP server before using its tools.');
   }
   const definitions = await fetchTools({ credential, server });
-  const permissions = await ensureMcpToolPermissions({
+  const modes = await ensureMcpToolModes({
+    defaultMode: defaultToolMode,
     serverId: server.id,
     teamId,
+    toolNames: definitions.tools.map((definition) => definition.name),
     userId,
-    tools: definitions.tools.map((definition) => ({
-      mode: mcp.defaultToolMode,
-      toolName: definition.name,
-    })),
   });
-  return { definitions, permissions };
+  return { definitions, modes };
 }
 
-export async function createMCPToolset({
+export async function createMcpToolset({
   context,
   stream,
 }: {
@@ -196,7 +181,7 @@ export async function createMCPToolset({
     return { cleanup: async () => undefined, tools: {} };
   }
 
-  const servers = await listEnabledMcpServersByUser({
+  const servers = await listEnabledMcpServers({
     userId,
   });
   const clients: MCPClient[] = [];
@@ -205,7 +190,7 @@ export async function createMCPToolset({
 
   for (const server of servers) {
     try {
-      const credential = await resolveMCPCredential({ server, userId });
+      const credential = await getMcpCredential({ server, userId });
       if (!credential) {
         continue;
       }
@@ -221,26 +206,18 @@ export async function createMCPToolset({
       }
       clients.push(client);
       const threadTs = context.event.thread_ts ?? context.event.ts;
-      await ensureMcpToolPermissions({
+      await ensureMcpToolModes({
+        defaultMode: defaultToolMode,
         serverId: server.id,
         teamId: context.teamId,
+        toolNames: definitions.tools.map((definition) => definition.name),
         userId,
-        tools: definitions.tools.map((definition) => ({
-          mode: mcp.defaultToolMode,
-          toolName: definition.name,
-        })),
       });
-      const permissions = await listMcpToolPermissions({
+      const modes = await getMcpToolModes({
         serverId: server.id,
         threadTs,
         userId,
       });
-      const permissionByTool = new Map(
-        permissions.map((permission) => [
-          `${permission.scope}:${permission.toolName}`,
-          permission,
-        ])
-      );
       const serverTools = client.toolsFromDefinitions(definitions);
       const serverSlug = slugify(server.name);
 
@@ -256,13 +233,8 @@ export async function createMCPToolset({
 
         const execute = tool.execute;
         const taskTitle = `Using ${server.name}: ${toolName}`;
-        const threadPermission = permissionByTool.get(`thread:${toolName}`);
-        const globalPermission = permissionByTool.get(`global:${toolName}`);
-        const mode = normalizeToolMode(
-          threadPermission?.mode ??
-            globalPermission?.mode ??
-            mcp.defaultToolMode
-        );
+        const mode =
+          modes.thread[toolName] ?? modes.global[toolName] ?? defaultToolMode;
         const metadata = {
           mcp: {
             serverId: server.id,
@@ -338,7 +310,7 @@ export async function createMCPToolset({
             : tool;
       }
 
-      await updateMcpServerForUser({
+      await updateMcpServer({
         id: server.id,
         userId,
         values: { lastConnectedAt: new Date(), lastError: null },

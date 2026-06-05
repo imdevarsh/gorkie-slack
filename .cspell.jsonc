@@ -1,5 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "import": ["@repo/cspell-config"],
+  "ignorePaths": ["pr30-review-state.md"],
   "useGitignore": true
 }

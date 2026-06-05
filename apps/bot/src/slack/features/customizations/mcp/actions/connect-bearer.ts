@@ -1,4 +1,4 @@
-import { getMcpServerByIdForUser } from '@repo/db/queries';
+import { getMcpServerById } from '@repo/db/queries';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
 import { bearerModal } from '../view';
@@ -17,7 +17,7 @@ export async function execute({
     return;
   }
 
-  const server = await getMcpServerByIdForUser({
+  const server = await getMcpServerById({
     id: serverId,
     userId: body.user.id,
   });

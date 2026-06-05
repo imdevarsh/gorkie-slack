@@ -1,42 +1,25 @@
-import { z } from 'zod';
+import { asRecord } from '@repo/utils/record';
 
-const modalStateSchema = z.object({
-  showPresets: z.boolean().default(false),
-});
-
-const promptValueSchema = z
-  .looseObject({
-    prompt_block: z
-      .looseObject({
-        prompt_input: z
-          .looseObject({
-            value: z.string().nullish(),
-          })
-          .optional(),
-      })
-      .optional(),
-  })
-  .catch({});
+export interface ModalState {
+  showPresets: boolean;
+}
 
 export function parseModalState({
   metadata,
 }: {
   metadata?: string;
-}): z.output<typeof modalStateSchema> {
-  if (!metadata) {
-    return modalStateSchema.parse({});
-  }
-
+}): ModalState {
   try {
-    return modalStateSchema.parse(JSON.parse(metadata));
+    const parsed = asRecord(JSON.parse(metadata ?? '{}'));
+    return { showPresets: parsed?.showPresets === true };
   } catch {
-    return modalStateSchema.parse({});
+    return { showPresets: false };
   }
 }
 
 export function parsePromptValue({ values }: { values: unknown }): string {
-  return (
-    promptValueSchema.parse(values).prompt_block?.prompt_input?.value?.trim() ??
-    ''
-  );
+  const root = asRecord(values);
+  const block = asRecord(root?.prompt_block);
+  const input = asRecord(block?.prompt_input);
+  return typeof input?.value === 'string' ? input.value.trim() : '';
 }

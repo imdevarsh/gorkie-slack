@@ -66,7 +66,6 @@ export async function collectToolApprovalsFromStream({
       if (mcp?.serverId && mcp.serverName && mcp.toolName) {
         approvals.push({
           approvalId: part.approvalId,
-          exposedName: part.toolCall.toolName,
           input: part.toolCall.input,
           serverId: mcp.serverId,
           serverName: mcp.serverName,

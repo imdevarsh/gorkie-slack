@@ -8,30 +8,30 @@ import {
   mcpOAuthTokensSchema,
 } from '@repo/validators';
 import { env } from '@/env';
-import { decrypt, encrypt, parseEncrypted } from './secret';
+import { decrypt, encrypt, parseEncrypted } from './encryption';
 
-export function createMCPOAuthProvider({
-  authorizationUrlRef,
+export function createMcpOAuthProvider({
+  authorizationURLRef,
   connection,
   server,
 }: {
-  authorizationUrlRef?: { value?: URL };
+  authorizationURLRef?: { value?: URL };
   connection: McpOauthConnection | null;
   server: McpServer;
 }): OAuthClientProvider {
-  let currentConnection = connection;
-  const redirectUrl = new URL('/mcp/oauth/callback', env.SERVER_BASE_URL);
+  let storedConnection = connection;
+  const redirectURL = new URL('/mcp/oauth/callback', env.SERVER_BASE_URL);
   const clientMetadata: OAuthClientMetadata = {
     client_name: 'Gorkie MCP',
     grant_types: ['authorization_code', 'refresh_token'],
-    redirect_uris: [redirectUrl.toString()],
+    redirect_uris: [redirectURL.toString()],
     response_types: ['code'],
     token_endpoint_auth_method: 'none',
   };
   const saveConnection = async (
     values: Parameters<typeof patchMcpOAuthConnection>[0]['values']
   ) => {
-    currentConnection = await patchMcpOAuthConnection({
+    storedConnection = await patchMcpOAuthConnection({
       serverId: server.id,
       userId: server.userId,
       values: { teamId: server.teamId, ...values },
@@ -43,11 +43,11 @@ export function createMCPOAuthProvider({
       return clientMetadata;
     },
     get redirectUrl() {
-      return redirectUrl.toString();
+      return redirectURL.toString();
     },
     tokens() {
       return parseEncrypted(
-        currentConnection?.tokens ?? null,
+        storedConnection?.tokens ?? null,
         mcpOAuthTokensSchema
       );
     },
@@ -57,14 +57,14 @@ export function createMCPOAuthProvider({
         expiresAt: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
           : null,
-        scopes: tokens.scope ?? currentConnection?.scopes ?? null,
+        scopes: tokens.scope ?? storedConnection?.scopes ?? null,
         state: null,
         tokens: encrypt(JSON.stringify(tokens)),
       });
     },
     redirectToAuthorization(authorizationUrl) {
-      if (authorizationUrlRef) {
-        authorizationUrlRef.value = authorizationUrl;
+      if (authorizationURLRef) {
+        authorizationURLRef.value = authorizationUrl;
       }
     },
     async saveCodeVerifier(codeVerifier) {
@@ -73,21 +73,21 @@ export function createMCPOAuthProvider({
       });
     },
     codeVerifier() {
-      if (!currentConnection?.codeVerifier) {
+      if (!storedConnection?.codeVerifier) {
         throw new Error('Missing OAuth code verifier.');
       }
-      return decrypt(currentConnection.codeVerifier);
+      return decrypt(storedConnection.codeVerifier);
     },
     clientInformation() {
-      if (currentConnection?.clientId) {
+      if (storedConnection?.clientId) {
         const fromDb = parseEncrypted(
-          currentConnection.clientInformation ?? null,
+          storedConnection.clientInformation ?? null,
           mcpOAuthClientInformationSchema
         );
-        return fromDb ?? { client_id: currentConnection.clientId };
+        return fromDb ?? { client_id: storedConnection.clientId };
       }
       return parseEncrypted(
-        currentConnection?.clientInformation ?? null,
+        storedConnection?.clientInformation ?? null,
         mcpOAuthClientInformationSchema
       );
     },
@@ -99,7 +99,7 @@ export function createMCPOAuthProvider({
     state() {
       return createMcpOAuthState({
         nonce: randomUUID(),
-        secret: env.MCP_TOKEN_ENCRYPTION_KEY,
+        secret: env.MCP_ENCRYPTION_KEY,
         serverId: server.id,
         userId: server.userId,
       });
@@ -114,22 +114,21 @@ export function createMCPOAuthProvider({
       });
     },
     storedState() {
-      if (!currentConnection?.state) {
+      if (!storedConnection?.state) {
         return;
       }
-      return decrypt(currentConnection.state);
+      return decrypt(storedConnection.state);
     },
     async invalidateCredentials(scope) {
       if (scope === 'all' || scope === 'tokens') {
         await saveConnection({
-          clientId: scope === 'all' ? null : currentConnection?.clientId,
+          clientId: scope === 'all' ? null : storedConnection?.clientId,
           clientInformation:
-            scope === 'all' ? null : currentConnection?.clientInformation,
-          codeVerifier:
-            scope === 'all' ? null : currentConnection?.codeVerifier,
+            scope === 'all' ? null : storedConnection?.clientInformation,
+          codeVerifier: scope === 'all' ? null : storedConnection?.codeVerifier,
           expiresAt: null,
           scopes: null,
-          state: scope === 'all' ? null : currentConnection?.state,
+          state: scope === 'all' ? null : storedConnection?.state,
           tokens: null,
         });
       }
