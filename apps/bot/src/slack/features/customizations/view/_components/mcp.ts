@@ -59,7 +59,7 @@ function serverBlocks(server: MCPServerWithConnection) {
       ? [
           Elements.Button({
             actionId: actions.configure,
-            text: 'Update MCP Server',
+            text: 'Configure',
             value: server.id,
           }),
         ]
