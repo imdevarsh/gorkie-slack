@@ -47,6 +47,14 @@ The "Thinking…" task created in `prepareStep` of `orchestratorAgent` and its r
 - Files: `apps/bot/src/lib/ai/agents/orchestrator.ts`, `apps/bot/src/lib/ai/utils/stream.ts`
 - Investigate: does `prepareStep` always fire before the reasoning stream starts? Check if the taskMap entry is set before `consumeOrchestratorReasoningStream` is called.
 
+### Investigate: Main chat model switch
+Evaluate whether the primary chat model should move from the current Gemini Flash model to a smaller GPT-5 family model, and document the cost, latency, context, and quality tradeoffs before changing defaults.
+- Files: `packages/ai/src/providers.ts`, `apps/bot/src/config.ts`
+
+### Bug: Slack task cards overflow block limits
+Long-running tool sessions can push the task item list past Slack's block limit and break the task card. When the current task card approaches the limit, start a continuation task card that preserves the active top-level task context, then append subsequent task items there.
+- Files: `apps/bot/src/lib/ai/utils/task.ts`, `apps/bot/src/lib/ai/utils/stream.ts`
+
 ### Bug: `agent-browser` snapshot not saving files
 When the sandbox agent uses `agent-browser` to capture screenshots, `--snapshot /path/to/file.png` does not appear to write files to disk (file not found after command). The daemon opens the page successfully but the output file is missing. Needs investigation into whether `agent-browser`'s snapshot command writes relative to CWD, the daemon's CWD, or a temp dir.
 - Workaround: may need to use Playwright directly or pipe `agent-browser snapshot -i` to a custom save step.
