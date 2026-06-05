@@ -1,16 +1,15 @@
-import type { McpServerWithConnection } from '@repo/db/queries';
+import type { MCPServerWithConnection } from '@repo/db/queries';
 import { Bits, Blocks, Elements } from 'slack-block-builder';
 import { appHome } from '@/config';
 import { formatMCPError } from '@/lib/mcp/format-error';
 import { codeBlock, mdText, truncateText } from '@/slack/blocks';
 import { actions } from '../../mcp/ids';
 
-function serverBlocks(server: McpServerWithConnection) {
+function serverBlocks(server: MCPServerWithConnection) {
   const connected = server.hasConnection;
   const failed = Boolean(server.lastError);
   const healthy = connected && !failed;
 
-  // Single lifecycle status so "Disabled" and "Disconnect" never collide.
   let statusLabel: string;
   if (!connected) {
     statusLabel = failed ? 'Connection failed' : 'Not connected';
@@ -25,9 +24,8 @@ function serverBlocks(server: McpServerWithConnection) {
   const connectAction =
     server.authType === 'bearer' ? actions.connectBearer : actions.connectOAuth;
 
-  // Name + the everyday toggle (Enable/Disable keeps the credential).
   const section = Blocks.Section({
-    text: `*${mdText(truncateText(server.name, appHome.maxMcpNameDisplay))}*`,
+    text: `*${mdText(truncateText(server.name, appHome.maxMCPNameDisplay))}*`,
   });
   if (healthy) {
     section.accessory(
@@ -39,9 +37,8 @@ function serverBlocks(server: McpServerWithConnection) {
     );
   }
 
-  // Muted one-line context: status · url.
   const context = Blocks.Context().elements(
-    `${statusLabel}  ·  \`${truncateText(server.url, appHome.maxMcpUrlDisplay)}\``
+    `${statusLabel}  ·  \`${truncateText(server.url, appHome.maxMCPUrlDisplay)}\``
   );
 
   const errorBlock = server.lastError
@@ -53,7 +50,6 @@ function serverBlocks(server: McpServerWithConnection) {
     : [];
 
   const actionsBlock = Blocks.Actions().elements(
-    // Healthy → Disconnect (remove credential). Otherwise → Connect.
     Elements.Button({
       actionId: healthy ? actions.disconnect : connectAction,
       text: healthy ? 'Disconnect' : 'Connect',
@@ -87,7 +83,7 @@ function serverBlocks(server: McpServerWithConnection) {
   return [section, context, ...errorBlock, actionsBlock];
 }
 
-export function mcpBlocks(servers: McpServerWithConnection[]) {
+export function mcpBlocks(servers: MCPServerWithConnection[]) {
   const header = Blocks.Section({
     text: `*MCP Servers*${servers.length > 0 ? ` (${servers.length})` : ''}`,
   }).accessory(

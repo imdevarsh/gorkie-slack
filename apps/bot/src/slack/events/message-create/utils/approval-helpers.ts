@@ -1,8 +1,8 @@
 import {
-  createMcpToolApproval,
-  getMcpServerById,
-  supersedePendingMcpToolApprovals,
-  updateMcpToolApproval,
+  createMCPToolApproval,
+  getMCPServerById,
+  supersedePendingMCPToolApprovals,
+  updateMCPToolApproval,
 } from '@repo/db/queries';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
@@ -37,7 +37,7 @@ export async function supersedeExpiredApprovals(
   if (!(userId && channelId)) {
     return;
   }
-  const expired = await supersedePendingMcpToolApprovals({
+  const expired = await supersedePendingMCPToolApprovals({
     channelId,
     threadTs:
       context.event.channel_type === 'im'
@@ -50,7 +50,7 @@ export async function supersedeExpiredApprovals(
       if (!approval.messageTs) {
         return;
       }
-      const server = await getMcpServerById({
+      const server = await getMCPServerById({
         id: approval.serverId,
         userId: approval.userId,
       });
@@ -149,7 +149,7 @@ export async function postApprovalRequest({
   const threadTs = context.event.thread_ts ?? context.event.ts;
   const args = JSON.stringify(approval.input, null, 2) ?? '';
 
-  await createMcpToolApproval({
+  await createMCPToolApproval({
     approvalId: approval.approvalId,
     args: encrypt(clampText(args, 8000)),
     channelId: channel,
@@ -201,7 +201,7 @@ export async function postApprovalRequest({
     blocks,
   });
   if (message.ts) {
-    await updateMcpToolApproval({
+    await updateMCPToolApproval({
       approvalId: approval.approvalId,
       userId,
       values: { messageTs: message.ts },

@@ -1,32 +1,18 @@
 import { and, eq, or } from 'drizzle-orm';
 import { db } from '../../index';
 import {
-  type McpToolMode,
-  type McpToolModeMap,
-  type McpToolPermission,
+  type MCPToolMode,
+  type MCPToolModeMap,
+  type MCPToolPermission,
   mcpToolPermissions,
 } from '../../schema';
 
-export interface McpToolModes {
-  global: McpToolModeMap;
-  thread: McpToolModeMap;
+export interface MCPToolModes {
+  global: MCPToolModeMap;
+  thread: MCPToolModeMap;
 }
 
-function isMcpToolMode(value: unknown): value is McpToolMode {
-  return value === 'allow' || value === 'ask' || value === 'block';
-}
-
-function cleanModes(modes: Record<string, unknown>): McpToolModeMap {
-  const clean: McpToolModeMap = {};
-  for (const [toolName, mode] of Object.entries(modes)) {
-    if (isMcpToolMode(mode)) {
-      clean[toolName] = mode;
-    }
-  }
-  return clean;
-}
-
-export async function getMcpToolModes({
+export async function getMCPToolModes({
   serverId,
   threadTs,
   userId,
@@ -34,7 +20,7 @@ export async function getMcpToolModes({
   serverId: string;
   threadTs?: string | null;
   userId: string;
-}): Promise<McpToolModes> {
+}): Promise<MCPToolModes> {
   const rows = await db
     .select()
     .from(mcpToolPermissions)
@@ -60,18 +46,18 @@ export async function getMcpToolModes({
       )
     );
 
-  const result: McpToolModes = { global: {}, thread: {} };
+  const result: MCPToolModes = { global: {}, thread: {} };
   for (const row of rows) {
     if (row.scope === 'thread') {
-      result.thread = cleanModes(row.modes);
+      result.thread = row.modes;
     } else {
-      result.global = cleanModes(row.modes);
+      result.global = row.modes;
     }
   }
   return result;
 }
 
-export async function setMcpToolModes({
+export async function setMCPToolModes({
   modes,
   scope,
   serverId,
@@ -79,13 +65,13 @@ export async function setMcpToolModes({
   threadTs,
   userId,
 }: {
-  modes: McpToolModeMap;
+  modes: MCPToolModeMap;
   scope: 'global' | 'thread';
   serverId: string;
   teamId?: string | null;
   threadTs?: string | null;
   userId: string;
-}): Promise<McpToolPermission | null> {
+}): Promise<MCPToolPermission | null> {
   const values = {
     modes,
     scope,
@@ -114,7 +100,7 @@ export async function setMcpToolModes({
   return rows[0] ?? null;
 }
 
-export async function patchMcpToolModes({
+export async function patchMCPToolModes({
   modes,
   scope,
   serverId,
@@ -122,19 +108,19 @@ export async function patchMcpToolModes({
   threadTs,
   userId,
 }: {
-  modes: McpToolModeMap;
+  modes: MCPToolModeMap;
   scope: 'global' | 'thread';
   serverId: string;
   teamId?: string | null;
   threadTs?: string | null;
   userId: string;
 }) {
-  const current = await getMcpToolModes({ serverId, threadTs, userId });
+  const current = await getMCPToolModes({ serverId, threadTs, userId });
   const merged = {
     ...(scope === 'thread' ? current.thread : current.global),
     ...modes,
   };
-  return setMcpToolModes({
+  return setMCPToolModes({
     modes: merged,
     scope,
     serverId,
@@ -144,20 +130,20 @@ export async function patchMcpToolModes({
   });
 }
 
-export async function ensureMcpToolModes({
+export async function ensureMCPToolModes({
   defaultMode,
   serverId,
   teamId,
   toolNames,
   userId,
 }: {
-  defaultMode: McpToolMode;
+  defaultMode: MCPToolMode;
   serverId: string;
   teamId?: string | null;
   toolNames: string[];
   userId: string;
-}): Promise<McpToolModeMap> {
-  const current = await getMcpToolModes({ serverId, userId });
+}): Promise<MCPToolModeMap> {
+  const current = await getMCPToolModes({ serverId, userId });
   const next = { ...current.global };
   let changed = false;
 
@@ -172,7 +158,7 @@ export async function ensureMcpToolModes({
     return next;
   }
 
-  await setMcpToolModes({
+  await setMCPToolModes({
     modes: next,
     scope: 'global',
     serverId,
@@ -182,7 +168,7 @@ export async function ensureMcpToolModes({
   return next;
 }
 
-export function resetMcpToolModes({
+export function resetMCPToolModes({
   serverId,
   userId,
 }: {

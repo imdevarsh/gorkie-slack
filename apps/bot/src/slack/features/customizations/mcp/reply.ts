@@ -1,10 +1,5 @@
 import { actions } from './ids';
 
-/**
- * The whole approval decision as one value, like opencode's permission `Reply`.
- * Everything else — the AI SDK approved flag, the denial reason, the card copy,
- * the DB status — is derived from this; nothing is passed alongside it.
- */
 export type ApprovalReply = 'once' | 'always' | 'reject';
 
 export const DENIAL_REASON = 'Access denied by Slack approval.';

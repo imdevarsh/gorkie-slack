@@ -1,16 +1,16 @@
 import { auth } from '@ai-sdk/mcp';
 import {
-  getMcpOAuthConnection,
-  getMcpServerById,
-  updateMcpServer,
+  getMCPOAuthConnection,
+  getMCPServerById,
+  updateMCPServer,
 } from '@repo/db/queries';
-import { createGuardedFetch, parseMcpOAuthState } from '@repo/utils';
+import { createGuardedFetch, parseMCPOAuthState } from '@repo/utils';
 import escapeHtml from 'escape-html';
 import { defineHandler, getQuery, getRequestURL } from 'nitro/h3';
 import { useStorage } from 'nitro/storage';
 import { mcp } from '@/config';
 import { env } from '@/env';
-import { createMcpOAuthCallbackProvider } from '@/utils/mcp-oauth-callback-provider';
+import { createMCPOAuthCallbackProvider } from '@/utils/mcp-oauth-callback-provider';
 
 const guardedFetch = Object.assign(
   createGuardedFetch({
@@ -74,7 +74,7 @@ export default defineHandler(async (event) => {
     });
   }
 
-  const parsedState = parseMcpOAuthState({
+  const parsedState = parseMCPOAuthState({
     secret: env.MCP_ENCRYPTION_KEY,
     state,
   });
@@ -88,11 +88,11 @@ export default defineHandler(async (event) => {
   }
 
   const [server, connection] = await Promise.all([
-    getMcpServerById({
+    getMCPServerById({
       id: parsedState.serverId,
       userId: parsedState.userId,
     }),
-    getMcpOAuthConnection({
+    getMCPOAuthConnection({
       serverId: parsedState.serverId,
       userId: parsedState.userId,
     }),
@@ -108,13 +108,13 @@ export default defineHandler(async (event) => {
   }
 
   try {
-    await auth(createMcpOAuthCallbackProvider({ connection, server }), {
+    await auth(createMCPOAuthCallbackProvider({ connection, server }), {
       authorizationCode: code,
       callbackState: state,
       fetchFn: guardedFetch,
       serverUrl: server.url,
     });
-    await updateMcpServer({
+    await updateMCPServer({
       id: server.id,
       userId: server.userId,
       values: {
@@ -123,7 +123,7 @@ export default defineHandler(async (event) => {
       },
     });
   } catch (error) {
-    await updateMcpServer({
+    await updateMCPServer({
       id: server.id,
       userId: server.userId,
       values: {

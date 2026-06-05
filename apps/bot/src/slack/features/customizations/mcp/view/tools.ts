@@ -1,5 +1,5 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
-import type { McpToolModeMap } from '@repo/db/schema';
+import type { MCPToolModeMap } from '@repo/db/schema';
 import type { ViewsOpenArguments } from '@slack/web-api';
 import { formatMCPError } from '@/lib/mcp/format-error';
 import { codeBlock, mdText } from '@/slack/blocks';
@@ -29,7 +29,7 @@ export function toolsModal({
   error?: string;
   serverId: string;
   serverName: string;
-  toolModes: McpToolModeMap;
+  toolModes: MCPToolModeMap;
   tools: ListToolsResult['tools'];
 }): ModalView {
   const canSave = !error && tools.length > 0;

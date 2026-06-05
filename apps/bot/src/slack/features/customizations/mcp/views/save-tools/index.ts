@@ -1,23 +1,12 @@
-import { setMcpToolModes } from '@repo/db/queries';
-import type { McpToolModeMap } from '@repo/db/schema';
-import { z } from 'zod';
+import { setMCPToolModes } from '@repo/db/queries';
+import type { MCPToolModeMap } from '@repo/db/schema';
 import { publishHome } from '../../../publish';
 import { toolBlock } from '../../block-id';
 import { inputs, views } from '../../ids';
-import { parseServerMeta } from '../../schema';
+import { parseServerMeta, toolModeInputSchema } from '../../schema';
 import type { SubmitArgs } from '../../types';
 
 export const name = views.configure;
-
-const toolModeSchema = z
-  .looseObject({
-    selected_option: z
-      .looseObject({
-        value: z.enum(['allow', 'ask', 'block']),
-      })
-      .nullish(),
-  })
-  .catch({});
 
 export async function execute({
   ack,
@@ -37,18 +26,18 @@ export async function execute({
       if (!toolName) {
         return [];
       }
-      const selected = toolModeSchema.parse(
+      const selected = toolModeInputSchema.parse(
         fields[inputs.toolMode]
       ).selected_option;
       return selected?.value ? [{ mode: selected.value, toolName }] : [];
     }
   );
 
-  const toolModes: McpToolModeMap = {};
+  const toolModes: MCPToolModeMap = {};
   for (const item of modes) {
     toolModes[item.toolName] = item.mode;
   }
-  await setMcpToolModes({
+  await setMCPToolModes({
     modes: toolModes,
     scope: 'global',
     serverId,

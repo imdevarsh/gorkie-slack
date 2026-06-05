@@ -9,8 +9,8 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
-export type McpToolMode = 'allow' | 'ask' | 'block';
-export type McpToolModeMap = Record<string, McpToolMode>;
+export type MCPToolMode = 'allow' | 'ask' | 'block';
+export type MCPToolModeMap = Record<string, MCPToolMode>;
 
 export const mcpServers = pgTable(
   'mcp_servers',
@@ -69,7 +69,7 @@ export const mcpBearerConnections = pgTable(
   ]
 );
 
-export const mcpOauthConnections = pgTable(
+export const mcpOAuthConnections = pgTable(
   'mcp_oauth_connections',
   {
     id: text('id')
@@ -116,7 +116,7 @@ export const mcpToolPermissions = pgTable(
     teamId: text('team_id'),
     scope: text('scope').notNull().default('global'),
     threadTs: text('thread_ts').notNull().default(''),
-    modes: jsonb('modes').$type<McpToolModeMap>().notNull().default({}),
+    modes: jsonb('modes').$type<MCPToolModeMap>().notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -174,13 +174,13 @@ export const mcpToolApprovals = pgTable(
   ]
 );
 
-export type McpServer = typeof mcpServers.$inferSelect;
-export type NewMcpServer = typeof mcpServers.$inferInsert;
-export type McpBearerConnection = typeof mcpBearerConnections.$inferSelect;
-export type NewMcpBearerConnection = typeof mcpBearerConnections.$inferInsert;
-export type McpOauthConnection = typeof mcpOauthConnections.$inferSelect;
-export type NewMcpOauthConnection = typeof mcpOauthConnections.$inferInsert;
-export type McpToolPermission = typeof mcpToolPermissions.$inferSelect;
-export type NewMcpToolPermission = typeof mcpToolPermissions.$inferInsert;
-export type McpToolApproval = typeof mcpToolApprovals.$inferSelect;
-export type NewMcpToolApproval = typeof mcpToolApprovals.$inferInsert;
+export type MCPServer = typeof mcpServers.$inferSelect;
+export type NewMCPServer = typeof mcpServers.$inferInsert;
+export type MCPBearerConnection = typeof mcpBearerConnections.$inferSelect;
+export type NewMCPBearerConnection = typeof mcpBearerConnections.$inferInsert;
+export type MCPOAuthConnection = typeof mcpOAuthConnections.$inferSelect;
+export type NewMCPOAuthConnection = typeof mcpOAuthConnections.$inferInsert;
+export type MCPToolPermission = typeof mcpToolPermissions.$inferSelect;
+export type NewMCPToolPermission = typeof mcpToolPermissions.$inferInsert;
+export type MCPToolApproval = typeof mcpToolApprovals.$inferSelect;
+export type NewMCPToolApproval = typeof mcpToolApprovals.$inferInsert;

@@ -1,25 +1,25 @@
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { db } from '../../index';
 import {
-  type McpBearerConnection,
-  type McpOauthConnection,
+  type MCPBearerConnection,
+  type MCPOAuthConnection,
   mcpBearerConnections,
-  mcpOauthConnections,
-  type NewMcpBearerConnection,
-  type NewMcpOauthConnection,
+  mcpOAuthConnections,
+  type NewMCPBearerConnection,
+  type NewMCPOAuthConnection,
 } from '../../schema';
 
-export type McpConnection =
-  | { authType: 'bearer'; connection: McpBearerConnection }
-  | { authType: 'oauth'; connection: McpOauthConnection };
+export type MCPConnection =
+  | { authType: 'bearer'; connection: MCPBearerConnection }
+  | { authType: 'oauth'; connection: MCPOAuthConnection };
 
-export function getMcpBearerConnection({
+export function getMCPBearerConnection({
   serverId,
   userId,
 }: {
   serverId: string;
   userId: string;
-}): Promise<McpBearerConnection | null> {
+}): Promise<MCPBearerConnection | null> {
   return db
     .select()
     .from(mcpBearerConnections)
@@ -33,27 +33,27 @@ export function getMcpBearerConnection({
     .then((rows) => rows[0] ?? null);
 }
 
-export function getMcpOAuthConnection({
+export function getMCPOAuthConnection({
   serverId,
   userId,
 }: {
   serverId: string;
   userId: string;
-}): Promise<McpOauthConnection | null> {
+}): Promise<MCPOAuthConnection | null> {
   return db
     .select()
-    .from(mcpOauthConnections)
+    .from(mcpOAuthConnections)
     .where(
       and(
-        eq(mcpOauthConnections.serverId, serverId),
-        eq(mcpOauthConnections.userId, userId)
+        eq(mcpOAuthConnections.serverId, serverId),
+        eq(mcpOAuthConnections.userId, userId)
       )
     )
     .limit(1)
     .then((rows) => rows[0] ?? null);
 }
 
-export async function getMcpConnection({
+export async function getMCPConnection({
   authType,
   serverId,
   userId,
@@ -61,17 +61,17 @@ export async function getMcpConnection({
   authType: string;
   serverId: string;
   userId: string;
-}): Promise<McpConnection | null> {
+}): Promise<MCPConnection | null> {
   if (authType === 'bearer') {
-    const connection = await getMcpBearerConnection({ serverId, userId });
+    const connection = await getMCPBearerConnection({ serverId, userId });
     return connection?.token ? { authType: 'bearer', connection } : null;
   }
 
-  const connection = await getMcpOAuthConnection({ serverId, userId });
+  const connection = await getMCPOAuthConnection({ serverId, userId });
   return connection?.tokens ? { authType: 'oauth', connection } : null;
 }
 
-export async function hasMcpConnection({
+export async function hasMCPConnection({
   authType,
   serverId,
   userId,
@@ -96,21 +96,21 @@ export async function hasMcpConnection({
   }
 
   const rows = await db
-    .select({ id: mcpOauthConnections.id })
-    .from(mcpOauthConnections)
+    .select({ id: mcpOAuthConnections.id })
+    .from(mcpOAuthConnections)
     .where(
       and(
-        eq(mcpOauthConnections.serverId, serverId),
-        eq(mcpOauthConnections.userId, userId),
-        isNotNull(mcpOauthConnections.tokens)
+        eq(mcpOAuthConnections.serverId, serverId),
+        eq(mcpOAuthConnections.userId, userId),
+        isNotNull(mcpOAuthConnections.tokens)
       )
     )
     .limit(1);
   return rows.length > 0;
 }
 
-export async function upsertMcpBearerConnection(
-  connection: NewMcpBearerConnection
+export async function upsertMCPBearerConnection(
+  connection: NewMCPBearerConnection
 ) {
   const values = {
     serverId: connection.serverId,
@@ -133,8 +133,8 @@ export async function upsertMcpBearerConnection(
   return rows[0] ?? null;
 }
 
-export async function upsertMcpOAuthConnection(
-  connection: NewMcpOauthConnection
+export async function upsertMCPOAuthConnection(
+  connection: NewMCPOAuthConnection
 ) {
   const values = {
     clientId: connection.clientId ?? null,
@@ -149,10 +149,10 @@ export async function upsertMcpOAuthConnection(
     userId: connection.userId,
   };
   const rows = await db
-    .insert(mcpOauthConnections)
+    .insert(mcpOAuthConnections)
     .values(values)
     .onConflictDoUpdate({
-      target: [mcpOauthConnections.serverId, mcpOauthConnections.userId],
+      target: [mcpOAuthConnections.serverId, mcpOAuthConnections.userId],
       set: {
         clientId: values.clientId,
         clientInformation: values.clientInformation,
@@ -169,17 +169,17 @@ export async function upsertMcpOAuthConnection(
   return rows[0] ?? null;
 }
 
-export async function patchMcpOAuthConnection({
+export async function patchMCPOAuthConnection({
   serverId,
   userId,
   values,
 }: {
   serverId: string;
   userId: string;
-  values: Partial<NewMcpOauthConnection>;
+  values: Partial<NewMCPOAuthConnection>;
 }) {
   const rows = await db
-    .insert(mcpOauthConnections)
+    .insert(mcpOAuthConnections)
     .values({
       serverId,
       teamId: values.teamId ?? null,
@@ -187,14 +187,14 @@ export async function patchMcpOAuthConnection({
       ...values,
     })
     .onConflictDoUpdate({
-      target: [mcpOauthConnections.serverId, mcpOauthConnections.userId],
+      target: [mcpOAuthConnections.serverId, mcpOAuthConnections.userId],
       set: { ...values, updatedAt: new Date() },
     })
     .returning();
   return rows[0] ?? null;
 }
 
-export async function deleteMcpConnections({
+export async function deleteMCPConnections({
   serverId,
   userId,
 }: {
@@ -211,11 +211,11 @@ export async function deleteMcpConnections({
         )
       ),
     db
-      .delete(mcpOauthConnections)
+      .delete(mcpOAuthConnections)
       .where(
         and(
-          eq(mcpOauthConnections.serverId, serverId),
-          eq(mcpOauthConnections.userId, userId)
+          eq(mcpOAuthConnections.serverId, serverId),
+          eq(mcpOAuthConnections.userId, userId)
         )
       ),
   ]);

@@ -1,41 +1,14 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
-import { getMcpServerById, getMcpToolModes } from '@repo/db/queries';
-import type { McpToolModeMap } from '@repo/db/schema';
+import { getMCPServerById, getMCPToolModes } from '@repo/db/queries';
+import type { MCPToolModeMap } from '@repo/db/schema';
 import { asRecord } from '@repo/utils/record';
 import { groupBlock, toolBlock } from '../block-id';
 import { actions, inputs } from '../ids';
+import { parseToolsMeta, toolModeInputSchema } from '../schema';
 import type { SelectArgs } from '../types';
 import { toolsModal } from '../view';
 
 export const name = actions.setGroupMode;
-
-type GroupSlug = 'ro' | 'dt' | 'gn';
-type ToolMode = 'allow' | 'ask' | 'block';
-
-function parseMeta(raw: string | undefined): {
-  serverId?: string;
-  groups?: Record<string, GroupSlug>;
-  nonce?: string;
-} {
-  try {
-    return JSON.parse(raw ?? '{}');
-  } catch {
-    return {};
-  }
-}
-
-function selectedMode(
-  values: Record<string, unknown>,
-  blockId: string
-): ToolMode | null {
-  const block = asRecord(values[blockId]);
-  const field = asRecord(block?.[inputs.toolMode]);
-  const selected = asRecord(field?.selected_option);
-  const value = selected?.value;
-  return value === 'allow' || value === 'ask' || value === 'block'
-    ? value
-    : null;
-}
 
 export async function execute({
   ack,
@@ -50,7 +23,7 @@ export async function execute({
     return;
   }
 
-  const meta = parseMeta(body.view?.private_metadata);
+  const meta = parseToolsMeta({ metadata: body.view?.private_metadata });
   const { serverId, groups, nonce } = meta;
   if (!(serverId && groups && nonce)) {
     return;
@@ -79,23 +52,25 @@ export async function execute({
   const stateValues = asRecord(body.view?.state?.values) ?? {};
 
   const [server, current] = await Promise.all([
-    getMcpServerById({ id: serverId, userId: body.user.id }),
-    getMcpToolModes({ serverId, userId: body.user.id }),
+    getMCPServerById({ id: serverId, userId: body.user.id }),
+    getMCPToolModes({ serverId, userId: body.user.id }),
   ]);
   if (!server) {
     return;
   }
 
-  const toolModes: McpToolModeMap = {};
+  const toolModes: MCPToolModeMap = {};
   for (const toolName of Object.keys(groups)) {
     if (groupToolNames.has(toolName)) {
       toolModes[toolName] = mode;
       continue;
     }
+    const block = asRecord(stateValues[toolBlock.encode(nonce, toolName)]);
+    const selected = toolModeInputSchema.parse(
+      block?.[inputs.toolMode]
+    ).selected_option;
     toolModes[toolName] =
-      selectedMode(stateValues, toolBlock.encode(nonce, toolName)) ??
-      current.global[toolName] ??
-      'ask';
+      selected?.value ?? current.global[toolName] ?? 'ask';
   }
 
   const syntheticTools: ListToolsResult['tools'] = Object.keys(groups).map(

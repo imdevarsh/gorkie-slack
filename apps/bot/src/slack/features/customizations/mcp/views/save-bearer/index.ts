@@ -1,4 +1,4 @@
-import { getMcpServerById } from '@repo/db/queries';
+import { getMCPServerById } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
 import { connectBearerServer } from '@/lib/mcp/connection';
 import { mdText } from '@/slack/blocks';
@@ -38,7 +38,7 @@ export async function execute({
     return;
   }
 
-  const server = await getMcpServerById({
+  const server = await getMCPServerById({
     id: serverId,
     userId: body.user.id,
   });

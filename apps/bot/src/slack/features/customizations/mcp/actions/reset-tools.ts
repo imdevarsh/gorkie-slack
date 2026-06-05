@@ -1,12 +1,12 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
 import {
-  getMcpServerById,
-  resetMcpToolModes,
-  updateMcpServer,
+  getMCPServerById,
+  resetMCPToolModes,
+  updateMCPServer,
 } from '@repo/db/queries';
-import type { McpToolModeMap } from '@repo/db/schema';
+import type { MCPToolModeMap } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
-import { syncMcpToolModes } from '@/lib/mcp/remote';
+import { syncMCPToolModes } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -35,7 +35,7 @@ export async function execute({
     }),
   });
 
-  const server = await getMcpServerById({
+  const server = await getMCPServerById({
     id: serverId,
     userId: body.user.id,
   });
@@ -50,13 +50,13 @@ export async function execute({
     return;
   }
 
-  await resetMcpToolModes({ serverId, userId: body.user.id });
+  await resetMCPToolModes({ serverId, userId: body.user.id });
 
   let error: string | undefined;
   let definitions: ListToolsResult | undefined;
-  let toolModes: McpToolModeMap = {};
+  let toolModes: MCPToolModeMap = {};
   try {
-    const synced = await syncMcpToolModes({
+    const synced = await syncMCPToolModes({
       server,
       teamId: body.team?.id,
       userId: body.user.id,
@@ -65,7 +65,7 @@ export async function execute({
     toolModes = synced.modes;
   } catch (err) {
     error = errorMessage(err);
-    await updateMcpServer({
+    await updateMCPServer({
       id: server.id,
       userId: body.user.id,
       values: {

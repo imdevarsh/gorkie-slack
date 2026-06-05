@@ -1,31 +1,31 @@
 import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import { db } from '../../index';
 import {
-  type McpServer,
+  type MCPServer,
   mcpBearerConnections,
-  mcpOauthConnections,
+  mcpOAuthConnections,
   mcpServers,
-  type NewMcpServer,
+  type NewMCPServer,
 } from '../../schema';
 
-export interface McpServerWithConnection extends McpServer {
+export interface MCPServerWithConnection extends MCPServer {
   hasConnection: boolean;
 }
 
-export async function createMcpServer(server: NewMcpServer) {
+export async function createMCPServer(server: NewMCPServer) {
   const rows = await db.insert(mcpServers).values(server).returning();
   return rows[0] ?? null;
 }
 
-export function listMcpServers({
+export function listMCPServers({
   userId,
 }: {
   userId: string;
-}): Promise<McpServerWithConnection[]> {
+}): Promise<MCPServerWithConnection[]> {
   return db
     .select({
       bearerConnectionId: mcpBearerConnections.id,
-      oauthConnectionId: mcpOauthConnections.id,
+      oauthConnectionId: mcpOAuthConnections.id,
       server: mcpServers,
     })
     .from(mcpServers)
@@ -38,11 +38,11 @@ export function listMcpServers({
       )
     )
     .leftJoin(
-      mcpOauthConnections,
+      mcpOAuthConnections,
       and(
-        eq(mcpOauthConnections.serverId, mcpServers.id),
-        eq(mcpOauthConnections.userId, userId),
-        isNotNull(mcpOauthConnections.tokens)
+        eq(mcpOAuthConnections.serverId, mcpServers.id),
+        eq(mcpOAuthConnections.userId, userId),
+        isNotNull(mcpOAuthConnections.tokens)
       )
     )
     .where(eq(mcpServers.userId, userId))
@@ -58,11 +58,11 @@ export function listMcpServers({
     );
 }
 
-export function listEnabledMcpServers({
+export function listEnabledMCPServers({
   userId,
 }: {
   userId: string;
-}): Promise<McpServer[]> {
+}): Promise<MCPServer[]> {
   return db
     .select()
     .from(mcpServers)
@@ -70,13 +70,13 @@ export function listEnabledMcpServers({
     .orderBy(desc(mcpServers.createdAt));
 }
 
-export function getMcpServerById({
+export function getMCPServerById({
   id,
   userId,
 }: {
   id: string;
   userId: string;
-}): Promise<McpServer | null> {
+}): Promise<MCPServer | null> {
   return db
     .select()
     .from(mcpServers)
@@ -85,14 +85,14 @@ export function getMcpServerById({
     .then((rows) => rows[0] ?? null);
 }
 
-export async function updateMcpServer({
+export async function updateMCPServer({
   id,
   userId,
   values,
 }: {
   id: string;
   userId: string;
-  values: Partial<NewMcpServer>;
+  values: Partial<NewMCPServer>;
 }) {
   const rows = await db
     .update(mcpServers)
@@ -102,7 +102,7 @@ export async function updateMcpServer({
   return rows[0] ?? null;
 }
 
-export async function deleteMcpServer({
+export async function deleteMCPServer({
   id,
   userId,
 }: {

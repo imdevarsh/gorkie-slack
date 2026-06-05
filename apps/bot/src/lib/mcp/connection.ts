@@ -1,21 +1,21 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
 import { auth } from '@ai-sdk/mcp';
 import {
-  deleteMcpConnections,
-  ensureMcpToolModes,
-  getMcpOAuthConnection,
-  updateMcpServer,
-  upsertMcpBearerConnection,
+  deleteMCPConnections,
+  ensureMCPToolModes,
+  getMCPOAuthConnection,
+  updateMCPServer,
+  upsertMCPBearerConnection,
 } from '@repo/db/queries';
-import type { McpServer, McpToolMode } from '@repo/db/schema';
+import type { MCPServer, MCPToolMode } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
 import { mcp } from '@/config';
 import { encrypt } from './encryption';
 import { guardedMCPFetch } from './guarded-fetch';
-import { createMcpOAuthProvider } from './oauth-provider';
-import { fetchTools, getMcpCredential } from './remote';
+import { createMCPOAuthProvider } from './oauth-provider';
+import { fetchTools, getMCPCredential } from './remote';
 
-const defaultToolMode: McpToolMode =
+const defaultToolMode: MCPToolMode =
   mcp.defaultToolMode === 'allow' || mcp.defaultToolMode === 'block'
     ? mcp.defaultToolMode
     : 'ask';
@@ -31,14 +31,14 @@ async function finalizeSuccess({
   teamId?: string | null;
   userId: string;
 }): Promise<void> {
-  await ensureMcpToolModes({
+  await ensureMCPToolModes({
     defaultMode: defaultToolMode,
     serverId,
     teamId,
     toolNames: definitions.tools.map((definition) => definition.name),
     userId,
   });
-  await updateMcpServer({
+  await updateMCPServer({
     id: serverId,
     userId,
     values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
@@ -54,8 +54,8 @@ async function finalizeFailure({
   serverId: string;
   userId: string;
 }): Promise<void> {
-  await deleteMcpConnections({ serverId, userId });
-  await updateMcpServer({
+  await deleteMCPConnections({ serverId, userId });
+  await updateMCPServer({
     id: serverId,
     userId,
     values: {
@@ -73,7 +73,7 @@ export async function connectBearerServer({
   userId,
 }: {
   rawToken: string;
-  server: McpServer;
+  server: MCPServer;
   teamId?: string | null;
   userId: string;
 }): Promise<void> {
@@ -82,7 +82,7 @@ export async function connectBearerServer({
       credential: { type: 'bearer', token: rawToken },
       server,
     });
-    await upsertMcpBearerConnection({
+    await upsertMCPBearerConnection({
       token: encrypt(rawToken),
       serverId: server.id,
       teamId: teamId ?? null,
@@ -104,11 +104,11 @@ export async function connectOAuthServer({
   teamId,
   userId,
 }: {
-  server: McpServer;
+  server: MCPServer;
   teamId?: string | null;
   userId: string;
 }): Promise<OAuthConnectResult> {
-  const connection = await getMcpOAuthConnection({
+  const connection = await getMCPOAuthConnection({
     serverId: server.id,
     userId,
   });
@@ -116,7 +116,7 @@ export async function connectOAuthServer({
 
   try {
     await auth(
-      createMcpOAuthProvider({ authorizationURLRef, connection, server }),
+      createMCPOAuthProvider({ authorizationURLRef, connection, server }),
       { fetchFn: guardedMCPFetch, serverUrl: server.url }
     );
   } catch (error) {
@@ -140,12 +140,12 @@ export async function finalizeOAuthServer({
   teamId,
   userId,
 }: {
-  server: McpServer;
+  server: MCPServer;
   teamId?: string | null;
   userId: string;
 }): Promise<void> {
   try {
-    const credential = await getMcpCredential({ server, userId });
+    const credential = await getMCPCredential({ server, userId });
     if (!credential) {
       throw new Error('OAuth connection required before tools can be used.');
     }

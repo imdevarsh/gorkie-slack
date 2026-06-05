@@ -1,4 +1,4 @@
-import { createMcpServer } from '@repo/db/queries';
+import { createMCPServer } from '@repo/db/queries';
 import { errorMessage } from '@repo/utils/error';
 import { connectBearerServer } from '@/lib/mcp/connection';
 import { mdText } from '@/slack/blocks';
@@ -33,7 +33,7 @@ export async function executeBearerSave({
     view: statusModal({ title: 'Connect MCP', text: 'Connecting…' }),
   });
 
-  const server = await createMcpServer({
+  const server = await createMCPServer({
     authType: 'bearer',
     enabled: false,
     name: base.data.name,

@@ -1,4 +1,4 @@
-import { createMcpServer, upsertMcpOAuthConnection } from '@repo/db/queries';
+import { createMCPServer, upsertMCPOAuthConnection } from '@repo/db/queries';
 import { publishHome } from '../../../publish';
 import { blocks, inputs } from '../../ids';
 import { viewValueSchema } from '../../schema';
@@ -19,7 +19,7 @@ export async function executeOAuthSave({
 
   await ack();
 
-  const server = await createMcpServer({
+  const server = await createMCPServer({
     authType: 'oauth',
     enabled: false,
     name: base.data.name,
@@ -38,7 +38,7 @@ export async function executeOAuthSave({
       .parse(view.state.values[blocks.clientId]?.[inputs.clientId])
       .value?.trim() ?? '';
   if (clientId) {
-    await upsertMcpOAuthConnection({
+    await upsertMCPOAuthConnection({
       clientId,
       serverId: server.id,
       teamId: body.team?.id ?? null,

@@ -1,4 +1,4 @@
-import { deleteMcpServer } from '@repo/db/queries';
+import { deleteMCPServer } from '@repo/db/queries';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
@@ -15,6 +15,6 @@ export async function execute({
   if (!action.value) {
     return;
   }
-  await deleteMcpServer({ id: action.value, userId: body.user.id });
+  await deleteMCPServer({ id: action.value, userId: body.user.id });
   await publishHome({ client, userId: body.user.id });
 }

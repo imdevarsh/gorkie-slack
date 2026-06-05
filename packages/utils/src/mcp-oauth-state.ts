@@ -1,18 +1,18 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { mcpOAuthStatePayloadSchema } from '@repo/validators';
 
-interface McpOAuthStatePayload {
+interface MCPOAuthStatePayload {
   nonce: string;
   serverId: string;
   userId: string;
 }
 
-export function createMcpOAuthState({
+export function createMCPOAuthState({
   nonce,
   secret,
   serverId,
   userId,
-}: McpOAuthStatePayload & { secret: string }): string {
+}: MCPOAuthStatePayload & { secret: string }): string {
   const payload = Buffer.from(
     JSON.stringify({ nonce, serverId, userId }),
     'utf8'
@@ -23,13 +23,13 @@ export function createMcpOAuthState({
   return `${payload}.${signature}`;
 }
 
-export function parseMcpOAuthState({
+export function parseMCPOAuthState({
   secret,
   state,
 }: {
   secret: string;
   state: string;
-}): McpOAuthStatePayload | null {
+}): MCPOAuthStatePayload | null {
   const [payload, signature] = state.split('.');
   if (!(payload && signature)) {
     return null;

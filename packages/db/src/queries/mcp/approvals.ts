@@ -1,17 +1,17 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../index';
 import {
-  type McpToolApproval,
+  type MCPToolApproval,
   mcpToolApprovals,
-  type NewMcpToolApproval,
+  type NewMCPToolApproval,
 } from '../../schema';
 
-export async function createMcpToolApproval(approval: NewMcpToolApproval) {
+export async function createMCPToolApproval(approval: NewMCPToolApproval) {
   const rows = await db.insert(mcpToolApprovals).values(approval).returning();
   return rows[0] ?? null;
 }
 
-export function supersedePendingMcpToolApprovals({
+export function supersedePendingMCPToolApprovals({
   channelId,
   threadTs,
   userId,
@@ -40,7 +40,7 @@ export function supersedePendingMcpToolApprovals({
     });
 }
 
-export function getMcpToolApprovalStatus({
+export function getMCPToolApprovalStatus({
   approvalId,
 }: {
   approvalId: string;
@@ -63,7 +63,7 @@ export function getMcpToolApprovalStatus({
     .then((rows) => rows[0] ?? null);
 }
 
-export async function claimMcpToolApproval({
+export async function claimMCPToolApproval({
   approvalId,
   userId,
 }: {
@@ -84,14 +84,14 @@ export async function claimMcpToolApproval({
   return rows[0] ?? null;
 }
 
-export async function updateMcpToolApproval({
+export async function updateMCPToolApproval({
   approvalId,
   userId,
   values,
 }: {
   approvalId: string;
   userId: string;
-  values: Partial<NewMcpToolApproval>;
+  values: Partial<NewMCPToolApproval>;
 }) {
   const rows = await db
     .update(mcpToolApprovals)
@@ -108,7 +108,7 @@ export async function updateMcpToolApproval({
 
 const OPEN_APPROVAL_STATUSES = new Set(['pending', 'handling']);
 
-export function finalizeMcpToolApprovalInBatch({
+export function finalizeMCPToolApprovalInBatch({
   approvalId,
   status,
   userId,
@@ -118,7 +118,7 @@ export function finalizeMcpToolApprovalInBatch({
   userId: string;
 }): Promise<
   | { batchComplete: false }
-  | { batchComplete: true; siblings: McpToolApproval[] }
+  | { batchComplete: true; siblings: MCPToolApproval[] }
 > {
   return db.transaction(async (tx) => {
     const current = await tx

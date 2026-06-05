@@ -1,7 +1,7 @@
 import {
-  deleteMcpConnections,
-  getMcpServerById,
-  updateMcpServer,
+  deleteMCPConnections,
+  getMCPServerById,
+  updateMCPServer,
 } from '@repo/db/queries';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
@@ -19,18 +19,18 @@ export async function execute({
   if (!action.value) {
     return;
   }
-  const server = await getMcpServerById({
+  const server = await getMCPServerById({
     id: action.value,
     userId: body.user.id,
   });
   if (!server) {
     return;
   }
-  await deleteMcpConnections({
+  await deleteMCPConnections({
     serverId: action.value,
     userId: body.user.id,
   });
-  await updateMcpServer({
+  await updateMCPServer({
     id: action.value,
     userId: body.user.id,
     values: { enabled: false, lastConnectedAt: null, lastError: null },

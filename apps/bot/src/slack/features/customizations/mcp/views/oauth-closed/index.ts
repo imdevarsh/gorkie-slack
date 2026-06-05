@@ -1,4 +1,4 @@
-import { getMcpServerById, hasMcpConnection } from '@repo/db/queries';
+import { getMCPServerById, hasMCPConnection } from '@repo/db/queries';
 import logger from '@/lib/logger';
 import { finalizeOAuthServer } from '@/lib/mcp/connection';
 import { publishHome } from '../../../publish';
@@ -19,11 +19,11 @@ export async function execute({
     parseServerMeta({ metadata: view.private_metadata }).serverId ?? null;
 
   const server = serverId
-    ? await getMcpServerById({ id: serverId, userId: body.user.id })
+    ? await getMCPServerById({ id: serverId, userId: body.user.id })
     : null;
 
   if (server?.authType === 'oauth') {
-    const hasCredentials = await hasMcpConnection({
+    const hasCredentials = await hasMCPConnection({
       authType: server.authType,
       serverId: server.id,
       userId: body.user.id,

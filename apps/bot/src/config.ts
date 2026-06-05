@@ -1,8 +1,8 @@
 export const appHome = {
   maxPromptDisplay: 200,
   maxTaskPrompt: 80,
-  maxMcpNameDisplay: 40,
-  maxMcpUrlDisplay: 80,
+  maxMCPNameDisplay: 40,
+  maxMCPUrlDisplay: 80,
 };
 
 export const assistantThread = {

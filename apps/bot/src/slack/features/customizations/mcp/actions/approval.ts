@@ -1,10 +1,10 @@
 import {
-  claimMcpToolApproval,
-  finalizeMcpToolApprovalInBatch,
-  getMcpServerById,
-  getMcpToolApprovalStatus,
-  patchMcpToolModes,
-  updateMcpToolApproval,
+  claimMCPToolApproval,
+  finalizeMCPToolApprovalInBatch,
+  getMCPServerById,
+  getMCPToolApprovalStatus,
+  patchMCPToolModes,
+  updateMCPToolApproval,
 } from '@repo/db/queries';
 import { asRecord } from '@repo/utils/record';
 import logger from '@/lib/logger';
@@ -68,7 +68,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
     return;
   }
 
-  const status = await getMcpToolApprovalStatus({
+  const status = await getMCPToolApprovalStatus({
     approvalId,
   });
   if (status && status.userId !== body.user.id) {
@@ -88,7 +88,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
 
   if (!status || status.status !== 'pending') {
     const server = status
-      ? await getMcpServerById({
+      ? await getMCPServerById({
           id: status.serverId,
           userId: body.user.id,
         })
@@ -110,12 +110,12 @@ export async function execute(args: ButtonArgs): Promise<void> {
   }
 
   const reply = replyFromActionId(action.action_id);
-  const approval = await claimMcpToolApproval({
+  const approval = await claimMCPToolApproval({
     approvalId,
     userId: body.user.id,
   });
   if (!approval) {
-    const server = await getMcpServerById({
+    const server = await getMCPServerById({
       id: status.serverId,
       userId: body.user.id,
     });
@@ -129,7 +129,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
     return;
   }
 
-  const server = await getMcpServerById({
+  const server = await getMCPServerById({
     id: approval.serverId,
     userId: body.user.id,
   });
@@ -159,7 +159,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
     };
 
     if (reply === 'always' && approval.threadTs) {
-      await patchMcpToolModes({
+      await patchMCPToolModes({
         modes: { [approval.toolName]: 'allow' },
         scope: 'thread',
         serverId: approval.serverId,
@@ -169,7 +169,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
       });
     }
 
-    const batch = await finalizeMcpToolApprovalInBatch({
+    const batch = await finalizeMCPToolApprovalInBatch({
       approvalId,
       status: replyStatus(reply),
       userId: body.user.id,
@@ -222,7 +222,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
           .catch(() => undefined);
       });
   } catch (error) {
-    await updateMcpToolApproval({
+    await updateMCPToolApproval({
       approvalId,
       userId: body.user.id,
       values: { status: 'pending' },

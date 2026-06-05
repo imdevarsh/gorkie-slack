@@ -1,6 +1,6 @@
 import type { OAuthClientMetadata, OAuthClientProvider } from '@ai-sdk/mcp';
-import { patchMcpOAuthConnection } from '@repo/db/queries';
-import type { McpOauthConnection, McpServer } from '@repo/db/schema';
+import { patchMCPOAuthConnection } from '@repo/db/queries';
+import type { MCPOAuthConnection, MCPServer } from '@repo/db/schema';
 import {
   mcpOAuthClientInformationSchema,
   mcpOAuthTokensSchema,
@@ -8,14 +8,14 @@ import {
 import { env } from '@/env';
 import { decrypt, encrypt, parseEncrypted } from './mcp-encryption';
 
-export function createMcpOAuthCallbackProvider({
+export function createMCPOAuthCallbackProvider({
   connection,
   server,
 }: {
-  connection: McpOauthConnection;
-  server: McpServer;
+  connection: MCPOAuthConnection;
+  server: MCPServer;
 }): OAuthClientProvider {
-  let storedConnection: McpOauthConnection | null = connection;
+  let storedConnection: MCPOAuthConnection | null = connection;
   const redirectURL = new URL('/mcp/oauth/callback', env.SERVER_BASE_URL);
   const clientMetadata: OAuthClientMetadata = {
     client_name: 'Gorkie MCP',
@@ -25,9 +25,9 @@ export function createMcpOAuthCallbackProvider({
     token_endpoint_auth_method: 'none',
   };
   const saveConnection = async (
-    values: Parameters<typeof patchMcpOAuthConnection>[0]['values']
+    values: Parameters<typeof patchMCPOAuthConnection>[0]['values']
   ) => {
-    storedConnection = await patchMcpOAuthConnection({
+    storedConnection = await patchMCPOAuthConnection({
       serverId: server.id,
       userId: server.userId,
       values: { teamId: server.teamId, ...values },

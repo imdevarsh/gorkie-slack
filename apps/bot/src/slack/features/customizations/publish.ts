@@ -1,7 +1,7 @@
 import {
   clearUserCustomization,
   getUserCustomization,
-  listMcpServers,
+  listMCPServers,
   listScheduledTasksByUser,
   setUserCustomization,
 } from '@repo/db/queries';
@@ -18,7 +18,7 @@ export async function publishHome({
   const [tasks, customization, mcpServers] = await Promise.all([
     listScheduledTasksByUser(userId),
     getUserCustomization(userId),
-    listMcpServers({ userId }),
+    listMCPServers({ userId }),
   ]);
   await client.views.publish({
     user_id: userId,

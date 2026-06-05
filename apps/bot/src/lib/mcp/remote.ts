@@ -4,16 +4,16 @@ import {
   type MCPClient,
 } from '@ai-sdk/mcp';
 import {
-  ensureMcpToolModes,
-  getMcpConnection,
-  getMcpToolModes,
-  listEnabledMcpServers,
-  updateMcpServer,
+  ensureMCPToolModes,
+  getMCPConnection,
+  getMCPToolModes,
+  listEnabledMCPServers,
+  updateMCPServer,
 } from '@repo/db/queries';
 import type {
-  McpOauthConnection,
-  McpServer,
-  McpToolMode,
+  MCPOAuthConnection,
+  MCPServer,
+  MCPToolMode,
 } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
 import { clampText } from '@repo/utils/text';
@@ -25,7 +25,7 @@ import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
 import { decrypt } from './encryption';
 import { guardedMCPFetch } from './guarded-fetch';
-import { createMcpOAuthProvider } from './oauth-provider';
+import { createMCPOAuthProvider } from './oauth-provider';
 
 function extractResultText(result: unknown): string {
   if (
@@ -61,29 +61,29 @@ function slugify(value: string): string {
   return slug || 'server';
 }
 
-const defaultToolMode: McpToolMode =
+const defaultToolMode: MCPToolMode =
   mcp.defaultToolMode === 'allow' || mcp.defaultToolMode === 'block'
     ? mcp.defaultToolMode
     : 'ask';
 
-export type McpCredential =
+export type MCPCredential =
   | { type: 'bearer'; token: string }
-  | { type: 'oauth'; connection: McpOauthConnection };
+  | { type: 'oauth'; connection: MCPOAuthConnection };
 
-export async function getMcpCredential({
+export async function getMCPCredential({
   bearerToken,
   server,
   userId,
 }: {
   bearerToken?: string;
-  server: McpServer;
+  server: MCPServer;
   userId: string;
-}): Promise<McpCredential | null> {
+}): Promise<MCPCredential | null> {
   if (server.authType === 'bearer' && bearerToken) {
     return { type: 'bearer', token: bearerToken };
   }
 
-  const result = await getMcpConnection({
+  const result = await getMCPConnection({
     authType: server.authType,
     serverId: server.id,
     userId,
@@ -101,14 +101,14 @@ function openMCPClient({
   credential,
   server,
 }: {
-  credential: McpCredential;
-  server: McpServer;
+  credential: MCPCredential;
+  server: MCPServer;
 }) {
   const auth =
     credential.type === 'bearer'
       ? { headers: { Authorization: `Bearer ${credential.token}` } }
       : {
-          authProvider: createMcpOAuthProvider({
+          authProvider: createMCPOAuthProvider({
             connection: credential.connection,
             server,
           }),
@@ -126,16 +126,12 @@ function openMCPClient({
   });
 }
 
-/**
- * List a server's tools with a known credential, closing the client after.
- * Used both to probe before persisting and to discover after connecting.
- */
 export async function fetchTools({
   credential,
   server,
 }: {
-  credential: McpCredential;
-  server: McpServer;
+  credential: MCPCredential;
+  server: MCPServer;
 }): Promise<ListToolsResult> {
   const client = await openMCPClient({ credential, server });
   try {
@@ -145,21 +141,21 @@ export async function fetchTools({
   }
 }
 
-export async function syncMcpToolModes({
+export async function syncMCPToolModes({
   server,
   teamId,
   userId,
 }: {
-  server: McpServer;
+  server: MCPServer;
   teamId?: string | null;
   userId: string;
 }) {
-  const credential = await getMcpCredential({ server, userId });
+  const credential = await getMCPCredential({ server, userId });
   if (!credential) {
     throw new Error('Connect this MCP server before using its tools.');
   }
   const definitions = await fetchTools({ credential, server });
-  const modes = await ensureMcpToolModes({
+  const modes = await ensureMCPToolModes({
     defaultMode: defaultToolMode,
     serverId: server.id,
     teamId,
@@ -169,7 +165,7 @@ export async function syncMcpToolModes({
   return { definitions, modes };
 }
 
-export async function createMcpToolset({
+export async function createMCPToolset({
   context,
   stream,
 }: {
@@ -181,7 +177,7 @@ export async function createMcpToolset({
     return { cleanup: async () => undefined, tools: {} };
   }
 
-  const servers = await listEnabledMcpServers({
+  const servers = await listEnabledMCPServers({
     userId,
   });
   const clients: MCPClient[] = [];
@@ -190,7 +186,7 @@ export async function createMcpToolset({
 
   for (const server of servers) {
     try {
-      const credential = await getMcpCredential({ server, userId });
+      const credential = await getMCPCredential({ server, userId });
       if (!credential) {
         continue;
       }
@@ -206,14 +202,14 @@ export async function createMcpToolset({
       }
       clients.push(client);
       const threadTs = context.event.thread_ts ?? context.event.ts;
-      await ensureMcpToolModes({
+      await ensureMCPToolModes({
         defaultMode: defaultToolMode,
         serverId: server.id,
         teamId: context.teamId,
         toolNames: definitions.tools.map((definition) => definition.name),
         userId,
       });
-      const modes = await getMcpToolModes({
+      const modes = await getMCPToolModes({
         serverId: server.id,
         threadTs,
         userId,
@@ -310,7 +306,7 @@ export async function createMcpToolset({
             : tool;
       }
 
-      await updateMcpServer({
+      await updateMCPServer({
         id: server.id,
         userId,
         values: { lastConnectedAt: new Date(), lastError: null },

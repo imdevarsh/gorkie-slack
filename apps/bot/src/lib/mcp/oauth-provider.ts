@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { OAuthClientMetadata, OAuthClientProvider } from '@ai-sdk/mcp';
-import { patchMcpOAuthConnection } from '@repo/db/queries';
-import type { McpOauthConnection, McpServer } from '@repo/db/schema';
-import { createMcpOAuthState } from '@repo/utils';
+import { patchMCPOAuthConnection } from '@repo/db/queries';
+import type { MCPOAuthConnection, MCPServer } from '@repo/db/schema';
+import { createMCPOAuthState } from '@repo/utils';
 import {
   mcpOAuthClientInformationSchema,
   mcpOAuthTokensSchema,
@@ -10,14 +10,14 @@ import {
 import { env } from '@/env';
 import { decrypt, encrypt, parseEncrypted } from './encryption';
 
-export function createMcpOAuthProvider({
+export function createMCPOAuthProvider({
   authorizationURLRef,
   connection,
   server,
 }: {
   authorizationURLRef?: { value?: URL };
-  connection: McpOauthConnection | null;
-  server: McpServer;
+  connection: MCPOAuthConnection | null;
+  server: MCPServer;
 }): OAuthClientProvider {
   let storedConnection = connection;
   const redirectURL = new URL('/mcp/oauth/callback', env.SERVER_BASE_URL);
@@ -29,9 +29,9 @@ export function createMcpOAuthProvider({
     token_endpoint_auth_method: 'none',
   };
   const saveConnection = async (
-    values: Parameters<typeof patchMcpOAuthConnection>[0]['values']
+    values: Parameters<typeof patchMCPOAuthConnection>[0]['values']
   ) => {
-    storedConnection = await patchMcpOAuthConnection({
+    storedConnection = await patchMCPOAuthConnection({
       serverId: server.id,
       userId: server.userId,
       values: { teamId: server.teamId, ...values },
@@ -97,7 +97,7 @@ export function createMcpOAuthProvider({
       });
     },
     state() {
-      return createMcpOAuthState({
+      return createMCPOAuthState({
         nonce: randomUUID(),
         secret: env.MCP_ENCRYPTION_KEY,
         serverId: server.id,
