@@ -1,7 +1,6 @@
 import { createMCPServer, upsertMCPOAuthConnection } from '@repo/db/queries';
 import { publishHome } from '../../../publish';
-import { blocks, inputs } from '../../ids';
-import { viewValueSchema } from '../../schema';
+import { textFieldValue } from '../../schema';
 import type { SubmitArgs } from '../../types';
 import { parseBaseFields } from './base';
 
@@ -33,10 +32,10 @@ export async function executeOAuthSave({
     return;
   }
 
-  const clientId =
-    viewValueSchema
-      .parse(view.state.values[blocks.clientId]?.[inputs.clientId])
-      .value?.trim() ?? '';
+  const clientId = textFieldValue({
+    field: 'clientId',
+    values: view.state.values,
+  });
   if (clientId) {
     await upsertMCPOAuthConnection({
       clientId,

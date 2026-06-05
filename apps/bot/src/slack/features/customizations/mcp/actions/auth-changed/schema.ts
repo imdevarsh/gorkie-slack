@@ -1,5 +1,4 @@
-import { blocks, inputs } from '../../ids';
-import { viewSelectedSchema, viewValueSchema } from '../../schema';
+import { selectedFieldValue, textFieldValue } from '../../schema';
 import type { ModalState, SelectArgs } from '../../types';
 
 export function parseAuthChangedPayload({
@@ -9,33 +8,20 @@ export function parseAuthChangedPayload({
 }): ModalState {
   const values = view?.state.values;
   const auth =
-    viewSelectedSchema.parse(values?.[blocks.auth]?.[inputs.auth])
-      .selected_option?.value === 'bearer'
+    selectedFieldValue({ field: 'auth', values }) === 'bearer'
       ? 'bearer'
       : 'oauth';
   const transport =
-    viewSelectedSchema.parse(values?.[blocks.transport]?.[inputs.transport])
-      .selected_option?.value === 'sse'
+    selectedFieldValue({ field: 'transport', values }) === 'sse'
       ? 'sse'
       : 'http';
 
   return {
     auth,
-    bearerToken:
-      viewValueSchema
-        .parse(values?.[blocks.bearer]?.[inputs.bearer])
-        .value?.trim() ?? '',
-    clientId:
-      viewValueSchema
-        .parse(values?.[blocks.clientId]?.[inputs.clientId])
-        .value?.trim() ?? '',
-    name:
-      viewValueSchema
-        .parse(values?.[blocks.name]?.[inputs.name])
-        .value?.trim() ?? '',
+    bearerToken: textFieldValue({ field: 'bearer', values }),
+    clientId: textFieldValue({ field: 'clientId', values }),
+    name: textFieldValue({ field: 'name', values }),
     transport,
-    url:
-      viewValueSchema.parse(values?.[blocks.url]?.[inputs.url]).value?.trim() ??
-      '',
+    url: textFieldValue({ field: 'url', values }),
   };
 }

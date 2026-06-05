@@ -1,6 +1,6 @@
 import { mcpServerUrlSchema } from '@repo/validators';
-import { blocks, inputs } from '../../ids';
-import { viewSelectedSchema, viewValueSchema } from '../../schema';
+import { blocks } from '../../ids';
+import { selectedFieldValue, textFieldValue } from '../../schema';
 import type { SubmitArgs, Transport } from '../../types';
 
 export async function parseBaseFields({
@@ -19,15 +19,10 @@ export async function parseBaseFields({
   | { data: null; errors: Record<string, string> }
 > {
   const state = view.state.values;
-  const name = viewValueSchema
-    .parse(state[blocks.name]?.[inputs.name])
-    .value?.trim();
-  const urlValue = viewValueSchema
-    .parse(state[blocks.url]?.[inputs.url])
-    .value?.trim();
+  const name = textFieldValue({ field: 'name', values: state });
+  const urlValue = textFieldValue({ field: 'url', values: state });
   const transportValue =
-    viewSelectedSchema.parse(state[blocks.transport]?.[inputs.transport])
-      .selected_option?.value ?? 'http';
+    selectedFieldValue({ field: 'transport', values: state }) || 'http';
   const transport: Transport = transportValue === 'sse' ? 'sse' : 'http';
   const errors: Record<string, string> = {};
 

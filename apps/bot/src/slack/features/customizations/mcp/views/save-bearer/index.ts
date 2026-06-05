@@ -3,8 +3,8 @@ import { errorMessage } from '@repo/utils/error';
 import { connectBearerServer } from '@/lib/mcp/connection';
 import { mdText } from '@/slack/blocks';
 import { publishHome } from '../../../publish';
-import { blocks, inputs, views } from '../../ids';
-import { parseServerMeta, viewValueSchema } from '../../schema';
+import { blocks, views } from '../../ids';
+import { parseServerMeta, textFieldValue } from '../../schema';
 import type { SubmitArgs } from '../../types';
 import { bearerModal, statusModal } from '../../view';
 
@@ -16,10 +16,10 @@ export async function execute({
   client,
   view,
 }: SubmitArgs): Promise<void> {
-  const bearerToken =
-    viewValueSchema
-      .parse(view.state.values[blocks.bearer]?.[inputs.bearer])
-      .value?.trim() ?? '';
+  const bearerToken = textFieldValue({
+    field: 'bearer',
+    values: view.state.values,
+  });
   if (!bearerToken) {
     await ack({
       errors: { [blocks.bearer]: 'Enter a bearer token.' },

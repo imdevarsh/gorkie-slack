@@ -1,4 +1,10 @@
+import { asRecord } from '@repo/utils/record';
 import { z } from 'zod';
+import { blocks, inputs } from './ids';
+
+type Field = keyof typeof blocks & keyof typeof inputs;
+type SelectField = 'auth' | 'transport';
+type ValueField = 'bearer' | 'clientId' | 'name' | 'url';
 
 export const serverMetaSchema = z.object({
   serverId: z.string().optional(),
@@ -27,6 +33,37 @@ export const toolModeInputSchema = z
       .nullish(),
   })
   .catch({});
+
+function fieldInput({ field, values }: { field: Field; values: unknown }) {
+  const root = asRecord(values);
+  const block = asRecord(root?.[blocks[field]]);
+  return block?.[inputs[field]];
+}
+
+export function selectedFieldValue({
+  field,
+  values,
+}: {
+  field: SelectField;
+  values: unknown;
+}): string {
+  return (
+    viewSelectedSchema.parse(fieldInput({ field, values })).selected_option
+      ?.value ?? ''
+  );
+}
+
+export function textFieldValue({
+  field,
+  values,
+}: {
+  field: ValueField;
+  values: unknown;
+}): string {
+  return (
+    viewValueSchema.parse(fieldInput({ field, values })).value?.trim() ?? ''
+  );
+}
 
 export const toolsMetaSchema = z.object({
   nonce: z.string().optional(),
