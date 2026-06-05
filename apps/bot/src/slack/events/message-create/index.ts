@@ -62,7 +62,7 @@ async function handleMessage(
       requestHints,
     });
 
-    if (!result.success && result.error && event.channel) {
+    if (!result.success && result.error && !result.replied && event.channel) {
       await messageContext.client.chat.postMessage({
         channel: event.channel,
         thread_ts: event.thread_ts ?? event.ts,
@@ -92,6 +92,27 @@ async function handleMessage(
             },
           ],
           text: "Gorkie's responses are shaped by this user's personal instructions",
+        })
+        .catch(() => null);
+    }
+
+    if (result.success && result.fallback && event.channel) {
+      await messageContext.client.chat
+        .postMessage({
+          channel: event.channel,
+          thread_ts: event.thread_ts ?? event.ts,
+          blocks: [
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: '_Inference was unavailable, so this response used a fallback model. Data may be used to improve the model. Disable this in settings._',
+                },
+              ],
+            },
+          ],
+          text: 'Inference was unavailable, so this response used a fallback model. Data may be used to improve the model. Disable this in settings.',
         })
         .catch(() => null);
     }

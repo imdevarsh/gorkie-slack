@@ -1,4 +1,4 @@
-import { provider } from '@repo/ai/providers';
+import { createChatLanguageModel } from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
 import { getTime } from '@repo/utils/time';
 import { stepCountIs, ToolLoopAgent } from 'ai';
@@ -27,7 +27,7 @@ export function scheduledTaskAgent({
   timezone: string;
 }) {
   return new ToolLoopAgent({
-    model: provider.languageModel('chat-model'),
+    model: createChatLanguageModel(),
     instructions: `\
 You are Gorkie running an automated scheduled task.
 You are not replying to a live chat message; you are executing a background job.

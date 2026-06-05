@@ -11,6 +11,7 @@ import type {
 } from '@slack/bolt';
 import logger from '@/lib/logger';
 import { applyPrompt } from '../publish';
+import * as toggleDataTraining from './actions/toggle-data-training';
 import { parseModalState, parsePromptValue } from './schema';
 import { buildPresetModal, buildPromptModal } from './view';
 
@@ -142,6 +143,7 @@ export const prompts = {
     { name: 'home_clear_prompt', execute: clearPrompt },
     { name: 'modal_toggle_presets', execute: togglePresets },
     { name: 'modal_load_preset', execute: loadPreset },
+    { name: toggleDataTraining.name, execute: toggleDataTraining.execute },
   ],
   submitViews: [
     { name: 'home_save_prompt', execute: savePrompt },

@@ -49,6 +49,8 @@ async function runAgent({
   const ctxId = getContextId(context);
   const controller = createAbortController(ctxId);
   let stream: Stream | null = null;
+  let fallback = false;
+  const allowTraining = requestHints.customization?.allowTraining ?? true;
   let cleanup: (() => Promise<void>) | null = null;
 
   try {
@@ -66,6 +68,9 @@ async function runAgent({
       requestHints,
       files,
       stream,
+      onFallback: () => {
+        fallback = true;
+      },
     });
     cleanup = result.cleanup;
 
@@ -106,7 +111,7 @@ async function runAgent({
     const toolCalls = await streamResult.toolCalls;
     await closeStream(stream);
     await setStatus(context, { status: '' });
-    return { success: true, toolCalls };
+    return { success: true, toolCalls, fallback };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       if (stream) {
@@ -120,7 +125,7 @@ async function runAgent({
         await closeStream(stream);
       }
       await setStatus(context, { status: '' });
-      return { success: false };
+      return { success: false, replied: Boolean(stream) };
     }
 
     const errorDetails = getErrorDetails(error);
@@ -144,11 +149,23 @@ async function runAgent({
       await closeStream(stream);
     }
     await setStatus(context, { status: 'failed to generate' });
+    let noOutputMessage =
+      'Inference is unavailable right now. Please try again shortly.';
+
+    if (!allowTraining) {
+      noOutputMessage =
+        'Inference is unavailable right now. Turn on data training in settings to let Gorkie use fallback models.';
+    } else if (fallback) {
+      noOutputMessage =
+        'Inference is unavailable right now, and fallback models also failed. Please try again shortly.';
+    }
+
     return {
       success: false,
+      replied: Boolean(stream),
       error:
         error instanceof NoOutputGeneratedError
-          ? 'Oops! Gorkie is out of credits right now. Please try again later.'
+          ? noOutputMessage
           : 'Oops! Something went wrong, try again later.',
     };
   } finally {
@@ -295,6 +312,7 @@ export async function generateResponse({
     await setStatus(context, { status: 'failed to generate' });
     return {
       success: false,
+      replied: false,
       error:
         error instanceof NoOutputGeneratedError
           ? 'Oops! Gorkie is out of credits right now. Please try again later.'

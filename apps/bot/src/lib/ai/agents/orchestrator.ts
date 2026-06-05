@@ -1,5 +1,5 @@
 import { systemPrompt } from '@repo/ai/prompts';
-import { provider } from '@repo/ai/providers';
+import { createChatLanguageModel } from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
@@ -115,15 +115,20 @@ export const orchestratorAgent = async ({
   requestHints,
   files,
   stream,
+  onFallback,
 }: {
   context: SlackMessageContext;
   requestHints: ChatRequestHints;
   files?: SlackFile[];
   stream: Stream;
+  onFallback: () => void;
 }): Promise<{ agent: ToolLoopAgent; cleanup: () => Promise<void> }> => {
   const { cleanup, tools } = await createToolset({ context, files, stream });
   const agent = new ToolLoopAgent({
-    model: provider.languageModel('chat-model'),
+    model: createChatLanguageModel({
+      allowTraining: requestHints.customization?.allowTraining ?? true,
+      onFallback,
+    }),
     instructions: systemPrompt({
       agent: 'chat',
       requestHints,
