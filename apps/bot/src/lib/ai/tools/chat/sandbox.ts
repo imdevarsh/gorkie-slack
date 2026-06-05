@@ -1,4 +1,4 @@
-import { revokeProxyToken } from '@repo/db/queries';
+import { revokeSandboxToken } from '@repo/db/queries';
 import { errorMessage, toLogError } from '@repo/utils/error';
 import { tool } from 'ai';
 import PQueue from 'p-queue';
@@ -248,12 +248,12 @@ export const sandbox = ({
               '[sandbox] Failed to disconnect Pi client'
             );
           });
-          await revokeProxyToken({
+          await revokeSandboxToken({
             sandboxId: runtime.sandbox.sandboxId,
           }).catch((error: unknown) => {
             logger.debug(
               { ...toLogError(error), ctxId },
-              '[sandbox] Failed to revoke proxy token'
+              '[sandbox] Failed to revoke sandbox token'
             );
           });
           if (env.NODE_ENV === 'production') {

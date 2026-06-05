@@ -1,7 +1,15 @@
-export type { Provider } from '@/types';
-
-import type { ProviderConfig } from '@/types';
 import { env } from './env';
+
+export interface Provider {
+  apiKey: string;
+  url: string;
+}
+
+interface ProviderConfig {
+  apiKey: string | undefined;
+  name: string;
+  url: string;
+}
 
 const CONFIGS: ProviderConfig[] = [
   {
@@ -26,3 +34,11 @@ export const providers = Object.fromEntries(
     apiKey ? [[name, { apiKey, url }]] : []
   )
 );
+
+export const proxy = {
+  requestTimeoutMs: 240_000,
+};
+
+export const mcp = {
+  requestTimeoutMs: 15_000,
+};

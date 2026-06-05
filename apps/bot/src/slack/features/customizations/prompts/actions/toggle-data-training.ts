@@ -23,7 +23,7 @@ export async function execute({
     const buttonText = (body.actions[0] as ButtonAction).text.text;
     const allow = buttonText === 'Enable';
     await setUserDataTraining(userId, allow);
-    await publishHome(client, userId);
+    await publishHome({ client, userId });
   } catch (error) {
     logger.warn(
       { ...toLogError(error), userId },

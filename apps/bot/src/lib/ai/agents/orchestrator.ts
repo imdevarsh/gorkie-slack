@@ -6,18 +6,15 @@ import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
 import type {
   ChatRequestHints,
+  ReasoningStreamPart,
   SlackFile,
   SlackMessageContext,
   Stream,
+  ToolApprovalRequest,
 } from '@/types';
 import { createTask, finishTask, updateTask } from '../utils/task';
 
 const taskMap = new Map<string, { taskId: string; startTime: number }>();
-
-type ReasoningStreamPart =
-  | { type: 'start-step' }
-  | { type: 'reasoning-delta'; text: string }
-  | { type: string };
 
 export async function resolveOrchestratorTask({
   context,
@@ -49,7 +46,7 @@ export async function resolveOrchestratorTask({
   });
 }
 
-export async function consumeOrchestratorReasoningStream({
+export async function collectToolApprovalsFromStream({
   context,
   stream,
   fullStream,
@@ -57,10 +54,28 @@ export async function consumeOrchestratorReasoningStream({
   context: SlackMessageContext;
   stream: Stream;
   fullStream: AsyncIterable<ReasoningStreamPart>;
-}): Promise<void> {
+}): Promise<ToolApprovalRequest[]> {
   const eventTs = context.event.event_ts;
+  const approvals: ToolApprovalRequest[] = [];
+  let reasoningText = '';
 
   for await (const part of fullStream) {
+    if (part.type === 'tool-approval-request' && 'toolCall' in part) {
+      const mcp = part.toolCall.toolMetadata?.mcp;
+      if (mcp?.serverId && mcp.serverName && mcp.toolName) {
+        approvals.push({
+          approvalId: part.approvalId,
+          exposedName: part.toolCall.toolName,
+          input: part.toolCall.input,
+          serverId: mcp.serverId,
+          serverName: mcp.serverName,
+          toolCallId: part.toolCall.toolCallId,
+          toolName: mcp.toolName,
+        });
+      }
+      continue;
+    }
+
     if (part.type === 'start-step') {
       continue;
     }
@@ -73,6 +88,12 @@ export async function consumeOrchestratorReasoningStream({
       continue;
     }
 
+    reasoningText += part.text;
+    const output = reasoningText.trim();
+    if (!output) {
+      continue;
+    }
+
     const entry = taskMap.get(eventTs);
     if (!entry) {
       logger.warn({ eventTs }, 'No taskId found in taskMap');
@@ -82,12 +103,14 @@ export async function consumeOrchestratorReasoningStream({
     await updateTask(stream, {
       taskId: entry.taskId,
       status: 'in_progress',
-      output: part.text,
+      output,
     });
   }
+
+  return approvals;
 }
 
-export const orchestratorAgent = ({
+export const orchestratorAgent = async ({
   context,
   requestHints,
   files,
@@ -99,8 +122,9 @@ export const orchestratorAgent = ({
   files?: SlackFile[];
   stream: Stream;
   onFallback: () => void;
-}) =>
-  new ToolLoopAgent({
+}): Promise<{ agent: ToolLoopAgent; cleanup: () => Promise<void> }> => {
+  const { cleanup, tools } = await createToolset({ context, files, stream });
+  const agent = new ToolLoopAgent({
     model: createChatLanguageModel({
       allowTraining: requestHints.customization?.allowTraining ?? true,
       onFallback,
@@ -112,6 +136,7 @@ export const orchestratorAgent = ({
     }),
     providerOptions: {
       openrouter: {
+        parallelToolCalls: false,
         reasoning: { enabled: true, exclude: false, effort: 'medium' },
       },
       google: {
@@ -122,7 +147,7 @@ export const orchestratorAgent = ({
       },
     },
     toolChoice: 'required',
-    tools: createToolset({ context, files, stream }),
+    tools,
     stopWhen: [
       stepCountIs(40),
       successToolCall('leaveChannel'),
@@ -159,3 +184,5 @@ export const orchestratorAgent = ({
       functionId: 'orchestrator',
     },
   });
+  return { agent, cleanup };
+};

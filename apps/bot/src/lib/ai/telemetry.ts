@@ -1,6 +1,6 @@
 import { LangfuseSpanProcessor } from '@langfuse/otel';
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import type { Logger } from '@repo/logging/log';
+import type { Logger } from '@repo/logging/logger';
 import { env } from '@/env';
 
 interface StartTelemetryOptions {

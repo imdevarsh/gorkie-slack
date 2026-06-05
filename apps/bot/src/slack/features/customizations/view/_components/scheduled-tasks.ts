@@ -2,6 +2,7 @@ import type { ScheduledTask } from '@repo/db/schema';
 import { formatDistanceToNowStrict, isPast } from 'date-fns';
 import { Bits, Blocks, Elements, setIfTruthy } from 'slack-block-builder';
 import { appHome } from '@/config';
+import { mdText } from '@/slack/blocks';
 
 function buildTaskBlock(task: ScheduledTask) {
   const destination =
@@ -34,7 +35,7 @@ function buildTaskBlock(task: ScheduledTask) {
 
   return Blocks.Section({
     text: [
-      `*${title}*`,
+      `*${mdText(title)}*`,
       `\`${task.cronExpression}\` (${task.timezone}) -> ${destination}`,
       `Next: ${nextRunText} · Last: ${lastRunText}`,
     ].join('\n'),
@@ -70,6 +71,6 @@ export function scheduledTasksBlocks(tasks: ScheduledTask[]) {
         'No active scheduled tasks. Ask Gorkie to schedule a recurring task for you.'
       )
     ),
-    tasks.map((task) => buildTaskBlock(task)),
+    ...tasks.map((task) => buildTaskBlock(task)),
   ];
 }

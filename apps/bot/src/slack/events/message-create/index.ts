@@ -56,11 +56,11 @@ async function handleMessage(
       `Triggered by ${trigger.type}`
     );
 
-    const result = await generateResponse(
-      messageContext,
+    const result = await generateResponse({
+      context: messageContext,
       messages,
-      requestHints
-    );
+      requestHints,
+    });
 
     if (!result.success && result.error && !result.replied && event.channel) {
       await messageContext.client.chat.postMessage({

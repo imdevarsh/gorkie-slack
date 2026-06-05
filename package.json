@@ -11,6 +11,7 @@
     ],
     "catalog": {
       "@ai-sdk/google": "^3.0.79",
+      "@ai-sdk/mcp": "^1.0.45",
       "@commitlint/cli": "^21.0.1",
       "@commitlint/config-conventional": "^21.0.1",
       "@commitlint/types": "^21.0.1",
@@ -50,6 +51,8 @@
     "start:bot": "bun --filter=bot run start",
     "start:server": "bun --filter=server run start",
     "build:sandbox": "bun --filter=bot run build:sandbox",
+    "update-pkgs": "taze -w -r",
+    "update:major": "taze -w -r major",
     "db:push": "turbo run db:push --filter=@repo/db",
     "db:studio": "turbo run db:studio --filter=@repo/db",
     "db:generate": "turbo run db:generate --filter=@repo/db",
@@ -72,6 +75,7 @@
     "@types/bun": "catalog:",
     "cspell": "catalog:",
     "lefthook": "catalog:",
+    "taze": "^19.13.0",
     "turbo": "^2.8.12",
     "typescript": "catalog:",
     "ultracite": "7.7.0"

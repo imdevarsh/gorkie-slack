@@ -1,8 +1,8 @@
+import { asRecord } from '@repo/utils/record';
 import { clampText } from '@repo/utils/text';
 import { sandbox as config } from '@/config';
 import type { ToolEndInput, ToolStartInput } from '@/types';
 import {
-  asRecord,
   asString,
   extractErrorResult,
   extractTextResult,

@@ -28,7 +28,7 @@ cp apps/server/.env.example apps/server/.env
 
 Use the same `DATABASE_URL` in both files. The bot writes short-lived proxy tokens to the database, and the proxy validates those tokens from the same database.
 
-Put Slack, Exa, E2B, AgentMail, Langfuse, and `PROXY_BASE_URL` in `apps/bot/.env`.
+Put Slack, Exa, E2B, AgentMail, Langfuse, and `SERVER_BASE_URL` in `apps/bot/.env`.
 
 Both apps need `HACKCLUB_API_KEY`, `OPENROUTER_API_KEY`, and `GOOGLE_GENERATIVE_AI_API_KEY`: the bot uses them for direct orchestrator inference, the proxy uses them to forward sandbox requests upstream.
 
@@ -55,7 +55,7 @@ In a second terminal, expose the proxy with a public tunnel:
 npx untun@latest tunnel http://localhost:3001
 ```
 
-Copy the printed `https://...trycloudflare.com` URL into `apps/bot/.env` as `PROXY_BASE_URL`. It must point at the server root. The sandbox config appends paths like `/provider/hackclub` and calls `/ip` to resolve the sandbox outbound IP.
+Copy the printed `https://...trycloudflare.com` URL into `apps/bot/.env` as `SERVER_BASE_URL`. It must point at the server root. The sandbox config appends paths like `/provider/hackclub` and calls `/ip` to resolve the sandbox outbound IP.
 
 In a third terminal, start the bot:
 
@@ -63,7 +63,7 @@ In a third terminal, start the bot:
 bun run dev:bot
 ```
 
-If you change `PROXY_BASE_URL`, restart the bot to pick it up.
+If you change `SERVER_BASE_URL`, restart the bot to pick it up.
 
 `SLACK_SOCKET_MODE=true` is the simplest setup for local Slack development. Slack does not need to reach your bot over HTTP.
 
@@ -105,7 +105,7 @@ The proxy is a Nitro app and deploys to Vercel as a serverless Node.js function.
 
 3. Deploy. The proxy URL will be `https://<your-project>.vercel.app`.
 
-4. Set that URL as `PROXY_BASE_URL` in `apps/bot/.env` (and in your bot's production environment).
+4. Set that URL as `SERVER_BASE_URL` in `apps/bot/.env` (and in your bot's production environment).
 
 The `/health` and `/ip` endpoints have no auth. `/provider/:provider/*` requires a valid short-lived token issued by the bot.
 
@@ -114,7 +114,7 @@ The `/health` and `/ip` endpoints have no auth. `/provider/:provider/*` requires
 The bot runs as a long-lived Node.js process and is not suited for serverless. Deploy it to a persistent host:
 
 1. Set the start command to `bun run start` (runs `dist/index.mjs`).
-2. Add all variables from `apps/bot/.env.example`, including `PROXY_BASE_URL` pointing at the deployed proxy.
+2. Add all variables from `apps/bot/.env.example`, including `SERVER_BASE_URL` pointing at the deployed server.
 3. Set `SLACK_SOCKET_MODE=true`, Socket Mode keeps Slack's connection open without requiring a public HTTP endpoint for the bot itself.
 
 **Database:**

@@ -1,6 +1,6 @@
-import { validateProxyToken } from '@repo/db/queries';
+import { validateSandboxToken } from '@repo/db/queries';
 import { defineHandler, getRequestIP, getRequestURL } from 'nitro/h3';
-import { providers } from '@/config';
+import { providers, proxy } from '@/config';
 import logger from '@/utils/logger';
 
 function getBearerToken(header: string | null): string | null {
@@ -26,7 +26,7 @@ export default defineHandler(async (event) => {
   const requestIp = getRequestIP(event, { xForwardedFor: true }) ?? null;
   const token = getBearerToken(event.req.headers.get('authorization'));
   const session = await (token
-    ? validateProxyToken(token, requestIp)
+    ? validateSandboxToken({ requestIp, token })
     : Promise.resolve(null)
   ).catch((error: unknown) => {
     logger.error(
@@ -77,7 +77,7 @@ export default defineHandler(async (event) => {
     body: requestBody ?? undefined,
     headers,
     method: event.req.method,
-    signal: AbortSignal.timeout(240_000),
+    signal: AbortSignal.timeout(proxy.requestTimeoutMs),
   }).catch((error: unknown) => {
     logger.error(
       { err: error, provider, upstreamUrl },

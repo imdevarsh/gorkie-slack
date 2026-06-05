@@ -1,7 +1,8 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { createLogger } from '@repo/logging/log';
+import { createLogger } from '@repo/logging/logger';
 import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
+
 import {
   createRetryable,
   type LanguageModel,
@@ -19,9 +20,9 @@ const logger = await createLogger({ fileLogging: false });
 const env = keys();
 
 const RETRY = {
-  maxAttempts: 2,
-  delay: 250,
   backoffFactor: 2,
+  delay: 250,
+  maxAttempts: 2,
 } satisfies Omit<Retry<LanguageModel>, 'model'>;
 
 const hackclubBase = createOpenRouter({

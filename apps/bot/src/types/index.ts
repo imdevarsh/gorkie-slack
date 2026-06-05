@@ -1,4 +1,5 @@
 export * from './activity';
+export * from './ai/orchestrator';
 export * from './ai/status';
 export * from './ai/task';
 export * from './request';
