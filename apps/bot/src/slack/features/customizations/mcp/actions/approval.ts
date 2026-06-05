@@ -13,7 +13,7 @@ import {
   decodeApprovalState,
   handledApprovalBlocks,
 } from '@/slack/events/message-create/utils/approval-helpers';
-import { resumeResponse } from '@/slack/events/message-create/utils/respond';
+import { resumeResponse } from '@/slack/events/message-create/utils/resume';
 import type { SlackMessageContext } from '@/types';
 import { getContextId } from '@/utils/context';
 import { actions } from '../ids';
@@ -191,15 +191,17 @@ export async function execute(args: ButtonArgs): Promise<void> {
     getQueue(getContextId(resumeContext))
       .add(() =>
         resumeResponse({
-          approval: {
-            approvalId,
-            reply,
-            tool: {
-              serverName,
-              toolCallId: approval.toolCallId,
-              toolName: approval.toolName,
+          approvals: [
+            {
+              approvalId,
+              reply,
+              tool: {
+                serverName,
+                toolCallId: approval.toolCallId,
+                toolName: approval.toolName,
+              },
             },
-          },
+          ],
           context: resumeContext,
           messages,
           requestHints,

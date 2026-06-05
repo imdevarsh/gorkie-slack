@@ -1,7 +1,3 @@
-import {
-  getMcpServerByIdForUser,
-  supersedePendingMcpToolApprovals,
-} from '@repo/db/queries';
 import { getErrorDetails } from '@repo/utils/error';
 import {
   type ModelMessage,
@@ -16,40 +12,23 @@ import {
 } from '@/lib/ai/agents/orchestrator';
 import { setStatus } from '@/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '@/lib/ai/utils/stream';
-import { finishTask } from '@/lib/ai/utils/task';
 import { setConversationTitle } from '@/lib/ai/utils/title';
-import {
-  type ApprovalReply,
-  DENIAL_REASON,
-  isApproved,
-} from '@/slack/features/customizations/mcp/reply';
 import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 import { processSlackFiles } from '@/utils/images';
 import { getSlackUser } from '@/utils/users';
 import {
-  handledApprovalBlocks,
   postApprovalRequest,
   recordApprovalTask,
+  supersedeExpiredApprovals,
 } from './approval-helpers';
 
-// The single shape an approval decision flows through (mirrors how opencode
-// keeps the tool info on the request and the decision as one `reply` value).
-// `approved`/`reason` are derived from `reply`, never passed alongside it.
-interface ApprovalOutcome {
-  approvalId: string;
-  reply: ApprovalReply;
-  tool: { serverName: string; toolCallId: string; toolName: string };
-}
-
-async function runAgent({
-  approval,
+export async function runAgent({
   context,
   files,
   messages,
   requestHints,
 }: {
-  approval?: ApprovalOutcome;
   context: SlackMessageContext;
   files?: Parameters<typeof orchestratorAgent>[0]['files'];
   messages: ModelMessage[];
@@ -62,14 +41,6 @@ async function runAgent({
 
   try {
     stream = await initStream(context);
-    if (approval && !isApproved(approval.reply)) {
-      await finishTask(stream, {
-        taskId: approval.tool.toolCallId,
-        title: `Using ${approval.tool.serverName} MCP: ${approval.tool.toolName}`,
-        status: 'complete',
-        output: DENIAL_REASON,
-      });
-    }
     const result = await orchestratorAgent({
       context,
       requestHints,
@@ -166,42 +137,6 @@ async function runAgent({
   }
 }
 
-export async function resumeResponse({
-  approval,
-  context,
-  messages,
-  requestHints,
-}: {
-  approval: ApprovalOutcome;
-  context: SlackMessageContext;
-  messages: ModelMessage[];
-  requestHints: ChatRequestHints;
-}) {
-  const approved = isApproved(approval.reply);
-  await setStatus(context, {
-    status: approved ? 'is continuing' : 'is handling the denial',
-  });
-  return runAgent({
-    approval,
-    context,
-    messages: [
-      ...messages,
-      {
-        role: 'tool',
-        content: [
-          {
-            type: 'tool-approval-response',
-            approvalId: approval.approvalId,
-            approved,
-            ...(approved ? {} : { reason: DENIAL_REASON }),
-          },
-        ],
-      },
-    ],
-    requestHints,
-  });
-}
-
 export async function generateResponse({
   context,
   messages,
@@ -230,41 +165,7 @@ export async function generateResponse({
 
     const userId = context.event.user;
     const messageText = context.event.text ?? '';
-    const channelId = context.event.channel;
-    if (userId && channelId) {
-      const expiredApprovals = await supersedePendingMcpToolApprovals({
-        channelId,
-        threadTs:
-          context.event.channel_type === 'im'
-            ? null
-            : (context.event.thread_ts ?? context.event.ts),
-        userId,
-      });
-      await Promise.all(
-        expiredApprovals.map(async (approval) => {
-          if (!approval.messageTs) {
-            return;
-          }
-          const server = await getMcpServerByIdForUser({
-            id: approval.serverId,
-            userId: approval.userId,
-          });
-          await context.client.chat
-            .update({
-              channel: approval.channelId,
-              ts: approval.messageTs,
-              text: 'This MCP approval request expired.',
-              blocks: handledApprovalBlocks({
-                serverName: server?.name ?? approval.exposedName,
-                text: 'Approval expired because you sent a newer message.',
-                title: 'Approval Expired',
-                toolName: approval.toolName,
-              }),
-            })
-            .catch(() => undefined);
-        })
-      );
-    }
+    await supersedeExpiredApprovals(context);
 
     if (messages.length === 0) {
       setConversationTitle(context, messageText).catch(() => undefined);

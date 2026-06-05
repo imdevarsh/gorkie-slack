@@ -1,4 +1,9 @@
-import { createMcpToolApproval, updateMcpToolApproval } from '@repo/db/queries';
+import {
+  createMcpToolApproval,
+  getMcpServerByIdForUser,
+  supersedePendingMcpToolApprovals,
+  updateMcpToolApproval,
+} from '@repo/db/queries';
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
@@ -8,6 +13,7 @@ import { formatToolInput } from '@/lib/ai/utils/tool-input';
 import { encrypt, parseEncrypted } from '@/lib/mcp/secret';
 import { codeBlock } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
+import type { ApprovalReply } from '@/slack/features/customizations/mcp/reply';
 import type {
   ChatRequestHints,
   SlackMessageContext,
@@ -16,6 +22,64 @@ import type {
 } from '@/types';
 
 type SlackBlocks = ChannelAndBlocks['blocks'];
+
+/**
+ * The whole approval decision as one value (opencode's permission `Reply`),
+ * carried with the tool it refers to. `approved`/`reason` are derived from
+ * `reply` by the resume path — never passed alongside it.
+ */
+export interface ApprovalOutcome {
+  approvalId: string;
+  reply: ApprovalReply;
+  tool: { serverName: string; toolCallId: string; toolName: string };
+}
+
+/**
+ * When a user sends a newer message, pending approvals in that channel/thread
+ * are superseded and their cards flipped to "expired". Keeps approval lifecycle
+ * out of the response path.
+ */
+export async function supersedeExpiredApprovals(
+  context: SlackMessageContext
+): Promise<void> {
+  const userId = context.event.user;
+  const channelId = context.event.channel;
+  if (!(userId && channelId)) {
+    return;
+  }
+  const expired = await supersedePendingMcpToolApprovals({
+    channelId,
+    threadTs:
+      context.event.channel_type === 'im'
+        ? null
+        : (context.event.thread_ts ?? context.event.ts),
+    userId,
+  });
+  await Promise.all(
+    expired.map(async (approval) => {
+      if (!approval.messageTs) {
+        return;
+      }
+      const server = await getMcpServerByIdForUser({
+        id: approval.serverId,
+        userId: approval.userId,
+      });
+      await context.client.chat
+        .update({
+          channel: approval.channelId,
+          ts: approval.messageTs,
+          text: 'This MCP approval request expired.',
+          blocks: handledApprovalBlocks({
+            serverName: server?.name ?? approval.exposedName,
+            text: 'Approval expired because you sent a newer message.',
+            title: 'Approval Expired',
+            toolName: approval.toolName,
+          }),
+        })
+        .catch(() => undefined);
+    })
+  );
+}
 
 const approvalStateSchema = z.object({
   messages: z.array(z.custom<ModelMessage>()),
