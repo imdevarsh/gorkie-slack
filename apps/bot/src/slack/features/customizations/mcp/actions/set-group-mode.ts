@@ -69,8 +69,7 @@ export async function execute({
     const selected = toolModeInputSchema.parse(
       block?.[inputs.toolMode]
     ).selected_option;
-    toolModes[toolName] =
-      selected?.value ?? current.global[toolName] ?? 'ask';
+    toolModes[toolName] = selected?.value ?? current.global[toolName] ?? 'ask';
   }
 
   const syntheticTools: ListToolsResult['tools'] = Object.keys(groups).map(

@@ -1,27 +1,13 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createLogger } from '@repo/logging/logger';
-import {
-  APICallError,
-  customProvider,
-  type Provider,
-  wrapLanguageModel,
-  wrapProvider,
-} from 'ai';
+import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
 import { createRetryable, type LanguageModel, type Retry } from 'ai-retry';
-import { requestNotRetryable } from 'ai-retry/retryables';
 
 import { keys } from './keys';
 
 const logger = await createLogger({ fileLogging: false });
-
 const env = keys();
-
-const RETRY = {
-  backoffFactor: 2,
-  delay: 250,
-  maxAttempts: 2,
-} satisfies Omit<Retry<LanguageModel>, 'model'>;
 
 const hackclubBase = createOpenRouter({
   apiKey: env.HACKCLUB_API_KEY,
@@ -64,54 +50,33 @@ const onModelError = (context: {
 
 const retry = (model: LanguageModel): Retry<LanguageModel> => ({
   model,
-  ...RETRY,
+  backoffFactor: 2,
+  delay: 250,
+  maxAttempts: 2,
 });
 
-const noParallel = { parallelToolCalls: false } as const;
-const hackclubMiddleware = {
-  specificationVersion: 'v3' as const,
-  overrideProvider: () => 'hackclub',
-};
+const chatModel = createRetryable({
+  model: hackclub.languageModel('google/gemini-3-flash-preview'),
+  retries: [
+    retry(hackclub.languageModel('openai/gpt-5.4-mini')),
+    retry(openrouter.languageModel('google/gemini-3-flash-preview')),
+    retry(openrouter.languageModel('openai/gpt-5.4-mini')),
+  ],
+  onError: onModelError,
+});
 
-// Use hackclubBase directly (accepts settings) then re-wrap for provider name
-const hc = (modelId: string) =>
-  wrapLanguageModel({
-    model: hackclubBase.languageModel(modelId, noParallel),
-    middleware: hackclubMiddleware,
-  });
-const or = (modelId: string) => openrouter.languageModel(modelId, noParallel);
-
-// Fallback chain (priority order). Every model gets the retry treatment:
-// a permanent error jumps straight to the next model, while a retryable error
-// retries each model — including the primary — with backoff.
-function retryableChain([primary, ...rest]: [
-  LanguageModel,
-  ...LanguageModel[],
-]) {
-  return createRetryable({
-    model: primary,
-    retries: [
-      ...rest.map((model) => requestNotRetryable(model)),
-      ...[primary, ...rest].map((model) => retry(model)),
-    ],
-    onError: onModelError,
-  });
-}
-
-const chatModel = retryableChain([
-  hc('openai/gpt-5.4-mini'),
-  hc('google/gemini-3-flash-preview'),
-  or('google/gemini-3-flash-preview'),
-  or('openai/gpt-5.4-mini'),
-]);
-
-const summariserModel = retryableChain([
-  hackclub.languageModel('google/gemini-3.1-flash-lite-preview'),
-  openrouter.languageModel('google/gemini-3.1-flash-lite-preview'),
-  ...(google ? [google('gemini-3.1-flash-lite-preview')] : []),
-  hackclub.languageModel('openai/gpt-5-nano'),
-  openrouter.languageModel('openai/gpt-5-nano'),
-]);
+const summariserModel = createRetryable({
+  model: hackclub.languageModel('google/gemini-3.1-flash-lite-preview'),
+  retries: [
+    retry(openrouter.languageModel('google/gemini-3.1-flash-lite-preview')),
+    ...(google
+      ? [retry(google('gemini-3.1-flash-lite-preview'))]
+      : []),
+    retry(hackclub.languageModel('openai/gpt-5-nano')),
+    retry(openrouter.languageModel('openai/gpt-5-nano')),
+  ],
+  onError: onModelError,
+});
 
 export const provider: Provider = customProvider({
   languageModels: {
