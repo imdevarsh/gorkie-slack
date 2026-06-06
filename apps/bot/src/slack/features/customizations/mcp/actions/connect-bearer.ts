@@ -1,4 +1,6 @@
 import { getMCPServerById } from '@repo/db/queries';
+import { toLogError } from '@repo/utils/error';
+import logger from '@/lib/logger';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
 import { bearerModal } from '../view';
@@ -12,6 +14,7 @@ export async function execute({
   client,
 }: ButtonArgs): Promise<void> {
   await ack();
+  const userId = body.user.id;
   const serverId = action.value;
   if (!serverId) {
     return;
@@ -19,7 +22,7 @@ export async function execute({
 
   const server = await getMCPServerById({
     id: serverId,
-    userId: body.user.id,
+    userId,
   });
   if (!server || server.authType !== 'bearer') {
     return;
@@ -30,5 +33,10 @@ export async function execute({
       trigger_id: body.trigger_id,
       view: bearerModal({ serverId: server.id, serverName: server.name }),
     })
-    .catch(() => undefined);
+    .catch((error: unknown) => {
+      logger.warn(
+        { ...toLogError(error), serverId: server.id, userId },
+        'Failed to open MCP bearer modal'
+      );
+    });
 }

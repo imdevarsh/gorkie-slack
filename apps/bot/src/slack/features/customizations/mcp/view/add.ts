@@ -15,7 +15,7 @@ export function addModal(state: ModalState = {}): SlackModalDto {
   const modal = Modal({
     callbackId: views.add,
     close: 'Cancel',
-    privateMetaData: JSON.stringify({ auth }),
+    privateMetaData: JSON.stringify({ ...state, auth, transport }),
     submit: 'Add',
     title: 'Add MCP Server',
   }).blocks(

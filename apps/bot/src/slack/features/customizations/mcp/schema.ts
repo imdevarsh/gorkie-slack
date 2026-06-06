@@ -1,6 +1,7 @@
 import { asRecord } from '@repo/utils/record';
 import { z } from 'zod';
 import { blocks, inputs } from './ids';
+import type { ModalState } from './types';
 
 type Field = keyof typeof blocks & keyof typeof inputs;
 type SelectField = 'auth' | 'transport';
@@ -9,6 +10,17 @@ type ValueField = 'bearer' | 'clientId' | 'name' | 'url';
 export const serverMetaSchema = z.object({
   serverId: z.string().optional(),
 });
+
+export const modalStateSchema = z
+  .looseObject({
+    auth: z.enum(['bearer', 'oauth']).optional(),
+    bearerToken: z.string().optional(),
+    clientId: z.string().optional(),
+    name: z.string().optional(),
+    transport: z.enum(['http', 'sse']).optional(),
+    url: z.string().optional(),
+  })
+  .catch({});
 
 export const viewValueSchema = z
   .looseObject({ value: z.string().nullish() })
@@ -60,9 +72,18 @@ export function textFieldValue({
   field: ValueField;
   values: unknown;
 }): string {
-  return (
-    viewValueSchema.parse(fieldInput({ field, values })).value?.trim() ?? ''
-  );
+  return textFieldState({ field, values }) ?? '';
+}
+
+export function textFieldState({
+  field,
+  values,
+}: {
+  field: ValueField;
+  values: unknown;
+}): string | undefined {
+  const value = viewValueSchema.parse(fieldInput({ field, values })).value;
+  return typeof value === 'string' ? value.trim() : undefined;
 }
 
 export const toolsMetaSchema = z.object({
@@ -86,6 +107,18 @@ export function parseServerMeta({
 }): z.output<typeof serverMetaSchema> {
   try {
     return serverMetaSchema.parse(JSON.parse(metadata || '{}'));
+  } catch {
+    return {};
+  }
+}
+
+export function parseModalState({
+  metadata,
+}: {
+  metadata?: string;
+}): ModalState {
+  try {
+    return modalStateSchema.parse(JSON.parse(metadata || '{}'));
   } catch {
     return {};
   }

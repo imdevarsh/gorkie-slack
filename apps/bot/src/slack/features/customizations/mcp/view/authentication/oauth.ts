@@ -4,11 +4,11 @@ import { mdText } from '@/slack/blocks';
 import { views } from '../../ids';
 
 export function oauthModal({
-  authorizationUrl,
+  authorizationURL,
   serverId,
   serverName,
 }: {
-  authorizationUrl: string;
+  authorizationURL: string;
   serverId: string;
   serverName: string;
 }): SlackModalDto {
@@ -26,7 +26,7 @@ export function oauthModal({
       Blocks.Actions().elements(
         Elements.Button({
           text: 'Authenticate',
-          url: authorizationUrl,
+          url: authorizationURL,
         })
       )
     )

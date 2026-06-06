@@ -96,7 +96,7 @@ export async function connectBearerServer({
 }
 
 export type OAuthConnectResult =
-  | { status: 'authorize'; authorizationUrl: string }
+  | { authorizationURL: string; status: 'authorize' }
   | { status: 'connected' };
 
 export async function connectOAuthServer({
@@ -126,8 +126,8 @@ export async function connectOAuthServer({
 
   if (authorizationURLRef.value) {
     return {
+      authorizationURL: authorizationURLRef.value.toString(),
       status: 'authorize',
-      authorizationUrl: authorizationURLRef.value.toString(),
     };
   }
 

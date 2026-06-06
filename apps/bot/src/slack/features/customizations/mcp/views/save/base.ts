@@ -30,7 +30,7 @@ export async function parseBaseFields({
     errors[blocks.name] = 'Enter a name.';
   }
   if (!(transportValue === 'http' || transportValue === 'sse')) {
-    errors[blocks.transport] = 'Transport must be http or sse.';
+    errors[blocks.transport] = 'Transport must be HTTP or SSE.';
   }
 
   const parsedUrl = await mcpServerUrlSchema.safeParseAsync(urlValue ?? '');

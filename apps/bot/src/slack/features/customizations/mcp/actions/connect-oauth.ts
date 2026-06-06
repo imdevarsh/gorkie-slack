@@ -1,5 +1,6 @@
 import { getMCPServerById } from '@repo/db/queries';
-import { errorMessage } from '@repo/utils/error';
+import { errorMessage, toLogError } from '@repo/utils/error';
+import logger from '@/lib/logger';
 import { connectOAuthServer } from '@/lib/mcp/connection';
 import { formatMCPError } from '@/lib/mcp/format-error';
 import { codeBlock } from '@/slack/blocks';
@@ -10,11 +11,26 @@ import { oauthModal, statusModal } from '../view';
 
 export const name = actions.connectOAuth;
 
-const updateView = (
-  client: ButtonArgs['client'],
-  viewId: string,
-  view: ReturnType<typeof statusModal>
-) => client.views.update({ view_id: viewId, view }).catch(() => undefined);
+function updateView({
+  client,
+  userId,
+  view,
+  viewId,
+}: {
+  client: ButtonArgs['client'];
+  userId: string;
+  view: ReturnType<typeof statusModal>;
+  viewId: string;
+}) {
+  return client.views
+    .update({ view_id: viewId, view })
+    .catch((error: unknown) => {
+      logger.warn(
+        { ...toLogError(error), userId, viewId },
+        'Failed to update MCP OAuth modal'
+      );
+    });
+}
 
 export async function execute({
   ack,
@@ -23,32 +39,50 @@ export async function execute({
   client,
 }: ButtonArgs): Promise<void> {
   await ack();
+  const userId = body.user.id;
   if (!action.value) {
     return;
   }
 
-  const opened = await client.views.open({
-    trigger_id: body.trigger_id,
-    view: statusModal({ title: 'Connect MCP', text: 'Preparing connection…' }),
-  });
+  const opened = await client.views
+    .open({
+      trigger_id: body.trigger_id,
+      view: statusModal({
+        title: 'Connect MCP',
+        text: 'Preparing connection…',
+      }),
+    })
+    .catch((error: unknown) => {
+      logger.warn(
+        { ...toLogError(error), userId },
+        'Failed to open MCP OAuth modal'
+      );
+      return null;
+    });
+  if (!opened) {
+    return;
+  }
+
   const viewId = opened.view?.id;
   if (!viewId) {
+    logger.warn({ userId }, 'MCP OAuth modal opened without view ID');
     return;
   }
 
   const server = await getMCPServerById({
     id: action.value,
-    userId: body.user.id,
+    userId,
   });
   if (!server || server.authType !== 'oauth') {
-    await updateView(
+    await updateView({
       client,
-      viewId,
-      statusModal({
+      userId,
+      view: statusModal({
         title: 'Connect MCP',
         text: 'Could not find this MCP server.',
-      })
-    );
+      }),
+      viewId,
+    });
     return;
   }
 
@@ -56,7 +90,7 @@ export async function execute({
     const result = await connectOAuthServer({
       server,
       teamId: body.team?.id,
-      userId: body.user.id,
+      userId,
     });
 
     if (result.status === 'authorize') {
@@ -64,33 +98,40 @@ export async function execute({
         .update({
           view_id: viewId,
           view: oauthModal({
-            authorizationUrl: result.authorizationUrl,
+            authorizationURL: result.authorizationURL,
             serverId: server.id,
             serverName: server.name,
           }),
         })
-        .catch(() => undefined);
+        .catch((error: unknown) => {
+          logger.warn(
+            { ...toLogError(error), serverId: server.id, userId, viewId },
+            'Failed to update MCP OAuth authorization modal'
+          );
+        });
       return;
     }
 
-    await publishHome({ client, userId: body.user.id });
-    await updateView(
+    await publishHome({ client, userId });
+    await updateView({
       client,
-      viewId,
-      statusModal({
+      userId,
+      view: statusModal({
         title: 'Connect MCP',
         text: 'This MCP server is connected. You can close this modal.',
-      })
-    );
-  } catch (error) {
-    await publishHome({ client, userId: body.user.id });
-    await updateView(
-      client,
+      }),
       viewId,
-      statusModal({
+    });
+  } catch (error) {
+    await publishHome({ client, userId });
+    await updateView({
+      client,
+      userId,
+      view: statusModal({
         title: 'Connection Failed',
         text: `Could not connect:\n${codeBlock({ value: formatMCPError(errorMessage(error)), maxLength: 900 })}`,
-      })
-    );
+      }),
+      viewId,
+    });
   }
 }
