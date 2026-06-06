@@ -6,7 +6,7 @@ import {
 } from 'ai';
 import { clearAbortController, createAbortController } from '@/lib/abort';
 import {
-  collectToolApprovalsFromStream,
+  consumeOrchestratorStream,
   orchestratorAgent,
   resolveOrchestratorTask,
 } from '@/lib/ai/agents/orchestrator';
@@ -50,7 +50,7 @@ export async function runAgent({
       messages,
       abortSignal: controller.signal,
     });
-    const approvals = await collectToolApprovalsFromStream({
+    const approvals = await consumeOrchestratorStream({
       context,
       stream,
       fullStream: streamResult.fullStream,

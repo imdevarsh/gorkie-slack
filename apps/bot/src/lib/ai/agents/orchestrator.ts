@@ -1,12 +1,14 @@
 import { systemPrompt } from '@repo/ai/prompts';
 import { provider } from '@repo/ai/providers';
 import { successToolCall } from '@repo/ai/tools';
+import { clampText } from '@repo/utils/text';
 import { stepCountIs, ToolLoopAgent } from 'ai';
+import { orchestratorStream } from '@/config';
 import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
 import type {
   ChatRequestHints,
-  ReasoningStreamPart,
+  OrchestratorStreamPart,
   SlackFile,
   SlackMessageContext,
   Stream,
@@ -14,7 +16,55 @@ import type {
 } from '@/types';
 import { createTask, finishTask, updateTask } from '../utils/task';
 
-const taskMap = new Map<string, { taskId: string; startTime: number }>();
+interface OrchestratorTaskEntry {
+  lastFlushAt: number;
+  lastFlushedLength: number;
+  reasoning: string;
+  startTime: number;
+  taskId: string;
+}
+
+const taskMap = new Map<string, OrchestratorTaskEntry>();
+
+async function flushReasoningTask({
+  entry,
+  force = false,
+  stream,
+}: {
+  entry: OrchestratorTaskEntry;
+  force?: boolean;
+  stream: Stream;
+}): Promise<void> {
+  const details = clampText(
+    entry.reasoning.replaceAll('[REDACTED]', ''),
+    orchestratorStream.reasoningDetailsMaxChars
+  );
+  if (!details) {
+    return;
+  }
+
+  const now = Date.now();
+  const shouldFlush =
+    force ||
+    (now - entry.lastFlushAt >= orchestratorStream.reasoningFlushIntervalMs &&
+      entry.reasoning.length - entry.lastFlushedLength >=
+        orchestratorStream.reasoningFlushMinChars);
+  if (!shouldFlush) {
+    return;
+  }
+
+  entry.lastFlushAt = now;
+  entry.lastFlushedLength = entry.reasoning.length;
+  const status =
+    stream.tasks.get(entry.taskId)?.status === 'complete'
+      ? 'complete'
+      : 'in_progress';
+  await updateTask(stream, {
+    taskId: entry.taskId,
+    status,
+    details,
+  });
+}
 
 export async function resolveOrchestratorTask({
   context,
@@ -46,17 +96,18 @@ export async function resolveOrchestratorTask({
   });
 }
 
-export async function collectToolApprovalsFromStream({
+export async function consumeOrchestratorStream({
   context,
   stream,
   fullStream,
 }: {
   context: SlackMessageContext;
   stream: Stream;
-  fullStream: AsyncIterable<ReasoningStreamPart>;
+  fullStream: AsyncIterable<OrchestratorStreamPart>;
 }): Promise<ToolApprovalRequest[]> {
   const eventTs = context.event.event_ts;
   const approvals: ToolApprovalRequest[] = [];
+  let missingTaskWarned = false;
 
   for await (const part of fullStream) {
     if (part.type === 'tool-approval-request' && 'toolCall' in part) {
@@ -78,6 +129,14 @@ export async function collectToolApprovalsFromStream({
       continue;
     }
 
+    if (part.type === 'reasoning-end' || part.type === 'finish-step') {
+      const entry = taskMap.get(eventTs);
+      if (entry) {
+        await flushReasoningTask({ entry, force: true, stream });
+      }
+      continue;
+    }
+
     if (part.type !== 'reasoning-delta' || !('text' in part)) {
       continue;
     }
@@ -88,14 +147,15 @@ export async function collectToolApprovalsFromStream({
 
     const entry = taskMap.get(eventTs);
     if (!entry) {
-      logger.warn({ eventTs }, 'No taskId found in taskMap');
+      if (!missingTaskWarned) {
+        logger.warn({ eventTs }, 'No task ID found for reasoning stream');
+        missingTaskWarned = true;
+      }
       continue;
     }
 
-    await updateTask(stream, {
-      taskId: entry.taskId,
-      status: 'in_progress',
-    });
+    entry.reasoning += part.text;
+    await flushReasoningTask({ entry, stream });
   }
 
   return approvals;
@@ -146,7 +206,13 @@ export const orchestratorAgent = async ({
         title: 'Thinking…',
         status: 'in_progress',
       });
-      taskMap.set(context.event.event_ts, { taskId, startTime: Date.now() });
+      taskMap.set(context.event.event_ts, {
+        lastFlushedLength: 0,
+        lastFlushAt: 0,
+        reasoning: '',
+        taskId,
+        startTime: Date.now(),
+      });
       return {};
     },
     async onStepFinish() {

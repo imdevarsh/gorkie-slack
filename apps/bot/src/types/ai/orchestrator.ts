@@ -1,6 +1,9 @@
-export type ReasoningStreamPart =
+export type OrchestratorStreamPart =
   | { type: 'start-step' }
-  | { text: string; type: 'reasoning-delta' }
+  | { type: 'finish-step' }
+  | { id: string; type: 'reasoning-start' }
+  | { id: string; type: 'reasoning-end' }
+  | { id?: string; text: string; type: 'reasoning-delta' }
   | {
       approvalId: string;
       toolCall: {
