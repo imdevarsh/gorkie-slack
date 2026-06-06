@@ -7,11 +7,10 @@ import {
 import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
-import { Blocks, Elements, Message } from 'slack-block-builder';
 import { updateTask } from '@/lib/ai/utils/task';
 import { formatToolInput } from '@/lib/ai/utils/tool-input';
 import { encrypt, parseEncrypted } from '@/lib/mcp/encryption';
-import { codeBlock } from '@/slack/blocks';
+import { buttonElement, cardBlock, codeBlock } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type { ApprovalReply } from '@/slack/features/customizations/mcp/reply';
 import type {
@@ -119,18 +118,15 @@ export function handledApprovalBlocks({
 
   const body = clampText(
     [
-      `*${cardTitle}*`,
       serverName && toolName && input ? null : text,
       input ? `Input:\n${codeBlock({ value: input, maxLength: 180 })}` : null,
     ]
       .filter(Boolean)
       .join('\n'),
-    260
+    200
   );
 
-  return Message()
-    .blocks(Blocks.Section({ text: body }))
-    .getBlocks();
+  return [cardBlock({ body, title: cardTitle })];
 }
 
 export async function postApprovalRequest({
@@ -168,33 +164,32 @@ export async function postApprovalRequest({
   });
 
   const blocks: SlackBlocks = [
-    ...Message()
-      .blocks(
-        Blocks.Section({
-          text: clampText(
-            `*Approve: ${approval.serverName} / ${approval.toolName}*\nInput:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
-            260
-          ),
+    cardBlock({
+      actions: [
+        buttonElement({
+          actionId: actions.approval.allow,
+          style: 'primary',
+          text: 'Approve once',
+          value: approval.approvalId,
         }),
-        Blocks.Actions().elements(
-          Elements.Button({
-            actionId: actions.approval.allow,
-            text: 'Approve once',
-            value: approval.approvalId,
-          }).primary(),
-          Elements.Button({
-            actionId: actions.approval.always,
-            text: 'Always in thread',
-            value: approval.approvalId,
-          }),
-          Elements.Button({
-            actionId: actions.approval.deny,
-            text: 'Deny',
-            value: approval.approvalId,
-          }).danger()
-        )
-      )
-      .getBlocks(),
+        buttonElement({
+          actionId: actions.approval.always,
+          text: 'Always in thread',
+          value: approval.approvalId,
+        }),
+        buttonElement({
+          actionId: actions.approval.deny,
+          style: 'danger',
+          text: 'Deny',
+          value: approval.approvalId,
+        }),
+      ],
+      body: clampText(
+        `Input:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
+        200
+      ),
+      title: `Approve: ${approval.serverName} / ${approval.toolName}`,
+    }),
   ];
 
   const message = await context.client.chat.postMessage({
