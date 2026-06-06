@@ -6,8 +6,8 @@
     "build": "nitro build",
     "dev": "nitro dev --port 8000",
     "prepare": "nitro prepare",
-    "preview": "NODE_ENV=production srvx --prod .output/",
-    "start": "NODE_ENV=production srvx --prod .output/",
+    "preview": "NODE_ENV=production srvx --prod --port 8000 .output/",
+    "start": "NODE_ENV=production srvx --prod --port 8000 .output/",
     "typecheck": "bun run prepare && tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
