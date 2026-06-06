@@ -232,7 +232,7 @@ export async function createMCPToolset({
         const execute = tool.execute;
         const taskTitle = `Using ${server.name}: ${toolName}`;
         const mode =
-          modes.thread[toolName] ?? modes.global[toolName] ?? defaultToolMode;
+          modes.global[toolName] ?? modes.thread[toolName] ?? defaultToolMode;
         const metadata = {
           mcp: {
             serverId: server.id,
