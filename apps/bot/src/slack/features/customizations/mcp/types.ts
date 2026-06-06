@@ -1,3 +1,4 @@
+import type { MCPModalState } from '@repo/validators';
 import type {
   AllMiddlewareArgs,
   BlockAction,
@@ -9,17 +10,9 @@ import type {
   ViewSubmitAction,
 } from '@slack/bolt';
 
-export type Auth = 'bearer' | 'oauth';
-export type Transport = 'http' | 'sse';
-
-export interface ModalState {
-  auth?: Auth;
-  bearerToken?: string;
-  clientId?: string;
-  name?: string;
-  transport?: Transport;
-  url?: string;
-}
+export type Auth = NonNullable<MCPModalState['auth']>;
+export type Transport = NonNullable<MCPModalState['transport']>;
+export type ModalState = MCPModalState;
 
 export type ButtonArgs = SlackActionMiddlewareArgs<BlockAction<ButtonAction>> &
   AllMiddlewareArgs;

@@ -1,9 +1,10 @@
 import { getMCPServerById, patchMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
+import { mcpToolModeInputSchema } from '@repo/validators';
 import { publishHome } from '../../../publish';
 import { toolBlock } from '../../block-id';
 import { inputs, views } from '../../ids';
-import { parseToolsMeta, toolModeInputSchema } from '../../schema';
+import { parseToolsMeta } from '../../schema';
 import type { SubmitArgs } from '../../types';
 
 export const name = views.configure;
@@ -32,7 +33,7 @@ export async function execute({
       if (!toolName) {
         return [];
       }
-      const selected = toolModeInputSchema.parse(
+      const selected = mcpToolModeInputSchema.parse(
         fields[inputs.toolMode]
       ).selected_option;
       return selected?.value ? [{ mode: selected.value, toolName }] : [];

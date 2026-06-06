@@ -2,9 +2,10 @@ import type { ListToolsResult } from '@ai-sdk/mcp';
 import { getMCPServerById, getMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import { asRecord } from '@repo/utils/record';
+import { mcpToolModeInputSchema } from '@repo/validators';
 import { groupBlock, toolBlock } from '../block-id';
 import { actions, inputs } from '../ids';
-import { parseToolsMeta, toolModeInputSchema } from '../schema';
+import { parseToolsMeta } from '../schema';
 import type { SelectArgs } from '../types';
 import { toolsModal } from '../view';
 
@@ -67,7 +68,7 @@ export async function execute({
       continue;
     }
     const block = asRecord(stateValues[toolBlock.encode(nonce, toolId)]);
-    const selected = toolModeInputSchema.parse(
+    const selected = mcpToolModeInputSchema.parse(
       block?.[inputs.toolMode]
     ).selected_option;
     toolModes[tool.name] =

@@ -1,2 +1,2 @@
-export * from './mcp';
+export * from './features/mcp';
 export * from './sandbox';
