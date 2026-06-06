@@ -18,9 +18,20 @@ async function cancelTask({
   AllMiddlewareArgs): Promise<void> {
   await ack();
   const userId = body.user.id;
-  const taskId = typeof action.value === 'string' ? action.value : '';
+  const taskId = typeof action.value === 'string' ? action.value.trim() : '';
+  if (!taskId) {
+    logger.warn({ userId }, 'Missing scheduled task ID for cancel action');
+    return;
+  }
+
   try {
-    await cancelScheduledTaskForUser(taskId, userId);
+    const cancelled = await cancelScheduledTaskForUser(taskId, userId);
+    if (!cancelled) {
+      logger.warn(
+        { userId, taskId },
+        'Scheduled task cancel action did not match an active task'
+      );
+    }
     await publishHome({ client, userId });
   } catch (error) {
     logger.warn(
