@@ -43,9 +43,9 @@ Add an explicit checkpoint flow for larger agent tasks so meaningful working sta
 - Consider where checkpoint metadata belongs before adding more one-off state fields.
 
 ### Bug: Task stream is intermittent — thinking sometimes missing
-The "Thinking…" task created in `prepareStep` of `orchestratorAgent` and its reasoning text (`consumeOrchestratorReasoningStream`) are sometimes not shown in Slack. Possibly a race condition in task creation vs. stream consumption, or the reasoning stream arriving after the step task is already resolved.
+The "Thinking…" task created in `prepareStep` of `orchestratorAgent` and its reasoning text are sometimes not shown in Slack. Partially addressed in `292bfbb` by consuming AI SDK reasoning lifecycle events in `consumeOrchestratorStream`, buffering reasoning details, and preventing late flushes from moving a completed task back to `in_progress`.
 - Files: `apps/bot/src/lib/ai/agents/orchestrator.ts`, `apps/bot/src/lib/ai/utils/stream.ts`
-- Investigate: does `prepareStep` always fire before the reasoning stream starts? Check if the taskMap entry is set before `consumeOrchestratorReasoningStream` is called.
+- Verify in live Slack: does `prepareStep` always fire before reasoning deltas, and do provider reasoning details remain visible after tool calls and terminal reply/skip/leave tasks?
 
 ### Investigate: Main chat model switch
 Evaluate whether the primary chat model should move from the current Gemini Flash model to a smaller GPT-5 family model, and document the cost, latency, context, and quality tradeoffs before changing defaults.
