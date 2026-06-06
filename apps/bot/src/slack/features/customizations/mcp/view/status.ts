@@ -1,4 +1,5 @@
 import type { ViewsOpenArguments } from '@slack/web-api';
+import { Blocks, Modal } from 'slack-block-builder';
 
 type ModalView = ViewsOpenArguments['view'];
 
@@ -9,15 +10,7 @@ export function statusModal({
   text: string;
   title: string;
 }): ModalView {
-  return {
-    type: 'modal',
-    title: { type: 'plain_text', text: title },
-    close: { type: 'plain_text', text: 'Done' },
-    blocks: [
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text },
-      },
-    ],
-  };
+  return Modal({ close: 'Done', title })
+    .blocks(Blocks.Section({ text }))
+    .buildToObject();
 }
