@@ -30,6 +30,18 @@ The request body in one trace has `max_tokens: undefined`, so OpenRouter appears
 MCP tool tasks should show the normalized MCP tool name in the title, plus concise input and output details. For example, use `Using Fathom: list_meetings` instead of only `Using Fathom MCP`, then include a clamped JSON input preview and a clamped text/JSON output preview.
 - File: `apps/bot/src/lib/mcp/remote.ts`
 
+### Improve: MCP server edit flow
+Lock down connection-defining MCP server fields after creation. URL, transport, and auth type should require deleting and re-adding the server rather than editing an existing connected server in place.
+- Files: `apps/bot/src/slack/features/customizations/mcp/views/save/index.ts`, `apps/bot/src/slack/features/customizations/mcp/actions/configure.ts`, `packages/db/src/queries/mcp/servers.ts`
+
+### Improve: MCP OAuth token refresh
+OAuth connections store `expiresAt`, but refresh is currently reactive at use time. Add a scheduled refresh path that renews tokens shortly before expiry and records refresh failures without breaking unrelated MCP servers.
+- Files: `apps/server/src/tasks/`, `apps/server/nitro.config.ts`, `packages/db/src/queries/mcp/connections.ts`
+
+### Improve: MCP tool discovery before full OAuth
+Users cannot preview available tools until after OAuth completes. Add a server-side discovery endpoint that attempts `listTools()` with current credentials and returns an empty list on auth failure, then surface the result in the Slack setup flow.
+- Files: `apps/server/src/routes/`, `apps/bot/src/slack/features/customizations/mcp/`
+
 ### Improve: Multi-provider retry for Pi sandbox agent
 The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the orchestrator (`createRetryable`) so it falls back to alternative providers on failure rather than erroring out.
 
