@@ -21,9 +21,13 @@ export function parseModalState({
   }
 }
 
-export function parsePromptValue({ values }: { values: unknown }): string {
+export function parsePromptValue({
+  values,
+}: {
+  values: unknown;
+}): string | null {
   const root = asRecord(values);
   const block = asRecord(root?.prompt_block);
   const input = asRecord(block?.prompt_input);
-  return typeof input?.value === 'string' ? input.value.trim() : '';
+  return typeof input?.value === 'string' ? input.value.trim() : null;
 }

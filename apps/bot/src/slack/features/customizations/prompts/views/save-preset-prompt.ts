@@ -14,6 +14,15 @@ export async function execute({
 }: SubmitArgs): Promise<void> {
   const userId = body.user.id;
   const prompt = parsePromptValue({ values: view.state.values });
+  if (prompt === null) {
+    await ack({
+      errors: { prompt_block: 'Could not read custom instructions.' },
+      response_action: 'errors',
+    });
+    return;
+  }
+  await ack({ response_action: 'clear' });
+
   try {
     await savePrompt({ prompt, userId });
   } catch (error) {
@@ -21,13 +30,8 @@ export async function execute({
       { ...toLogError(error), userId },
       'Failed to save preset prompt'
     );
-    await ack({
-      errors: { prompt_block: 'Could not save custom instructions.' },
-      response_action: 'errors',
-    });
     return;
   }
-  await ack({ response_action: 'clear' });
   await publishHome({ client, userId }).catch((error: unknown) => {
     logger.warn({ ...toLogError(error), userId }, 'Failed to publish home');
   });

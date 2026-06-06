@@ -3,6 +3,15 @@ import { Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
 import type { ModalState } from './schema';
 
+export function buildPromptLoadingModal(): SlackModalDto {
+  return Modal({
+    title: 'Custom Instructions',
+    close: 'Cancel',
+  })
+    .blocks(Blocks.Section({ text: 'Loading custom instructions...' }))
+    .buildToObject();
+}
+
 export function buildPromptModal({
   currentPrompt,
   state = { showPresets: false },
