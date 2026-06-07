@@ -1,7 +1,6 @@
 import {
   deleteAllMCPToolPermissions,
   deleteMCPConnections,
-  getMCPServerById,
   updateMCPServer,
 } from '@repo/db/queries';
 import { publishHome } from '../../publish';
@@ -18,13 +17,6 @@ export async function execute({
 }: ButtonArgs): Promise<void> {
   await ack();
   if (!action.value) {
-    return;
-  }
-  const server = await getMCPServerById({
-    id: action.value,
-    userId: body.user.id,
-  });
-  if (!server) {
     return;
   }
   await deleteMCPConnections({

@@ -14,12 +14,7 @@ import type {
 } from '@/types';
 import { createTask, finishTask } from '../utils/task';
 
-interface OrchestratorTaskEntry {
-  startTime: number;
-  taskId: string;
-}
-
-const taskMap = new Map<string, OrchestratorTaskEntry>();
+const taskMap = new Map<string, { startTime: number; taskId: string }>();
 
 export async function resolveOrchestratorTask({
   context,

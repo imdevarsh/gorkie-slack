@@ -1,9 +1,5 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
-import {
-  getMCPServerById,
-  getMCPToolModes,
-  updateMCPServer,
-} from '@repo/db/queries';
+import { getMCPServerById, updateMCPServer } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
 import { syncMCPToolModes } from '@/lib/mcp/remote';
@@ -75,15 +71,6 @@ export async function execute({
     });
     await publishHome({ client, userId: body.user.id });
   }
-  if (!definitions) {
-    toolModes = (
-      await getMCPToolModes({
-        serverId,
-        userId: body.user.id,
-      })
-    ).global;
-  }
-
   await client.views.update({
     view_id: viewId,
     view: toolsModal({

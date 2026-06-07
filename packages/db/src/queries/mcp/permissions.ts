@@ -1,4 +1,4 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { db } from '../../index';
 import {
   type MCPToolMode,
@@ -106,33 +106,32 @@ export async function setMCPToolModes(
 }
 
 export async function patchMCPToolModes(input: SetMCPToolModesInput) {
-  const current = await getMCPToolModes({
+  const values = {
+    modes: input.modes,
+    scope: input.scope,
     serverId: input.serverId,
-    threadTs: input.scope === 'thread' ? input.threadTs : null,
+    teamId: input.teamId ?? null,
+    threadTs: input.scope === 'thread' ? input.threadTs : '',
     userId: input.userId,
-  });
-  const merged = {
-    ...(input.scope === 'thread' ? current.thread : current.global),
-    ...input.modes,
   };
-  const next =
-    input.scope === 'thread'
-      ? {
-          modes: merged,
-          scope: input.scope,
-          serverId: input.serverId,
-          teamId: input.teamId,
-          threadTs: input.threadTs,
-          userId: input.userId,
-        }
-      : {
-          modes: merged,
-          scope: input.scope,
-          serverId: input.serverId,
-          teamId: input.teamId,
-          userId: input.userId,
-        };
-  return setMCPToolModes(next);
+  const rows = await db
+    .insert(mcpToolPermissions)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [
+        mcpToolPermissions.serverId,
+        mcpToolPermissions.userId,
+        mcpToolPermissions.scope,
+        mcpToolPermissions.threadTs,
+      ],
+      set: {
+        modes: sql`${mcpToolPermissions.modes} || ${JSON.stringify(input.modes)}::jsonb`,
+        teamId: values.teamId,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+  return rows[0] ?? null;
 }
 
 export async function ensureMCPToolModes({
@@ -161,25 +160,6 @@ export async function ensureMCPToolModes({
     userId,
   });
   return next;
-}
-
-export function resetGlobalMCPToolModes({
-  serverId,
-  userId,
-}: {
-  serverId: string;
-  userId: string;
-}) {
-  return db
-    .delete(mcpToolPermissions)
-    .where(
-      and(
-        eq(mcpToolPermissions.serverId, serverId),
-        eq(mcpToolPermissions.userId, userId),
-        eq(mcpToolPermissions.scope, 'global'),
-        eq(mcpToolPermissions.threadTs, '')
-      )
-    );
 }
 
 export function deleteAllMCPToolPermissions({
