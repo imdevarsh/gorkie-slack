@@ -68,10 +68,22 @@ export async function execute(args: ButtonArgs): Promise<void> {
     return;
   }
 
-  const status = await getMCPToolApprovalStatus({
-    approvalId,
-    userId: body.user.id,
-  });
+  const status = await getMCPToolApprovalStatus({ approvalId });
+
+  if (status && status.userId !== body.user.id) {
+    const container = asRecord(body.container);
+    const channel = container?.channel_id;
+    if (typeof channel === 'string') {
+      await client.chat
+        .postEphemeral({
+          channel,
+          text: "You don't have permission to respond to this approval request.",
+          user: body.user.id,
+        })
+        .catch(() => undefined);
+    }
+    return;
+  }
 
   if (!status || status.status !== 'pending') {
     const server = status
@@ -127,7 +139,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
       ...args,
       serverName,
       text: 'Server is no longer connected. Approval cancelled.',
-      title: 'Server Disconnected',
+      title: 'Disconnected',
       toolName: approval.toolName,
     });
     await updateMCPToolApproval({

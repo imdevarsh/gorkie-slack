@@ -4,6 +4,7 @@ import type { ViewsOpenArguments } from '@slack/web-api';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import { mcp } from '@/config';
 import { formatMCPError } from '@/lib/mcp/format-error';
+import { formatToolName } from '@/lib/mcp/format-tool-name';
 import { codeBlock, mdText } from '@/slack/blocks';
 import { groupBlock, renderNonce, toolBlock } from '../block-id';
 import { actions, inputs, views } from '../ids';
@@ -114,7 +115,7 @@ export function toolsModal({
         ...header,
         Blocks.Section({
           blockId: toolBlock.encode(nonce, id),
-          text: mdText(tool.name.slice(0, 180)),
+          text: mdText(formatToolName(tool.name).slice(0, 180)),
         }).accessory(
           Elements.StaticSelect({
             actionId: inputs.toolMode,

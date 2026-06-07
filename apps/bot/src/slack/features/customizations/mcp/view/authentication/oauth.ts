@@ -1,4 +1,4 @@
-import { Blocks, Elements, Modal } from 'slack-block-builder';
+import { Blocks, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
 import { mdText } from '@/slack/blocks';
 import { views } from '../../ids';
@@ -21,14 +21,8 @@ export function oauthModal({
     .notifyOnClose()
     .blocks(
       Blocks.Section({
-        text: `*Connect ${mdText(serverName)} to Gorkie*\n\nAuthenticate with this MCP server, then return to Slack.`,
-      }),
-      Blocks.Actions().elements(
-        Elements.Button({
-          text: 'Authenticate',
-          url: authorizationURL,
-        })
-      )
+        text: `*Connect ${mdText(serverName)} to Gorkie*\n\nAuthenticate with this MCP server, then return to Slack.\n\n<${authorizationURL}|Authenticate →>`,
+      })
     )
     .buildToObject();
 }

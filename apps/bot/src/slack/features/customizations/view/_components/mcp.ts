@@ -27,15 +27,6 @@ function serverBlocks(server: MCPServerWithConnection) {
   const section = Blocks.Section({
     text: `*${mdText(truncateText(server.name, appHome.maxMCPNameDisplay))}*`,
   });
-  if (healthy) {
-    section.accessory(
-      Elements.Button({
-        actionId: server.enabled ? actions.disable : actions.enable,
-        text: server.enabled ? 'Disable' : 'Enable',
-        value: server.id,
-      })
-    );
-  }
 
   const context = Blocks.Context().elements(
     `${statusLabel}  ·  \`${truncateText(server.url, appHome.maxMCPUrlDisplay)}\``
@@ -50,6 +41,15 @@ function serverBlocks(server: MCPServerWithConnection) {
     : [];
 
   const actionsBlock = Blocks.Actions().elements(
+    ...(healthy
+      ? [
+          Elements.Button({
+            actionId: server.enabled ? actions.disable : actions.enable,
+            text: server.enabled ? 'Disable' : 'Enable',
+            value: server.id,
+          }),
+        ]
+      : []),
     Elements.Button({
       actionId: healthy ? actions.disconnect : connectAction,
       text: healthy ? 'Disconnect' : 'Connect',

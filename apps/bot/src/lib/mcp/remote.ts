@@ -24,6 +24,7 @@ import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 import { decrypt } from './encryption';
+import { formatToolName } from './format-tool-name';
 import { guardedMCPFetch } from './guarded-fetch';
 import { createMCPOAuthProvider } from './oauth-provider';
 
@@ -229,7 +230,7 @@ export async function createMCPToolset({
         usedNames.add(exposedName);
 
         const execute = tool.execute;
-        const taskTitle = `Using ${server.name}: ${toolName}`;
+        const taskTitle = `Using ${server.name}: ${formatToolName(toolName)}`;
         const globalMode = modes.global[toolName] ?? defaultToolMode;
         const mode =
           globalMode === 'block'
@@ -262,7 +263,10 @@ export async function createMCPToolset({
                     {
                       ctxId,
                       exposedName,
-                      input: details,
+                      input: clampText(
+                        JSON.stringify(input, null, 2),
+                        mcp.taskOutputMaxChars
+                      ),
                       mode,
                       serverId: server.id,
                       serverName: server.name,
@@ -289,7 +293,7 @@ export async function createMCPToolset({
                     );
                     await createTask(stream, {
                       taskId: options.toolCallId,
-                      title: `Denied ${server.name}: ${toolName}`,
+                      title: `Denied ${server.name}: ${formatToolName(toolName)}`,
                       details,
                       status: 'in_progress',
                     });
@@ -312,17 +316,18 @@ export async function createMCPToolset({
 
                   try {
                     const result = await execute(input, options);
-                    const output = clampText(
-                      `Output:\n${extractResultText(result)}`,
+                    const resultText = clampText(
+                      extractResultText(result),
                       mcp.taskOutputMaxChars
                     );
+                    const output = `Output:\n${resultText}`;
                     logger.info(
                       {
                         ctxId,
                         durationMs: Date.now() - startedAt,
                         exposedName,
                         mode,
-                        output,
+                        output: resultText,
                         serverId: server.id,
                         serverName: server.name,
                         toolCallId: options.toolCallId,

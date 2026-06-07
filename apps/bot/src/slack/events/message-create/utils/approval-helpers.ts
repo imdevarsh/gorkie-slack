@@ -9,6 +9,7 @@ import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
 import { updateTask } from '@/lib/ai/utils/task';
 import { encrypt, parseEncrypted } from '@/lib/mcp/encryption';
+import { formatToolName } from '@/lib/mcp/format-tool-name';
 import { buttonElement, cardBlock, codeBlock } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
 import type { ApprovalReply } from '@/slack/features/customizations/mcp/reply';
@@ -92,7 +93,7 @@ export async function recordApprovalTask({
 }) {
   await updateTask(stream, {
     taskId: approval.toolCallId,
-    title: `Using ${approval.serverName} MCP: ${approval.toolName}`,
+    title: `Using ${approval.serverName}: ${formatToolName(approval.toolName)}`,
     details: clampText(
       `Input:\n${JSON.stringify(approval.input, null, 2)}`,
       1200
@@ -190,7 +191,7 @@ export async function postApprovalRequest({
         `Input:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
         200
       ),
-      title: `Approve: ${approval.serverName} / ${approval.toolName}`,
+      title: `Approve: ${approval.serverName} / ${formatToolName(approval.toolName)}`,
     }),
   ];
 

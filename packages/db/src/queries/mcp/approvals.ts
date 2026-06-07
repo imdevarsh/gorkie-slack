@@ -47,10 +47,8 @@ export function supersedePendingMCPToolApprovals({
 
 export function getMCPToolApprovalStatus({
   approvalId,
-  userId,
 }: {
   approvalId: string;
-  userId: string;
 }): Promise<{
   serverId: string;
   status: MCPToolApprovalStatus;
@@ -65,12 +63,7 @@ export function getMCPToolApprovalStatus({
       userId: mcpToolApprovals.userId,
     })
     .from(mcpToolApprovals)
-    .where(
-      and(
-        eq(mcpToolApprovals.approvalId, approvalId),
-        eq(mcpToolApprovals.userId, userId)
-      )
-    )
+    .where(eq(mcpToolApprovals.approvalId, approvalId))
     .limit(1)
     .then((rows) => rows[0] ?? null);
 }
