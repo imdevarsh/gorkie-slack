@@ -2,7 +2,7 @@ import { toLogError } from '@repo/utils/error';
 import { env } from '@/env';
 import { isUserAllowed } from '@/lib/allowed-users';
 import logger from '@/lib/logger';
-import { getQueue } from '@/lib/queue';
+import { getQueue, isQueueFull } from '@/lib/queue';
 import type { MessageEventArgs } from '@/types';
 import { buildChatContext, getContextId } from '@/utils/context';
 import { handleInlineCommand } from '@/utils/inline-commands';
@@ -128,6 +128,11 @@ export async function execute(args: MessageEventArgs): Promise<void> {
     if (inlineResult === 'handled') {
       return;
     }
+  }
+
+  if (isQueueFull(ctxId)) {
+    logger.warn({ ctxId }, 'Message queue full, dropping message');
+    return;
   }
 
   await getQueue(ctxId)

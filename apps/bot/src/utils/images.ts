@@ -4,6 +4,8 @@ import { env } from '@/env';
 import logger from '@/lib/logger';
 import type { SlackFile } from '@/types';
 
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+
 const SUPPORTED_IMAGE_TYPES = [
   'image/jpeg',
   'image/png',
@@ -48,7 +50,23 @@ export async function fetchSlackImageAsBase64(
       return null;
     }
 
+    const contentLength = Number(response.headers.get('content-length') ?? 0);
+    if (contentLength > MAX_IMAGE_BYTES) {
+      logger.warn(
+        { fileId: file.id, contentLength },
+        'Skipping image: exceeds size limit'
+      );
+      return null;
+    }
+
     const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_IMAGE_BYTES) {
+      logger.warn(
+        { fileId: file.id, byteLength: arrayBuffer.byteLength },
+        'Skipping image: exceeds size limit'
+      );
+      return null;
+    }
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = getMimeType(file);
 

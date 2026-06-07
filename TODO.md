@@ -26,6 +26,13 @@ The request body in one trace has `max_tokens: undefined`, so OpenRouter appears
 - Files: `packages/ai/src/providers.ts`, `apps/bot/src/config.ts`, `apps/bot/src/lib/sandbox/config/index.ts`
 - Validation: confirm HackClub `504` responses retry to the next provider and OpenRouter/HackClub requests no longer reserve `65536` output tokens by default.
 
+### Improve: Show denied tools in thinking panel
+When a user clicks "Deny" on an approval card, the new response stream starts fresh with no record of the denial. Blocked tools (configure mode = deny) correctly show a "Denied Server: tool" task because they run inside the same stream. Manually denied tools can't update the old stream (already closed), so they need synthetic tasks at the start of the new stream.
+- (a) Add `serverName`, `toolName`, `input` to `ApprovalOutcome` for denied items; populate in `approval.ts` from `batch.siblings`.
+- (b) Add `preTasks?` to `runAgent`; emit them as complete tasks right after `initStream`.
+- (c) In `resumeResponse`, build `preTasks` from denied approvals and pass to `runAgent`.
+- Files: `approval-helpers.ts`, `approval.ts`, `respond.ts`, `resume.ts`
+
 ### Improve: MCP tool task display
 MCP tool tasks should show the normalized MCP tool name in the title, plus concise input and output details. For example, use `Using Fathom: list_meetings` instead of only `Using Fathom MCP`, then include a clamped JSON input preview and a clamped text/JSON output preview.
 - File: `apps/bot/src/lib/mcp/remote.ts`

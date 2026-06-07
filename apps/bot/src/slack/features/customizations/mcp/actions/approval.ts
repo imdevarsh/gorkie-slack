@@ -70,21 +70,8 @@ export async function execute(args: ButtonArgs): Promise<void> {
 
   const status = await getMCPToolApprovalStatus({
     approvalId,
+    userId: body.user.id,
   });
-  if (status && status.userId !== body.user.id) {
-    const container = asRecord(body.container);
-    const channel = container?.channel_id;
-    if (typeof channel === 'string') {
-      await client.chat
-        .postEphemeral({
-          channel,
-          text: 'This MCP approval request is not yours.',
-          user: body.user.id,
-        })
-        .catch(() => undefined);
-    }
-    return;
-  }
 
   if (!status || status.status !== 'pending') {
     const server = status
