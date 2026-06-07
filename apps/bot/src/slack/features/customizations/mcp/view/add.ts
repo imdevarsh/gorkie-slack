@@ -32,7 +32,7 @@ export function addModal(state: ModalState = {}): SlackModalDto {
     ),
     Blocks.Input({
       blockId: blocks.url,
-      label: 'MCP URL',
+      label: 'MCP',
     }).element(
       Elements.TextInput({
         actionId: inputs.url,

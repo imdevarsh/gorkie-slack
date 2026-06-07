@@ -28,7 +28,7 @@ export const sandboxSessions = pgTable(
 export const sandboxTokens = pgTable(
   'sandbox_tokens',
   {
-    token: text('token_hash').primaryKey(),
+    token: text('token').primaryKey(),
     sandboxId: text('sandbox_id').notNull(),
     allowedIp: text('allowed_ip'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
