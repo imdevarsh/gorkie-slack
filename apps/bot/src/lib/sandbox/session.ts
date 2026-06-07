@@ -20,6 +20,10 @@ import { getContextId } from '@/utils/context';
 import { configureAgent } from './config';
 import { boot } from './rpc/boot';
 
+const outboundIpSchema = z.object({
+  ip: z.string().nullable(),
+});
+
 function isMissingSandboxError(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
   return (

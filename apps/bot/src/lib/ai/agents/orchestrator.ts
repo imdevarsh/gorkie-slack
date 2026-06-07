@@ -98,6 +98,7 @@ export const orchestratorAgent = async ({
     }),
     providerOptions: {
       openrouter: {
+        parallelToolCalls: false,
         reasoning: { enabled: true, exclude: false, effort: 'medium' },
       },
       google: {

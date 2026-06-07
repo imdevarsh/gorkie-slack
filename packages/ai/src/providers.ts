@@ -9,6 +9,12 @@ import { keys } from './keys';
 const logger = await createLogger({ fileLogging: false });
 const env = keys();
 
+const RETRY = {
+  backoffFactor: 2,
+  delay: 250,
+  maxAttempts: 2,
+} satisfies Omit<Retry<LanguageModel>, 'model'>;
+
 const hackclubBase = createOpenRouter({
   apiKey: env.HACKCLUB_API_KEY,
   baseURL: 'https://ai.hackclub.com/proxy/v1',
