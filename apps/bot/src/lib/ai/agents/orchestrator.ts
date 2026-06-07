@@ -4,6 +4,7 @@ import { successToolCall } from '@repo/ai/tools';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
+import type { MCPToolMetadata } from '@/lib/mcp/mcp-wrapper';
 import type {
   ChatRequestHints,
   OrchestratorStreamPart,
@@ -58,15 +59,16 @@ export async function consumeOrchestratorStream({
 
   for await (const part of fullStream) {
     if (part.type === 'tool-approval-request' && 'toolCall' in part) {
-      const mcp = part.toolCall.toolMetadata?.mcp;
-      if (mcp?.serverId && mcp.serverName && mcp.toolName) {
+      const meta = part.toolCall.toolMetadata as MCPToolMetadata | undefined;
+      const mcp = meta?.mcp;
+      if (mcp?.server && mcp.tool) {
         approvals.push({
           approvalId: part.approvalId,
           input: part.toolCall.input,
-          serverId: mcp.serverId,
-          serverName: mcp.serverName,
+          serverId: mcp.server.id,
+          serverName: mcp.server.name,
           toolCallId: part.toolCall.toolCallId,
-          toolName: mcp.toolName,
+          toolName: mcp.tool.name,
         });
       }
     }
