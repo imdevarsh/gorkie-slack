@@ -55,7 +55,7 @@
       "performance": {
         "noBarrelFile": "off",
         "noNamespaceImport": "off",
-        "useTopLevelRegex": "warn"
+        "useTopLevelRegex": "off"
       },
       "suspicious": {
         "noEmptyBlockStatements": "error"
