@@ -20,7 +20,6 @@ import { clampText } from '@repo/utils/text';
 import type { ToolExecutionOptions, ToolSet } from 'ai';
 import { mcp } from '@/config';
 import { createTask, finishTask } from '@/lib/ai/utils/task';
-import { formatToolInput } from '@/lib/ai/utils/tool-input';
 import logger from '@/lib/logger';
 import type { SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
@@ -256,7 +255,7 @@ export async function createMCPToolset({
                 ) => {
                   const startedAt = Date.now();
                   const details = clampText(
-                    formatToolInput(input),
+                    `Input:\n${JSON.stringify(input, null, 2)}`,
                     mcp.taskOutputMaxChars
                   );
                   logger.info(

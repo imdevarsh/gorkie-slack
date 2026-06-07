@@ -8,7 +8,6 @@ import { clampText } from '@repo/utils/text';
 import type { ChannelAndBlocks } from '@slack/web-api/dist/types/request/chat';
 import type { ModelMessage } from 'ai';
 import { updateTask } from '@/lib/ai/utils/task';
-import { formatToolInput } from '@/lib/ai/utils/tool-input';
 import { encrypt, parseEncrypted } from '@/lib/mcp/encryption';
 import { buttonElement, cardBlock, codeBlock } from '@/slack/blocks';
 import { actions } from '@/slack/features/customizations/mcp/ids';
@@ -94,7 +93,10 @@ export async function recordApprovalTask({
   await updateTask(stream, {
     taskId: approval.toolCallId,
     title: `Using ${approval.serverName} MCP: ${approval.toolName}`,
-    details: clampText(formatToolInput(approval.input), 1200),
+    details: clampText(
+      `Input:\n${JSON.stringify(approval.input, null, 2)}`,
+      1200
+    ),
     status: 'complete',
     output: 'Approval needed',
   });
