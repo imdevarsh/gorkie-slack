@@ -104,6 +104,9 @@ Anything that could reasonably change per deployment (thresholds, message lists,
 ### Feature-enclosed architecture
 Slack features live under `apps/bot/src/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts` when applicable. Keep feature-specific UI/actions near the feature that owns them.
 
+### Code review
+Use the `/coding-best-practices` skill when reviewing or auditing code for quality issues.
+
 ### Review cleanup findings
 When addressing review comments, prefer deleting compatibility wrappers and one-shot helpers over renaming them. Keep MCP naming direct (`OAuth`, `URL`, concise function names), parse Slack modal metadata with schemas, and avoid adding files that only re-export another module without real ownership.
 

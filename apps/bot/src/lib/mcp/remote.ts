@@ -23,7 +23,7 @@ import { getContextId } from '@/utils/context';
 import { decrypt } from './encryption';
 import { formatToolName } from './format-tool-name';
 import { guardedMCPFetch } from './guarded-fetch';
-import { wrapMCPToolExecute } from './mcp-wrapper';
+import { wrapMCPToolExecute } from './wrapper';
 import { createMCPOAuthProvider } from './oauth-provider';
 
 function slugify(value: string): string {

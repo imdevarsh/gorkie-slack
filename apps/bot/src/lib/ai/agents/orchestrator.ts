@@ -4,7 +4,7 @@ import { successToolCall } from '@repo/ai/tools';
 import { stepCountIs, ToolLoopAgent } from 'ai';
 import { createToolset } from '@/lib/ai/tools';
 import logger from '@/lib/logger';
-import type { MCPToolMetadata } from '@/lib/mcp/mcp-wrapper';
+import type { MCPToolMetadata } from '@/lib/mcp/wrapper';
 import type {
   ChatRequestHints,
   OrchestratorStreamPart,
