@@ -21,6 +21,10 @@ function registerApp(app: App) {
     app.action(action.name, action.execute);
   }
 
+  for (const action of customizations.inputActions) {
+    app.action(action.name, action.execute);
+  }
+
   for (const view of customizations.submitViews) {
     app.view(view.name, view.execute);
   }

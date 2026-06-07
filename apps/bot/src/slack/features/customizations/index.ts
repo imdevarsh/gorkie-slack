@@ -9,6 +9,7 @@ export const customizations = {
     ...mcp.buttonActions,
   ],
   closedViews: [...mcp.closedViews],
+  inputActions: [...mcp.inputActions],
   selectActions: [...mcp.selectActions],
   submitViews: [...prompts.submitViews, ...mcp.submitViews],
 };

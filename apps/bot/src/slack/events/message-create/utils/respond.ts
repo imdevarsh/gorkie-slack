@@ -1,7 +1,3 @@
-import {
-  getMcpServerByIdForUser,
-  supersedePendingMcpToolApprovals,
-} from '@repo/db/queries';
 import { getErrorDetails } from '@repo/utils/error';
 import {
   type ModelMessage,
@@ -16,14 +12,8 @@ import {
 } from '@/lib/ai/agents/orchestrator';
 import { setStatus } from '@/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '@/lib/ai/utils/stream';
-import { finishTask } from '@/lib/ai/utils/task';
 import { setConversationTitle } from '@/lib/ai/utils/title';
-import type {
-  ChatRequestHints,
-  SlackMessageContext,
-  Stream,
-  ToolApprovalRequest,
-} from '@/types';
+import type { ChatRequestHints, SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 import { processSlackFiles } from '@/utils/images';
 import { getSlackUser } from '@/utils/users';

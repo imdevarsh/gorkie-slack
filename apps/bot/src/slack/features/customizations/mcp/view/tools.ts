@@ -7,11 +7,14 @@ import { formatMCPError } from '@/lib/mcp/format-error';
 import { formatToolName } from '@/lib/mcp/format-tool-name';
 import { codeBlock, mdText } from '@/slack/blocks';
 import { groupBlock, renderNonce, toolBlock } from '../block-id';
-import { actions, inputs, views } from '../ids';
+import { actions, blocks, inputs, views } from '../ids';
 
 type ModalView = ViewsOpenArguments['view'];
 export type GroupSlug = 'ro' | 'dt' | 'gn';
-export type ToolEntry = { name: string; group: GroupSlug };
+export interface ToolEntry {
+  group: GroupSlug;
+  name: string;
+}
 type ToolMeta = Record<string, { group: GroupSlug; name: string }>;
 
 const GROUP_LABELS: Record<GroupSlug, string> = {
@@ -40,21 +43,27 @@ export function toToolEntries(tools: ListToolsResult['tools']): ToolEntry[] {
 
 export function toolsModal({
   error,
+  search,
   serverId,
   serverName,
   toolModes,
   tools,
 }: {
   error?: string;
+  search?: string;
   serverId: string;
   serverName: string;
   toolModes: MCPToolModeMap;
   tools: ToolEntry[];
 }): ModalView {
   const nonce = renderNonce();
-  const visibleTools = error ? [] : tools;
+  const searchTerm = search?.trim().toLowerCase() || undefined;
+  const allTools = error ? [] : tools;
+  const filteredTools = searchTerm
+    ? allTools.filter((t) => t.name.toLowerCase().includes(searchTerm))
+    : allTools;
 
-  const sortedItems = visibleTools
+  const sortedItems = filteredTools
     .map((tool) => ({
       group: tool.group,
       mode: toolModes[tool.name] ?? 'ask',
@@ -77,8 +86,12 @@ export function toolsModal({
       [id]: meta,
     };
     if (
-      JSON.stringify({ nonce, serverId, tools: nextToolMeta }).length >
-      mcp.toolModalMetadataMaxChars
+      JSON.stringify({
+        nonce,
+        search: searchTerm,
+        serverId,
+        tools: nextToolMeta,
+      }).length > mcp.toolModalMetadataMaxChars
     ) {
       break;
     }
@@ -131,18 +144,44 @@ export function toolsModal({
   const modal = Modal({
     callbackId: views.configure,
     close: canSave ? 'Cancel' : 'Done',
-    privateMetaData: JSON.stringify({ nonce, serverId, tools: toolMeta }),
+    privateMetaData: JSON.stringify({
+      nonce,
+      search: searchTerm,
+      serverId,
+      tools: toolMeta,
+    }),
     title: 'MCP Tools',
   });
   if (canSave) {
     modal.submit('Save');
   }
 
+  let visibilityNote = '';
+  if (searchTerm) {
+    visibilityNote = `\n\nShowing ${visibleItems.length} results for _${search}_.${hiddenToolCount > 0 ? ' Refine your search to see more.' : ''}`;
+  } else if (hiddenToolCount > 0) {
+    visibilityNote = `\n\nShowing ${visibleItems.length} of ${sortedItems.length} tools. Search to find specific tools.`;
+  }
+
+  const searchBlock = Blocks.Input({
+    blockId: blocks.search,
+    label: 'Search tools',
+  })
+    .optional()
+    .dispatchAction()
+    .element(
+      Elements.TextInput({
+        actionId: actions.searchTools,
+        initialValue: search || undefined,
+        placeholder: 'Filter by name…',
+      })
+    );
+
   if (groupedBlocks.length > 0) {
     return modal
       .blocks(
         Blocks.Section({
-          text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or deny.${hiddenToolCount > 0 ? `\n\nShowing ${visibleItems.length} of ${sortedItems.length} tools.` : ''}${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
+          text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or deny.${visibilityNote}${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
         }).accessory(
           Elements.Button({
             actionId: actions.resetTools,
@@ -159,18 +198,25 @@ export function toolsModal({
               })
             )
         ),
+        searchBlock,
         ...groupedBlocks
       )
       .buildToObject();
   }
 
+  let emptyText: string;
+  if (error) {
+    emptyText = `*${mdText(serverName)}*\n\nThis server rejected the connection, so it has been disabled. Reconnect it from the App Home with a valid credential.\n\n*Error:*\n${codeBlock({ value: formatMCPError(error), maxLength: 1200 })}`;
+  } else if (searchTerm) {
+    emptyText = `*${mdText(serverName)}*\nNo tools match _${search}_.`;
+  } else {
+    emptyText = `*${mdText(serverName)}*\nNo tools were found for this server yet.`;
+  }
+
   return modal
     .blocks(
-      Blocks.Section({
-        text: error
-          ? `*${mdText(serverName)}*\n\nThis server rejected the connection, so it has been disabled. Reconnect it from the App Home with a valid credential.\n\n*Error:*\n${codeBlock({ value: formatMCPError(error), maxLength: 1200 })}`
-          : `*${mdText(serverName)}*\nNo tools were found for this server yet.`,
-      })
+      Blocks.Section({ text: emptyText }),
+      ...(error ? [] : [searchBlock])
     )
     .buildToObject();
 }

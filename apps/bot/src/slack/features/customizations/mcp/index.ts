@@ -6,6 +6,7 @@ import * as connectOAuth from './actions/connect-oauth';
 import * as deleteServer from './actions/delete';
 import * as disconnect from './actions/disconnect';
 import * as resetTools from './actions/reset-tools';
+import * as searchTools from './actions/search-tools';
 import * as setGroupMode from './actions/set-group-mode';
 import * as toggle from './actions/toggle';
 import { actions, inputs } from './ids';
@@ -40,6 +41,7 @@ export const mcp = {
     { execute: toggle.execute, name: toggle.enableName },
     { execute: toggle.execute, name: toggle.disableName },
   ],
+  inputActions: [{ execute: searchTools.execute, name: searchTools.name }],
   selectActions: [
     { execute: authChanged.execute, name: authChanged.name },
     { execute: setGroupMode.execute, name: setGroupMode.name },

@@ -3,6 +3,7 @@ import type {
   AllMiddlewareArgs,
   BlockAction,
   ButtonAction,
+  PlainTextInputAction,
   SlackActionMiddlewareArgs,
   SlackViewMiddlewareArgs,
   StaticSelectAction,
@@ -26,4 +27,9 @@ export type SubmitArgs = SlackViewMiddlewareArgs<ViewSubmitAction> &
   AllMiddlewareArgs;
 
 export type CloseArgs = SlackViewMiddlewareArgs<ViewClosedAction> &
+  AllMiddlewareArgs;
+
+export type InputArgs = SlackActionMiddlewareArgs<
+  BlockAction<PlainTextInputAction>
+> &
   AllMiddlewareArgs;

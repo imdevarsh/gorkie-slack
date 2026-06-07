@@ -25,7 +25,7 @@ export async function execute({
   const viewId = view.id;
 
   const meta = parseToolsMeta({ metadata: view.private_metadata });
-  const { serverId, nonce, tools } = meta;
+  const { serverId, nonce, search, tools } = meta;
   if (!(serverId && nonce && tools)) {
     return;
   }
@@ -79,6 +79,7 @@ export async function execute({
       hash: view.hash,
       view_id: viewId,
       view: toolsModal({
+        search,
         serverId,
         serverName: server.name,
         toolModes,

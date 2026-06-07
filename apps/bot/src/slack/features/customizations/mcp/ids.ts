@@ -9,6 +9,7 @@ export const actions = {
   disconnect: 'home_mcp_disconnect',
   enable: 'home_mcp_enable',
   resetTools: 'home_mcp_reset_tools',
+  searchTools: 'home_mcp_search_tools',
   setGroupMode: 'home_mcp_set_group_mode',
   approval: {
     allow: 'approval.allow',
@@ -29,6 +30,7 @@ export const blocks = {
   bearer: 'bearer_block',
   clientId: 'client_id_block',
   name: 'name_block',
+  search: 'search_block',
   transport: 'transport_block',
   url: 'url_block',
 };
@@ -38,6 +40,7 @@ export const inputs = {
   bearer: 'bearer_input',
   clientId: 'client_id_input',
   name: 'name_input',
+  search: 'search_input',
   transport: 'transport_input',
   url: 'url_input',
   toolMode: 'tool_mode_input',
