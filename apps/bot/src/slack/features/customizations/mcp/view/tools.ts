@@ -14,7 +14,7 @@ type ToolMeta = Record<string, { group: GroupSlug; name: string }>;
 
 const allowOption = Bits.Option({ text: 'Allow always', value: 'allow' });
 const askOption = Bits.Option({ text: 'Ask', value: 'ask' });
-const blockOption = Bits.Option({ text: 'Block', value: 'block' });
+const blockOption = Bits.Option({ text: 'Deny', value: 'block' });
 const modeOptions = [allowOption, askOption, blockOption];
 
 function groupSlugOf(group: string): GroupSlug {
@@ -141,7 +141,7 @@ export function toolsModal({
     return modal
       .blocks(
         Blocks.Section({
-          text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or blocked.${hiddenToolCount > 0 ? `\n\nShowing ${visibleItems.length} of ${sortedItems.length} tools.` : ''}${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
+          text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or deny.${hiddenToolCount > 0 ? `\n\nShowing ${visibleItems.length} of ${sortedItems.length} tools.` : ''}${error ? `\n\nTool discovery warning: ${mdText(error)}` : ''}`,
         }).accessory(
           Elements.Button({
             actionId: actions.resetTools,

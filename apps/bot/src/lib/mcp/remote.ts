@@ -289,7 +289,7 @@ export async function createMCPToolset({
                     );
                     await createTask(stream, {
                       taskId: options.toolCallId,
-                      title: `Blocked ${server.name}: ${toolName}`,
+                      title: `Denied ${server.name}: ${toolName}`,
                       details,
                       status: 'in_progress',
                     });
