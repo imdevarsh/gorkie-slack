@@ -1,7 +1,7 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
 import {
+  deleteAllMCPToolPermissions,
   getMCPServerById,
-  resetGlobalMCPToolModes,
   updateMCPServer,
 } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
@@ -50,7 +50,7 @@ export async function execute({
     return;
   }
 
-  await resetGlobalMCPToolModes({ serverId, userId: body.user.id });
+  await deleteAllMCPToolPermissions({ serverId, userId: body.user.id });
 
   let error: string | undefined;
   let definitions: ListToolsResult | undefined;

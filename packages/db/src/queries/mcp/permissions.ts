@@ -152,6 +152,14 @@ export async function ensureMCPToolModes({
   const next = { ...current.global };
   let changed = false;
 
+  const toolNameSet = new Set(toolNames);
+  for (const key of Object.keys(next)) {
+    if (!toolNameSet.has(key)) {
+      delete next[key];
+      changed = true;
+    }
+  }
+
   for (const toolName of toolNames) {
     if (!next[toolName]) {
       next[toolName] = defaultMode;
@@ -188,6 +196,23 @@ export function resetGlobalMCPToolModes({
         eq(mcpToolPermissions.userId, userId),
         eq(mcpToolPermissions.scope, 'global'),
         eq(mcpToolPermissions.threadTs, '')
+      )
+    );
+}
+
+export function deleteAllMCPToolPermissions({
+  serverId,
+  userId,
+}: {
+  serverId: string;
+  userId: string;
+}) {
+  return db
+    .delete(mcpToolPermissions)
+    .where(
+      and(
+        eq(mcpToolPermissions.serverId, serverId),
+        eq(mcpToolPermissions.userId, userId)
       )
     );
 }

@@ -1,4 +1,5 @@
 import {
+  deleteAllMCPToolPermissions,
   deleteMCPConnections,
   getMCPServerById,
   updateMCPServer,
@@ -27,6 +28,10 @@ export async function execute({
     return;
   }
   await deleteMCPConnections({
+    serverId: action.value,
+    userId: body.user.id,
+  });
+  await deleteAllMCPToolPermissions({
     serverId: action.value,
     userId: body.user.id,
   });

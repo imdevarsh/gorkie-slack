@@ -134,6 +134,23 @@ export async function execute(args: ButtonArgs): Promise<void> {
     userId: body.user.id,
   });
   const serverName = server?.name ?? approval.toolName;
+
+  if (reply !== 'reject' && !server?.enabled) {
+    await updateApprovalMessage({
+      ...args,
+      serverName,
+      text: 'Server is no longer connected. Approval cancelled.',
+      title: 'Server Disconnected',
+      toolName: approval.toolName,
+    });
+    await updateMCPToolApproval({
+      approvalId,
+      userId: body.user.id,
+      values: { status: 'denied' },
+    });
+    return;
+  }
+
   const { text: resultText, title: resultTitle } = replyCard(reply);
 
   let input: string | undefined;
@@ -184,20 +201,15 @@ export async function execute(args: ButtonArgs): Promise<void> {
     });
 
     // Parallel tool calls raise a batch of approvals for one turn; the run can
-    // only resume once every sibling is answered. Bail until this click settles
-    // the last one — and skip entirely if a sibling expired (batch abandoned).
+    // only resume once every sibling is answered. Superseded siblings count as
+    // denied so a new message doesn't permanently deadlock the batch.
     if (!batch.batchComplete) {
       return;
     }
-    const approvals: ApprovalOutcome[] = batch.siblings
-      .filter((s) => s.status === 'approved' || s.status === 'denied')
-      .map((s) => ({
-        approvalId: s.approvalId,
-        reply: s.status === 'denied' ? 'reject' : 'once',
-      }));
-    if (approvals.length !== batch.siblings.length) {
-      return;
-    }
+    const approvals: ApprovalOutcome[] = batch.siblings.map((s) => ({
+      approvalId: s.approvalId,
+      reply: s.status === 'approved' ? 'once' : 'reject',
+    }));
 
     getQueue(getContextId(resumeContext))
       .add(() =>

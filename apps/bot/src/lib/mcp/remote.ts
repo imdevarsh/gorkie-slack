@@ -231,8 +231,11 @@ export async function createMCPToolset({
 
         const execute = tool.execute;
         const taskTitle = `Using ${server.name}: ${toolName}`;
+        const globalMode = modes.global[toolName] ?? defaultToolMode;
         const mode =
-          modes.global[toolName] ?? modes.thread[toolName] ?? defaultToolMode;
+          globalMode === 'block'
+            ? 'block'
+            : (modes.thread[toolName] ?? globalMode);
         const metadata = {
           mcp: {
             serverId: server.id,
