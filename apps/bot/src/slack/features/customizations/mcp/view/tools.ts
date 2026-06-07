@@ -10,22 +10,32 @@ import { groupBlock, renderNonce, toolBlock } from '../block-id';
 import { actions, inputs, views } from '../ids';
 
 type ModalView = ViewsOpenArguments['view'];
-type GroupSlug = 'ro' | 'dt' | 'gn';
+export type GroupSlug = 'ro' | 'dt' | 'gn';
+export type ToolEntry = { name: string; group: GroupSlug };
 type ToolMeta = Record<string, { group: GroupSlug; name: string }>;
+
+const GROUP_LABELS: Record<GroupSlug, string> = {
+  dt: 'Destructive tools',
+  gn: 'Tools',
+  ro: 'Read-only tools',
+};
 
 const allowOption = Bits.Option({ text: 'Allow always', value: 'allow' });
 const askOption = Bits.Option({ text: 'Ask', value: 'ask' });
 const blockOption = Bits.Option({ text: 'Deny', value: 'block' });
 const modeOptions = [allowOption, askOption, blockOption];
 
-function groupSlugOf(group: string): GroupSlug {
-  if (group === 'Read-only tools') {
-    return 'ro';
-  }
-  if (group === 'Destructive tools') {
-    return 'dt';
-  }
-  return 'gn';
+export function toToolEntries(tools: ListToolsResult['tools']): ToolEntry[] {
+  return tools.map((tool) => {
+    const { annotations } = tool;
+    let group: GroupSlug = 'gn';
+    if (annotations?.readOnlyHint === true) {
+      group = 'ro';
+    } else if (annotations?.destructiveHint === true) {
+      group = 'dt';
+    }
+    return { name: tool.name, group };
+  });
 }
 
 export function toolsModal({
@@ -39,26 +49,17 @@ export function toolsModal({
   serverId: string;
   serverName: string;
   toolModes: MCPToolModeMap;
-  tools: ListToolsResult['tools'];
+  tools: ToolEntry[];
 }): ModalView {
   const nonce = renderNonce();
   const visibleTools = error ? [] : tools;
 
   const sortedItems = visibleTools
-    .map((tool) => {
-      const annotations = tool.annotations;
-      let group = 'Tools';
-      if (annotations?.readOnlyHint === true) {
-        group = 'Read-only tools';
-      } else if (annotations?.destructiveHint === true) {
-        group = 'Destructive tools';
-      }
-      return {
-        group,
-        mode: toolModes[tool.name] ?? 'ask',
-        tool,
-      };
-    })
+    .map((tool) => ({
+      group: tool.group,
+      mode: toolModes[tool.name] ?? 'ask',
+      tool,
+    }))
     .sort((a, b) =>
       `${a.group}:${a.tool.name}`.localeCompare(`${b.group}:${b.tool.name}`)
     );
@@ -70,7 +71,7 @@ export function toolsModal({
       break;
     }
     const id = visibleItems.length.toString(36);
-    const meta = { group: groupSlugOf(item.group), name: item.tool.name };
+    const meta = { group: item.group, name: item.tool.name };
     const nextToolMeta = {
       ...toolMeta,
       [id]: meta,
@@ -90,7 +91,6 @@ export function toolsModal({
   const groupedBlocks = visibleItems.flatMap(
     ({ group, id, mode, tool }, index, sorted) => {
       const previous = sorted[index - 1];
-      const slug = groupSlugOf(group);
       let initialOption = askOption;
       if (mode === 'allow') {
         initialOption = allowOption;
@@ -102,8 +102,8 @@ export function toolsModal({
           ? []
           : [
               Blocks.Section({
-                blockId: groupBlock.encode(nonce, slug),
-                text: `*${group}*`,
+                blockId: groupBlock.encode(nonce, group),
+                text: `*${GROUP_LABELS[group]}*`,
               }).accessory(
                 Elements.StaticSelect({
                   actionId: actions.setGroupMode,

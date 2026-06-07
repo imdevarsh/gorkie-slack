@@ -1,4 +1,3 @@
-import type { ListToolsResult } from '@ai-sdk/mcp';
 import { getMCPServerById, getMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import { asRecord } from '@repo/utils/record';
@@ -75,18 +74,6 @@ export async function execute({
       selected?.value ?? current.global[tool.name] ?? 'ask';
   }
 
-  const syntheticTools: ListToolsResult['tools'] = Object.values(tools).map(
-    (tool) => ({
-      name: tool.name,
-      description: '',
-      inputSchema: { type: 'object', properties: {} },
-      annotations: {
-        readOnlyHint: tool.group === 'ro',
-        destructiveHint: tool.group === 'dt',
-      },
-    })
-  );
-
   await client.views
     .update({
       hash: view.hash,
@@ -95,7 +82,7 @@ export async function execute({
         serverId,
         serverName: server.name,
         toolModes,
-        tools: syntheticTools,
+        tools: Object.values(tools),
       }),
     })
     .catch(() => undefined);

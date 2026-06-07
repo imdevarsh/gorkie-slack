@@ -1,4 +1,3 @@
-import type { ListToolsResult } from '@ai-sdk/mcp';
 import {
   deleteAllMCPToolPermissions,
   getMCPServerById,
@@ -11,6 +10,7 @@ import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
 import { statusModal, toolsModal } from '../view';
+import { toToolEntries } from '../view/tools';
 
 export const name = actions.resetTools;
 
@@ -53,7 +53,7 @@ export async function execute({
   await deleteAllMCPToolPermissions({ serverId, userId: body.user.id });
 
   let error: string | undefined;
-  let definitions: ListToolsResult | undefined;
+  let toolEntries: ReturnType<typeof toToolEntries> = [];
   let toolModes: MCPToolModeMap = {};
   try {
     const synced = await syncMCPToolModes({
@@ -61,7 +61,7 @@ export async function execute({
       teamId: body.team?.id,
       userId: body.user.id,
     });
-    definitions = synced.definitions;
+    toolEntries = toToolEntries(synced.definitions.tools);
     toolModes = synced.modes;
   } catch (err) {
     error = errorMessage(err);
@@ -83,7 +83,7 @@ export async function execute({
       serverId,
       serverName: server.name,
       toolModes,
-      tools: definitions?.tools ?? [],
+      tools: toolEntries,
     }),
   });
 }
