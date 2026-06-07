@@ -45,6 +45,7 @@ export const mcpToolModeInputSchema = z
 
 export const mcpToolsMetaSchema = z.object({
   nonce: z.string().optional(),
+  page: z.number().optional(),
   search: z.string().optional(),
   serverId: z.string().optional(),
   tools: z

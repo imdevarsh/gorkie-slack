@@ -1,12 +1,13 @@
-import { getMCPServerById, getMCPToolModes } from '@repo/db/queries';
+import { getMCPServerById, patchMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
-import { asRecord } from '@repo/utils/record';
-import { mcpToolModeInputSchema } from '@repo/validators';
-import { groupBlock, toolBlock } from '../block-id';
-import { actions, inputs } from '../ids';
+import { errorMessage } from '@repo/utils/error';
+import { syncMCPToolModes } from '@/lib/mcp/remote';
+import { groupBlock } from '../block-id';
+import { actions } from '../ids';
 import { parseToolsMeta } from '../schema';
 import type { SelectArgs } from '../types';
 import { toolsModal } from '../view';
+import { toToolEntries } from '../view/tools';
 
 export const name = actions.setGroupMode;
 
@@ -22,19 +23,15 @@ export async function execute({
   if (!view?.id) {
     return;
   }
-  const viewId = view.id;
 
   const meta = parseToolsMeta({ metadata: view.private_metadata });
-  const { serverId, nonce, search, tools } = meta;
-  if (!(serverId && nonce && tools)) {
+  const { page, search, serverId, tools } = meta;
+  if (!(serverId && tools)) {
     return;
   }
 
   const prefix = groupBlock.decode(action.block_id);
   const mode = action.selected_option?.value;
-  if (!(prefix && mode)) {
-    return;
-  }
   if (
     !(
       (prefix === 'ro' || prefix === 'dt' || prefix === 'gn') &&
@@ -44,46 +41,57 @@ export async function execute({
     return;
   }
 
-  const groupToolNames = new Set(
-    Object.entries(tools)
-      .filter(([, tool]) => tool.group === prefix)
-      .map(([id]) => id)
-  );
+  const groupModes: MCPToolModeMap = {};
+  for (const tool of Object.values(tools)) {
+    if (tool.group === prefix) {
+      groupModes[tool.name] = mode;
+    }
+  }
+  if (Object.keys(groupModes).length === 0) {
+    return;
+  }
 
-  const stateValues = asRecord(body.view?.state?.values) ?? {};
-
-  const [server, current] = await Promise.all([
+  const [server] = await Promise.all([
     getMCPServerById({ id: serverId, userId: body.user.id }),
-    getMCPToolModes({ serverId, userId: body.user.id }),
+    patchMCPToolModes({
+      modes: groupModes,
+      scope: 'global',
+      serverId,
+      teamId: body.team?.id,
+      userId: body.user.id,
+    }),
   ]);
   if (!server) {
     return;
   }
 
-  const toolModes: MCPToolModeMap = {};
-  for (const [toolId, tool] of Object.entries(tools)) {
-    if (groupToolNames.has(toolId)) {
-      toolModes[tool.name] = mode;
-      continue;
-    }
-    const block = asRecord(stateValues[toolBlock.encode(nonce, toolId)]);
-    const selected = mcpToolModeInputSchema.parse(
-      block?.[inputs.toolMode]
-    ).selected_option;
-    toolModes[tool.name] =
-      selected?.value ?? current.global[tool.name] ?? 'ask';
+  let error: string | undefined;
+  let toolEntries: ReturnType<typeof toToolEntries> = [];
+  let toolModes: MCPToolModeMap = {};
+  try {
+    const synced = await syncMCPToolModes({
+      server,
+      teamId: body.team?.id,
+      userId: body.user.id,
+    });
+    toolEntries = toToolEntries(synced.definitions.tools);
+    toolModes = synced.modes;
+  } catch (err) {
+    error = errorMessage(err);
   }
 
   await client.views
     .update({
       hash: view.hash,
-      view_id: viewId,
+      view_id: view.id,
       view: toolsModal({
+        error,
+        page,
         search,
         serverId,
         serverName: server.name,
         toolModes,
-        tools: Object.values(tools),
+        tools: toolEntries,
       }),
     })
     .catch(() => undefined);

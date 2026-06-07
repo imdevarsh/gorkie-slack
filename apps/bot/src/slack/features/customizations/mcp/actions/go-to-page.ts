@@ -4,18 +4,18 @@ import { errorMessage } from '@repo/utils/error';
 import { syncMCPToolModes } from '@/lib/mcp/remote';
 import { actions } from '../ids';
 import { parseToolsMeta } from '../schema';
-import type { InputArgs } from '../types';
+import type { ButtonArgs } from '../types';
 import { toolsModal } from '../view';
 import { toToolEntries } from '../view/tools';
 
-export const name = actions.searchTools;
+export const name = actions.goToPage;
 
 export async function execute({
   ack,
   action,
   body,
   client,
-}: InputArgs): Promise<void> {
+}: ButtonArgs): Promise<void> {
   await ack();
 
   const view = body.view;
@@ -23,12 +23,16 @@ export async function execute({
     return;
   }
 
-  const { serverId } = parseToolsMeta({ metadata: view.private_metadata });
+  const meta = parseToolsMeta({ metadata: view.private_metadata });
+  const { search, serverId } = meta;
   if (!serverId) {
     return;
   }
 
-  const search = action.value?.trim() || undefined;
+  const page = Number(action.value);
+  if (!Number.isFinite(page)) {
+    return;
+  }
 
   const server = await getMCPServerById({ id: serverId, userId: body.user.id });
   if (!server) {
@@ -56,7 +60,7 @@ export async function execute({
       view_id: view.id,
       view: toolsModal({
         error,
-        page: 0,
+        page,
         search,
         serverId,
         serverName: server.name,

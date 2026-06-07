@@ -8,6 +8,7 @@ export const actions = {
   disable: 'home_mcp_disable',
   disconnect: 'home_mcp_disconnect',
   enable: 'home_mcp_enable',
+  goToPage: 'home_mcp_go_to_page',
   resetTools: 'home_mcp_reset_tools',
   searchTools: 'home_mcp_search_tools',
   setGroupMode: 'home_mcp_set_group_mode',

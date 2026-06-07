@@ -87,7 +87,7 @@ export const mcp = {
   defaultToolMode: 'ask',
   requestTimeoutMs: 15_000,
   taskOutputMaxChars: 260,
-  toolModalMaxTools: 40,
+  toolModalDefaultCount: 25,
   toolModalMetadataMaxChars: 2800,
 };
 
