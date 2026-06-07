@@ -149,28 +149,10 @@ export async function ensureMCPToolModes({
   userId: string;
 }): Promise<MCPToolModeMap> {
   const current = await getMCPToolModes({ serverId, userId });
-  const next = { ...current.global };
-  let changed = false;
-
-  const toolNameSet = new Set(toolNames);
-  for (const key of Object.keys(next)) {
-    if (!toolNameSet.has(key)) {
-      delete next[key];
-      changed = true;
-    }
-  }
-
+  const next: MCPToolModeMap = {};
   for (const toolName of toolNames) {
-    if (!next[toolName]) {
-      next[toolName] = defaultMode;
-      changed = true;
-    }
+    next[toolName] = current.global[toolName] ?? defaultMode;
   }
-
-  if (!changed) {
-    return next;
-  }
-
   await setMCPToolModes({
     modes: next,
     scope: 'global',
