@@ -36,11 +36,11 @@ export const blocks = {
   url: 'url_block',
 };
 
-export const groupLabels = {
+export const groupNames: Record<string, string> = {
   dt: 'Destructive',
   gn: 'General',
   ro: 'Read-only',
-} as const;
+};
 
 export const inputs = {
   auth: 'auth_input',

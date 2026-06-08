@@ -8,7 +8,7 @@ import { formatMCPError } from '@/lib/mcp/format-error';
 import { formatToolName } from '@/lib/mcp/format-tool-name';
 import { codeBlock, mdText } from '@/slack/blocks';
 import { groupBlock, renderNonce, toolBlock } from '../block-id';
-import { actions, blocks, groupLabels, inputs, views } from '../ids';
+import { actions, blocks, groupNames, inputs, views } from '../ids';
 
 type ModalView = ViewsOpenArguments['view'];
 export interface ToolEntry {
@@ -224,7 +224,7 @@ export function toolsModal({
           Blocks.Actions({ blockId: groupBlock.encode(nonce, group) }).elements(
             Elements.Button({
               actionId: actions.toggleGroup,
-              text: groupLabels[group],
+              text: groupNames[group],
               value: group,
             }),
             Elements.StaticSelect({
@@ -287,7 +287,7 @@ export function toolsModal({
       Blocks.Actions({ blockId: groupBlock.encode(nonce, group) }).elements(
         Elements.Button({
           actionId: actions.toggleGroup,
-          text: `${isOpen ? '▾' : '▸'} ${groupLabels[group]}`,
+          text: `${isOpen ? '▾' : '▸'} ${groupNames[group]}`,
           value: group,
         }),
         ...(isOpen
