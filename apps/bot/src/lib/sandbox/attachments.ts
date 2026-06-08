@@ -10,7 +10,7 @@ import type {
 } from '@/types';
 import { getContextId } from '@/utils/context';
 
-export const ATTACHMENTS_DIR = 'attachments';
+const ATTACHMENTS_DIR = 'attachments';
 const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}`;
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 

@@ -11,7 +11,6 @@ import type {
   ViewSubmitAction,
 } from '@slack/bolt';
 
-export type Auth = NonNullable<MCPModalState['auth']>;
 export type Transport = NonNullable<MCPModalState['transport']>;
 export type ModalState = MCPModalState;
 

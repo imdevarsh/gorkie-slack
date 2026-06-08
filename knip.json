@@ -1,0 +1,50 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "tags": ["-lintignore"],
+  "workspaces": {
+    ".": {},
+    "apps/bot": {
+      "entry": ["src/index.ts", "src/scripts/*.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["extensions/**"]
+    },
+    "apps/server": {
+      "entry": [
+        "src/index.ts",
+        "nitro.config.ts",
+        "src/routes/**/*.ts",
+        "src/middleware/**/*.ts",
+        "src/plugins/**/*.ts",
+        "src/tasks/**/*.ts",
+        "src/renderer.ts",
+        "src/config.ts",
+        "src/env.ts"
+      ],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/ai": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/db": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/kv": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/logging": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/utils": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/validators": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  }
+}

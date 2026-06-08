@@ -90,9 +90,3 @@ export const mcp = {
   toolModalDefaultCount: 25,
   toolModalMetadataMaxChars: 2800,
 };
-
-export const orchestratorStream = {
-  reasoningDetailsMaxChars: 1200,
-  reasoningFlushIntervalMs: 750,
-  reasoningFlushMinChars: 80,
-};

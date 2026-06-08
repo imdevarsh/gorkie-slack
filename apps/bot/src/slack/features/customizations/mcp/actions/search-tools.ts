@@ -5,7 +5,7 @@ import { syncMCPToolModes } from '@/lib/mcp/remote';
 import { actions } from '../ids';
 import { parseToolsMeta } from '../schema';
 import type { InputArgs } from '../types';
-import { toolsModal } from '../view';
+import { toolsLoadingModal, toolsModal } from '../view';
 import { toToolEntries } from '../view/tools';
 
 export const name = actions.searchTools;
@@ -35,6 +35,13 @@ export async function execute({
     return;
   }
 
+  await client.views
+    .update({
+      view_id: view.id,
+      view: toolsLoadingModal({ search, serverId, serverName: server.name }),
+    })
+    .catch(() => undefined);
+
   let error: string | undefined;
   let toolEntries: ReturnType<typeof toToolEntries> = [];
   let toolModes: MCPToolModeMap = {};
@@ -52,7 +59,6 @@ export async function execute({
 
   await client.views
     .update({
-      hash: view.hash,
       view_id: view.id,
       view: toolsModal({
         error,

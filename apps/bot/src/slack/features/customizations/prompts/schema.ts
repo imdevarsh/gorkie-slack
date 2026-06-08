@@ -1,7 +1,7 @@
 import { asRecord } from '@repo/utils/record';
 import { z } from 'zod';
 
-export const modalStateSchema = z
+const modalStateSchema = z
   .object({
     showPresets: z.boolean().default(false),
   })

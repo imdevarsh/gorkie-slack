@@ -13,7 +13,7 @@ const SUPPORTED_IMAGE_TYPES = [
   'image/webp',
 ];
 
-export function isImageFile(file: SlackFile): boolean {
+function isImageFile(file: SlackFile): boolean {
   const mimetype = file.mimetype ?? '';
   return SUPPORTED_IMAGE_TYPES.includes(mimetype);
 }
@@ -26,7 +26,7 @@ function getMimeType(file: SlackFile): string {
   return 'image/jpeg';
 }
 
-export async function fetchSlackImageAsBase64(
+async function fetchSlackImageAsBase64(
   file: SlackFile
 ): Promise<{ data: string; mimeType: string } | null> {
   const url = file.url_private ?? file.url_private_download;

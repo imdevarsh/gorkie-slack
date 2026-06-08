@@ -1,6 +1,7 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import type { ViewsOpenArguments } from '@slack/web-api';
+import Fuse from 'fuse.js';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import { mcp } from '@/config';
 import { formatMCPError } from '@/lib/mcp/format-error';
@@ -10,7 +11,7 @@ import { groupBlock, renderNonce, toolBlock } from '../block-id';
 import { actions, blocks, inputs, views } from '../ids';
 
 type ModalView = ViewsOpenArguments['view'];
-export type GroupSlug = 'ro' | 'dt' | 'gn';
+type GroupSlug = 'ro' | 'dt' | 'gn';
 export interface ToolEntry {
   group: GroupSlug;
   name: string;
@@ -28,6 +29,24 @@ const askOption = Bits.Option({ text: 'Ask', value: 'ask' });
 const blockOption = Bits.Option({ text: 'Deny', value: 'block' });
 const modeOptions = [allowOption, askOption, blockOption];
 
+function injectCharacterDispatch(view: ModalView): ModalView {
+  if (!view?.blocks) {
+    return view;
+  }
+  const mutable = JSON.parse(JSON.stringify(view)) as typeof view;
+  for (const block of mutable.blocks as Record<string, unknown>[]) {
+    if (block.block_id === blocks.search) {
+      const element = block.element as Record<string, unknown> | undefined;
+      if (element) {
+        element.dispatch_action_config = {
+          trigger_actions_on: ['on_character_entered'],
+        };
+      }
+    }
+  }
+  return mutable;
+}
+
 export function toToolEntries(tools: ListToolsResult['tools']): ToolEntry[] {
   return tools.map((tool) => {
     const { annotations } = tool;
@@ -39,6 +58,45 @@ export function toToolEntries(tools: ListToolsResult['tools']): ToolEntry[] {
     }
     return { name: tool.name, group };
   });
+}
+
+export function toolsLoadingModal({
+  search,
+  serverId,
+  serverName,
+}: {
+  search?: string;
+  serverId: string;
+  serverName: string;
+}): ModalView {
+  const nonce = renderNonce();
+  return injectCharacterDispatch(
+    Modal({
+      callbackId: views.configure,
+      close: 'Done',
+      privateMetaData: JSON.stringify({ nonce, page: 0, search, serverId }),
+      title: 'MCP Tools',
+    })
+      .blocks(
+        Blocks.Section({
+          text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or deny.`,
+        }),
+        Blocks.Input({
+          blockId: blocks.search,
+          label: 'Search',
+        })
+          .dispatchAction()
+          .element(
+            Elements.TextInput({
+              actionId: actions.searchTools,
+              initialValue: search || undefined,
+              placeholder: 'Filter by name…',
+            })
+          ),
+        Blocks.Context().elements('_Searching…_')
+      )
+      .buildToObject()
+  );
 }
 
 export function toolsModal({
@@ -59,10 +117,12 @@ export function toolsModal({
   tools: ToolEntry[];
 }): ModalView {
   const nonce = renderNonce();
-  const searchTerm = search?.trim().toLowerCase() || undefined;
+  const searchTerm = search?.trim() || undefined;
   const allTools = error ? [] : tools;
   const filteredTools = searchTerm
-    ? allTools.filter((t) => t.name.toLowerCase().includes(searchTerm))
+    ? new Fuse(allTools, { keys: ['name'], threshold: 0.4 })
+        .search(searchTerm)
+        .map((r) => r.item)
     : allTools;
 
   const sortedTools = filteredTools
@@ -135,9 +195,8 @@ export function toolsModal({
 
   const searchBlock = Blocks.Input({
     blockId: blocks.search,
-    label: 'Search tools',
+    label: 'Search',
   })
-    .optional()
     .dispatchAction()
     .element(
       Elements.TextInput({
@@ -148,23 +207,21 @@ export function toolsModal({
     );
 
   if (visibleItems.length === 0) {
-    return modal
-      .blocks(
-        Blocks.Section({
-          text: searchTerm
-            ? `*${mdText(serverName)}*\nNo tools match _${search}_.`
-            : `*${mdText(serverName)}*\nNo tools were found for this server yet.`,
-        }),
-        searchBlock
-      )
-      .buildToObject();
+    const noResultsText = searchTerm
+      ? `No tools match _${mdText(search ?? '')}_`
+      : 'No tools were found for this server yet.';
+    return injectCharacterDispatch(
+      modal
+        .blocks(searchBlock, Blocks.Section({ text: noResultsText }))
+        .buildToObject()
+    );
   }
 
   const pageInfo =
     totalPages > 1 ? ` · Page ${safePage + 1} of ${totalPages}` : '';
   let countInfo = '';
   if (searchTerm) {
-    countInfo = ` · ${filteredTools.length} of ${allTools.length} match _${search}_`;
+    countInfo = ` · ${filteredTools.length} of ${allTools.length} match _${mdText(search ?? '')}_`;
   } else if (allTools.length > pageSize) {
     countInfo = ` · ${allTools.length} tools`;
   }
@@ -232,31 +289,33 @@ export function toolsModal({
       : []),
   ];
 
-  return modal
-    .blocks(
-      Blocks.Section({
-        text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or deny.${countInfo}${pageInfo}`,
-      }).accessory(
-        Elements.Button({
-          actionId: actions.resetTools,
-          text: 'Reset',
-          value: serverId,
-        })
-          .danger()
-          .confirm(
-            Bits.ConfirmationDialog({
-              confirm: 'Reset',
-              deny: 'Cancel',
-              text: 'This will reset every tool on this MCP server to the default mode.',
-              title: 'Reset tool modes?',
-            })
-          )
-      ),
-      searchBlock,
-      ...groupedBlocks,
-      ...(paginationElements.length > 0
-        ? [Blocks.Actions().elements(...paginationElements)]
-        : [])
-    )
-    .buildToObject();
+  return injectCharacterDispatch(
+    modal
+      .blocks(
+        Blocks.Section({
+          text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or deny.${countInfo}${pageInfo}`,
+        }).accessory(
+          Elements.Button({
+            actionId: actions.resetTools,
+            text: 'Reset',
+            value: serverId,
+          })
+            .danger()
+            .confirm(
+              Bits.ConfirmationDialog({
+                confirm: 'Reset',
+                deny: 'Cancel',
+                text: 'This will reset every tool on this MCP server to the default mode.',
+                title: 'Reset tool modes?',
+              })
+            )
+        ),
+        searchBlock,
+        ...groupedBlocks,
+        ...(paginationElements.length > 0
+          ? [Blocks.Actions().elements(...paginationElements)]
+          : [])
+      )
+      .buildToObject()
+  );
 }
