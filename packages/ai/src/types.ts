@@ -30,6 +30,7 @@ interface BaseHints {
 
 export interface ChatRequestHints extends BaseHints {
   customization?: UserCustomization;
+  model?: string;
 }
 
 export interface SandboxRequestHints extends BaseHints {}

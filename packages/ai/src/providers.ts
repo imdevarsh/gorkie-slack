@@ -76,6 +76,8 @@ const summariserModel = createRetryable({
   onError: onModelError,
 });
 
+export const CHAT_MODEL_ID = 'google/gemini-3-flash-preview';
+
 export const provider: Provider = customProvider({
   languageModels: {
     'chat-model': chatModel,

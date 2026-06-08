@@ -139,3 +139,6 @@ What to add:
 - Proxy timeout is `AbortSignal.timeout(240_000)` (4 min) — safely under Vercel's 300s `maxDuration`.
 - `tools.ts` is uploaded as raw TypeScript source to E2B via `configureAgent`; it must NOT be compiled or it breaks the PI agent's dynamic extension loading.
 - If a plan block (conversation thread used for planning/tasking) exceeds 50 messages, start a new plan block to avoid context degradation.
+
+Also, when the sandbox resolved, every uploadFile that has been called shld be included in response injected bcs ai needs to know what was uploaded
+Also, for groups like read-only, etc... Set All thing it shld do whole read only goup not olny ones shown in pagination? but in search yea only for search results... [configure modal]

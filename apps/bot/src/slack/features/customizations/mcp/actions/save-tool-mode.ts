@@ -19,16 +19,13 @@ export async function execute({
     return;
   }
 
-  const { serverId, tools } = parseToolsMeta({
-    metadata: view.private_metadata,
-  });
-  if (!(serverId && tools)) {
+  const { serverId } = parseToolsMeta({ metadata: view.private_metadata });
+  if (!serverId) {
     return;
   }
 
-  const toolId = toolBlock.decode(action.block_id);
-  const tool = toolId ? tools[toolId] : undefined;
-  if (!tool) {
+  const toolName = toolBlock.decode(action.block_id);
+  if (!toolName) {
     return;
   }
 
@@ -36,10 +33,9 @@ export async function execute({
   if (!modeParsed.success) {
     return;
   }
-  const mode = modeParsed.data;
 
   await patchMCPToolModes({
-    modes: { [tool.name]: mode },
+    modes: { [toolName]: modeParsed.data },
     scope: 'global',
     serverId,
     teamId: body.team?.id,

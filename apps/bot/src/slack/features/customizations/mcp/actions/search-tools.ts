@@ -36,7 +36,7 @@ export async function execute({
     .update({
       hash: view.hash,
       view_id: view.id,
-      view: toolsLoadingModal({ search, serverId, serverName: server.name }),
+      view: toolsLoadingModal({ search, serverId }),
     })
     .catch(() => undefined);
   const loadingHash = loadingResult?.view?.hash;
@@ -53,7 +53,6 @@ export async function execute({
       view_id: view.id,
       view: toolsModal({
         error,
-        page: 0,
         search,
         serverId,
         serverName: server.name,

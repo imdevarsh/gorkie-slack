@@ -1,3 +1,3 @@
 export * from 'ai';
-export { provider } from './providers';
+export { CHAT_MODEL_ID, provider } from './providers';
 export { successToolCall } from './tools';

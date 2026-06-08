@@ -8,10 +8,10 @@ export const actions = {
   disable: 'home_mcp_disable',
   disconnect: 'home_mcp_disconnect',
   enable: 'home_mcp_enable',
-  goToPage: 'home_mcp_go_to_page',
   resetTools: 'home_mcp_reset_tools',
   searchTools: 'home_mcp_search_tools',
   setGroupMode: 'home_mcp_set_group_mode',
+  toggleGroup: 'home_mcp_toggle_group',
   approval: {
     allow: 'approval.allow',
     always: 'approval.always',
@@ -35,6 +35,12 @@ export const blocks = {
   transport: 'transport_block',
   url: 'url_block',
 };
+
+export const groupLabels = {
+  dt: 'Destructive',
+  gn: 'General',
+  ro: 'Read-only',
+} as const;
 
 export const inputs = {
   auth: 'auth_input',

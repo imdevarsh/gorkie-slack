@@ -19,7 +19,8 @@ export function chatPrompt({
     examplesPrompt,
     `<context>
 The current date and time is ${requestHints.time}.
-You're in the ${requestHints.server} Slack workspace, inside the ${requestHints.channel} channel.
+You're in the ${requestHints.server} Slack workspace, inside the ${requestHints.channel} channel.${requestHints.model ? `\nYou are running on the ${requestHints.model} model.` : ''}
+Gorkie's source code is at https://github.com/imdevarsh/gorkie-slack
 </context>`,
     requestHints.customization?.prompt
       ? `<user_instructions>

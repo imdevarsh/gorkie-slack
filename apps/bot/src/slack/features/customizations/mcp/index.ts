@@ -5,12 +5,12 @@ import * as connectBearer from './actions/connect-bearer';
 import * as connectOAuth from './actions/connect-oauth';
 import * as deleteServer from './actions/delete';
 import * as disconnect from './actions/disconnect';
-import * as goToPage from './actions/go-to-page';
 import * as resetTools from './actions/reset-tools';
 import * as saveToolMode from './actions/save-tool-mode';
 import * as searchTools from './actions/search-tools';
 import * as setGroupMode from './actions/set-group-mode';
 import * as toggle from './actions/toggle';
+import * as toggleGroup from './actions/toggle-group';
 import { actions } from './ids';
 import type { ButtonArgs } from './types';
 import { addModal } from './view';
@@ -39,7 +39,7 @@ export const mcp = {
     { execute: connectOAuth.execute, name: connectOAuth.name },
     { execute: deleteServer.execute, name: deleteServer.name },
     { execute: disconnect.execute, name: disconnect.name },
-    { execute: goToPage.execute, name: goToPage.name },
+    { execute: toggleGroup.execute, name: toggleGroup.name },
     { execute: resetTools.execute, name: resetTools.name },
     { execute: toggle.execute, name: toggle.enableName },
     { execute: toggle.execute, name: toggle.disableName },

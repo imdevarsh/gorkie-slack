@@ -1,3 +1,4 @@
+import { CHAT_MODEL_ID } from '@repo/ai/providers';
 import { getUserCustomization } from '@repo/db/queries';
 import { getTime } from '@repo/utils/time';
 import type { ModelMessage } from 'ai';
@@ -59,9 +60,10 @@ export async function buildChatContext(
 
     requestHints = {
       channel: channelName,
-      time: getTime(),
-      server: serverName,
       customization: customization ?? undefined,
+      model: CHAT_MODEL_ID,
+      server: serverName,
+      time: getTime(),
     };
   }
 

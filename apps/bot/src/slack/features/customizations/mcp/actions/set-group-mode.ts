@@ -1,12 +1,13 @@
-import { getMCPServerById, patchMCPToolModes } from '@repo/db/queries';
+import { getMCPToolModes, patchMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import { mcpGroupSlugSchema, mcpToolModeSchema } from '@repo/validators';
+import Fuse from 'fuse.js';
 import { groupBlock } from '../block-id';
 import { actions } from '../ids';
 import { parseToolsMeta } from '../schema';
 import type { SelectArgs } from '../types';
 import { toolsModal } from '../view';
-import { syncToolsForView } from './helpers';
+import type { ToolEntry } from '../view/tools';
 
 export const name = actions.setGroupMode;
 
@@ -24,8 +25,8 @@ export async function execute({
   }
 
   const meta = parseToolsMeta({ metadata: view.private_metadata });
-  const { page, search, serverId, tools } = meta;
-  if (!(serverId && tools)) {
+  const { open, search, serverId, serverName, tools: toolsByGroup } = meta;
+  if (!(serverId && serverName && toolsByGroup)) {
     return;
   }
 
@@ -39,48 +40,57 @@ export async function execute({
   const prefix = prefixParsed.data;
   const mode = modeParsed.data;
 
+  const allGroupNames = toolsByGroup[prefix];
+  const searchTerm = search?.trim() || undefined;
+
+  const targetNames: string[] = searchTerm
+    ? new Fuse(
+        allGroupNames.map((n) => ({ name: n })),
+        { keys: ['name'], threshold: 0.4 }
+      )
+        .search(searchTerm)
+        .map((r) => r.item.name)
+    : allGroupNames;
+
+  if (targetNames.length === 0) {
+    return;
+  }
+
   const groupModes: MCPToolModeMap = {};
-  for (const tool of Object.values(tools)) {
-    if (tool.group === prefix) {
-      groupModes[tool.name] = mode;
-    }
-  }
-  if (Object.keys(groupModes).length === 0) {
-    return;
+  for (const name of targetNames) {
+    groupModes[name] = mode;
   }
 
-  const [server] = await Promise.all([
-    getMCPServerById({ id: serverId, userId: body.user.id }),
-    patchMCPToolModes({
-      modes: groupModes,
-      scope: 'global',
-      serverId,
-      teamId: body.team?.id,
-      userId: body.user.id,
-    }),
-  ]);
-  if (!server) {
-    return;
-  }
-
-  const { error, toolEntries, toolModes } = await syncToolsForView({
-    server,
+  await patchMCPToolModes({
+    modes: groupModes,
+    scope: 'global',
+    serverId,
     teamId: body.team?.id,
     userId: body.user.id,
   });
+
+  const { global: toolModes } = await getMCPToolModes({
+    serverId,
+    userId: body.user.id,
+  });
+
+  const allToolEntries: ToolEntry[] = [
+    ...toolsByGroup.ro.map((n) => ({ name: n, group: 'ro' as const })),
+    ...toolsByGroup.dt.map((n) => ({ name: n, group: 'dt' as const })),
+    ...toolsByGroup.gn.map((n) => ({ name: n, group: 'gn' as const })),
+  ];
 
   await client.views
     .update({
       hash: view.hash,
       view_id: view.id,
       view: toolsModal({
-        error,
-        page,
+        open,
         search,
         serverId,
-        serverName: server.name,
+        serverName,
         toolModes,
-        tools: toolEntries,
+        tools: allToolEntries,
       }),
     })
     .catch(() => undefined);
