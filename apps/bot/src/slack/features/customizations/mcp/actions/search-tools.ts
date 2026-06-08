@@ -35,12 +35,14 @@ export async function execute({
     return;
   }
 
-  await client.views
+  const loadingResult = await client.views
     .update({
+      hash: view.hash,
       view_id: view.id,
       view: toolsLoadingModal({ search, serverId, serverName: server.name }),
     })
     .catch(() => undefined);
+  const loadingHash = loadingResult?.view?.hash;
 
   let error: string | undefined;
   let toolEntries: ReturnType<typeof toToolEntries> = [];
@@ -59,6 +61,7 @@ export async function execute({
 
   await client.views
     .update({
+      hash: loadingHash,
       view_id: view.id,
       view: toolsModal({
         error,

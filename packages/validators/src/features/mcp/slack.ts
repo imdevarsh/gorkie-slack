@@ -33,11 +33,17 @@ export const mcpSlackViewSelectedSchema = z
   })
   .catch({});
 
+export const mcpGroupSlugSchema = z.enum(['ro', 'dt', 'gn']);
+export type GroupSlug = z.infer<typeof mcpGroupSlugSchema>;
+
+export const mcpToolModeSchema = z.enum(['allow', 'ask', 'block']);
+export type ToolMode = z.infer<typeof mcpToolModeSchema>;
+
 export const mcpToolModeInputSchema = z
   .looseObject({
     selected_option: z
       .looseObject({
-        value: z.enum(['allow', 'ask', 'block']),
+        value: mcpToolModeSchema,
       })
       .nullish(),
   })
@@ -52,7 +58,7 @@ export const mcpToolsMetaSchema = z.object({
     .record(
       z.string(),
       z.object({
-        group: z.enum(['ro', 'dt', 'gn']),
+        group: mcpGroupSlugSchema,
         name: z.string(),
       })
     )

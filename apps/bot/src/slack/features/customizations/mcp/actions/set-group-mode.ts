@@ -1,6 +1,7 @@
 import { getMCPServerById, patchMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
+import { mcpGroupSlugSchema, mcpToolModeSchema } from '@repo/validators';
 import { syncMCPToolModes } from '@/lib/mcp/remote';
 import { groupBlock } from '../block-id';
 import { actions } from '../ids';
@@ -30,16 +31,15 @@ export async function execute({
     return;
   }
 
-  const prefix = groupBlock.decode(action.block_id);
-  const mode = action.selected_option?.value;
-  if (
-    !(
-      (prefix === 'ro' || prefix === 'dt' || prefix === 'gn') &&
-      (mode === 'allow' || mode === 'ask' || mode === 'block')
-    )
-  ) {
+  const prefixParsed = mcpGroupSlugSchema.safeParse(
+    groupBlock.decode(action.block_id)
+  );
+  const modeParsed = mcpToolModeSchema.safeParse(action.selected_option?.value);
+  if (!(prefixParsed.success && modeParsed.success)) {
     return;
   }
+  const prefix = prefixParsed.data;
+  const mode = modeParsed.data;
 
   const groupModes: MCPToolModeMap = {};
   for (const tool of Object.values(tools)) {

@@ -27,26 +27,33 @@ export async function execute({
     return;
   }
 
-  await client.views.update({
-    view_id: viewId,
-    view: statusModal({
-      title: 'MCP Tools',
-      text: 'Resetting tools...',
-    }),
-  });
+  const statusResult = await client.views
+    .update({
+      hash: body.view?.hash,
+      view_id: viewId,
+      view: statusModal({
+        title: 'MCP Tools',
+        text: 'Resetting tools...',
+      }),
+    })
+    .catch(() => undefined);
+  const statusHash = statusResult?.view?.hash;
 
   const server = await getMCPServerById({
     id: serverId,
     userId: body.user.id,
   });
   if (!server) {
-    await client.views.update({
-      view_id: viewId,
-      view: statusModal({
-        title: 'MCP Tools',
-        text: 'Could not find this MCP server.',
-      }),
-    });
+    await client.views
+      .update({
+        hash: statusHash,
+        view_id: viewId,
+        view: statusModal({
+          title: 'MCP Tools',
+          text: 'Could not find this MCP server.',
+        }),
+      })
+      .catch(() => undefined);
     return;
   }
 
@@ -76,14 +83,17 @@ export async function execute({
     await publishHome({ client, userId: body.user.id });
   }
 
-  await client.views.update({
-    view_id: viewId,
-    view: toolsModal({
-      error,
-      serverId,
-      serverName: server.name,
-      toolModes,
-      tools: toolEntries,
-    }),
-  });
+  await client.views
+    .update({
+      hash: statusHash,
+      view_id: viewId,
+      view: toolsModal({
+        error,
+        serverId,
+        serverName: server.name,
+        toolModes,
+        tools: toolEntries,
+      }),
+    })
+    .catch(() => undefined);
 }

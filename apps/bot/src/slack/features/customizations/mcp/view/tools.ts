@@ -1,5 +1,6 @@
 import type { ListToolsResult } from '@ai-sdk/mcp';
 import type { MCPToolModeMap } from '@repo/db/schema';
+import type { GroupSlug } from '@repo/validators';
 import type { ViewsOpenArguments } from '@slack/web-api';
 import Fuse from 'fuse.js';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
@@ -11,7 +12,6 @@ import { groupBlock, renderNonce, toolBlock } from '../block-id';
 import { actions, blocks, inputs, views } from '../ids';
 
 type ModalView = ViewsOpenArguments['view'];
-type GroupSlug = 'ro' | 'dt' | 'gn';
 export interface ToolEntry {
   group: GroupSlug;
   name: string;

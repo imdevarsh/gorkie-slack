@@ -1,4 +1,5 @@
 import { patchMCPToolModes } from '@repo/db/queries';
+import { mcpToolModeSchema } from '@repo/validators';
 import { toolBlock } from '../block-id';
 import { inputs } from '../ids';
 import { parseToolsMeta } from '../schema';
@@ -31,10 +32,11 @@ export async function execute({
     return;
   }
 
-  const mode = action.selected_option?.value;
-  if (!(mode === 'allow' || mode === 'ask' || mode === 'block')) {
+  const modeParsed = mcpToolModeSchema.safeParse(action.selected_option?.value);
+  if (!modeParsed.success) {
     return;
   }
+  const mode = modeParsed.data;
 
   await patchMCPToolModes({
     modes: { [tool.name]: mode },

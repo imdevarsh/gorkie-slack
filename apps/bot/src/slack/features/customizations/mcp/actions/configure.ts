@@ -39,6 +39,7 @@ export async function execute({
   });
   if (!server) {
     await client.views.update({
+      hash: opened.view?.hash,
       view_id: viewId,
       view: statusModal({
         title: 'MCP Tools',
@@ -72,6 +73,7 @@ export async function execute({
     await publishHome({ client, userId: body.user.id });
   }
   await client.views.update({
+    hash: opened.view?.hash,
     view_id: viewId,
     view: toolsModal({
       error,
