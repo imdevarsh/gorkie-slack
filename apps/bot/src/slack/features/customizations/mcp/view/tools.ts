@@ -9,7 +9,7 @@ import { formatMCPError } from '@/lib/mcp/format-error';
 import { formatToolName } from '@/lib/mcp/format-tool-name';
 import { codeBlock, mdText } from '@/slack/blocks';
 import { groupBlock, renderNonce, toolBlock } from '../block-id';
-import { actions, blocks, inputs, views } from '../ids';
+import { actions, blocks, groupLabels, inputs, views } from '../ids';
 
 type ModalView = ViewsOpenArguments['view'];
 export interface ToolEntry {
@@ -17,12 +17,6 @@ export interface ToolEntry {
   name: string;
 }
 type ToolMeta = Record<string, { group: GroupSlug; name: string }>;
-
-const GROUP_LABELS: Record<GroupSlug, string> = {
-  dt: 'Destructive tools',
-  gn: 'Tools',
-  ro: 'Read-only tools',
-};
 
 const allowOption = Bits.Option({ text: 'Allow always', value: 'allow' });
 const askOption = Bits.Option({ text: 'Ask', value: 'ask' });
@@ -33,8 +27,8 @@ function injectCharacterDispatch(view: ModalView): ModalView {
   if (!view?.blocks) {
     return view;
   }
-  const mutable = JSON.parse(JSON.stringify(view)) as typeof view;
-  for (const block of mutable.blocks as Record<string, unknown>[]) {
+  const mutable = structuredClone(view) as typeof view;
+  for (const block of mutable.blocks as unknown as Record<string, unknown>[]) {
     if (block.block_id === blocks.search) {
       const element = block.element as Record<string, unknown> | undefined;
       if (element) {
@@ -242,7 +236,7 @@ export function toolsModal({
           : [
               Blocks.Section({
                 blockId: groupBlock.encode(nonce, group),
-                text: `*${GROUP_LABELS[group]}*`,
+                text: `*${groupLabels[group]}*`,
               }).accessory(
                 Elements.StaticSelect({
                   actionId: actions.setGroupMode,

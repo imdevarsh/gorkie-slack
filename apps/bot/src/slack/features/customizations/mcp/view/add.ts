@@ -1,14 +1,14 @@
+import type { MCPModalState } from '@repo/validators';
 import { Bits, Blocks, Elements, Modal } from 'slack-block-builder';
 import type { SlackModalDto } from 'slack-block-builder/dist/internal';
 import { actions, blocks, inputs, views } from '../ids';
-import type { ModalState } from '../types';
 
 const httpOption = Bits.Option({ text: 'HTTP', value: 'http' });
 const sseOption = Bits.Option({ text: 'SSE', value: 'sse' });
 const oauthOption = Bits.Option({ text: 'OAuth', value: 'oauth' });
 const bearerOption = Bits.Option({ text: 'Token', value: 'bearer' });
 
-export function addModal(state: ModalState = {}): SlackModalDto {
+export function addModal(state: MCPModalState = {}): SlackModalDto {
   const auth = state.auth ?? 'oauth';
   const transport = state.transport ?? 'http';
 

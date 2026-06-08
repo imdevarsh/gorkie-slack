@@ -1,8 +1,10 @@
+import { randomUUID } from 'node:crypto';
+
 const TOOL = /^tool_[^_]+_(.+)$/;
 const GROUP = /^group_[^_]+_(.+)$/;
 
 export function renderNonce(): string {
-  return crypto.randomUUID().replaceAll('-', '');
+  return randomUUID().replaceAll('-', '');
 }
 
 export const toolBlock = {

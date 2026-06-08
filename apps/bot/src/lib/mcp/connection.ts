@@ -7,18 +7,12 @@ import {
   updateMCPServer,
   upsertMCPBearerConnection,
 } from '@repo/db/queries';
-import type { MCPServer, MCPToolMode } from '@repo/db/schema';
+import type { MCPServer } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
-import { mcp } from '@/config';
 import { encrypt } from './encryption';
 import { guardedMCPFetch } from './guarded-fetch';
 import { createMCPOAuthProvider } from './oauth-provider';
-import { fetchTools, getMCPCredential } from './remote';
-
-const defaultToolMode: MCPToolMode =
-  mcp.defaultToolMode === 'allow' || mcp.defaultToolMode === 'block'
-    ? mcp.defaultToolMode
-    : 'ask';
+import { defaultToolMode, fetchTools, getMCPCredential } from './remote';
 
 async function finalizeSuccess({
   definitions,

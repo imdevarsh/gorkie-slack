@@ -12,7 +12,6 @@ import type {
 } from '@slack/bolt';
 
 export type Transport = NonNullable<MCPModalState['transport']>;
-export type ModalState = MCPModalState;
 
 export type ButtonArgs = SlackActionMiddlewareArgs<BlockAction<ButtonAction>> &
   AllMiddlewareArgs;

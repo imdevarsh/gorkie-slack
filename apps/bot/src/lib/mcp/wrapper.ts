@@ -35,9 +35,15 @@ function extractResultText(result: unknown): string {
       )
       .filter(Boolean)
       .join('\n');
-    return text || (JSON.stringify(result) ?? String(result));
+    if (text) {
+      return text;
+    }
   }
-  return JSON.stringify(result) ?? String(result);
+  try {
+    return JSON.stringify(result);
+  } catch {
+    return String(result);
+  }
 }
 
 export function wrapMCPToolExecute({

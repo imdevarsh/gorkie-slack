@@ -1,14 +1,12 @@
 import { getMCPServerById, patchMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
-import { errorMessage } from '@repo/utils/error';
 import { mcpGroupSlugSchema, mcpToolModeSchema } from '@repo/validators';
-import { syncMCPToolModes } from '@/lib/mcp/remote';
 import { groupBlock } from '../block-id';
 import { actions } from '../ids';
 import { parseToolsMeta } from '../schema';
 import type { SelectArgs } from '../types';
 import { toolsModal } from '../view';
-import { toToolEntries } from '../view/tools';
+import { syncToolsForView } from './helpers';
 
 export const name = actions.setGroupMode;
 
@@ -65,20 +63,11 @@ export async function execute({
     return;
   }
 
-  let error: string | undefined;
-  let toolEntries: ReturnType<typeof toToolEntries> = [];
-  let toolModes: MCPToolModeMap = {};
-  try {
-    const synced = await syncMCPToolModes({
-      server,
-      teamId: body.team?.id,
-      userId: body.user.id,
-    });
-    toolEntries = toToolEntries(synced.definitions.tools);
-    toolModes = synced.modes;
-  } catch (err) {
-    error = errorMessage(err);
-  }
+  const { error, toolEntries, toolModes } = await syncToolsForView({
+    server,
+    teamId: body.team?.id,
+    userId: body.user.id,
+  });
 
   await client.views
     .update({

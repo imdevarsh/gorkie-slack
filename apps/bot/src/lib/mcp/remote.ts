@@ -35,7 +35,7 @@ function slugify(value: string): string {
   return slug || 'server';
 }
 
-const defaultToolMode: MCPToolMode =
+export const defaultToolMode: MCPToolMode =
   mcp.defaultToolMode === 'allow' || mcp.defaultToolMode === 'block'
     ? mcp.defaultToolMode
     : 'ask';

@@ -1,12 +1,9 @@
 import { getMCPServerById } from '@repo/db/queries';
-import type { MCPToolModeMap } from '@repo/db/schema';
-import { errorMessage } from '@repo/utils/error';
-import { syncMCPToolModes } from '@/lib/mcp/remote';
 import { actions } from '../ids';
 import { parseToolsMeta } from '../schema';
 import type { InputArgs } from '../types';
 import { toolsLoadingModal, toolsModal } from '../view';
-import { toToolEntries } from '../view/tools';
+import { syncToolsForView } from './helpers';
 
 export const name = actions.searchTools;
 
@@ -44,20 +41,11 @@ export async function execute({
     .catch(() => undefined);
   const loadingHash = loadingResult?.view?.hash;
 
-  let error: string | undefined;
-  let toolEntries: ReturnType<typeof toToolEntries> = [];
-  let toolModes: MCPToolModeMap = {};
-  try {
-    const synced = await syncMCPToolModes({
-      server,
-      teamId: body.team?.id,
-      userId: body.user.id,
-    });
-    toolEntries = toToolEntries(synced.definitions.tools);
-    toolModes = synced.modes;
-  } catch (err) {
-    error = errorMessage(err);
-  }
+  const { error, toolEntries, toolModes } = await syncToolsForView({
+    server,
+    teamId: body.team?.id,
+    userId: body.user.id,
+  });
 
   await client.views
     .update({

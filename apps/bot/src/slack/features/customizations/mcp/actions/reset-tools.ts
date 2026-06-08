@@ -3,14 +3,11 @@ import {
   getMCPServerById,
   updateMCPServer,
 } from '@repo/db/queries';
-import type { MCPToolModeMap } from '@repo/db/schema';
-import { errorMessage } from '@repo/utils/error';
-import { syncMCPToolModes } from '@/lib/mcp/remote';
 import { publishHome } from '../../publish';
 import { actions } from '../ids';
 import type { ButtonArgs } from '../types';
 import { statusModal, toolsModal } from '../view';
-import { toToolEntries } from '../view/tools';
+import { syncToolsForView } from './helpers';
 
 export const name = actions.resetTools;
 
@@ -59,26 +56,16 @@ export async function execute({
 
   await deleteAllMCPToolPermissions({ serverId, userId: body.user.id });
 
-  let error: string | undefined;
-  let toolEntries: ReturnType<typeof toToolEntries> = [];
-  let toolModes: MCPToolModeMap = {};
-  try {
-    const synced = await syncMCPToolModes({
-      server,
-      teamId: body.team?.id,
-      userId: body.user.id,
-    });
-    toolEntries = toToolEntries(synced.definitions.tools);
-    toolModes = synced.modes;
-  } catch (err) {
-    error = errorMessage(err);
+  const { error, toolEntries, toolModes } = await syncToolsForView({
+    server,
+    teamId: body.team?.id,
+    userId: body.user.id,
+  });
+  if (error) {
     await updateMCPServer({
       id: server.id,
       userId: body.user.id,
-      values: {
-        enabled: false,
-        lastError: error,
-      },
+      values: { enabled: false, lastError: error },
     });
     await publishHome({ client, userId: body.user.id });
   }
