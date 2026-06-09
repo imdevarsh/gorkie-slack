@@ -77,17 +77,6 @@ function buildToolsByGroup(tools: ToolEntry[]): MCPToolsByGroup {
   return result;
 }
 
-function defaultOpenGroup(
-  toolsByGroup: MCPToolsByGroup
-): GroupSlug | undefined {
-  for (const group of ['ro', 'dt', 'gn'] as GroupSlug[]) {
-    if (toolsByGroup[group].length > 0) {
-      return group;
-    }
-  }
-  return;
-}
-
 export function toolsLoadingModal({
   search,
   serverId,
@@ -146,7 +135,7 @@ export function toolsModal({
   const searchTerm = search?.trim() || undefined;
   const allTools = error ? [] : tools;
   const toolsByGroup = buildToolsByGroup(allTools);
-  const openGroup = open ?? defaultOpenGroup(toolsByGroup);
+  const openGroup = open;
 
   const modal = Modal({
     callbackId: views.configure,
