@@ -123,6 +123,7 @@ export function toolsLoadingModal({
   );
 }
 
+const ACCORDION_THRESHOLD = 40;
 const MAX_TOOLS_PER_GROUP = Math.floor((100 - 5) / 1);
 
 export function toolsModal({
@@ -146,7 +147,10 @@ export function toolsModal({
   const searchTerm = search?.trim() || undefined;
   const allTools = error ? [] : tools;
   const toolsByGroup = buildToolsByGroup(allTools);
-  const openGroup = open ?? defaultOpenGroup(toolsByGroup);
+  const useAccordion = allTools.length > ACCORDION_THRESHOLD;
+  const openGroup = useAccordion
+    ? (open ?? defaultOpenGroup(toolsByGroup))
+    : undefined;
 
   const modal = Modal({
     callbackId: views.configure,
@@ -221,12 +225,8 @@ export function toolsModal({
           return [];
         }
         return [
+          Blocks.Context().elements(`*${groupNames[group]}*`),
           Blocks.Actions({ blockId: groupBlock.encode(nonce, group) }).elements(
-            Elements.Button({
-              actionId: actions.toggleGroup,
-              text: groupNames[group],
-              value: group,
-            }),
             Elements.StaticSelect({
               actionId: actions.setGroupMode,
               placeholder: 'Set all…',
@@ -262,8 +262,7 @@ export function toolsModal({
     );
   }
 
-  const totalCount = allTools.length;
-  const countInfo = totalCount > 0 ? ` · ${totalCount} tools` : '';
+  const countInfo = allTools.length > 0 ? ` · ${allTools.length} tools` : '';
 
   const headerBlock = Blocks.Section({
     text: `*${mdText(serverName)}*\nChoose tool access: always allow, ask, or deny.${countInfo}`,
@@ -277,45 +276,58 @@ export function toolsModal({
       .confirm(confirmReset)
   );
 
-  const groupBlocks = (['ro', 'dt', 'gn'] as GroupSlug[]).flatMap((group) => {
-    const names = toolsByGroup[group];
-    if (names.length === 0) {
-      return [];
-    }
-    const isOpen = openGroup === group;
-    return [
-      Blocks.Actions({ blockId: groupBlock.encode(nonce, group) }).elements(
-        Elements.Button({
-          actionId: actions.toggleGroup,
-          text: `${isOpen ? '▾' : '▸'} ${groupNames[group]}`,
-          value: group,
-        }),
-        ...(isOpen
-          ? [
-              Elements.StaticSelect({
-                actionId: actions.setGroupMode,
-                placeholder: 'Set all…',
-              }).options(...modeOptions),
-            ]
-          : [])
-      ),
-      ...(isOpen
-        ? names.slice(0, MAX_TOOLS_PER_GROUP).map((name) =>
-            Blocks.Section({
-              blockId: toolBlock.encode(nonce, name),
-              text: mdText(formatToolName(name).slice(0, 180)),
-            }).accessory(
-              Elements.StaticSelect({
-                actionId: inputs.toolMode,
-                placeholder: 'Mode',
-              })
-                .options(...modeOptions)
-                .initialOption(modeOption(toolModes[name] ?? 'ask'))
-            )
-          )
-        : []),
-    ];
-  });
+  const toolRow = (name: string) =>
+    Blocks.Section({
+      blockId: toolBlock.encode(nonce, name),
+      text: mdText(formatToolName(name).slice(0, 180)),
+    }).accessory(
+      Elements.StaticSelect({ actionId: inputs.toolMode, placeholder: 'Mode' })
+        .options(...modeOptions)
+        .initialOption(modeOption(toolModes[name] ?? 'ask'))
+    );
+
+  const groupBlocks = useAccordion
+    ? (['ro', 'dt', 'gn'] as GroupSlug[]).flatMap((group) => {
+        const names = toolsByGroup[group];
+        if (names.length === 0) {
+          return [];
+        }
+        const isOpen = openGroup === group;
+        return [
+          Blocks.Actions({ blockId: groupBlock.encode(nonce, group) }).elements(
+            Elements.Button({
+              actionId: actions.toggleGroup,
+              text: `${isOpen ? '▾' : '▸'} ${groupNames[group]}`,
+              value: group,
+            }),
+            ...(isOpen
+              ? [
+                  Elements.StaticSelect({
+                    actionId: actions.setGroupMode,
+                    placeholder: 'Set all…',
+                  }).options(...modeOptions),
+                ]
+              : [])
+          ),
+          ...(isOpen ? names.slice(0, MAX_TOOLS_PER_GROUP).map(toolRow) : []),
+        ];
+      })
+    : (['ro', 'dt', 'gn'] as GroupSlug[]).flatMap((group) => {
+        const names = toolsByGroup[group];
+        if (names.length === 0) {
+          return [];
+        }
+        return [
+          Blocks.Context().elements(`*${groupNames[group]}*`),
+          Blocks.Actions({ blockId: groupBlock.encode(nonce, group) }).elements(
+            Elements.StaticSelect({
+              actionId: actions.setGroupMode,
+              placeholder: 'Set all…',
+            }).options(...modeOptions)
+          ),
+          ...names.map(toolRow),
+        ];
+      });
 
   if (groupBlocks.length === 0) {
     return injectCharacterDispatch(
