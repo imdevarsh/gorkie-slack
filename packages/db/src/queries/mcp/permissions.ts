@@ -152,6 +152,19 @@ export async function ensureMCPToolModes({
   for (const toolName of toolNames) {
     next[toolName] = current.global[toolName] ?? defaultMode;
   }
+
+  // Skip the upsert when nothing changed: same set of tools (a pruned or added
+  // tool changes the key count) and the same mode for each. Compare by next's
+  // keys so duplicate toolNames can't skew the count.
+  const currentGlobal = current.global;
+  const nextKeys = Object.keys(next);
+  const unchanged =
+    nextKeys.length === Object.keys(currentGlobal).length &&
+    nextKeys.every((toolName) => currentGlobal[toolName] === next[toolName]);
+  if (unchanged) {
+    return next;
+  }
+
   await setMCPToolModes({
     modes: next,
     scope: 'global',

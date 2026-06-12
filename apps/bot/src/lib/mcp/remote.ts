@@ -40,6 +40,10 @@ export const defaultToolMode: MCPToolMode =
     ? mcp.defaultToolMode
     : 'ask';
 
+// Keeps the App Home "Active" freshness within this window while removing a
+// lastConnectedAt write from every message.
+const CONNECTED_AT_REFRESH_MS = 5 * 60 * 1000;
+
 export type MCPCredential =
   | { type: 'bearer'; token: string }
   | { type: 'oauth'; connection: MCPOAuthConnection };
@@ -152,100 +156,126 @@ export async function createMCPToolset({
   }
 
   const ctxId = getContextId(context);
+  const threadTs = context.event.thread_ts ?? context.event.ts;
   const servers = await listEnabledMCPServers({
     userId,
   });
+
+  // Phase A (concurrent): per-server I/O. Each closure owns its errors and
+  // returns null on failure so one bad server doesn't abort the others. No
+  // shared state is mutated here, so the order servers resolve in is irrelevant.
+  const setups = await Promise.all(
+    servers.map(async (server) => {
+      try {
+        const credential = await getMCPCredential({ server, userId });
+        if (!credential) {
+          return null;
+        }
+
+        const client = await openMCPClient({ credential, server });
+
+        let definitions: Awaited<ReturnType<typeof client.listTools>>;
+        try {
+          definitions = await client.listTools();
+        } catch (err) {
+          await client.close().catch(() => undefined);
+          throw err;
+        }
+
+        await ensureMCPToolModes({
+          defaultMode: defaultToolMode,
+          serverId: server.id,
+          teamId: context.teamId,
+          toolNames: definitions.tools.map((definition) => definition.name),
+          userId,
+        });
+        const modes = await getMCPToolModes({
+          serverId: server.id,
+          threadTs,
+          userId,
+        });
+
+        const needsTouch =
+          server.lastError !== null ||
+          !server.lastConnectedAt ||
+          Date.now() - server.lastConnectedAt.getTime() >
+            CONNECTED_AT_REFRESH_MS;
+        if (needsTouch) {
+          await updateMCPServer({
+            id: server.id,
+            userId,
+            values: { lastConnectedAt: new Date(), lastError: null },
+          });
+        }
+
+        return { client, definitions, modes, server };
+      } catch (error) {
+        logger.warn(
+          { err: error, serverId: server.id, userId },
+          'MCP server failed'
+        );
+        return null;
+      }
+    })
+  );
+
+  // Phase B (serial): assemble tools in the original servers order so exposed
+  // names stay deterministic across messages regardless of resolution order.
   const clients: MCPClient[] = [];
   const tools: ToolSet = {};
   const usedNames = new Set<string>();
 
-  for (const server of servers) {
-    try {
-      const credential = await getMCPCredential({ server, userId });
-      if (!credential) {
-        continue;
+  for (const setup of setups) {
+    if (!setup) {
+      continue;
+    }
+    const { client, definitions, modes, server } = setup;
+    clients.push(client);
+    const serverTools = client.toolsFromDefinitions(definitions);
+    const serverSlug = slugify(server.name);
+
+    for (const [toolName, tool] of Object.entries(serverTools)) {
+      const baseName = `mcp_${serverSlug}_${slugify(toolName)}`;
+      let exposedName = baseName;
+      let collision = 2;
+      while (usedNames.has(exposedName)) {
+        exposedName = `${baseName}_${collision}`;
+        collision += 1;
       }
+      usedNames.add(exposedName);
 
-      const client = await openMCPClient({ credential, server });
-
-      let definitions: Awaited<ReturnType<typeof client.listTools>>;
-      try {
-        definitions = await client.listTools();
-      } catch (err) {
-        await client.close().catch(() => undefined);
-        throw err;
-      }
-      clients.push(client);
-      const threadTs = context.event.thread_ts ?? context.event.ts;
-      await ensureMCPToolModes({
-        defaultMode: defaultToolMode,
-        serverId: server.id,
-        teamId: context.teamId,
-        toolNames: definitions.tools.map((definition) => definition.name),
-        userId,
-      });
-      const modes = await getMCPToolModes({
-        serverId: server.id,
-        threadTs,
-        userId,
-      });
-      const serverTools = client.toolsFromDefinitions(definitions);
-      const serverSlug = slugify(server.name);
-
-      for (const [toolName, tool] of Object.entries(serverTools)) {
-        const baseName = `mcp_${serverSlug}_${slugify(toolName)}`;
-        let exposedName = baseName;
-        let collision = 2;
-        while (usedNames.has(exposedName)) {
-          exposedName = `${baseName}_${collision}`;
-          collision += 1;
-        }
-        usedNames.add(exposedName);
-
-        const execute = tool.execute;
-        const taskTitle = `Using ${server.name}: ${formatToolName(toolName)}`;
-        const globalMode = modes.global[toolName] ?? defaultToolMode;
-        const mode =
-          globalMode === 'block'
-            ? 'block'
-            : (modes.thread[toolName] ?? globalMode);
-        const metadata = {
-          mcp: {
-            server: { id: server.id, name: server.name },
-            tool: { name: toolName, exposedName },
-          },
-        };
-        tools[exposedName] =
-          typeof execute === 'function'
-            ? {
-                ...tool,
-                metadata,
-                needsApproval: mode === 'ask',
-                onInputStart: tool.onInputStart,
-                execute: wrapMCPToolExecute({
-                  ctxId,
-                  execute,
-                  exposedName,
-                  mode,
-                  server,
-                  stream,
-                  taskTitle,
-                  toolName,
-                }),
-              }
-            : tool;
-      }
-
-      await updateMCPServer({
-        id: server.id,
-        userId,
-        values: { lastConnectedAt: new Date(), lastError: null },
-      });
-    } catch (error) {
-      logger.warn(
-        { err: error, serverId: server.id, userId },
-        'MCP server failed'
-      );
+      const execute = tool.execute;
+      const taskTitle = `Using ${server.name}: ${formatToolName(toolName)}`;
+      const globalMode = modes.global[toolName] ?? defaultToolMode;
+      const mode =
+        globalMode === 'block'
+          ? 'block'
+          : (modes.thread[toolName] ?? globalMode);
+      const metadata = {
+        mcp: {
+          server: { id: server.id, name: server.name },
+          tool: { name: toolName, exposedName },
+        },
+      };
+      tools[exposedName] =
+        typeof execute === 'function'
+          ? {
+              ...tool,
+              metadata,
+              needsApproval: mode === 'ask',
+              onInputStart: tool.onInputStart,
+              execute: wrapMCPToolExecute({
+                ctxId,
+                execute,
+                exposedName,
+                mode,
+                server,
+                stream,
+                taskTitle,
+                toolName,
+              }),
+            }
+          : tool;
     }
   }
 
