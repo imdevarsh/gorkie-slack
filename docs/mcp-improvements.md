@@ -25,6 +25,11 @@ LibreChat locks `url`, `auth`, and header fields by default with a permission sy
 
 **Fix**: In `apps/bot/src/slack/features/customizations/mcp/views/save/index.ts` and `configure.ts`, restrict which fields can change after first creation. URL and auth type should be immutable once connected — require delete + re-add to change them.
 
+> **Resolved (2026-06):** there is no UI edit path for these fields, and
+> `MCPServerUpdate` in `packages/db/src/queries/mcp/servers.ts` now excludes
+> `url`/`transport`/`authType` at the type level. Changing a connection
+> requires delete + re-add.
+
 ### 2. Atomic OAuth upsert (correctness)
 
 `upsertMcpOAuthConnection` in `packages/db/src/queries/mcp.ts` does a select-then-insert. Two concurrent callback requests (e.g., user double-clicks) can both miss the `existing` row and attempt to insert duplicate rows.

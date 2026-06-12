@@ -12,17 +12,11 @@ export interface MCPServerWithConnection extends MCPServer {
   hasConnection: boolean;
 }
 
+// url, transport, and authType are immutable after creation: editing them
+// would re-aim stored credentials at a new host. Changing the connection
+// requires delete + re-add (docs/mcp-improvements.md item 1).
 type MCPServerUpdate = Partial<
-  Pick<
-    NewMCPServer,
-    | 'authType'
-    | 'enabled'
-    | 'lastConnectedAt'
-    | 'lastError'
-    | 'name'
-    | 'transport'
-    | 'url'
-  >
+  Pick<NewMCPServer, 'enabled' | 'lastConnectedAt' | 'lastError' | 'name'>
 >;
 
 export async function createMCPServer(server: NewMCPServer) {
