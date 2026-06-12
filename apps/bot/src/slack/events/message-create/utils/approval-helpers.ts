@@ -132,6 +132,47 @@ export function handledApprovalBlocks({
   return [cardBlock({ body, title: cardTitle })];
 }
 
+export function activeApprovalBlocks({
+  approvalId,
+  input,
+  serverName,
+  toolName,
+}: {
+  approvalId: string;
+  input: string;
+  serverName: string;
+  toolName: string;
+}): SlackBlocks {
+  return [
+    cardBlock({
+      actions: [
+        buttonElement({
+          actionId: actions.approval.allow,
+          style: 'primary',
+          text: 'Approve once',
+          value: approvalId,
+        }),
+        buttonElement({
+          actionId: actions.approval.always,
+          text: 'Always in thread',
+          value: approvalId,
+        }),
+        buttonElement({
+          actionId: actions.approval.deny,
+          style: 'danger',
+          text: 'Deny',
+          value: approvalId,
+        }),
+      ],
+      body: clampText(
+        `Input:\n${codeBlock({ value: input || '{}', maxLength: 180 })}`,
+        200
+      ),
+      title: `Approve: ${serverName} / ${formatToolName(toolName)}`,
+    }),
+  ];
+}
+
 export async function postApprovalRequest({
   approval,
   context,
@@ -166,34 +207,12 @@ export async function postApprovalRequest({
     userId,
   });
 
-  const blocks: SlackBlocks = [
-    cardBlock({
-      actions: [
-        buttonElement({
-          actionId: actions.approval.allow,
-          style: 'primary',
-          text: 'Approve once',
-          value: approval.approvalId,
-        }),
-        buttonElement({
-          actionId: actions.approval.always,
-          text: 'Always in thread',
-          value: approval.approvalId,
-        }),
-        buttonElement({
-          actionId: actions.approval.deny,
-          style: 'danger',
-          text: 'Deny',
-          value: approval.approvalId,
-        }),
-      ],
-      body: clampText(
-        `Input:\n${codeBlock({ value: args || '{}', maxLength: 180 })}`,
-        200
-      ),
-      title: `Approve: ${approval.serverName} / ${formatToolName(approval.toolName)}`,
-    }),
-  ];
+  const blocks = activeApprovalBlocks({
+    approvalId: approval.approvalId,
+    input: args,
+    serverName: approval.serverName,
+    toolName: approval.toolName,
+  });
 
   const message = await context.client.chat.postMessage({
     channel,

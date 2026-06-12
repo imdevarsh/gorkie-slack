@@ -4,6 +4,7 @@ import {
   getMCPServerById,
   getMCPToolApprovalStatus,
   patchMCPToolModes,
+  reopenMCPToolApprovals,
   updateMCPToolApproval,
 } from '@repo/db/queries';
 import { asRecord } from '@repo/utils/record';
@@ -12,6 +13,7 @@ import { decrypt } from '@/lib/mcp/encryption';
 import { getQueue } from '@/lib/queue';
 import {
   type ApprovalOutcome,
+  activeApprovalBlocks,
   decodeApprovalState,
   handledApprovalBlocks,
 } from '@/slack/events/message-create/utils/approval-helpers';
@@ -56,6 +58,50 @@ async function updateApprovalMessage({
         title,
         toolName,
       }),
+    })
+    .catch(() => undefined);
+}
+
+// When the post-approval resume fails, the batch is already finalized — so the
+// buttons would render "Already handled" and the run would be lost. Reopen the
+// batch to 'pending' and restore each card's actionable blocks so the user can
+// respond again. Never throws; recovery must not deadlock on its own failure.
+async function recoverFromResumeFailure({
+  approvalIds,
+  resumeContext,
+  userId,
+}: {
+  approvalIds: string[];
+  resumeContext: SlackMessageContext;
+  userId: string;
+}): Promise<void> {
+  const reopened = await reopenMCPToolApprovals({ approvalIds, userId });
+  await Promise.all(
+    reopened.map(async (item) => {
+      if (!item.messageTs) {
+        return;
+      }
+      const server = await getMCPServerById({ id: item.serverId, userId });
+      await resumeContext.client.chat
+        .update({
+          channel: item.channelId,
+          ts: item.messageTs,
+          text: `Approve ${server?.name ?? item.toolName}: ${item.toolName}`,
+          blocks: activeApprovalBlocks({
+            approvalId: item.approvalId,
+            input: item.args ? decrypt(item.args) : '',
+            serverName: server?.name ?? item.toolName,
+            toolName: item.toolName,
+          }),
+        })
+        .catch(() => undefined);
+    })
+  );
+  await resumeContext.client.chat
+    .postMessage({
+      channel: resumeContext.event.channel,
+      thread_ts: resumeContext.event.thread_ts ?? undefined,
+      text: 'Resuming after your approval failed. The approval buttons are active again — please respond once more.',
     })
     .catch(() => undefined);
 }
@@ -224,13 +270,16 @@ export async function execute(args: ButtonArgs): Promise<void> {
           { err: error, approvalId },
           'Failed to resume MCP approval'
         );
-        resumeContext.client.chat
-          .postMessage({
-            channel: resumeContext.event.channel,
-            thread_ts: resumeContext.event.thread_ts ?? undefined,
-            text: 'Something went wrong resuming after your approval. Please try again.',
-          })
-          .catch(() => undefined);
+        recoverFromResumeFailure({
+          approvalIds: batch.siblings.map((s) => s.approvalId),
+          resumeContext,
+          userId: body.user.id,
+        }).catch((recoveryError: unknown) => {
+          logger.error(
+            { err: recoveryError, approvalId },
+            'Failed to reopen approval batch after resume failure'
+          );
+        });
       });
   } catch (error) {
     await updateMCPToolApproval({

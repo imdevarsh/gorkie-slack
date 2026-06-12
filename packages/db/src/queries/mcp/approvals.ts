@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../../index';
 import {
   type MCPToolApproval,
@@ -109,6 +109,30 @@ export async function updateMCPToolApproval({
     )
     .returning();
   return rows[0] ?? null;
+}
+
+export async function reopenMCPToolApprovals({
+  approvalIds,
+  userId,
+}: {
+  approvalIds: string[];
+  userId: string;
+}): Promise<MCPToolApproval[]> {
+  if (approvalIds.length === 0) {
+    return [];
+  }
+  const rows = await db
+    .update(mcpToolApprovals)
+    .set({ status: 'pending', updatedAt: new Date() })
+    .where(
+      and(
+        inArray(mcpToolApprovals.approvalId, approvalIds),
+        eq(mcpToolApprovals.userId, userId),
+        inArray(mcpToolApprovals.status, ['approved', 'denied'])
+      )
+    )
+    .returning();
+  return rows;
 }
 
 const OPEN_APPROVAL_STATUSES = new Set(['pending', 'handling']);
