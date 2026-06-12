@@ -11,7 +11,7 @@ Reference: [LibreChat MCP implementation](https://github.com/danny-avila/LibreCh
 - `redirect: 'error'` in transport config: blocks redirect-based SSRF — used ✓
 - `auth()` helper: handles initial auth, PKCE, token exchange, refresh — used ✓
 
-The SDK does **not** provide: timeout enforcement, response size caps, streaming byte limits, or IP-based SSRF validation. These are all handled by `packages/utils/src/guarded-fetch.ts` — keep it.
+The SDK does **not** provide: timeout enforcement, redirect blocking, response size caps, or IP-based SSRF validation. Timeout, redirect blocking, and the response size cap live in `packages/utils/src/guarded-fetch.ts`; IP/SSRF validation lives in `packages/validators/src/features/mcp/url.ts` (`mcpServerUrlSchema`), which guarded-fetch calls on every request. Keep both.
 
 ---
 
@@ -52,6 +52,8 @@ uniqueIndex('mcp_oauth_connections_server_user_idx')
   .on(table.serverId, table.userId)
 ```
 
+> **Resolved:** implemented in `packages/db/src/queries/mcp/connections.ts` via `onConflictDoUpdate` on `(serverId, userId)`.
+
 ### 3. Scope MCP queries by teamId (security — multi-workspace)
 
 Every `getMcpServerByIdForUser`, `getMcpOAuthConnection`, and related query uses only `userId` as the predicate. If the same Slack user ID exists in two workspaces (possible in Slack Connect or Enterprise Grid), workspace A can read workspace B's MCP servers.
@@ -86,6 +88,8 @@ function isBlockedIpv6(address: string): boolean {
   // ... existing checks
 }
 ```
+
+> **Resolved:** `packages/validators/src/features/mcp/url.ts` uses `ipaddr.process()`, which normalizes `::ffff:` mapped addresses before range checks.
 
 ### 5. Proactive token refresh (reliability)
 
@@ -122,10 +126,10 @@ No new major library additions are required. The main wins are fixes to existing
 
 ## Priority order
 
-1. **Atomic OAuth upsert** — data integrity bug, easy to fix
-2. **IPv4-mapped IPv6 SSRF bypass** — security hole, 5-line fix
+1. ~~**Atomic OAuth upsert** — data integrity bug, easy to fix~~ ✅ resolved
+2. ~~**IPv4-mapped IPv6 SSRF bypass** — security hole, 5-line fix~~ ✅ resolved
 3. **teamId scoping** — multi-workspace security, medium lift
 4. **Approval-queue ordering** — correctness bug in approval flow
-5. **Field lockdown** — security hardening, requires UX consideration
+5. ~~**Field lockdown** — security hardening, requires UX consideration~~ ✅ resolved (type-level; no UI edit path)
 6. **Proactive token refresh** — reliability, low urgency
 7. **Tool discovery before auth** — UX improvement, lowest priority
