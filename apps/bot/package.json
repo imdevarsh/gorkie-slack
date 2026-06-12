@@ -36,8 +36,6 @@
     "mime-types": "^3.0.2",
     "p-queue": "^9.3.0",
     "pako": "^2.1.0",
-    "pino": "catalog:",
-    "pino-pretty": "catalog:",
     "sanitize-filename": "^1.6.4",
     "slack-block-builder": "^2.8.0",
     "typebox": "1.1.38",
