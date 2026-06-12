@@ -54,7 +54,6 @@
     "db:push": "turbo run db:push --filter=@repo/db",
     "db:studio": "turbo run db:studio --filter=@repo/db",
     "db:generate": "turbo run db:generate --filter=@repo/db",
-    "db:migrate": "turbo run db:migrate --filter=@repo/db",
     "check": "ultracite check .",
     "check:spelling": "cspell -c .cspell.jsonc --no-progress --no-summary --no-must-find-files --unique --cache .",
     "check:unsafe": "ultracite fix --unsafe .",

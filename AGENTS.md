@@ -20,6 +20,8 @@ bun run check:spelling  # Spell-check with cspell
 bun run db:push      # Push schema changes to database
 ```
 
+Schema changes ship via `bun run db:push` (push-only workflow — no migration files are generated or applied).
+
 There is no committed test suite for the sandbox proxy yet. Use temporary local scripts or direct app requests for validation, then delete those artifacts.
 
 ## Project Structure
