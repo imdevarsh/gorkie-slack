@@ -1,10 +1,15 @@
-import { and, asc, desc, eq, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { db } from '../index';
 import {
   type NewScheduledTask,
   type ScheduledTask,
   scheduledTasks,
 } from '../schema';
+
+// A run claim older than this is assumed orphaned by a crashed process and
+// becomes reclaimable. Must comfortably exceed the longest legitimate task run
+// (agent stream + Slack delivery).
+const STALE_RUN_CLAIM_MS = 30 * 60 * 1000;
 
 export async function createScheduledTask(task: NewScheduledTask) {
   const rows = await db.insert(scheduledTasks).values(task).returning();
@@ -56,7 +61,13 @@ export function listDueScheduledTasks(now: Date, limit = 20) {
     .where(
       and(
         eq(scheduledTasks.enabled, true),
-        isNull(scheduledTasks.runningAt),
+        or(
+          isNull(scheduledTasks.runningAt),
+          lt(
+            scheduledTasks.runningAt,
+            new Date(now.getTime() - STALE_RUN_CLAIM_MS)
+          )
+        ),
         lte(scheduledTasks.nextRunAt, now)
       )
     )
@@ -77,7 +88,13 @@ export async function claimScheduledTaskRun(taskId: string, now: Date) {
       and(
         eq(scheduledTasks.id, taskId),
         eq(scheduledTasks.enabled, true),
-        isNull(scheduledTasks.runningAt),
+        or(
+          isNull(scheduledTasks.runningAt),
+          lt(
+            scheduledTasks.runningAt,
+            new Date(now.getTime() - STALE_RUN_CLAIM_MS)
+          )
+        ),
         lte(scheduledTasks.nextRunAt, now)
       )
     )
