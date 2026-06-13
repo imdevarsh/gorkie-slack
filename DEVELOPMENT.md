@@ -96,7 +96,7 @@ The proxy is a Nitro app and deploys to Vercel as a serverless Node.js function.
 
    | Variable | Notes |
    |---|---|
-   | `DATABASE_URL` | Same Supabase Postgres connection string as the bot |
+   | `DATABASE_URL` | Same Supabase pooled Postgres connection string as the bot |
    | `HACKCLUB_API_KEY` | Provider key (never put in the bot) |
    | `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` | Optional fallback |
    | `GOOGLE_GENERATIVE_AI_API_KEY` | Optional fallback |
@@ -119,7 +119,7 @@ The bot runs as a long-lived Node.js process and is not suited for serverless. D
 
 **Database:**
 
-Both apps must share the same `DATABASE_URL`. Supabase Postgres works well for this; use the same pooled or direct connection string in the bot and server environments.
+Both apps must share the same `DATABASE_URL`. Use the Supabase Shared Pooler / Transaction Pooler connection string in the bot and server environments. The direct `db.<project>.supabase.co` host can resolve to IPv6-only in some runtimes.
 
 ### Deploying the Sandbox Template
 
