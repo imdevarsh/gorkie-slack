@@ -1,4 +1,3 @@
-import { runWithLogContext } from '@repo/logging/context';
 import { toLogError } from '@repo/utils/error';
 import { env } from '@/env';
 import { isUserAllowed } from '@/lib/allowed-users';
@@ -125,9 +124,7 @@ export async function execute(args: MessageEventArgs): Promise<void> {
       trigger.type === 'ping'
         ? raw.replace(/<@[A-Z0-9]+>/gi, '').trimStart()
         : raw;
-    const inlineResult = await runWithLogContext({ ctxId }, () =>
-      handleInlineCommand(messageContext, ctxId, text)
-    );
+    const inlineResult = await handleInlineCommand(messageContext, ctxId, text);
     if (inlineResult === 'handled') {
       return;
     }
@@ -139,9 +136,7 @@ export async function execute(args: MessageEventArgs): Promise<void> {
   }
 
   await getQueue(ctxId)
-    .add(() =>
-      runWithLogContext({ ctxId }, () => handleMessage(messageContext, trigger))
-    )
+    .add(async () => handleMessage(messageContext, trigger))
     .catch((error: unknown) => {
       logger.error(
         { ...toLogError(error), ctxId },

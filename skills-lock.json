@@ -7,6 +7,12 @@
       "skillPath": "skills/use-ai-sdk/SKILL.md",
       "computedHash": "2249889eb47ef0f61c4dba4cf2afe01c1c8dd793bb4c24230347c1ab909bb7dd"
     },
+    "grill-with-docs": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/grill-with-docs/SKILL.md",
+      "computedHash": "eb0e91e84277283dc2b23ed544399e53afd6b5287e5b6929f25fe8aa608e164b"
+    },
     "hono": {
       "source": "yusukebe/hono-skill",
       "sourceType": "github",

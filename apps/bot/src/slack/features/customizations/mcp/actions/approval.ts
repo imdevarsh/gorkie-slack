@@ -7,7 +7,6 @@ import {
   reopenMCPToolApprovals,
   updateMCPToolApproval,
 } from '@repo/db/queries';
-import { runWithLogContext } from '@repo/logging/context';
 import { asRecord } from '@repo/utils/record';
 import logger from '@/lib/logger';
 import { decrypt } from '@/lib/mcp/encryption';

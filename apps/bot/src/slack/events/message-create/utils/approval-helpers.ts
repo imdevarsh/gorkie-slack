@@ -154,7 +154,7 @@ export function activeApprovalBlocks({
         }),
         buttonElement({
           actionId: actions.approval.always,
-          text: 'Always in thread',
+          text: 'Always allow',
           value: approvalId,
         }),
         buttonElement({
