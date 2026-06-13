@@ -26,7 +26,7 @@ cp apps/bot/.env.example apps/bot/.env
 cp apps/server/.env.example apps/server/.env
 ```
 
-Use the same `DATABASE_URL` in both files. The bot writes short-lived proxy tokens to the database, and the proxy validates those tokens from the same database.
+Use the same `DATABASE_URL` in both files.
 
 Put Slack, Exa, E2B, AgentMail, Langfuse, and `SERVER_BASE_URL` in `apps/bot/.env`.
 
@@ -96,7 +96,7 @@ The proxy is a Nitro app and deploys to Vercel as a serverless Node.js function.
 
    | Variable | Notes |
    |---|---|
-   | `DATABASE_URL` | Same Neon connection string as the bot |
+   | `DATABASE_URL` | Same Supabase Postgres connection string as the bot |
    | `HACKCLUB_API_KEY` | Provider key (never put in the bot) |
    | `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` | Optional fallback |
    | `GOOGLE_GENERATIVE_AI_API_KEY` | Optional fallback |
@@ -119,7 +119,7 @@ The bot runs as a long-lived Node.js process and is not suited for serverless. D
 
 **Database:**
 
-Both apps must share the same `DATABASE_URL`. The bot writes short-lived proxy tokens; the proxy validates them. [Neon](https://neon.tech) works well for this, free tier is sufficient and the connection string supports SSL by default.
+Both apps must share the same `DATABASE_URL`. Supabase Postgres works well for this; use the same pooled or direct connection string in the bot and server environments.
 
 ### Deploying the Sandbox Template
 

@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import {
   HarnessAgent,
   type HarnessAgentAdapter,
@@ -27,7 +30,19 @@ function parseResumeState(
   if (!value) {
     return;
   }
-  return JSON.parse(value) as HarnessAgentResumeSessionState;
+  const parsed: unknown = JSON.parse(value);
+
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    'state' in parsed &&
+    parsed.state &&
+    typeof parsed.state === 'object'
+  ) {
+    return parsed.state as HarnessAgentResumeSessionState;
+  }
+
+  return parsed as HarnessAgentResumeSessionState;
 }
 
 function createSandboxAgent({
@@ -42,6 +57,9 @@ function createSandboxAgent({
   onUploads: (uploads: PromptResourceLink[]) => void;
 }): HarnessAgent {
   const prompt = systemPrompt({ agent: 'sandbox', context });
+  if (/\bpi\b|coding agent|badlogic|pi-mono/i.test(prompt)) {
+    throw new Error('Sandbox prompt contains provider-blocked terms.');
+  }
   const harness = createPi({
     auth: {
       customEnv: {
@@ -60,6 +78,18 @@ function createSandboxAgent({
     sandbox: e2bProvider,
     tools: createSandboxTools({ context, ctxId }),
     onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
+      const safeSessionId = ctxId.replace(/[\\/: ]/g, '-');
+      const hostAgentDir = path.join(
+        tmpdir(),
+        'ai-sdk-harness',
+        'pi',
+        safeSessionId,
+        'agent'
+      );
+      const systemPromptPath = `${sessionWorkDir}/.pi/SYSTEM.md`;
+      const legacySystemPromptPath = `${sessionWorkDir}/.pi/SYSTEM`;
+      await mkdir(hostAgentDir, { recursive: true });
+      await writeFile(path.join(hostAgentDir, 'SYSTEM.md'), prompt);
       await session.run({
         abortSignal,
         command: [
@@ -73,8 +103,24 @@ function createSandboxAgent({
       await session.writeTextFile({
         abortSignal,
         content: prompt,
-        path: `${sessionWorkDir}/.pi/SYSTEM.md`,
+        path: systemPromptPath,
       });
+      await session.writeTextFile({
+        abortSignal,
+        content: prompt,
+        path: legacySystemPromptPath,
+      });
+      const writtenPrompt = await session.readTextFile({
+        abortSignal,
+        path: systemPromptPath,
+      });
+      const writtenLegacyPrompt = await session.readTextFile({
+        abortSignal,
+        path: legacySystemPromptPath,
+      });
+      if (writtenPrompt !== prompt || writtenLegacyPrompt !== prompt) {
+        throw new Error('Sandbox system prompt override was not written.');
+      }
       onUploads(await syncAttachments(session, context, files));
     },
   });
