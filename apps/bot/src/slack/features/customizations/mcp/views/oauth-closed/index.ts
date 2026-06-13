@@ -31,7 +31,6 @@ export async function execute({
     if (hasCredentials) {
       await finalizeOAuthServer({
         server,
-        teamId: body.team?.id,
         userId: body.user.id,
       }).catch((error: unknown) => {
         logger.warn(

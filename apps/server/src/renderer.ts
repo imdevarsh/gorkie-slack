@@ -132,7 +132,6 @@ export default defineHandler(async (event) => {
       await ensureMCPToolModes({
         defaultMode: mcp.defaultToolMode,
         serverId: server.id,
-        teamId: server.teamId,
         toolNames: definitions.tools.map((definition) => definition.name),
         userId: server.userId,
       });

@@ -18,7 +18,6 @@ export const mcpServers = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => randomUUID()),
-    teamId: text('team_id'),
     userId: text('user_id').notNull(),
     name: text('name').notNull(),
     transport: text('transport', { enum: ['http', 'sse'] }).notNull(),
@@ -53,7 +52,6 @@ export const mcpBearerConnections = pgTable(
       .notNull()
       .references(() => mcpServers.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
-    teamId: text('team_id'),
     token: text('token'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -81,7 +79,6 @@ export const mcpOAuthConnections = pgTable(
       .notNull()
       .references(() => mcpServers.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
-    teamId: text('team_id'),
     clientId: text('client_id'),
     tokens: text('tokens'),
     clientInformation: text('client_information'),
@@ -105,7 +102,9 @@ export const mcpOAuthConnections = pgTable(
   ]
 );
 
-export const mcpToolPermissions = pgTable(
+// Physical table stays `mcp_tool_permissions`; the concept is tool modes
+// (allow/ask/block), so the code symbol is mcpToolModes.
+export const mcpToolModes = pgTable(
   'mcp_tool_permissions',
   {
     id: text('id')
@@ -115,7 +114,6 @@ export const mcpToolPermissions = pgTable(
       .notNull()
       .references(() => mcpServers.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
-    teamId: text('team_id'),
     scope: text('scope', { enum: ['global', 'thread'] })
       .notNull()
       .default('global'),
@@ -154,7 +152,6 @@ export const mcpToolApprovals = pgTable(
       .notNull()
       .references(() => mcpServers.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
-    teamId: text('team_id'),
     channelId: text('channel_id').notNull(),
     threadTs: text('thread_ts').notNull(),
     eventTs: text('event_ts').notNull(),
@@ -189,9 +186,8 @@ export type MCPBearerConnection = typeof mcpBearerConnections.$inferSelect;
 export type NewMCPBearerConnection = typeof mcpBearerConnections.$inferInsert;
 export type MCPOAuthConnection = typeof mcpOAuthConnections.$inferSelect;
 export type NewMCPOAuthConnection = typeof mcpOAuthConnections.$inferInsert;
-export type MCPToolPermission = typeof mcpToolPermissions.$inferSelect;
-export type NewMCPToolPermission = typeof mcpToolPermissions.$inferInsert;
-export type MCPToolPermissionScope = MCPToolPermission['scope'];
+export type MCPToolModesRow = typeof mcpToolModes.$inferSelect;
+export type NewMCPToolModesRow = typeof mcpToolModes.$inferInsert;
 export type MCPToolApproval = typeof mcpToolApprovals.$inferSelect;
 export type NewMCPToolApproval = typeof mcpToolApprovals.$inferInsert;
 export type MCPToolApprovalStatus = MCPToolApproval['status'];

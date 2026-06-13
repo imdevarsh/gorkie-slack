@@ -34,7 +34,7 @@ export function createMCPOAuthProvider({
     storedConnection = await patchMCPOAuthConnection({
       serverId: server.id,
       userId: server.userId,
-      values: { teamId: server.teamId, ...values },
+      values,
     });
   };
 

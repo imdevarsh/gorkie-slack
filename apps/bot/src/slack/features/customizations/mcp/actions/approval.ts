@@ -209,7 +209,7 @@ export async function execute(args: ButtonArgs): Promise<void> {
     const resumeContext: SlackMessageContext = {
       botUserId: context.botUserId,
       client,
-      teamId: approval.teamId ?? body.team?.id,
+      teamId: body.team?.id,
       event: {
         channel: approval.channelId,
         event_ts: approval.eventTs,
@@ -224,7 +224,6 @@ export async function execute(args: ButtonArgs): Promise<void> {
       await patchMCPToolModes({
         modes: { [approval.toolName]: 'allow' },
         serverId: approval.serverId,
-        teamId: approval.teamId,
         userId: approval.userId,
       });
     }

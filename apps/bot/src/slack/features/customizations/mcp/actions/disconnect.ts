@@ -1,5 +1,5 @@
 import {
-  deleteAllMCPToolPermissions,
+  deleteAllMCPToolModes,
   deleteMCPConnections,
   updateMCPServer,
 } from '@repo/db/queries';
@@ -23,7 +23,7 @@ export async function execute({
     serverId: action.value,
     userId: body.user.id,
   });
-  await deleteAllMCPToolPermissions({
+  await deleteAllMCPToolModes({
     serverId: action.value,
     userId: body.user.id,
   });

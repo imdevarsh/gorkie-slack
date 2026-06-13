@@ -40,7 +40,6 @@ export async function executeBearerSave({
       authType: 'bearer',
       enabled: false,
       name: base.data.name,
-      teamId: body.team?.id ?? null,
       transport: base.data.transport,
       url: base.data.url,
       userId,

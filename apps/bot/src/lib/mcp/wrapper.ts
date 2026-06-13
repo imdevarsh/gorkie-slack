@@ -57,7 +57,7 @@ export function wrapMCPToolExecute({
   toolName,
 }: {
   ctxId: string;
-  execute: (input: unknown, options: ToolExecutionOptions) => unknown;
+  execute: (input: unknown, options: ToolExecutionOptions<unknown>) => unknown;
   exposedName: string;
   mode: MCPToolMode;
   server: MCPServer;
@@ -65,7 +65,7 @@ export function wrapMCPToolExecute({
   taskTitle: string;
   toolName: string;
 }) {
-  return async (input: unknown, options: ToolExecutionOptions) => {
+  return async (input: unknown, options: ToolExecutionOptions<unknown>) => {
     const startedAt = Date.now();
     const details = clampText(
       `Input:\n${JSON.stringify(input, null, 2)}`,

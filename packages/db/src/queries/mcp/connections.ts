@@ -123,7 +123,6 @@ export async function upsertMCPBearerConnection(
 ) {
   const values = {
     serverId: connection.serverId,
-    teamId: connection.teamId ?? null,
     token: connection.token ?? null,
     userId: connection.userId,
   };
@@ -133,7 +132,6 @@ export async function upsertMCPBearerConnection(
     .onConflictDoUpdate({
       target: [mcpBearerConnections.serverId, mcpBearerConnections.userId],
       set: {
-        teamId: values.teamId,
         token: values.token,
         updatedAt: new Date(),
       },
@@ -153,7 +151,6 @@ export async function upsertMCPOAuthConnection(
     scopes: connection.scopes ?? null,
     serverId: connection.serverId,
     state: connection.state ?? null,
-    teamId: connection.teamId ?? null,
     tokens: connection.tokens ?? null,
     userId: connection.userId,
   };
@@ -169,7 +166,6 @@ export async function upsertMCPOAuthConnection(
         expiresAt: values.expiresAt,
         scopes: values.scopes,
         state: values.state,
-        teamId: values.teamId,
         tokens: values.tokens,
         updatedAt: new Date(),
       },
@@ -194,7 +190,6 @@ export async function patchMCPOAuthConnection({
       | 'expiresAt'
       | 'scopes'
       | 'state'
-      | 'teamId'
       | 'tokens'
     >
   >;
@@ -203,7 +198,6 @@ export async function patchMCPOAuthConnection({
     .insert(mcpOAuthConnections)
     .values({
       serverId,
-      teamId: values.teamId ?? null,
       userId,
       ...values,
     })

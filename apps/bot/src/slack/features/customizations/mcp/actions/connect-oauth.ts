@@ -89,7 +89,6 @@ export async function execute({
   try {
     const result = await connectOAuthServer({
       server,
-      teamId: body.team?.id,
       userId,
     });
 

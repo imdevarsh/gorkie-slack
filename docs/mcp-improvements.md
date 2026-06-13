@@ -11,7 +11,7 @@ Reference: [LibreChat MCP implementation](https://github.com/danny-avila/LibreCh
 - `redirect: 'error'` in transport config: blocks redirect-based SSRF — used ✓
 - `auth()` helper: handles initial auth, PKCE, token exchange, refresh — used ✓
 
-The SDK does **not** provide: timeout enforcement, redirect blocking, response size caps, or IP-based SSRF validation. Timeout, redirect blocking, and the response size cap live in `packages/utils/src/guarded-fetch.ts`; IP/SSRF validation lives in `packages/validators/src/features/mcp/url.ts` (`mcpServerUrlSchema`), which guarded-fetch calls on every request. Keep both.
+The SDK does **not** provide: timeout enforcement, redirect blocking, or IP-based SSRF validation. Timeout and redirect blocking live in `packages/utils/src/guarded-fetch.ts`; IP/SSRF validation lives in `packages/validators/src/features/mcp/url.ts` (`mcpServerUrlSchema`), which guarded-fetch calls on every request. Keep both.
 
 ---
 

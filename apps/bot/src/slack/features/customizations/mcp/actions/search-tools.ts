@@ -32,7 +32,6 @@ export async function execute({
 
   const { error, toolEntries, toolModes } = await syncToolsForView({
     server,
-    teamId: body.team?.id,
     userId: body.user.id,
   });
 

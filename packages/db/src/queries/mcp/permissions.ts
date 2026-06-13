@@ -3,8 +3,8 @@ import { db } from '../../index';
 import {
   type MCPToolMode,
   type MCPToolModeMap,
-  type MCPToolPermission,
-  mcpToolPermissions,
+  type MCPToolModesRow,
+  mcpToolModes,
 } from '../../schema';
 
 // Tool permissions are global per (user, server). The scope/threadTs columns
@@ -13,7 +13,6 @@ import {
 interface SetMCPToolModesInput {
   modes: MCPToolModeMap;
   serverId: string;
-  teamId?: string | null;
   userId: string;
 }
 
@@ -26,13 +25,13 @@ export async function getMCPToolModes({
 }): Promise<MCPToolModeMap> {
   const rows = await db
     .select()
-    .from(mcpToolPermissions)
+    .from(mcpToolModes)
     .where(
       and(
-        eq(mcpToolPermissions.serverId, serverId),
-        eq(mcpToolPermissions.userId, userId),
-        eq(mcpToolPermissions.scope, 'global'),
-        eq(mcpToolPermissions.threadTs, '')
+        eq(mcpToolModes.serverId, serverId),
+        eq(mcpToolModes.userId, userId),
+        eq(mcpToolModes.scope, 'global'),
+        eq(mcpToolModes.threadTs, '')
       )
     );
   return rows[0]?.modes ?? {};
@@ -40,28 +39,26 @@ export async function getMCPToolModes({
 
 export async function setMCPToolModes(
   input: SetMCPToolModesInput
-): Promise<MCPToolPermission | null> {
+): Promise<MCPToolModesRow | null> {
   const values = {
     modes: input.modes,
     scope: 'global' as const,
     serverId: input.serverId,
-    teamId: input.teamId ?? null,
     threadTs: '',
     userId: input.userId,
   };
   const rows = await db
-    .insert(mcpToolPermissions)
+    .insert(mcpToolModes)
     .values(values)
     .onConflictDoUpdate({
       target: [
-        mcpToolPermissions.serverId,
-        mcpToolPermissions.userId,
-        mcpToolPermissions.scope,
-        mcpToolPermissions.threadTs,
+        mcpToolModes.serverId,
+        mcpToolModes.userId,
+        mcpToolModes.scope,
+        mcpToolModes.threadTs,
       ],
       set: {
         modes: values.modes,
-        teamId: values.teamId,
         updatedAt: new Date(),
       },
     })
@@ -74,23 +71,21 @@ export async function patchMCPToolModes(input: SetMCPToolModesInput) {
     modes: input.modes,
     scope: 'global' as const,
     serverId: input.serverId,
-    teamId: input.teamId ?? null,
     threadTs: '',
     userId: input.userId,
   };
   const rows = await db
-    .insert(mcpToolPermissions)
+    .insert(mcpToolModes)
     .values(values)
     .onConflictDoUpdate({
       target: [
-        mcpToolPermissions.serverId,
-        mcpToolPermissions.userId,
-        mcpToolPermissions.scope,
-        mcpToolPermissions.threadTs,
+        mcpToolModes.serverId,
+        mcpToolModes.userId,
+        mcpToolModes.scope,
+        mcpToolModes.threadTs,
       ],
       set: {
-        modes: sql`${mcpToolPermissions.modes} || ${JSON.stringify(input.modes)}::jsonb`,
-        teamId: values.teamId,
+        modes: sql`${mcpToolModes.modes} || ${JSON.stringify(input.modes)}::jsonb`,
         updatedAt: new Date(),
       },
     })
@@ -101,13 +96,11 @@ export async function patchMCPToolModes(input: SetMCPToolModesInput) {
 export async function ensureMCPToolModes({
   defaultMode,
   serverId,
-  teamId,
   toolNames,
   userId,
 }: {
   defaultMode: MCPToolMode;
   serverId: string;
-  teamId?: string | null;
   toolNames: string[];
   userId: string;
 }): Promise<MCPToolModeMap> {
@@ -131,13 +124,12 @@ export async function ensureMCPToolModes({
   await setMCPToolModes({
     modes: next,
     serverId,
-    teamId,
     userId,
   });
   return next;
 }
 
-export function deleteAllMCPToolPermissions({
+export function deleteAllMCPToolModes({
   serverId,
   userId,
 }: {
@@ -145,11 +137,8 @@ export function deleteAllMCPToolPermissions({
   userId: string;
 }) {
   return db
-    .delete(mcpToolPermissions)
+    .delete(mcpToolModes)
     .where(
-      and(
-        eq(mcpToolPermissions.serverId, serverId),
-        eq(mcpToolPermissions.userId, userId)
-      )
+      and(eq(mcpToolModes.serverId, serverId), eq(mcpToolModes.userId, userId))
     );
 }

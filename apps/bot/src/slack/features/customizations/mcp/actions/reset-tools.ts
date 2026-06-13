@@ -1,5 +1,5 @@
 import {
-  deleteAllMCPToolPermissions,
+  deleteAllMCPToolModes,
   getMCPServerById,
   updateMCPServer,
 } from '@repo/db/queries';
@@ -54,11 +54,10 @@ export async function execute({
     return;
   }
 
-  await deleteAllMCPToolPermissions({ serverId, userId: body.user.id });
+  await deleteAllMCPToolModes({ serverId, userId: body.user.id });
 
   const { error, toolEntries, toolModes } = await syncToolsForView({
     server,
-    teamId: body.team?.id,
     userId: body.user.id,
   });
   if (error) {

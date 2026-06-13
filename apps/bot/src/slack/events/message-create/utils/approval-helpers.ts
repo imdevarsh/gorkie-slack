@@ -200,7 +200,6 @@ export async function postApprovalRequest({
     state: encrypt(JSON.stringify({ messages, requestHints })),
     serverId: approval.serverId,
     status: 'pending',
-    teamId: context.teamId ?? null,
     threadTs,
     toolCallId: approval.toolCallId,
     toolName: approval.toolName,

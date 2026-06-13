@@ -60,7 +60,6 @@ export async function execute({
     try {
       await syncMCPToolModes({
         server,
-        teamId: body.team?.id,
         userId: body.user.id,
       });
     } catch (error) {

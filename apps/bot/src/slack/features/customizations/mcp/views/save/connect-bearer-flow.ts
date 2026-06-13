@@ -49,7 +49,6 @@ export async function connectBearerAndRender({
     await connectBearerServer({
       rawToken: bearerToken,
       server,
-      teamId: body.team?.id,
       userId,
     });
     await updateView({

@@ -22,7 +22,6 @@ export async function executeOAuthSave({
     authType: 'oauth',
     enabled: false,
     name: base.data.name,
-    teamId: body.team?.id ?? null,
     transport: base.data.transport,
     url: base.data.url,
     userId: body.user.id,
@@ -40,7 +39,6 @@ export async function executeOAuthSave({
     await upsertMCPOAuthConnection({
       clientId,
       serverId: server.id,
-      teamId: body.team?.id ?? null,
       userId: body.user.id,
     });
   }

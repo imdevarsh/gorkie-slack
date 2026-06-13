@@ -37,7 +37,6 @@ export async function execute({
   await patchMCPToolModes({
     modes: { [toolName]: modeParsed.data },
     serverId,
-    teamId: body.team?.id,
     userId: body.user.id,
   });
 }

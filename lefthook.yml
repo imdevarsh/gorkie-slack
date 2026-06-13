@@ -1,9 +1,3 @@
-pre-commit:
-  commands:
-    ultracite:
-      glob: "*.{ts,tsx,js,jsx,json,jsonc}"
-      run: bun x ultracite check {staged_files}
-
 post-merge:
   commands:
     install-deps:

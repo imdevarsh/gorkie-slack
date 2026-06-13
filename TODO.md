@@ -132,6 +132,13 @@ What to add:
 
 - Files: `packages/kv/src/`
 
+### Tech debt: ai-retry v7 type bridge
+`ai-retry@1.7.4` is typed against AI SDK **v6** (peers `ai: 6.x`, `@ai-sdk/provider: ^3`, `@ai-sdk/provider-utils: ^4`). After the v7 / harness bump, the model-spec package went `@ai-sdk/provider` 3 → 4 (added `LanguageModelV4`; `LanguageModelV2` retained), so the `LanguageModel` union identity ai-retry expects no longer matches what the providers emit. The break is **type-only** — ai-retry just delegates to the underlying `LanguageModelV2` contract at runtime, which is unchanged — so it's bridged with casts at one seam in `providers.ts` (`toRetry`/`fromRetry`). The raw OpenRouter/Google providers also emit `LanguageModelV2` while v7 wants `LanguageModelV4`, widening the same gap.
+
+Remove the cast bridge when `ai-retry` ships v7-compatible types (or replace it). Until then:
+- The casts hide compile errors, so any real runtime regression in the fallback chain won't be caught by the type system — **smoke-test the fallback path** (force a primary 500) after any provider/ai-retry/AI-SDK bump.
+- Files: `packages/ai/src/providers.ts` (the `ai-retry v6 ↔ v7 type bridge` block), `apps/bot/src/lib/mcp/wrapper.ts` (`ToolExecutionOptions<unknown>` — v7 made it generic).
+
 ---
 
 ## Notes

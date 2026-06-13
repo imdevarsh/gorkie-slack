@@ -40,10 +40,6 @@ export const defaultToolMode: MCPToolMode =
     ? mcp.defaultToolMode
     : 'ask';
 
-// Keeps the App Home "Active" freshness within this window while removing a
-// lastConnectedAt write from every message.
-const CONNECTED_AT_REFRESH_MS = 5 * 60 * 1000;
-
 export type MCPCredential =
   | { type: 'bearer'; token: string }
   | { type: 'oauth'; connection: MCPOAuthConnection };
@@ -121,11 +117,9 @@ export async function fetchTools({
 
 export async function syncMCPToolModes({
   server,
-  teamId,
   userId,
 }: {
   server: MCPServer;
-  teamId?: string | null;
   userId: string;
 }) {
   const credential = await getMCPCredential({ server, userId });
@@ -136,7 +130,6 @@ export async function syncMCPToolModes({
   const modes = await ensureMCPToolModes({
     defaultMode: defaultToolMode,
     serverId: server.id,
-    teamId,
     toolNames: definitions.tools.map((definition) => definition.name),
     userId,
   });
@@ -184,7 +177,6 @@ export async function createMCPToolset({
         await ensureMCPToolModes({
           defaultMode: defaultToolMode,
           serverId: server.id,
-          teamId: context.teamId,
           toolNames: definitions.tools.map((definition) => definition.name),
           userId,
         });
@@ -193,16 +185,14 @@ export async function createMCPToolset({
           userId,
         });
 
-        const needsTouch =
-          server.lastError !== null ||
-          !server.lastConnectedAt ||
-          Date.now() - server.lastConnectedAt.getTime() >
-            CONNECTED_AT_REFRESH_MS;
-        if (needsTouch) {
+        // Nothing reads lastConnectedAt, so don't churn it on every message.
+        // Only clear a stale error so App Home flips a recovered server back to
+        // "Active" (rare write).
+        if (server.lastError !== null) {
           await updateMCPServer({
             id: server.id,
             userId,
-            values: { lastConnectedAt: new Date(), lastError: null },
+            values: { lastError: null },
           });
         }
 

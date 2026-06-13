@@ -18,18 +18,15 @@ import { defaultToolMode, fetchTools, getMCPCredential } from './remote';
 async function finalizeSuccess({
   definitions,
   serverId,
-  teamId,
   userId,
 }: {
   definitions: ListToolsResult;
   serverId: string;
-  teamId?: string | null;
   userId: string;
 }): Promise<void> {
   await ensureMCPToolModes({
     defaultMode: defaultToolMode,
     serverId,
-    teamId,
     toolNames: definitions.tools.map((definition) => definition.name),
     userId,
   });
@@ -72,12 +69,10 @@ async function finalizeFailure({
 export async function connectBearerServer({
   rawToken,
   server,
-  teamId,
   userId,
 }: {
   rawToken: string;
   server: MCPServer;
-  teamId?: string | null;
   userId: string;
 }): Promise<void> {
   try {
@@ -88,10 +83,9 @@ export async function connectBearerServer({
     await upsertMCPBearerConnection({
       token: encrypt(rawToken),
       serverId: server.id,
-      teamId: teamId ?? null,
       userId,
     });
-    await finalizeSuccess({ definitions, serverId: server.id, teamId, userId });
+    await finalizeSuccess({ definitions, serverId: server.id, userId });
   } catch (error) {
     await finalizeFailure({ error, serverId: server.id, userId });
     throw error;
@@ -104,11 +98,9 @@ export type OAuthConnectResult =
 
 export async function connectOAuthServer({
   server,
-  teamId,
   userId,
 }: {
   server: MCPServer;
-  teamId?: string | null;
   userId: string;
 }): Promise<OAuthConnectResult> {
   const connection = await getMCPOAuthConnection({
@@ -138,17 +130,15 @@ export async function connectOAuthServer({
     };
   }
 
-  await finalizeOAuthServer({ server, teamId, userId });
+  await finalizeOAuthServer({ server, userId });
   return { status: 'connected' };
 }
 
 export async function finalizeOAuthServer({
   server,
-  teamId,
   userId,
 }: {
   server: MCPServer;
-  teamId?: string | null;
   userId: string;
 }): Promise<void> {
   try {
@@ -157,7 +147,7 @@ export async function finalizeOAuthServer({
       throw new Error('OAuth connection required before tools can be used.');
     }
     const definitions = await fetchTools({ credential, server });
-    await finalizeSuccess({ definitions, serverId: server.id, teamId, userId });
+    await finalizeSuccess({ definitions, serverId: server.id, userId });
   } catch (error) {
     await finalizeFailure({ error, serverId: server.id, userId });
     throw error;

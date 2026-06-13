@@ -6,11 +6,9 @@ import { toToolEntries } from '../view/tools';
 
 export async function syncToolsForView({
   server,
-  teamId,
   userId,
 }: {
   server: MCPServer;
-  teamId?: string | null;
   userId: string;
 }): Promise<{
   error?: string;
@@ -18,7 +16,7 @@ export async function syncToolsForView({
   toolModes: MCPToolModeMap;
 }> {
   try {
-    const synced = await syncMCPToolModes({ server, teamId, userId });
+    const synced = await syncMCPToolModes({ server, userId });
     return {
       toolEntries: toToolEntries(synced.definitions.tools),
       toolModes: synced.modes,
