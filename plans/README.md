@@ -18,17 +18,19 @@ at `7e2862a`. Run each plan's drift check before starting.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001  | Test baseline (bun:test + turbo + CI + first unit tests) | P1 | S | — | TODO |
-| 002  | Reclaim scheduled tasks orphaned by a crash | P1 | S | — | TODO |
-| 006  | Quick wins: MCP size cap, dead deps, pre-commit, db:migrate, doc refresh | P2 | S | — | TODO |
-| 004  | Lock MCP server url/transport/authType at the query layer | P2 | S | — | TODO |
-| 003  | Recoverable post-approval resume failures | P1 | M | 001 (soft) | TODO |
-| 005  | Per-message MCP toolset latency (parallelize + skip writes) | P2 | M | 001 (soft) | TODO |
-| 007  | MCP connection logging + ctxId AsyncLocalStorage | P3 | M | 001 | TODO |
-| 008  | Spike: tool discovery before OAuth (design doc deliverable) | P3 | M | — | TODO |
-| 009  | Tools modal: single render flow (cap + Enter-search; drop accordion, Fuse, metadata tool list) | P1 | M | — | TODO |
-| 010  | Merge duplicated bearer connect flows (create + reconnect) | P2 | S | — | TODO |
-| 011  | "Always allow" becomes global; remove thread-scope permission dimension (semantic change) | P2 | M | 003, 005, 009 (order) | TODO |
+| 001  | Test baseline (bun:test + turbo + CI + first unit tests) | P1 | S | — | REJECTED — maintainer doesn't want unit-test files |
+| 002  | Reclaim scheduled tasks orphaned by a crash | P1 | S | — | DONE (7c307c8) |
+| 006  | Quick wins: MCP size cap, dead deps, pre-commit, db:migrate, doc refresh | P2 | S | — | DONE (4c56826, 9097a7a, a2778a4, 36d59dc, 3f5f675) |
+| 004  | Lock MCP server url/transport/authType at the query layer | P2 | S | — | DONE (8e9ae8c) |
+| 003  | Recoverable post-approval resume failures | P1 | M | 001 (soft) | DONE (ca6ac17) — no unit test per 001 rejection |
+| 005  | Per-message MCP toolset latency (parallelize + skip writes) | P2 | M | 001 (soft) | DONE (352874f) |
+| 007  | MCP connection logging + ctxId AsyncLocalStorage | P3 | M | 001 | DONE (aa1520e) — logging unit test skipped per 001 rejection |
+| 008  | Spike: tool discovery before OAuth (design doc deliverable) | P3 | M | — | DONE (8283550) — verdict GO; see docs/spikes/ |
+| 009  | Tools modal: single render flow (cap + Enter-search; drop accordion, Fuse, metadata tool list) | P1 | M | — | DONE (2db7fb7) |
+| 010  | Merge duplicated bearer connect flows (create + reconnect) | P2 | S | — | DONE (b1f4da0) |
+| 011  | "Always allow" becomes global; remove thread-scope permission dimension (semantic change) | P2 | M | 003, 005, 009 (order) | DONE (8e18132) |
+| 012  | Offline e2e harness: fake Slack + scripted model, full bot loop in-process | P1 | M | 001 (soft) | REJECTED — maintainer doesn't want an e2e harness |
+| 013  | MCP fixture server + approval-flow e2e scenarios | P1 | M | 012 | REJECTED — depends on 012 (e2e harness, rejected) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale).
@@ -51,6 +53,49 @@ REJECTED (with one-line rationale).
   makes their drift checks fire). 010 is independent.
 - 009 removes `fuse.js`; plan 006's dependency-cleanup step does not cover it
   — no conflict, but knip output changes after 009.
+- 012/013 (e2e, added 2026-06-12 at `9097a7a` on the maintainer's request)
+  should run **before 003, 005, and 011** where possible — they are the
+  regression net for the approval/MCP/permission code those plans rewrite.
+  013 hard-requires 012. If 011 lands first, 013's approval scenarios must
+  be written against the post-011 semantics (its drift check will flag
+  this). 012 amends plan 001's `apps/bot` test script (`bun test` →
+  `bun test src`); if 001 runs after 012, keep 012's version.
+
+## Deferred ideas — e2e/testing direction (not planned; revisit on demand)
+
+Surfaced during the 2026-06-12 e2e investigation. These are options, not
+findings; each would become a plan only if the maintainer picks it up:
+
+- **Live-workspace smoke tier**: a dedicated test channel in a real Slack
+  workspace; a driver (second Slack app or user token) posts prompts at the
+  real deployed bot with the real model, polls `conversations.replies`, and
+  asserts loosely (reply arrived within N s; LLM-judge or regex on content).
+  Catches what offline e2e cannot (Slack API drift, real-model tool-call
+  formats, prompt regressions) but is slow, flaky, and costs tokens — run
+  nightly/manually, never CI-blocking. Needs: test workspace, secrets in CI,
+  a kill-switch channel allowlist so a misfire can't post elsewhere.
+- **Prompt/agent evals (LLM-as-judge)**: scenario transcripts replayed
+  against the real model with graded rubrics (does it pick `searchWeb` for
+  news questions? does it `skip` when not addressed?). This is product
+  quality, not correctness — separate cadence/budget from CI. Langfuse is
+  already integrated for traces; its datasets/evals feature is the obvious
+  home.
+- **Full-process tier**: spawn the built bot (`bun run dist/index.mjs`) with
+  fake-server env and POST signed payloads at the ExpressReceiver — covers
+  `index.ts` startup wiring (task runner, janitor, telemetry-off path) that
+  the in-process harness skips. Cheap to add once 012 exists; low marginal
+  value until startup wiring becomes a bug source.
+- **Modal/UI flows**: `app_home_opened` → assert `views.publish` payload;
+  connect/configure modals via injected `block_actions`/`view_submission` →
+  assert `views.open`/`views.update` payloads. The harness from 012 already
+  supports this; cheaper variant is unit snapshot tests of the view-builder
+  functions. Best written AFTER plan 009 lands (it rewrites the tools
+  modal these tests would pin).
+- **Scheduled-task e2e**: seed a `scheduled_tasks` row with `next_run_at` in
+  the past, call `startTaskRunner(app.client)` against the fakes, assert the
+  scheduled-message post. Natural companion to plan 002's stale-claim work.
+- **Sandbox (E2B) e2e**: would need an E2B fake or recorded fixtures; the
+  protocol surface is large. Defer until the sandbox is a regression source.
 
 ## Findings considered and rejected (do not re-audit)
 
