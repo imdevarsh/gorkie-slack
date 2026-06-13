@@ -1,9 +1,5 @@
-import { getErrorDetails } from '@repo/utils/error';
-import {
-  type ModelMessage,
-  NoOutputGeneratedError,
-  type UserContent,
-} from 'ai';
+import { errorMessage, getErrorDetails } from '@repo/utils/error';
+import type { ModelMessage, UserContent } from 'ai';
 import { clearAbortController, createAbortController } from '@/lib/abort';
 import {
   consumeOrchestratorStream,
@@ -19,6 +15,25 @@ import { processSlackFiles } from '@/utils/images';
 import { getSlackUser } from '@/utils/users';
 import { pauseForApprovals } from './approval-flow';
 import { supersedeExpiredApprovals } from './approval-helpers';
+
+const CREDIT_ERROR_PATTERN =
+  /\b(credit|credits|quota|billing|insufficient balance|payment required)\b/i;
+
+function isCreditError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return (
+      CREDIT_ERROR_PATTERN.test(error.message) || isCreditError(error.cause)
+    );
+  }
+
+  return CREDIT_ERROR_PATTERN.test(errorMessage(error));
+}
+
+function getUserFacingError(error: unknown): string {
+  return isCreditError(error)
+    ? 'Oops! Gorkie is out of credits right now. Please try again later.'
+    : 'Oops! Something went wrong, try again later.';
+}
 
 export async function runAgent({
   context,
@@ -111,10 +126,7 @@ export async function runAgent({
     await setStatus(context, { status: 'failed to generate' });
     return {
       success: false,
-      error:
-        error instanceof NoOutputGeneratedError
-          ? 'Oops! Gorkie is out of credits right now. Please try again later.'
-          : 'Oops! Something went wrong, try again later.',
+      error: getUserFacingError(error),
     };
   } finally {
     await cleanup?.().catch(() => undefined);
@@ -185,10 +197,7 @@ export async function generateResponse({
     await setStatus(context, { status: 'failed to generate' });
     return {
       success: false,
-      error:
-        error instanceof NoOutputGeneratedError
-          ? 'Oops! Gorkie is out of credits right now. Please try again later.'
-          : 'Oops! Something went wrong, try again later.',
+      error: getUserFacingError(error),
     };
   }
 }

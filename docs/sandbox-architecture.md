@@ -7,8 +7,9 @@ Gorkie delegates Linux/file-processing work to an AI SDK `HarnessAgent` session 
 - `apps/bot/src/lib/ai/tools/chat/sandbox.ts` exposes the chat-facing `sandbox` tool.
 - `apps/bot/src/lib/sandbox/session.ts` creates the `HarnessAgent`, resumes or creates a harness session per Slack thread, syncs attachments, and persists resume state.
 - `apps/bot/src/lib/sandbox/providers/index.ts` is the public sandbox provider export surface.
-- `apps/bot/src/lib/sandbox/providers/e2b.ts` implements AI SDK's `HarnessV1SandboxProvider` lifecycle contract on top of E2B.
-- `apps/bot/src/lib/sandbox/providers/e2b-session.ts` maps E2B file and command APIs to AI SDK's sandbox session interfaces.
+- `apps/bot/src/lib/sandbox/providers/e2b/index.ts` implements AI SDK's `HarnessV1SandboxProvider` lifecycle contract on top of E2B.
+- `apps/bot/src/lib/sandbox/providers/e2b/session.ts` maps E2B file and command APIs to AI SDK's sandbox session interfaces.
+- `apps/bot/src/lib/sandbox/providers/e2b/stream.ts` contains the small stream adapters needed by the E2B session implementation.
 - `apps/bot/src/lib/sandbox/tools/index.ts` exposes host-executed AI SDK tools to the harness. `showFile` reads from the restricted sandbox session and uploads the file to Slack.
 - `packages/ai/src/prompts/sandbox/*` owns the full sandbox system prompt.
 - `packages/db/src/schema/sandbox.ts` stores the thread-to-sandbox runtime mapping and opaque harness resume state.
@@ -23,7 +24,7 @@ Old RPC token handling was removed because the sandbox no longer calls back into
 
 ### Use E2B as a Harness Sandbox Provider
 
-The repo has a custom E2B adapter because AI SDK's initial sandbox providers do not include E2B. The adapter is split like a provider package: `providers/index.ts` owns the public surface, `providers/e2b.ts` owns E2B create/resume/destroy and DB persistence, and `providers/e2b-session.ts` owns file, command, network-port, and restricted-session adaptation.
+The repo has a custom E2B adapter because AI SDK's initial sandbox providers do not include E2B. The adapter is split like a provider package: `providers/index.ts` owns the public surface, `providers/e2b/index.ts` owns E2B create/resume/destroy and DB persistence, `providers/e2b/session.ts` owns file, command, network-port, and restricted-session adaptation, and `providers/e2b/stream.ts` keeps the session stream glue local to that provider.
 
 The session adapter maps E2B file and command APIs to the AI SDK sandbox interface:
 
@@ -70,9 +71,9 @@ Official AI SDK packages are pinned to the AI SDK 7 canary line for harness supp
 
 The runtime guard must accept `specificationVersion: 'v4'`; otherwise v4 model instances are treated as provider IDs and gateway-wrapped. Keep the patch until upstream publishes AI SDK 7-compatible peer ranges and types.
 
-### Use Supabase Transaction Pooler
+### Use Supabase Transaction Pool
 
-The DB client uses `postgres-js` with `prepare: false` and `ssl: 'require'`. The deployed `DATABASE_URL` should be the Supabase transaction pooler URL, not the direct `db.<project>.supabase.co` host. Direct Supabase DB hosts can resolve IPv6-only in this runtime, while the pooler is the intended application connection path.
+The DB client uses `postgres-js` with `prepare: false` and `ssl: 'require'`. The deployed `DATABASE_URL` should be the Supabase transaction pool URL, not the direct `db.<project>.supabase.co` host. Direct Supabase DB hosts can resolve IPv6-only in this runtime, while the pooled connection path is the intended application path.
 
 ## Operational Notes
 

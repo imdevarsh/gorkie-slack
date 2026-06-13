@@ -1,34 +1,37 @@
 import { toLogError } from '@repo/utils/error';
-import type { ImagePart } from 'ai';
+import type { FilePart } from 'ai';
 import { env } from '@/env';
 import logger from '@/lib/logger';
 import type { SlackFile } from '@/types';
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
-const SUPPORTED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-];
+type SupportedImageMimeType =
+  | 'image/gif'
+  | 'image/jpeg'
+  | 'image/png'
+  | 'image/webp';
 
-function isImageFile(file: SlackFile): boolean {
-  const mimetype = file.mimetype ?? '';
-  return SUPPORTED_IMAGE_TYPES.includes(mimetype);
+type SlackImageFile = SlackFile & { mimetype: SupportedImageMimeType };
+
+function isImageFile(file: SlackFile): file is SlackImageFile {
+  return isSupportedImageMimeType(file.mimetype);
 }
 
-function getMimeType(file: SlackFile): string {
-  const mimetype = file.mimetype ?? '';
-  if (SUPPORTED_IMAGE_TYPES.includes(mimetype)) {
-    return mimetype;
-  }
-  return 'image/jpeg';
+function isSupportedImageMimeType(
+  value: string | undefined
+): value is SupportedImageMimeType {
+  return (
+    value === 'image/gif' ||
+    value === 'image/jpeg' ||
+    value === 'image/png' ||
+    value === 'image/webp'
+  );
 }
 
 async function fetchSlackImageAsBase64(
-  file: SlackFile
-): Promise<{ data: string; mimeType: string } | null> {
+  file: SlackImageFile
+): Promise<{ data: string; mimeType: SupportedImageMimeType } | null> {
   const url = file.url_private ?? file.url_private_download;
   if (!url) {
     logger.warn({ fileId: file.id }, 'No private URL available for file');
@@ -43,9 +46,9 @@ async function fetchSlackImageAsBase64(
     });
 
     if (!response.ok) {
-      logger.error(
+      logger.warn(
         { status: response.status, fileId: file.id },
-        'Failed to fetch Slack image'
+        'Could not fetch Slack image'
       );
       return null;
     }
@@ -67,12 +70,10 @@ async function fetchSlackImageAsBase64(
       );
       return null;
     }
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = getMimeType(file);
 
     return {
-      data: `data:${mimeType};base64,${base64}`,
-      mimeType,
+      data: Buffer.from(arrayBuffer).toString('base64'),
+      mimeType: file.mimetype,
     };
   } catch (error) {
     logger.error(
@@ -85,7 +86,7 @@ async function fetchSlackImageAsBase64(
 
 export async function processSlackFiles(
   files: SlackFile[] | undefined
-): Promise<ImagePart[]> {
+): Promise<FilePart[]> {
   if (!files || files.length === 0) {
     return [];
   }
@@ -96,14 +97,14 @@ export async function processSlackFiles(
   }
 
   const imagePromises = imageFiles.map(
-    async (file): Promise<ImagePart | null> => {
+    async (file): Promise<FilePart | null> => {
       const result = await fetchSlackImageAsBase64(file);
       if (!result) {
         return null;
       }
-      const image: ImagePart = {
-        type: 'image',
-        image: result.data,
+      const image: FilePart = {
+        type: 'file',
+        data: result.data,
         mediaType: result.mimeType,
       };
       return image;
@@ -111,5 +112,5 @@ export async function processSlackFiles(
   );
 
   const results = await Promise.all(imagePromises);
-  return results.filter((result): result is ImagePart => result !== null);
+  return results.filter((result): result is FilePart => result !== null);
 }

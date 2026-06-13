@@ -58,7 +58,7 @@ The status assigned to a pending Approval when a new AI response begins in the s
 _Avoid_: Cancelled, expired
 
 **Connection**:
-The stored credentials (bearer token or OAuth tokens) that authorise a user's MCP Server. A server has a connection when credentials are present; losing a connection (on auth failure) disables the server and wipes the credentials.
+The stored credentials (bearer token or OAuth tokens) that authorize a user's MCP Server. A server has a connection when credentials are present; losing a connection (on auth failure) disables the server and wipes the credentials.
 _Avoid_: Auth, credential pair
 
 **Connected**:
@@ -97,6 +97,10 @@ _Avoid_: Checkpoint, snapshot
 **Sandbox Provider**:
 The host-side adapter that satisfies AI SDK's harness sandbox contract. It creates and resumes Sandbox Sessions, maps E2B lifecycle calls into AI SDK lifecycle calls, and persists the thread-to-sandbox runtime mapping.
 _Avoid_: Sandbox manager, proxy, RPC layer
+
+**E2B Provider**:
+The concrete Sandbox Provider implementation under `apps/bot/src/lib/sandbox/providers/e2b/`. Its `index.ts` owns E2B lifecycle and DB persistence, `session.ts` owns AI SDK session adaptation, and `stream.ts` is private stream glue.
+_Avoid_: E2B proxy, sandbox RPC
 
 **Restricted Sandbox Session**:
 The limited file/process interface passed to host-executed tools. It can read, write, and run inside the Sandbox Session, but cannot stop, pause, or destroy the E2B sandbox.

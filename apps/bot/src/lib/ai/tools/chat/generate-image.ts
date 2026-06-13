@@ -23,7 +23,7 @@ function isSourceImage(image: unknown): image is SourceImage {
 async function getImagePrompt(prompt: string, files?: SlackFile[]) {
   const inputImages = await processSlackFiles(files);
   const sourceImages = inputImages
-    .map((item) => item.image)
+    .map((item) => item.data)
     .filter(isSourceImage);
 
   return {
@@ -61,13 +61,11 @@ export const generateImageTool = ({
           .describe('Number of images to generate'),
         size: z
           .string()
-          // biome-ignore lint/performance/useTopLevelRegex: Inlined for local schema readability.
           .regex(/^\d+x\d+$/)
           .optional()
           .describe('Optional image size in {width}x{height} format'),
         aspectRatio: z
           .string()
-          // biome-ignore lint/performance/useTopLevelRegex: Inlined for local schema readability.
           .regex(/^\d+:\d+$/)
           .optional()
           .describe('Optional aspect ratio in {width}:{height} format'),

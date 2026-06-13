@@ -12,7 +12,7 @@ import { toLogError } from '@repo/utils/error';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
 import logger from '@/lib/logger';
-import { E2BNetworkSandboxSession, isMissingSandboxError } from './e2b-session';
+import { E2BNetworkSandboxSession, isMissingSandboxError } from './session';
 
 interface E2BSandboxProviderSettings {
   template: string;

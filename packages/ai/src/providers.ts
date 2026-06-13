@@ -1,7 +1,13 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createLogger } from '@repo/logging/logger';
-import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
+import {
+  APICallError,
+  customProvider,
+  type LanguageModelMiddleware,
+  type Provider,
+  wrapProvider,
+} from 'ai';
 import { createRetryable, type LanguageModel, type Retry } from 'ai-retry';
 
 import { keys } from './keys';
@@ -19,10 +25,46 @@ const openrouterBase = createOpenRouter({
   baseURL: env.OPENROUTER_BASE_URL ?? undefined,
 });
 
+const openrouterLanguageModelMiddleware = {
+  specificationVersion: 'v4',
+  transformParams: ({ params }) => {
+    const prompt = params.prompt.map((message) => {
+      if (!Array.isArray(message.content)) {
+        return message;
+      }
+
+      return {
+        ...message,
+        content: message.content.map((part) => {
+          if (part.type !== 'file') {
+            return part;
+          }
+
+          if (part.data.type === 'data') {
+            return { ...part, data: part.data.data };
+          }
+
+          if (part.data.type === 'url') {
+            return { ...part, data: part.data.url };
+          }
+
+          return part;
+        }),
+      };
+    });
+
+    // OpenRouter's current adapter still serializes file parts from the older untagged shape.
+    return Promise.resolve({
+      ...params,
+      prompt: prompt as typeof params.prompt,
+    });
+  },
+} satisfies LanguageModelMiddleware;
+
 const hackclub = wrapProvider({
   provider: hackclubBase,
   languageModelMiddleware: {
-    specificationVersion: 'v4',
+    ...openrouterLanguageModelMiddleware,
     overrideProvider: () => 'hackclub',
   },
   imageModelMiddleware: {
@@ -37,7 +79,7 @@ const google = env.GOOGLE_GENERATIVE_AI_API_KEY
 
 const openrouter = wrapProvider({
   provider: openrouterBase,
-  languageModelMiddleware: {},
+  languageModelMiddleware: openrouterLanguageModelMiddleware,
 });
 
 const onModelError = (context: {
