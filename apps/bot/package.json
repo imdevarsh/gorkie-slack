@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@ai-sdk/mcp": "catalog:",
+    "@ai-sdk/harness": "catalog:",
+    "@ai-sdk/harness-pi": "catalog:",
+    "@ai-sdk/provider-utils": "catalog:",
     "@e2b/code-interpreter": "^2.4.2",
-    "@earendil-works/pi-agent-core": "^0.75.4",
-    "@earendil-works/pi-ai": "^0.75.4",
-    "@earendil-works/pi-coding-agent": "^0.75.4",
     "@langfuse/otel": "^5.3.0",
     "@opentelemetry/sdk-node": "^0.218.0",
     "@repo/ai": "workspace:*",
@@ -37,7 +37,6 @@
     "pako": "^2.1.0",
     "sanitize-filename": "^1.6.4",
     "slack-block-builder": "^2.8.0",
-    "typebox": "1.1.38",
     "zod": "catalog:"
   },
   "devDependencies": {

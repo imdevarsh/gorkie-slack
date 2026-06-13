@@ -1,18 +1,16 @@
-import type { PiRpcClient } from './rpc/client';
+const active = new Map<string, AbortController>();
 
-const active = new Map<string, PiRpcClient>();
-
-export function setSandboxClient(ctxId: string, client: PiRpcClient): void {
-  active.set(ctxId, client);
+export function setActiveSandboxController(
+  ctxId: string,
+  controller: AbortController
+): void {
+  active.set(ctxId, controller);
 }
 
-export function clearSandboxClient(ctxId: string): void {
+export function clearActiveSandboxController(ctxId: string): void {
   active.delete(ctxId);
 }
 
-export async function abortActiveSandbox(ctxId: string): Promise<void> {
-  await active
-    .get(ctxId)
-    ?.abort()
-    .catch(() => null);
+export function abortActiveSandbox(ctxId: string): void {
+  active.get(ctxId)?.abort();
 }

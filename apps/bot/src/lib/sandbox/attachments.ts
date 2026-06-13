@@ -1,4 +1,4 @@
-import type { Sandbox } from '@e2b/code-interpreter';
+import type { Experimental_SandboxSession } from '@ai-sdk/provider-utils';
 import sanitizeFilename from 'sanitize-filename';
 import { sandbox as sandboxConfig } from '@/config';
 import { env } from '@/env';
@@ -15,7 +15,7 @@ const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 
 export async function syncAttachments(
-  sandbox: Sandbox,
+  sandbox: Experimental_SandboxSession,
   context: SlackMessageContext,
   files?: SlackFile[]
 ): Promise<PromptResourceLink[]> {
@@ -30,7 +30,9 @@ export async function syncAttachments(
 
   const ctxId = getContextId(context);
 
-  await sandbox.files.makeDir(ATTACHMENTS_ABS_DIR).catch(() => undefined);
+  await Promise.resolve(
+    sandbox.run({ command: `mkdir -p ${JSON.stringify(ATTACHMENTS_ABS_DIR)}` })
+  ).catch(() => undefined);
 
   const results = await Promise.all(
     files.map((file) => syncFile(sandbox, file, ctxId))
@@ -57,7 +59,7 @@ export async function syncAttachments(
 }
 
 async function syncFile(
-  sandbox: Sandbox,
+  sandbox: Experimental_SandboxSession,
   file: SlackFile,
   ctxId: string
 ): Promise<PromptResourceLink | null> {
@@ -75,7 +77,7 @@ async function syncFile(
   const fileData = Uint8Array.from(content).buffer;
 
   try {
-    await sandbox.files.write(path, fileData);
+    await sandbox.writeBinaryFile({ path, content: new Uint8Array(fileData) });
     return {
       type: 'resource_link',
       name: safeName,

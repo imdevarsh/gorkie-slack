@@ -1,5 +1,6 @@
-import { revokeSandboxToken } from '@repo/db/queries';
 import { errorMessage, toLogError } from '@repo/utils/error';
+import { asRecord } from '@repo/utils/record';
+import { clampText } from '@repo/utils/text';
 import { tool } from 'ai';
 import PQueue from 'p-queue';
 import { z } from 'zod';
@@ -7,47 +8,130 @@ import { sandbox as config } from '@/config';
 import { env } from '@/env';
 import { createTask, finishTask, updateTask } from '@/lib/ai/utils/task';
 import logger from '@/lib/logger';
-import { clearSandboxClient, setSandboxClient } from '@/lib/sandbox/active';
-import { syncAttachments } from '@/lib/sandbox/attachments';
-import { getResponse, subscribeEvents } from '@/lib/sandbox/events';
-import { pauseSession, resolveSession } from '@/lib/sandbox/session';
-import { extendSandboxTimeout } from '@/lib/sandbox/timeout';
-import { getToolTaskEnd, getToolTaskStart } from '@/lib/sandbox/tools';
+import {
+  clearActiveSandboxController,
+  setActiveSandboxController,
+} from '@/lib/sandbox/active';
+import { finishSession, resolveSession } from '@/lib/sandbox/session';
 import type { SlackFile, SlackMessageContext, Stream } from '@/types';
-import type { AgentSessionEvent } from '@/types/sandbox/rpc';
 import { getContextId } from '@/utils/context';
 
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
-const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
 
-function getAgentError(events: AgentSessionEvent[]): string | null {
-  for (const event of events) {
-    if (event.type !== 'agent_end') {
-      continue;
+const toolTitles = {
+  bash: 'Run command',
+  read: 'Read file',
+  write: 'Write file',
+  edit: 'Edit file',
+  grep: 'Search text',
+  glob: 'Find files',
+  ls: 'List files',
+  showFile: 'Upload file',
+} as const;
+
+function normalizeToolInput(input: unknown): unknown {
+  if (typeof input !== 'string') {
+    return input;
+  }
+
+  try {
+    return JSON.parse(input) as unknown;
+  } catch {
+    return input;
+  }
+}
+
+function getString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function getInputValue(input: unknown, key: string): string | undefined {
+  return getString(asRecord(input)?.[key]);
+}
+
+function getStatus(input: unknown): string | undefined {
+  const status = asRecord(input)?.status;
+  return typeof status === 'string' ? status.slice(0, 49) : undefined;
+}
+
+function getToolTitle(
+  toolName: string,
+  input: unknown,
+  title?: string
+): string {
+  return clampText(
+    title ??
+      getStatus(input) ??
+      toolTitles[toolName as keyof typeof toolTitles] ??
+      toolName,
+    config.toolOutput.titleMaxChars
+  );
+}
+
+function getToolDetails(toolName: string, input: unknown): string {
+  switch (toolName) {
+    case 'bash':
+      return `input:\n\n${getInputValue(input, 'command') ?? 'running command'}`;
+    case 'read':
+      return `Reading ${getInputValue(input, 'file_path') ?? 'file'}`;
+    case 'write':
+      return `Writing ${getInputValue(input, 'file_path') ?? 'file'}`;
+    case 'edit':
+      return `Editing ${getInputValue(input, 'file_path') ?? 'file'}`;
+    case 'grep': {
+      const pattern = getInputValue(input, 'pattern') ?? '<pattern>';
+      const path = getInputValue(input, 'path') ?? '.';
+      return `Searching "${pattern}" in ${path}`;
     }
-
-    const messages = 'messages' in event ? event.messages : undefined;
-    if (!Array.isArray(messages)) {
-      continue;
+    case 'glob': {
+      const pattern = getInputValue(input, 'pattern') ?? '<pattern>';
+      const path = getInputValue(input, 'path') ?? '.';
+      return `Finding "${pattern}" in ${path}`;
     }
+    case 'ls':
+      return `Listing ${getInputValue(input, 'path') ?? '.'}`;
+    case 'showFile':
+      return `Uploading ${getInputValue(input, 'path') ?? 'file'}`;
+    default:
+      return `Running ${toolName}`;
+  }
+}
 
-    for (const message of messages) {
-      if (!(message && typeof message === 'object')) {
-        continue;
-      }
-      if (!('stopReason' in message && message.stopReason === 'error')) {
-        continue;
-      }
-
-      const errorMessage =
-        'errorMessage' in message && typeof message.errorMessage === 'string'
-          ? message.errorMessage.trim()
-          : '';
-      return errorMessage || 'Sandbox agent stopped with an error';
+function getToolOutput({
+  isError,
+  output,
+  toolName,
+}: {
+  isError: boolean;
+  output: unknown;
+  toolName: string;
+}): string | undefined {
+  if (toolName === 'showFile') {
+    const path = getString(asRecord(output)?.path);
+    if (path) {
+      return clampText(`Uploaded ${path}`, config.toolOutput.outputMaxChars);
     }
   }
 
-  return null;
+  const text =
+    getString(output) ??
+    getString(asRecord(output)?.text) ??
+    getString(asRecord(output)?.reason) ??
+    getString(asRecord(output)?.message);
+
+  if (text) {
+    return toolName === 'bash'
+      ? `output:\n${clampText(text, config.toolOutput.outputMaxChars)}`
+      : clampText(text, config.toolOutput.outputMaxChars);
+  }
+
+  if (isError) {
+    return clampText('Tool execution failed', config.toolOutput.outputMaxChars);
+  }
+
+  return;
 }
 
 export const sandbox = ({
@@ -79,7 +163,9 @@ export const sandbox = ({
     execute: async ({ task }, { toolCallId }) => {
       const ctxId = getContextId(context);
       let runtime: Awaited<ReturnType<typeof resolveSession>> | null = null;
+      const controller = new AbortController();
       const tasks = new Map<string, string>();
+      const textChunks: string[] = [];
       const queue = new PQueue({ concurrency: 1 });
       const enqueue = (fn: () => Promise<unknown>) => {
         queue.add(fn).catch((error: unknown) => {
@@ -97,60 +183,81 @@ export const sandbox = ({
         status: 'in_progress',
       });
 
-      try {
-        runtime = await resolveSession(context);
-        if (!runtime) {
-          throw new Error('[sandbox] Failed to resolve runtime session');
-        }
-        const session = runtime;
-        setSandboxClient(ctxId, session.client);
-        const uploads = await syncAttachments(session.sandbox, context, files);
-        const prompt = `${task}${uploads.length > 0 ? `\n\n<files>\n${JSON.stringify(uploads, null, 2)}\n</files>` : ''}\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
-        const keepSandboxAlive = () =>
-          extendSandboxTimeout(session.sandbox, SANDBOX_MIN_REMAINING_MS);
+      setActiveSandboxController(ctxId, controller);
 
-        const eventStream: AgentSessionEvent[] = [];
-        const unsubscribe = subscribeEvents({
-          runtime: session,
-          context,
-          ctxId,
-          events: eventStream,
-          onRetry: ({ attempt, maxAttempts, delayMs }) => {
-            const seconds = Math.round(delayMs / 1000);
-            enqueue(() =>
-              updateTask(stream, {
-                taskId,
-                status: 'in_progress',
-                details: `Retrying... (${attempt}/${maxAttempts}, waiting ${seconds}s)`,
-              })
+      const timeoutId = setTimeout(
+        () => controller.abort(new Error('[sandbox] Execution timed out')),
+        config.runtime.executionTimeoutMs
+      );
+
+      const keepAlive = setInterval(() => {
+        enqueue(() => updateTask(stream, { taskId, status: 'in_progress' }));
+      }, KEEP_ALIVE_INTERVAL_MS);
+
+      try {
+        runtime = await resolveSession(context, files);
+
+        const prompt = `${task}${
+          runtime.uploads.length > 0
+            ? `\n\n<files>\n${JSON.stringify(runtime.uploads, null, 2)}\n</files>`
+            : ''
+        }\n\nUpload results with showFile as soon as they are ready, do not wait until the end. End with a structured summary (Summary/Files/Notes).`;
+
+        const result = await runtime.agent.stream({
+          abortSignal: controller.signal,
+          prompt,
+          session: runtime.session,
+        });
+
+        for await (const part of result.stream) {
+          if (part.type === 'text-delta') {
+            textChunks.push(part.text);
+            continue;
+          }
+
+          if (part.type === 'tool-call') {
+            const input = normalizeToolInput(part.input);
+            logger.info(
+              { ctxId, tool: part.toolName, input },
+              '[sandbox] Tool started'
             );
-          },
-          onToolStart: ({ toolName, toolCallId, args, status }) => {
-            keepSandboxAlive().catch((error: unknown) => {
-              logger.warn(
-                { ...toLogError(error), ctxId, toolName, toolCallId },
-                '[sandbox] Failed to extend timeout'
-              );
-            });
-            const toolTask = getToolTaskStart({ toolName, args, status });
-            const id = `${taskId}:${toolCallId}`;
-            tasks.set(toolCallId, id);
+            const id = `${taskId}:${part.toolCallId}`;
+            tasks.set(part.toolCallId, id);
             enqueue(() =>
               createTask(stream, {
                 taskId: id,
-                title: toolTask.title,
-                details: toolTask.details,
+                title: getToolTitle(part.toolName, input, part.title),
+                details: clampText(
+                  getToolDetails(part.toolName, input),
+                  config.toolOutput.detailsMaxChars
+                ),
                 status: 'in_progress',
               })
             );
-          },
-          onToolEnd: ({ toolName, toolCallId, isError, result }) => {
-            const id = tasks.get(toolCallId);
+            continue;
+          }
+
+          if (part.type === 'tool-result' || part.type === 'tool-error') {
+            const id = tasks.get(part.toolCallId);
             if (!id) {
-              return;
+              continue;
             }
-            tasks.delete(toolCallId);
-            const { output } = getToolTaskEnd({ toolName, result, isError });
+            tasks.delete(part.toolCallId);
+            const isError = part.type === 'tool-error';
+            const output = getToolOutput({
+              isError,
+              output: isError ? part.error : part.output,
+              toolName: part.toolName,
+            });
+            logger[isError ? 'warn' : 'info'](
+              {
+                ctxId,
+                tool: part.toolName,
+                isError,
+                result: isError ? part.error : part.output,
+              },
+              '[sandbox] Tool completed'
+            );
             enqueue(() =>
               finishTask(stream, {
                 status: isError ? 'error' : 'complete',
@@ -158,59 +265,21 @@ export const sandbox = ({
                 output,
               })
             );
-          },
-        });
+            continue;
+          }
 
-        const keepAlive = setInterval(() => {
-          keepSandboxAlive().catch((error: unknown) => {
-            logger.warn(
-              { ...toLogError(error), ctxId },
-              '[sandbox] Keep-alive failed'
-            );
-          });
-          enqueue(() => updateTask(stream, { taskId, status: 'in_progress' }));
-        }, KEEP_ALIVE_INTERVAL_MS);
-
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(
-            () => reject(new Error('[sandbox] Execution timed out')),
-            config.runtime.executionTimeoutMs
-          );
-        });
-
-        try {
-          const idle = session.client.waitForIdle();
-          await session.client.prompt(prompt);
-          await Promise.race([idle, timeoutPromise]);
-        } catch (error) {
-          await session.client.abort().catch(() => null);
-          throw error;
-        } finally {
-          clearTimeout(timeoutId);
-          clearInterval(keepAlive);
-          unsubscribe();
-        }
-
-        const agentError = getAgentError(eventStream);
-        if (agentError) {
-          throw new Error(`[sandbox] Agent failed: ${agentError}`);
+          if (part.type === 'error') {
+            throw part.error;
+          }
         }
 
         await queue.onIdle();
 
-        const response =
-          (
-            await session.client.getLastAssistantText().catch(() => null)
-          )?.trim() ||
-          getResponse(eventStream) ||
-          'Done';
+        const response = textChunks.join('').trim() || 'Done';
 
         logger.info(
           {
             ctxId,
-            sandboxId: session.sandbox.sandboxId,
-            attachments: uploads.map((file) => file.uri),
             task,
             response,
           },
@@ -240,32 +309,19 @@ export const sandbox = ({
 
         return { success: false, error: message, task };
       } finally {
-        clearSandboxClient(ctxId);
+        clearTimeout(timeoutId);
+        clearInterval(keepAlive);
+        clearActiveSandboxController(ctxId);
         if (runtime) {
-          await runtime.client.disconnect().catch((error: unknown) => {
-            logger.debug(
-              { ...toLogError(error), ctxId },
-              '[sandbox] Failed to disconnect Pi client'
-            );
-          });
-          await revokeSandboxToken({
-            sandboxId: runtime.sandbox.sandboxId,
+          await finishSession({
+            runtime,
+            status: env.NODE_ENV === 'production' ? 'paused' : 'active',
           }).catch((error: unknown) => {
             logger.debug(
               { ...toLogError(error), ctxId },
-              '[sandbox] Failed to revoke sandbox token'
+              '[sandbox] Failed to persist harness session'
             );
           });
-          if (env.NODE_ENV === 'production') {
-            await pauseSession(context, runtime.sandbox.sandboxId).catch(
-              (error: unknown) => {
-                logger.debug(
-                  { ...toLogError(error), ctxId },
-                  '[sandbox] Failed to pause sandbox session'
-                );
-              }
-            );
-          }
         }
       }
     },

@@ -9,12 +9,6 @@ export default defineConfig({
   routeRules: {
     '/': { redirect: '/health' },
   },
-  experimental: {
-    tasks: true,
-  },
-  scheduledTasks: {
-    '0 0 * * *': ['cleanup:sandbox-tokens'],
-  },
   renderer: { handler: './src/renderer' },
   serverAssets: [{ baseName: 'templates', dir: './src/templates' }],
 });

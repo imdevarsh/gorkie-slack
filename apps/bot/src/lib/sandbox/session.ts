@@ -1,264 +1,132 @@
-import { Sandbox } from '@e2b/code-interpreter';
-import { systemPrompt } from '@repo/ai/prompts';
 import {
-  clearDestroyed,
-  getByThread,
-  issueSandboxToken,
-  markActivity,
-  revokeSandboxToken,
-  updateRuntime,
-  updateStatus,
-  upsert,
-} from '@repo/db/queries';
-import { toLogError } from '@repo/utils/error';
-import { asRecord } from '@repo/utils/record';
+  HarnessAgent,
+  type HarnessAgentAdapter,
+  type HarnessAgentResumeSessionState,
+  type HarnessAgentSession,
+} from '@ai-sdk/harness/agent';
+import { createPi } from '@ai-sdk/harness-pi';
+import { systemPrompt } from '@repo/ai/prompts';
+import { getByThread, updateResumeState } from '@repo/db/queries';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
-import logger from '@/lib/logger';
-import type { ResolvedSandboxSession, SlackMessageContext } from '@/types';
+import type {
+  PromptResourceLink,
+  SlackFile,
+  SlackMessageContext,
+} from '@/types';
 import { getContextId } from '@/utils/context';
-import { configureAgent } from './config';
-import { boot } from './rpc/boot';
+import { syncAttachments } from './attachments';
+import { createE2BSandboxProvider } from './e2b-provider';
+import { createSandboxTools } from './tools';
 
-function isMissingSandboxError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : '';
-  return (
-    message.includes('not found') ||
-    message.includes('404') ||
-    message.includes('does not exist')
-  );
-}
+const e2bProvider = createE2BSandboxProvider({ template: config.template });
 
-function getChannelId(context: SlackMessageContext): string {
-  const channelId = context.event.channel;
-  if (!(typeof channelId === 'string' && channelId.length > 0)) {
-    throw new Error('Missing Slack channel ID for sandbox session');
+function parseResumeState(
+  value: string | null
+): HarnessAgentResumeSessionState | undefined {
+  if (!value) {
+    return;
   }
-  return channelId;
+  return JSON.parse(value) as HarnessAgentResumeSessionState;
 }
 
-function getSandboxMetadata(
-  context: SlackMessageContext,
-  threadId: string
-): { app: string; channelId: string; threadId: string } {
-  return {
-    threadId,
-    channelId: getChannelId(context),
-    app: 'gorkie-slack',
-  };
-}
-
-function connectSandbox(sandboxId: string): Promise<Sandbox | null> {
-  return Sandbox.connect(sandboxId, {
-    apiKey: env.E2B_API_KEY,
-    timeoutMs: config.timeoutMs,
-  }).catch((error: unknown) => {
-    if (isMissingSandboxError(error)) {
-      return null;
-    }
-    throw error;
-  });
-}
-
-async function getOutboundIp(sandbox: Sandbox): Promise<string | null> {
-  const ipUrl = new URL('/ip', env.SERVER_BASE_URL).toString();
-  const result = await sandbox.commands
-    .run(`curl -fsS --max-time 5 ${JSON.stringify(ipUrl)}`, {
-      timeoutMs: 10_000,
-    })
-    .catch((error: unknown) => {
-      logger.warn(
-        { ...toLogError(error), sandboxId: sandbox.sandboxId },
-        '[sandbox] Failed to resolve outbound IP'
-      );
-      return null;
-    });
-
-  if (!result || result.exitCode !== 0) {
-    return null;
-  }
-
-  try {
-    const parsed = asRecord(JSON.parse(result.stdout));
-    return typeof parsed?.ip === 'string' ? parsed.ip : null;
-  } catch {
-    return null;
-  }
-}
-
-async function createSandboxToken({
-  sandbox,
-  sandboxId,
+function createSandboxAgent({
+  context,
+  ctxId,
+  files,
+  onUploads,
 }: {
-  sandbox: Sandbox;
-  sandboxId: string;
-}): Promise<string> {
-  const allowedIp = await getOutboundIp(sandbox);
-  if (!allowedIp) {
-    logger.warn(
-      { sandboxId },
-      '[sandbox] Could not resolve outbound IP — issuing unrestricted token'
-    );
-  }
-  const { token } = await issueSandboxToken({
-    allowedIp: allowedIp ?? null,
-    sandboxId,
-    ttlMs: config.runtime.executionTimeoutMs,
-  });
-  return token;
-}
+  context: SlackMessageContext;
+  ctxId: string;
+  files?: SlackFile[];
+  onUploads: (uploads: PromptResourceLink[]) => void;
+}): HarnessAgent {
+  const prompt = systemPrompt({ agent: 'sandbox', context });
+  const harness = createPi({
+    auth: {
+      customEnv: {
+        OPENROUTER_API_KEY: env.HACKCLUB_API_KEY,
+        OPENROUTER_BASE_URL: 'https://ai.hackclub.com/proxy/v1',
+      },
+    },
+    model: config.model.modelId,
+    thinkingLevel: 'medium',
+  }) as unknown as HarnessAgentAdapter;
 
-async function createSandbox(
-  context: SlackMessageContext,
-  threadId: string
-): Promise<ResolvedSandboxSession> {
-  const template = config.template;
-
-  const sandbox = await Sandbox.betaCreate(template, {
-    apiKey: env.E2B_API_KEY,
-    timeoutMs: config.timeoutMs,
-    autoPause: true,
-    allowInternetAccess: true,
-    metadata: getSandboxMetadata(context, threadId),
-  });
-
-  await sandbox.setTimeout(config.timeoutMs);
-
-  let client: Awaited<ReturnType<typeof boot>> | undefined;
-  try {
-    const sandboxToken = await createSandboxToken({
-      sandbox,
-      sandboxId: sandbox.sandboxId,
-    });
-    await configureAgent(sandbox, systemPrompt({ agent: 'sandbox', context }));
-    client = await boot({ sandbox, sessionToken: sandboxToken });
-    const { sessionId } = await client.getState();
-
-    await upsert({
-      threadId,
-      sandboxId: sandbox.sandboxId,
-      sessionId,
-      status: 'active',
-    });
-    logger.info(
-      { threadId, sandboxId: sandbox.sandboxId, sessionId, template },
-      '[sandbox] Created sandbox'
-    );
-
-    return { client, sandbox };
-  } catch (error) {
-    await client?.disconnect().catch(() => null);
-    await revokeSandboxToken({ sandboxId: sandbox.sandboxId }).catch(
-      () => null
-    );
-    await Sandbox.kill(sandbox.sandboxId, { apiKey: env.E2B_API_KEY }).catch(
-      () => null
-    );
-    throw error;
-  }
-}
-
-async function resumeSandbox(
-  threadId: string,
-  sandboxId: string,
-  sessionId: string
-): Promise<ResolvedSandboxSession> {
-  const sandbox = await connectSandbox(sandboxId);
-
-  if (!sandbox) {
-    await clearDestroyed(threadId);
-    throw new Error(`[sandbox] Sandbox ${sandboxId} not found`);
-  }
-
-  try {
-    await sandbox.setTimeout(config.timeoutMs);
-
-    const sandboxToken = await createSandboxToken({
-      sandbox,
-      sandboxId: sandbox.sandboxId,
-    });
-    const client = await boot({
-      sandbox,
-      sessionId,
-      sessionToken: sandboxToken,
-    });
-    try {
-      const state = await client.getState();
-      logger.debug(
-        { threadId, sessionId: state.sessionId },
-        '[sandbox] Resumed session'
-      );
-
-      await updateRuntime(threadId, {
-        sandboxId: sandbox.sandboxId,
-        sessionId: state.sessionId,
-        status: 'active',
+  return new HarnessAgent({
+    harness,
+    id: 'gorkie-sandbox',
+    permissionMode: 'allow-all',
+    sandbox: e2bProvider,
+    tools: createSandboxTools({ context, ctxId }),
+    onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
+      await session.run({
+        abortSignal,
+        command: [
+          `mkdir -p ${JSON.stringify(`${sessionWorkDir}/.pi`)}`,
+          `mkdir -p ${JSON.stringify(`${sessionWorkDir}/attachments`)}`,
+          `mkdir -p ${JSON.stringify(`${sessionWorkDir}/output`)}`,
+          `mkdir -p ${JSON.stringify(config.runtime.workdir)}/attachments`,
+          `mkdir -p ${JSON.stringify(config.runtime.workdir)}/output`,
+        ].join(' && '),
       });
-      await markActivity(threadId);
+      await session.writeTextFile({
+        abortSignal,
+        content: prompt,
+        path: `${sessionWorkDir}/.pi/SYSTEM.md`,
+      });
+      onUploads(await syncAttachments(session, context, files));
+    },
+  });
+}
 
-      return { client, sandbox };
-    } catch (error) {
-      await client.disconnect().catch(() => null);
-      throw error;
-    }
-  } catch (error) {
-    await revokeSandboxToken({ sandboxId: sandbox.sandboxId }).catch(
-      () => null
-    );
-    if (isMissingSandboxError(error)) {
-      await clearDestroyed(threadId);
-    }
-    throw error;
-  }
+export interface ResolvedSandboxRuntime {
+  agent: ReturnType<typeof createSandboxAgent>;
+  session: HarnessAgentSession;
+  threadId: string;
+  uploads: PromptResourceLink[];
 }
 
 export async function resolveSession(
-  context: SlackMessageContext
-): Promise<ResolvedSandboxSession> {
+  context: SlackMessageContext,
+  files?: SlackFile[]
+): Promise<ResolvedSandboxRuntime> {
   const threadId = getContextId(context);
   const existing = await getByThread(threadId);
+  let uploads: PromptResourceLink[] = [];
+  const agent = createSandboxAgent({
+    context,
+    ctxId: threadId,
+    files,
+    onUploads: (nextUploads) => {
+      uploads = nextUploads;
+    },
+  });
+  const resumeState = parseResumeState(existing?.resumeState ?? null);
+  const session = await agent.createSession(
+    resumeState
+      ? { sessionId: threadId, resumeFrom: resumeState }
+      : { sessionId: threadId }
+  );
 
-  if (!existing) {
-    return createSandbox(context, threadId);
-  }
-
-  await updateStatus(threadId, 'resuming');
-
-  try {
-    return await resumeSandbox(
-      threadId,
-      existing.sandboxId,
-      existing.sessionId
-    ).catch((error: unknown) => {
-      if (isMissingSandboxError(error)) {
-        return createSandbox(context, threadId);
-      }
-      throw error;
-    });
-  } catch (error) {
-    logger.warn(
-      { ...toLogError(error), threadId },
-      '[sandbox] Failed to resume, creating new sandbox'
-    );
-    await updateStatus(threadId, 'error');
-    throw error;
-  }
+  return { agent, session, threadId, uploads };
 }
 
-export async function pauseSession(
-  context: SlackMessageContext,
-  sandboxId: string
-): Promise<void> {
-  const threadId = getContextId(context);
+export async function finishSession({
+  runtime,
+  status,
+}: {
+  runtime: ResolvedSandboxRuntime;
+  status: 'active' | 'paused';
+}): Promise<void> {
+  const resumeState =
+    status === 'paused'
+      ? await runtime.session.stop()
+      : await runtime.session.detach();
 
-  try {
-    await Sandbox.betaPause(sandboxId, { apiKey: env.E2B_API_KEY });
-    await updateStatus(threadId, 'paused');
-    logger.info({ threadId, sandboxId }, '[sandbox] Paused sandbox');
-  } catch (error) {
-    logger.warn(
-      { ...toLogError(error), threadId, sandboxId },
-      '[sandbox] Failed to pause sandbox'
-    );
-  }
+  await updateResumeState({
+    resumeState: JSON.stringify(resumeState),
+    status,
+    threadId: runtime.threadId,
+  });
 }

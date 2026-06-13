@@ -53,22 +53,11 @@ export const assistantThread = {
 export const sandbox = {
   template: 'gorkie-sandbox:3.0',
   model: {
-    provider: 'hackclub',
     modelId: 'google/gemini-3-flash-preview',
-    api: 'openai-completions',
-  },
-  retry: {
-    enabled: true,
-    maxRetries: 4,
-    baseDelayMs: 2000,
   },
   timeoutMs: 10 * 60 * 1000,
   autoDeleteAfterMs: 7 * 24 * 60 * 60 * 1000,
   janitorIntervalMs: 60 * 1000,
-  rpc: {
-    commandTimeoutMs: 60_000,
-    startupTimeoutMs: 2 * 60 * 1000,
-  },
   toolOutput: {
     detailsMaxChars: 180,
     titleMaxChars: 60,
