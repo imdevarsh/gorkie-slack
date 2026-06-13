@@ -1,6 +1,6 @@
-# Gorkie Slack Bot — MCP Feature
+# Gorkie Slack Bot
 
-A Slack bot that lets users connect Model Context Protocol (MCP) servers and use their tools within AI-assisted conversations.
+A Slack bot that lets users use AI-assisted conversations, connected MCP tools, and persistent sandbox execution inside Slack threads.
 
 ## Language
 
@@ -72,3 +72,24 @@ _Avoid_: Inactive, off
 A server with no Connection — either it has never been connected or its credentials were deleted after a failed connection attempt. Requires re-entering credentials to use.
 _Avoid_: Failed, broken
 
+### Sandbox Execution
+
+**Sandbox Task**:
+A delegated request that needs a Linux workspace, code execution, file processing, data analysis, browser automation, or artifact generation. It is launched from a Slack conversation and returns a summary plus any uploaded files.
+_Avoid_: Job, command, script
+
+**Sandbox Session**:
+The persistent execution workspace associated with one Slack thread. Files, installed packages, generated outputs, and runtime state remain available to follow-up Sandbox Tasks in the same thread.
+_Avoid_: Container, VM, runtime
+
+**Artifact**:
+A file produced by a Sandbox Task for the user, usually written under the output directory and uploaded back to the Slack thread.
+_Avoid_: Result file, generated file
+
+**Attachment**:
+A file originally uploaded by a Slack user and synchronized into the Sandbox Session so the sandbox can inspect or transform it.
+_Avoid_: Input file, upload
+
+**Resume State**:
+The opaque state needed to reconnect a later Slack request to the same Sandbox Session and conversation state.
+_Avoid_: Checkpoint, snapshot

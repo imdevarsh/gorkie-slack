@@ -257,14 +257,12 @@ export async function execute(args: ButtonArgs): Promise<void> {
     const resumeCtxId = getContextId(resumeContext);
     getQueue(resumeCtxId)
       .add(() =>
-        runWithLogContext({ ctxId: resumeCtxId }, () =>
-          resumeResponse({
-            approvals,
-            context: resumeContext,
-            messages,
-            requestHints,
-          })
-        )
+        resumeResponse({
+          approvals,
+          context: resumeContext,
+          messages,
+          requestHints,
+        })
       )
       .catch((error: unknown) => {
         logger.error(
