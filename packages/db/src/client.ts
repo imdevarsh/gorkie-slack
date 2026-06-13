@@ -6,7 +6,7 @@ import * as schema from './schema';
 
 const client = postgres(env.DATABASE_URL, {
   prepare: false,
-  ssl: env.DATABASE_URL.includes('supabase.co') ? 'require' : false,
+  ssl: 'require',
 });
 
 export const db = drizzle({
