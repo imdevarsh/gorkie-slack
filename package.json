@@ -28,6 +28,7 @@
       "@types/bun": "^1.3.4",
       "@types/node": "^25.9.1",
       "ai": "7.0.0-canary.173",
+      "ai-retry": "1.7.4",
       "cspell": "^10.0.0",
       "dotenv": "^17.2.2",
       "lefthook": "^2.0.13",
@@ -40,6 +41,9 @@
     }
   },
   "type": "module",
+  "patchedDependencies": {
+    "ai-retry@1.7.4": "patches/ai-retry@1.7.4.patch"
+  },
   "scripts": {
     "clean": "git clean -xdf node_modules",
     "clean:workspaces": "turbo run clean",

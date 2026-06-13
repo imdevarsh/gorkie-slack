@@ -132,11 +132,12 @@ What to add:
 
 - Files: `packages/kv/src/`
 
-### Tech debt: replace local model fallback when libraries catch up
-`ai-retry@1.7.4` targets AI SDK **v6** (peers `ai: 6.x`, `@ai-sdk/provider: ^3`, `@ai-sdk/provider-utils: ^4`). It also checks the model `specificationVersion` at runtime. AI SDK 7 language models use `specificationVersion: 'v4'`, so casting them to the older type makes `ai-retry` treat them as non-model inputs and route through Vercel AI Gateway.
+### Tech debt: remove `ai-retry` patch when upstream catches up
+`ai-retry@1.7.4` targets AI SDK **v6** in its peer and declaration metadata. Gorkie uses `patches/ai-retry@1.7.4.patch` so the package can type-check against AI SDK 7/v4 language models while keeping `createRetryable` for provider fallback.
 
-`packages/ai/src/providers.ts` now uses a local fallback wrapper over AI SDK 7/v4 models. Revisit this when `ai-retry` or another fallback package supports v4 models at runtime. Until then:
+Remove the patch when `ai-retry` supports AI SDK 7 without local changes. Until then:
 - Keep official AI SDK packages on the same v7 canary line.
+- Keep `ai-retry` pinned to `1.7.4`; the patch is version-specific.
 - Keep `wrapProvider` for provider normalization and HackClub provider labeling.
 - Smoke-test the fallback path after any provider or AI SDK bump.
 

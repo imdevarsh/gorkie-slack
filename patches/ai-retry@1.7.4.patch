@@ -1,0 +1,77 @@
+diff --git a/package.json b/package.json
+index 8b17ff0..310f0b7 100644
+--- a/package.json
++++ b/package.json
+@@ -61,9 +61,9 @@
+     "zod": "^4.3.6"
+   },
+   "peerDependencies": {
+-    "@ai-sdk/provider": "^3.0.0",
+-    "@ai-sdk/provider-utils": "^4.0.0",
+-    "ai": "6.x",
++    "@ai-sdk/provider": "^3.0.0 || ^4.0.0-0",
++    "@ai-sdk/provider-utils": "^4.0.0 || ^5.0.0-0",
++    "ai": "6.x || 7.x",
+     "zod": "^4.0.0"
+   },
+   "lint-staged": {
+diff --git a/dist/types-DYMm5YMu.d.mts b/dist/types-DYMm5YMu.d.mts
+index e1e2d28..42cb452 100644
+--- a/dist/types-DYMm5YMu.d.mts
++++ b/dist/types-DYMm5YMu.d.mts
+@@ -3,7 +3,15 @@ import { EmbeddingModelV3, ImageModelV3, ImageModelV3CallOptions, LanguageModelV
+ 
+ //#region src/types.d.ts
+ type Literals<T> = T extends string ? string extends T ? never : T : never;
+-type LanguageModel = LanguageModelV3;
++type LanguageModelV4Compat = {
++  readonly specificationVersion: 'v4';
++  readonly provider: string;
++  readonly modelId: string;
++  supportedUrls: PromiseLike<Record<string, RegExp[]>> | Record<string, RegExp[]>;
++  doGenerate(options: any): PromiseLike<any>;
++  doStream(options: any): PromiseLike<any>;
++};
++type LanguageModel = LanguageModelV3 | LanguageModelV4Compat;
+ type EmbeddingModel = EmbeddingModelV3;
+ type ImageModel = ImageModelV3;
+ type LanguageModelCallOptions = LanguageModelV3CallOptions;
+@@ -181,7 +189,7 @@ type Retry<MODEL extends ResolvableLanguageModel | EmbeddingModel | ImageModel>
+    * If both `providerOptions` and `options.providerOptions` are set,
+    * `options.providerOptions` takes precedence.
+    */
+-  providerOptions?: SharedV3ProviderOptions;
++  providerOptions?: ProviderOptions;
+ };
+ /**
+  * A function that determines whether to retry with a different model based on the current attempt and all previous attempts.
+diff --git a/dist/create-retryable-model-Bgf7SQFz.mjs b/dist/create-retryable-model-Bgf7SQFz.mjs
+index 62336e0..ae8559b 100644
+--- a/dist/create-retryable-model-Bgf7SQFz.mjs
++++ b/dist/create-retryable-model-Bgf7SQFz.mjs
+@@ -585,7 +585,7 @@ var RetryableImageModel = class extends BaseRetryableModel {
+ //#endregion
+ //#region src/internal/retryable-language-model.ts
+ var RetryableLanguageModel = class extends BaseRetryableModel {
+-	specificationVersion = "v3";
++	specificationVersion = "v4";
+ 	get modelId() {
+ 		return this.currentModel.modelId;
+ 	}
+diff --git a/dist/guards-D8UJtxDK.mjs b/dist/guards-D8UJtxDK.mjs
+index 0d5cc7b..447b326 100644
+--- a/dist/guards-D8UJtxDK.mjs
++++ b/dist/guards-D8UJtxDK.mjs
+@@ -2,9 +2,9 @@
+ const isObject = (value) => typeof value === "object" && value !== null;
+ const isString = (value) => typeof value === "string";
+ const isModel = (model) => isLanguageModel(model) || isEmbeddingModel(model) || isImageModel(model);
+-const isLanguageModel = (model) => isObject(model) && "provider" in model && "modelId" in model && "specificationVersion" in model && "doGenerate" in model && "doStream" in model && model.specificationVersion === "v3";
+-const isEmbeddingModel = (model) => isObject(model) && "provider" in model && "modelId" in model && "specificationVersion" in model && "doEmbed" in model && model.specificationVersion === "v3";
+-const isImageModel = (model) => isObject(model) && "provider" in model && "modelId" in model && "specificationVersion" in model && "doGenerate" in model && model.specificationVersion === "v3" && !("doStream" in model) && !("doEmbed" in model);
++const isLanguageModel = (model) => isObject(model) && "provider" in model && "modelId" in model && "specificationVersion" in model && "doGenerate" in model && "doStream" in model && (model.specificationVersion === "v3" || model.specificationVersion === "v4");
++const isEmbeddingModel = (model) => isObject(model) && "provider" in model && "modelId" in model && "specificationVersion" in model && "doEmbed" in model && (model.specificationVersion === "v3" || model.specificationVersion === "v4");
++const isImageModel = (model) => isObject(model) && "provider" in model && "modelId" in model && "specificationVersion" in model && "doGenerate" in model && (model.specificationVersion === "v3" || model.specificationVersion === "v4") && !("doStream" in model) && !("doEmbed" in model);
+ const isGenerateResult = (result) => "content" in result;
+ /**
+ * Type guard to check if a retry attempt is an error attempt

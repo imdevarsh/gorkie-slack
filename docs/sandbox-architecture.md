@@ -58,13 +58,13 @@ Sandbox-specific host tools live under `apps/bot/src/lib/sandbox/tools/`. They a
 
 Tool task rendering for built-in harness calls is handled from AI SDK stream parts in the chat-facing sandbox tool. Titles, details, and outputs are clamped before they are shown in Slack.
 
-### Keep Chat Model Fallbacks Local
+### Patch `ai-retry` for AI SDK 7
 
 Official AI SDK packages are pinned to the AI SDK 7 canary line for harness support. `@openrouter/ai-sdk-provider` does not yet publish an AI SDK 7-native release, but AI SDK 7's `wrapProvider` can normalize the provider into the v4 model surface used by the rest of the app.
 
-`ai-retry@1.7.4` is not used with these models because it runtime-checks for the AI SDK 6/v3 model contract and gateway-wraps anything else. AI SDK 7 models have `specificationVersion: 'v4'`, so a type cast is not enough and can route calls through Vercel AI Gateway unexpectedly.
+`ai-retry@1.7.4` originally targets AI SDK 6 and has AI SDK 6 peer/type metadata. Gorkie keeps using it through `patches/ai-retry@1.7.4.patch`, which widens its peer ranges, declaration surface, runtime model guard, and retryable language-model spec marker for AI SDK 7/v4 language models.
 
-`packages/ai/src/providers.ts` owns a small local fallback model wrapper instead. It keeps the behavior Gorkie currently needs: try each configured model, retry short transient errors, log the provider/model that errored, and then move to the next model. Replace this wrapper with `ai-retry` or another library only after that library accepts AI SDK 7/v4 language models at runtime.
+The runtime guard must accept `specificationVersion: 'v4'`; otherwise v4 model instances are treated as provider IDs and gateway-wrapped. Keep the patch until upstream publishes AI SDK 7-compatible peer ranges and types.
 
 ### Use Supabase Transaction Pooler
 
@@ -73,6 +73,7 @@ The DB client uses `postgres-js` with `prepare: false` and `ssl: 'require'`. The
 ## Operational Notes
 
 - Use `bun install --minimum-release-age 0` when refreshing AI SDK canary packages; Bun's default minimum release age rejects fresh canary builds.
+- The `ai-retry` patch was committed manually because `bun patch --commit` hit the local global Git attributes symlink. Keep patch edits in `patches/ai-retry@1.7.4.patch` and validate with `bun install --minimum-release-age 0`.
 - Build the E2B template with `bun run build:sandbox` after changing the sandbox base image script.
 - Use `bun --filter=bot run build` to catch bundled production runtime imports. A successful TypeScript build alone is not enough for mixed ESM dependency graphs.
 - Use a short `NODE_ENV=production bun run apps/bot/dist/index.mjs` smoke run after dependency changes. In a shell without bot env vars, reaching env validation is enough to prove module loading passed.
