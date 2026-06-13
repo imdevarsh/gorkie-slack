@@ -94,7 +94,6 @@ export async function execute({
 
   await patchMCPToolModes({
     modes: groupModes,
-    scope: 'global',
     serverId,
     teamId: body.team?.id,
     userId: body.user.id,

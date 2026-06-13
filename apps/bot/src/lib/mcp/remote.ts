@@ -156,7 +156,6 @@ export async function createMCPToolset({
   }
 
   const ctxId = getContextId(context);
-  const threadTs = context.event.thread_ts ?? context.event.ts;
   const servers = await listEnabledMCPServers({
     userId,
   });
@@ -191,7 +190,6 @@ export async function createMCPToolset({
         });
         const modes = await getMCPToolModes({
           serverId: server.id,
-          threadTs,
           userId,
         });
 
@@ -246,11 +244,7 @@ export async function createMCPToolset({
 
       const execute = tool.execute;
       const taskTitle = `Using ${server.name}: ${formatToolName(toolName)}`;
-      const globalMode = modes.global[toolName] ?? defaultToolMode;
-      const mode =
-        globalMode === 'block'
-          ? 'block'
-          : (modes.thread[toolName] ?? globalMode);
+      const mode = modes[toolName] ?? defaultToolMode;
       const metadata = {
         mcp: {
           server: { id: server.id, name: server.name },

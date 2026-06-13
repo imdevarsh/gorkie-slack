@@ -1,4 +1,4 @@
-import { and, eq, or, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../index';
 import {
   type MCPToolMode,
@@ -7,37 +7,23 @@ import {
   mcpToolPermissions,
 } from '../../schema';
 
-export interface MCPToolModes {
-  global: MCPToolModeMap;
-  thread: MCPToolModeMap;
+// Tool permissions are global per (user, server). The scope/threadTs columns
+// remain in the schema (dropping them is a separate migration) but are always
+// written as 'global'/'' and only the global row is ever read.
+interface SetMCPToolModesInput {
+  modes: MCPToolModeMap;
+  serverId: string;
+  teamId?: string | null;
+  userId: string;
 }
-
-type SetMCPToolModesInput =
-  | {
-      modes: MCPToolModeMap;
-      scope: 'global';
-      serverId: string;
-      teamId?: string | null;
-      userId: string;
-    }
-  | {
-      modes: MCPToolModeMap;
-      scope: 'thread';
-      serverId: string;
-      teamId?: string | null;
-      threadTs: string;
-      userId: string;
-    };
 
 export async function getMCPToolModes({
   serverId,
-  threadTs,
   userId,
 }: {
   serverId: string;
-  threadTs?: string | null;
   userId: string;
-}): Promise<MCPToolModes> {
+}): Promise<MCPToolModeMap> {
   const rows = await db
     .select()
     .from(mcpToolPermissions)
@@ -45,33 +31,11 @@ export async function getMCPToolModes({
       and(
         eq(mcpToolPermissions.serverId, serverId),
         eq(mcpToolPermissions.userId, userId),
-        threadTs
-          ? or(
-              and(
-                eq(mcpToolPermissions.scope, 'global'),
-                eq(mcpToolPermissions.threadTs, '')
-              ),
-              and(
-                eq(mcpToolPermissions.scope, 'thread'),
-                eq(mcpToolPermissions.threadTs, threadTs)
-              )
-            )
-          : and(
-              eq(mcpToolPermissions.scope, 'global'),
-              eq(mcpToolPermissions.threadTs, '')
-            )
+        eq(mcpToolPermissions.scope, 'global'),
+        eq(mcpToolPermissions.threadTs, '')
       )
     );
-
-  const result: MCPToolModes = { global: {}, thread: {} };
-  for (const row of rows) {
-    if (row.scope === 'thread') {
-      result.thread = row.modes;
-    } else {
-      result.global = row.modes;
-    }
-  }
-  return result;
+  return rows[0]?.modes ?? {};
 }
 
 export async function setMCPToolModes(
@@ -79,10 +43,10 @@ export async function setMCPToolModes(
 ): Promise<MCPToolPermission | null> {
   const values = {
     modes: input.modes,
-    scope: input.scope,
+    scope: 'global' as const,
     serverId: input.serverId,
     teamId: input.teamId ?? null,
-    threadTs: input.scope === 'thread' ? input.threadTs : '',
+    threadTs: '',
     userId: input.userId,
   };
   const rows = await db
@@ -108,10 +72,10 @@ export async function setMCPToolModes(
 export async function patchMCPToolModes(input: SetMCPToolModesInput) {
   const values = {
     modes: input.modes,
-    scope: input.scope,
+    scope: 'global' as const,
     serverId: input.serverId,
     teamId: input.teamId ?? null,
-    threadTs: input.scope === 'thread' ? input.threadTs : '',
+    threadTs: '',
     userId: input.userId,
   };
   const rows = await db
@@ -150,24 +114,22 @@ export async function ensureMCPToolModes({
   const current = await getMCPToolModes({ serverId, userId });
   const next: MCPToolModeMap = {};
   for (const toolName of toolNames) {
-    next[toolName] = current.global[toolName] ?? defaultMode;
+    next[toolName] = current[toolName] ?? defaultMode;
   }
 
   // Skip the upsert when nothing changed: same set of tools (a pruned or added
   // tool changes the key count) and the same mode for each. Compare by next's
   // keys so duplicate toolNames can't skew the count.
-  const currentGlobal = current.global;
   const nextKeys = Object.keys(next);
   const unchanged =
-    nextKeys.length === Object.keys(currentGlobal).length &&
-    nextKeys.every((toolName) => currentGlobal[toolName] === next[toolName]);
+    nextKeys.length === Object.keys(current).length &&
+    nextKeys.every((toolName) => current[toolName] === next[toolName]);
   if (unchanged) {
     return next;
   }
 
   await setMCPToolModes({
     modes: next,
-    scope: 'global',
     serverId,
     teamId,
     userId,

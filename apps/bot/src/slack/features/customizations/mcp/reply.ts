@@ -27,7 +27,10 @@ export function replyCard(reply: ApprovalReply): {
   title: string;
 } {
   if (reply === 'always') {
-    return { text: 'Approved for this thread.', title: 'Approved for thread' };
+    return {
+      text: 'Always allowed. Manage this under App Home → MCP tools.',
+      title: 'Always allowed',
+    };
   }
   if (reply === 'reject') {
     return { text: 'Access denied.', title: 'Access denied' };

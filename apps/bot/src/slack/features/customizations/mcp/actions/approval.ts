@@ -221,13 +221,11 @@ export async function execute(args: ButtonArgs): Promise<void> {
       },
     };
 
-    if (reply === 'always' && approval.threadTs) {
+    if (reply === 'always') {
       await patchMCPToolModes({
         modes: { [approval.toolName]: 'allow' },
-        scope: 'thread',
         serverId: approval.serverId,
         teamId: approval.teamId,
-        threadTs: approval.threadTs,
         userId: approval.userId,
       });
     }
