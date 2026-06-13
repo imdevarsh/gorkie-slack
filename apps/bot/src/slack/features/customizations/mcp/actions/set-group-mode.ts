@@ -1,13 +1,13 @@
-import { getMCPToolModes, patchMCPToolModes } from '@repo/db/queries';
+import { getMCPServerById, patchMCPToolModes } from '@repo/db/queries';
 import type { MCPToolModeMap } from '@repo/db/schema';
 import { mcpGroupSlugSchema, mcpToolModeSchema } from '@repo/validators';
-import Fuse from 'fuse.js';
+import { formatToolName } from '@/lib/mcp/format-tool-name';
 import { groupBlock } from '../block-id';
 import { actions } from '../ids';
 import { parseToolsMeta } from '../schema';
 import type { SelectArgs } from '../types';
 import { toolsModal } from '../view';
-import type { ToolEntry } from '../view/tools';
+import { syncToolsForView } from './helpers';
 
 export const name = actions.setGroupMode;
 
@@ -24,41 +24,72 @@ export async function execute({
     return;
   }
 
-  const meta = parseToolsMeta({ metadata: view.private_metadata });
-  const { open, search, serverId, serverName, tools: toolsByGroup } = meta;
-  if (!(serverId && serverName && toolsByGroup)) {
+  const { search, serverId } = parseToolsMeta({
+    metadata: view.private_metadata,
+  });
+  if (!serverId) {
     return;
   }
 
-  const prefixParsed = mcpGroupSlugSchema.safeParse(
+  const groupParsed = mcpGroupSlugSchema.safeParse(
     groupBlock.decode(action.block_id)
   );
   const modeParsed = mcpToolModeSchema.safeParse(action.selected_option?.value);
-  if (!(prefixParsed.success && modeParsed.success)) {
+  if (!(groupParsed.success && modeParsed.success)) {
     return;
   }
-  const prefix = prefixParsed.data;
+  const group = groupParsed.data;
   const mode = modeParsed.data;
 
-  const allGroupNames = toolsByGroup[prefix];
-  const searchTerm = search?.trim() || undefined;
+  const server = await getMCPServerById({ id: serverId, userId: body.user.id });
+  if (!server) {
+    return;
+  }
 
-  const targetNames: string[] = searchTerm
-    ? new Fuse(
-        allGroupNames.map((n) => ({ name: n })),
-        { keys: ['name'], threshold: 0.4 }
-      )
-        .search(searchTerm)
-        .map((r) => r.item.name)
-    : allGroupNames;
+  const { error, toolEntries, toolModes } = await syncToolsForView({
+    server,
+    teamId: body.team?.id,
+    userId: body.user.id,
+  });
+
+  if (error) {
+    await client.views
+      .update({
+        hash: view.hash,
+        view_id: view.id,
+        view: toolsModal({
+          error,
+          search,
+          serverId,
+          serverName: server.name,
+          toolModes,
+          tools: toolEntries,
+        }),
+      })
+      .catch(() => undefined);
+    return;
+  }
+
+  // When a search is active, "Set all" only affects the substring-matched
+  // tools that are actually visible — same predicate as the modal's filter.
+  const needle = search?.trim().toLowerCase() || undefined;
+  const targetNames = toolEntries
+    .filter((tool) => tool.group === group)
+    .filter(
+      (tool) =>
+        !needle ||
+        tool.name.toLowerCase().includes(needle) ||
+        formatToolName(tool.name).toLowerCase().includes(needle)
+    )
+    .map((tool) => tool.name);
 
   if (targetNames.length === 0) {
     return;
   }
 
   const groupModes: MCPToolModeMap = {};
-  for (const name of targetNames) {
-    groupModes[name] = mode;
+  for (const toolName of targetNames) {
+    groupModes[toolName] = mode;
   }
 
   await patchMCPToolModes({
@@ -69,28 +100,16 @@ export async function execute({
     userId: body.user.id,
   });
 
-  const { global: toolModes } = await getMCPToolModes({
-    serverId,
-    userId: body.user.id,
-  });
-
-  const allToolEntries: ToolEntry[] = [
-    ...toolsByGroup.ro.map((n) => ({ name: n, group: 'ro' as const })),
-    ...toolsByGroup.dt.map((n) => ({ name: n, group: 'dt' as const })),
-    ...toolsByGroup.gn.map((n) => ({ name: n, group: 'gn' as const })),
-  ];
-
   await client.views
     .update({
       hash: view.hash,
       view_id: view.id,
       view: toolsModal({
-        open,
         search,
         serverId,
-        serverName,
-        toolModes,
-        tools: allToolEntries,
+        serverName: server.name,
+        toolModes: { ...toolModes, ...groupModes },
+        tools: toolEntries,
       }),
     })
     .catch(() => undefined);

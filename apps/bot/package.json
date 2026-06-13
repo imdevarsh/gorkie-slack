@@ -32,7 +32,6 @@
     "dotenv": "catalog:",
     "e2b": "^2.21.0",
     "exa-js": "^2.13.0",
-    "fuse.js": "^7.4.2",
     "mime-types": "^3.0.2",
     "p-queue": "^9.3.0",
     "pako": "^2.1.0",

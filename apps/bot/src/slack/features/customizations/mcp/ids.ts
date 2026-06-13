@@ -11,7 +11,6 @@ export const actions = {
   resetTools: 'home_mcp_reset_tools',
   searchTools: 'home_mcp_search_tools',
   setGroupMode: 'home_mcp_set_group_mode',
-  toggleGroup: 'home_mcp_toggle_group',
   approval: {
     allow: 'approval.allow',
     always: 'approval.always',

@@ -2,7 +2,7 @@ import { getMCPServerById } from '@repo/db/queries';
 import { actions } from '../ids';
 import { parseToolsMeta } from '../schema';
 import type { InputArgs } from '../types';
-import { toolsLoadingModal, toolsModal } from '../view';
+import { toolsModal } from '../view';
 import { syncToolsForView } from './helpers';
 
 export const name = actions.searchTools;
@@ -25,21 +25,10 @@ export async function execute({
     return;
   }
 
-  const search = action.value?.trim() || undefined;
-
   const server = await getMCPServerById({ id: serverId, userId: body.user.id });
   if (!server) {
     return;
   }
-
-  const loadingResult = await client.views
-    .update({
-      hash: view.hash,
-      view_id: view.id,
-      view: toolsLoadingModal({ search, serverId }),
-    })
-    .catch(() => undefined);
-  const loadingHash = loadingResult?.view?.hash;
 
   const { error, toolEntries, toolModes } = await syncToolsForView({
     server,
@@ -49,11 +38,11 @@ export async function execute({
 
   await client.views
     .update({
-      hash: loadingHash,
+      hash: view.hash,
       view_id: view.id,
       view: toolsModal({
         error,
-        search,
+        search: action.value?.trim() || undefined,
         serverId,
         serverName: server.name,
         toolModes,

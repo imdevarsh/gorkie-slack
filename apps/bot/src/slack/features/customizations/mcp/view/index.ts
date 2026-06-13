@@ -2,4 +2,4 @@ export { addModal } from './add';
 export { bearerModal } from './authentication/bearer';
 export { oauthModal } from './authentication/oauth';
 export { statusModal } from './status';
-export { toolsLoadingModal, toolsModal } from './tools';
+export { toolsModal } from './tools';

@@ -10,7 +10,6 @@ import * as saveToolMode from './actions/save-tool-mode';
 import * as searchTools from './actions/search-tools';
 import * as setGroupMode from './actions/set-group-mode';
 import * as toggle from './actions/toggle';
-import * as toggleGroup from './actions/toggle-group';
 import { actions } from './ids';
 import type { ButtonArgs } from './types';
 import { addModal } from './view';
@@ -39,7 +38,6 @@ export const mcp = {
     { execute: connectOAuth.execute, name: connectOAuth.name },
     { execute: deleteServer.execute, name: deleteServer.name },
     { execute: disconnect.execute, name: disconnect.name },
-    { execute: toggleGroup.execute, name: toggleGroup.name },
     { execute: resetTools.execute, name: resetTools.name },
     { execute: toggle.execute, name: toggle.enableName },
     { execute: toggle.execute, name: toggle.disableName },

@@ -49,21 +49,11 @@ export const mcpToolModeInputSchema = z
   })
   .catch({});
 
-export const mcpToolsByGroupSchema = z.object({
-  ro: z.array(z.string()),
-  dt: z.array(z.string()),
-  gn: z.array(z.string()),
-});
-
-export type MCPToolsByGroup = z.output<typeof mcpToolsByGroupSchema>;
-
 export const mcpToolsMetaSchema = z.object({
   nonce: z.string().optional(),
-  open: mcpGroupSlugSchema.optional(),
   search: z.string().optional(),
   serverId: z.string().optional(),
   serverName: z.string().optional(),
-  tools: mcpToolsByGroupSchema.optional(),
 });
 
 export type MCPToolsMeta = z.output<typeof mcpToolsMetaSchema>;
