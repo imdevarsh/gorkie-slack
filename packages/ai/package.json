@@ -23,7 +23,6 @@
     "@repo/logging": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "ai": "catalog:",
-    "ai-retry": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

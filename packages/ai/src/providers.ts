@@ -2,7 +2,6 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createLogger } from '@repo/logging/logger';
 import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
-import { createRetryable, type LanguageModel, type Retry } from 'ai-retry';
 
 import { keys } from './keys';
 
@@ -14,7 +13,7 @@ const hackclubBase = createOpenRouter({
   baseURL: 'https://ai.hackclub.com/proxy/v1',
 });
 
-const openrouter = createOpenRouter({
+const openrouterBase = createOpenRouter({
   apiKey: env.OPENROUTER_API_KEY,
   baseURL: env.OPENROUTER_BASE_URL ?? undefined,
 });
@@ -22,11 +21,11 @@ const openrouter = createOpenRouter({
 const hackclub = wrapProvider({
   provider: hackclubBase,
   languageModelMiddleware: {
-    specificationVersion: 'v3',
+    specificationVersion: 'v4',
     overrideProvider: () => 'hackclub',
   },
   imageModelMiddleware: {
-    specificationVersion: 'v3',
+    specificationVersion: 'v4',
     overrideProvider: () => 'hackclub',
   },
 });
@@ -35,10 +34,26 @@ const google = env.GOOGLE_GENERATIVE_AI_API_KEY
   ? createGoogleGenerativeAI({ apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY })
   : null;
 
-const onModelError = (context: {
-  current: { model: { provider: string; modelId: string }; error?: unknown };
-}) => {
-  const { model, error } = context.current;
+const openrouter = wrapProvider({
+  provider: openrouterBase,
+  languageModelMiddleware: {},
+});
+
+type LanguageModel = ReturnType<typeof hackclub.languageModel>;
+type GenerateOptions = Parameters<LanguageModel['doGenerate']>[0];
+type StreamOptions = Parameters<LanguageModel['doStream']>[0];
+
+const retryDelayMs = 250;
+const retryBackoffFactor = 2;
+const maxAttempts = 2;
+
+function logModelError({
+  error,
+  model,
+}: {
+  error: unknown;
+  model: LanguageModel;
+}) {
   const err = APICallError.isInstance(error)
     ? { status: error.statusCode, message: error.message, url: error.url }
     : { message: error instanceof Error ? error.message : String(error) };
@@ -46,57 +61,130 @@ const onModelError = (context: {
     { provider: model.provider, modelId: model.modelId, err },
     'model error, switching to next'
   );
-};
+}
 
-// --- ai-retry v6 ↔ v7 type bridge ---
-// ai-retry@1.7.4 is typed against AI SDK v6's LanguageModel union. Under v7 the
-// union identity changed (provider spec added LanguageModelV4) but the
-// LanguageModelV2 runtime contract ai-retry delegates to is unchanged, so these
-// casts are type-only and runtime-safe. Remove when ai-retry ships v7 types.
-// See TODO.md "ai-retry v7 type bridge".
-// Inputs are mixed-spec models (wrapProvider yields v7 LanguageModelV4; the raw
-// OpenRouter/Google providers yield LanguageModelV2) — all V2-shaped at runtime.
-type ModelV7 = ReturnType<typeof hackclub.languageModel>;
-const toRetry = (model: unknown): LanguageModel => model as LanguageModel;
-const fromRetry = (model: LanguageModel): ModelV7 =>
-  model as unknown as ModelV7;
+async function waitForRetry({
+  abortSignal,
+  delayMs,
+}: {
+  abortSignal?: AbortSignal;
+  delayMs: number;
+}) {
+  if (abortSignal?.aborted) {
+    throw abortSignal.reason;
+  }
 
-const retry = (model: unknown): Retry<LanguageModel> => ({
-  model: toRetry(model),
-  backoffFactor: 2,
-  delay: 250,
-  maxAttempts: 2,
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(resolve, delayMs);
+    abortSignal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timeout);
+        reject(abortSignal.reason);
+      },
+      { once: true }
+    );
+  });
+}
+
+function fallbackModel({
+  models,
+}: {
+  models: [LanguageModel, ...LanguageModel[]];
+}): LanguageModel {
+  const [primary] = models;
+
+  return {
+    specificationVersion: 'v4',
+    provider: primary.provider,
+    modelId: primary.modelId,
+    supportedUrls: primary.supportedUrls,
+    async doGenerate(options: GenerateOptions) {
+      let lastError: unknown;
+
+      for (const model of models) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            return await model.doGenerate(options);
+          } catch (error) {
+            lastError = error;
+            logModelError({ error, model });
+
+            const isLastModel = model === models.at(-1);
+            const isLastAttempt = attempt === maxAttempts;
+            if (isLastModel && isLastAttempt) {
+              throw error;
+            }
+            if (!isLastAttempt) {
+              await waitForRetry({
+                abortSignal: options.abortSignal,
+                delayMs:
+                  retryDelayMs * retryBackoffFactor ** Math.max(0, attempt - 1),
+              });
+            }
+          }
+        }
+      }
+
+      throw lastError;
+    },
+    async doStream(options: StreamOptions) {
+      let lastError: unknown;
+
+      for (const model of models) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            return await model.doStream(options);
+          } catch (error) {
+            lastError = error;
+            logModelError({ error, model });
+
+            const isLastModel = model === models.at(-1);
+            const isLastAttempt = attempt === maxAttempts;
+            if (isLastModel && isLastAttempt) {
+              throw error;
+            }
+            if (!isLastAttempt) {
+              await waitForRetry({
+                abortSignal: options.abortSignal,
+                delayMs:
+                  retryDelayMs * retryBackoffFactor ** Math.max(0, attempt - 1),
+              });
+            }
+          }
+        }
+      }
+
+      throw lastError;
+    },
+  };
+}
+
+const chatModel = fallbackModel({
+  models: [
+    hackclub.languageModel('google/gemini-3-flash-preview'),
+    hackclub.languageModel('openai/gpt-5.4-mini'),
+    openrouter.languageModel('google/gemini-3-flash-preview'),
+    openrouter.languageModel('openai/gpt-5.4-mini'),
+  ],
 });
 
-const chatModel = createRetryable({
-  model: toRetry(hackclub.languageModel('google/gemini-3-flash-preview')),
-  retries: [
-    retry(hackclub.languageModel('openai/gpt-5.4-mini')),
-    retry(openrouter.languageModel('google/gemini-3-flash-preview')),
-    retry(openrouter.languageModel('openai/gpt-5.4-mini')),
+const summariserModel = fallbackModel({
+  models: [
+    hackclub.languageModel('google/gemini-3.1-flash-lite-preview'),
+    openrouter.languageModel('google/gemini-3.1-flash-lite-preview'),
+    ...(google ? [google('gemini-3.1-flash-lite-preview')] : []),
+    hackclub.languageModel('openai/gpt-5-nano'),
+    openrouter.languageModel('openai/gpt-5-nano'),
   ],
-  onError: onModelError,
-});
-
-const summariserModel = createRetryable({
-  model: toRetry(
-    hackclub.languageModel('google/gemini-3.1-flash-lite-preview')
-  ),
-  retries: [
-    retry(openrouter.languageModel('google/gemini-3.1-flash-lite-preview')),
-    ...(google ? [retry(google('gemini-3.1-flash-lite-preview'))] : []),
-    retry(hackclub.languageModel('openai/gpt-5-nano')),
-    retry(openrouter.languageModel('openai/gpt-5-nano')),
-  ],
-  onError: onModelError,
 });
 
 export const CHAT_MODEL_ID = 'google/gemini-3-flash-preview';
 
 export const provider: Provider = customProvider({
   languageModels: {
-    'chat-model': fromRetry(chatModel),
-    'summariser-model': fromRetry(summariserModel),
+    'chat-model': chatModel,
+    'summariser-model': summariserModel,
   },
   imageModels: {
     'image-model': hackclub.imageModel('google/gemini-3.1-flash-image-preview'),

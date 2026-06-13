@@ -58,11 +58,13 @@ Sandbox-specific host tools live under `apps/bot/src/lib/sandbox/tools/`. They a
 
 Tool task rendering for built-in harness calls is handled from AI SDK stream parts in the chat-facing sandbox tool. Titles, details, and outputs are clamped before they are shown in Slack.
 
-### Keep `ai-retry` for Chat Model Fallbacks
+### Keep Chat Model Fallbacks Local
 
-Official AI SDK packages are pinned to the AI SDK 7 canary line for harness support. `@openrouter/ai-sdk-provider` and `ai-retry` do not yet publish AI SDK 7-compatible releases, so model fallback code intentionally keeps the OpenRouter/HackClub model path on the v3-shaped surface that `ai-retry` supports.
+Official AI SDK packages are pinned to the AI SDK 7 canary line for harness support. `@openrouter/ai-sdk-provider` does not yet publish an AI SDK 7-native release, but AI SDK 7's `wrapProvider` can normalize the provider into the v4 model surface used by the rest of the app.
 
-Do not wrap the OpenRouter provider with AI SDK 7 `wrapProvider` before passing models to `ai-retry`; that changes the public model type to v4 and breaks `ai-retry`'s v3 assumptions. When those packages publish AI SDK 7-compatible versions, remove this compatibility boundary and reintroduce provider-name overrides through the native v4 APIs.
+`ai-retry@1.7.4` is not used with these models because it runtime-checks for the AI SDK 6/v3 model contract and gateway-wraps anything else. AI SDK 7 models have `specificationVersion: 'v4'`, so a type cast is not enough and can route calls through Vercel AI Gateway unexpectedly.
+
+`packages/ai/src/providers.ts` owns a small local fallback model wrapper instead. It keeps the behavior Gorkie currently needs: try each configured model, retry short transient errors, log the provider/model that errored, and then move to the next model. Replace this wrapper with `ai-retry` or another library only after that library accepts AI SDK 7/v4 language models at runtime.
 
 ### Use Supabase Transaction Pooler
 

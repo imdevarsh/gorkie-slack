@@ -50,7 +50,7 @@ Users cannot preview available tools until after OAuth completes. Add a server-s
 - Files: `apps/server/src/routes/`, `apps/bot/src/slack/features/customizations/mcp/`
 
 ### Improve: Multi-provider retry for Pi sandbox agent
-The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the orchestrator (`createRetryable`) so it falls back to alternative providers on failure rather than erroring out.
+The Pi coding agent inside the sandbox uses a single provider/model. It should have a retry chain similar to the chat model fallback wrapper so it falls back to alternative providers on failure rather than erroring out.
 
 ### Improve: Orchestrator — show terminal tool as task when no reasoning was shown
 Currently `prepareStep` always creates a "Thinking…" task, after terminal tool firing show just show "Replied" / "Skipping" / "Left channel" directly as the task title
@@ -132,12 +132,13 @@ What to add:
 
 - Files: `packages/kv/src/`
 
-### Tech debt: ai-retry v7 type bridge
-`ai-retry@1.7.4` is typed against AI SDK **v6** (peers `ai: 6.x`, `@ai-sdk/provider: ^3`, `@ai-sdk/provider-utils: ^4`). After the v7 / harness bump, the model-spec package went `@ai-sdk/provider` 3 → 4 (added `LanguageModelV4`; `LanguageModelV2` retained), so the `LanguageModel` union identity ai-retry expects no longer matches what the providers emit. The break is **type-only** — ai-retry just delegates to the underlying `LanguageModelV2` contract at runtime, which is unchanged — so it's bridged with casts at one seam in `providers.ts` (`toRetry`/`fromRetry`). The raw OpenRouter/Google providers also emit `LanguageModelV2` while v7 wants `LanguageModelV4`, widening the same gap.
+### Tech debt: replace local model fallback when libraries catch up
+`ai-retry@1.7.4` targets AI SDK **v6** (peers `ai: 6.x`, `@ai-sdk/provider: ^3`, `@ai-sdk/provider-utils: ^4`). It also checks the model `specificationVersion` at runtime. AI SDK 7 language models use `specificationVersion: 'v4'`, so casting them to the older type makes `ai-retry` treat them as non-model inputs and route through Vercel AI Gateway.
 
-Remove the cast bridge when `ai-retry` ships v7-compatible types (or replace it). Until then:
-- The casts hide compile errors, so any real runtime regression in the fallback chain won't be caught by the type system — **smoke-test the fallback path** (force a primary 500) after any provider/ai-retry/AI-SDK bump.
-- Files: `packages/ai/src/providers.ts` (the `ai-retry v6 ↔ v7 type bridge` block), `apps/bot/src/lib/mcp/wrapper.ts` (`ToolExecutionOptions<unknown>` — v7 made it generic).
+`packages/ai/src/providers.ts` now uses a local fallback wrapper over AI SDK 7/v4 models. Revisit this when `ai-retry` or another fallback package supports v4 models at runtime. Until then:
+- Keep official AI SDK packages on the same v7 canary line.
+- Keep `wrapProvider` for provider normalization and HackClub provider labeling.
+- Smoke-test the fallback path after any provider or AI SDK bump.
 
 ---
 
