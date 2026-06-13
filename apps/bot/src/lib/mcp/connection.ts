@@ -9,6 +9,7 @@ import {
 } from '@repo/db/queries';
 import type { MCPServer } from '@repo/db/schema';
 import { errorMessage } from '@repo/utils/error';
+import logger from '@/lib/logger';
 import { encrypt } from './encryption';
 import { guardedMCPFetch } from './guarded-fetch';
 import { createMCPOAuthProvider } from './oauth-provider';
@@ -37,6 +38,10 @@ async function finalizeSuccess({
     userId,
     values: { enabled: true, lastConnectedAt: new Date(), lastError: null },
   });
+  logger.info(
+    { serverId, userId, toolCount: definitions.tools.length },
+    '[mcp] Server connected'
+  );
 }
 
 async function finalizeFailure({
@@ -58,6 +63,10 @@ async function finalizeFailure({
       lastError: errorMessage(error),
     },
   });
+  logger.warn(
+    { err: error, serverId, userId },
+    '[mcp] Server connection failed — disabling'
+  );
 }
 
 export async function connectBearerServer({
@@ -119,6 +128,10 @@ export async function connectOAuthServer({
   }
 
   if (authorizationURLRef.value) {
+    logger.info(
+      { serverId: server.id, userId },
+      '[mcp] OAuth authorization required'
+    );
     return {
       authorizationURL: authorizationURLRef.value.toString(),
       status: 'authorize',

@@ -7,6 +7,7 @@ import {
   reopenMCPToolApprovals,
   updateMCPToolApproval,
 } from '@repo/db/queries';
+import { runWithLogContext } from '@repo/logging/context';
 import { asRecord } from '@repo/utils/record';
 import logger from '@/lib/logger';
 import { decrypt } from '@/lib/mcp/encryption';
@@ -256,14 +257,17 @@ export async function execute(args: ButtonArgs): Promise<void> {
       reply: s.status === 'approved' ? 'once' : 'reject',
     }));
 
-    getQueue(getContextId(resumeContext))
+    const resumeCtxId = getContextId(resumeContext);
+    getQueue(resumeCtxId)
       .add(() =>
-        resumeResponse({
-          approvals,
-          context: resumeContext,
-          messages,
-          requestHints,
-        })
+        runWithLogContext({ ctxId: resumeCtxId }, () =>
+          resumeResponse({
+            approvals,
+            context: resumeContext,
+            messages,
+            requestHints,
+          })
+        )
       )
       .catch((error: unknown) => {
         logger.error(

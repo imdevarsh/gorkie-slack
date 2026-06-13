@@ -5,6 +5,7 @@ import pino, {
   type Logger as PinoLogger,
   type TransportTargetOptions,
 } from 'pino';
+import { getLogContext } from './context';
 
 export type Logger = PinoLogger;
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -26,6 +27,9 @@ export async function createLogger({
     level: logLevel,
     timestamp: pino.stdTimeFunctions.isoTime,
     serializers: { err: pino.stdSerializers.err },
+    // Merge the current async-context ctxId into every line. An explicit ctxId
+    // field at a call site overrides this, which is the desired precedence.
+    mixin: () => getLogContext() ?? {},
   };
 
   if (process.env.VERCEL === '1') {
