@@ -19,7 +19,7 @@ import type {
 } from '@/types';
 import { getContextId } from '@/utils/context';
 import { syncAttachments } from './attachments';
-import { createE2BSandboxProvider } from './e2b-provider';
+import { createE2BSandboxProvider } from './providers';
 import { createSandboxTools } from './tools';
 
 const e2bProvider = createE2BSandboxProvider({ template: config.template });

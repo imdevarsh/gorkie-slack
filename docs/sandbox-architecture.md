@@ -6,7 +6,9 @@ Gorkie delegates Linux/file-processing work to an AI SDK `HarnessAgent` session 
 
 - `apps/bot/src/lib/ai/tools/chat/sandbox.ts` exposes the chat-facing `sandbox` tool.
 - `apps/bot/src/lib/sandbox/session.ts` creates the `HarnessAgent`, resumes or creates a harness session per Slack thread, syncs attachments, and persists resume state.
-- `apps/bot/src/lib/sandbox/e2b-provider.ts` implements AI SDK's `HarnessV1SandboxProvider` contract on top of E2B.
+- `apps/bot/src/lib/sandbox/providers/index.ts` is the public sandbox provider export surface.
+- `apps/bot/src/lib/sandbox/providers/e2b.ts` implements AI SDK's `HarnessV1SandboxProvider` lifecycle contract on top of E2B.
+- `apps/bot/src/lib/sandbox/providers/e2b-session.ts` maps E2B file and command APIs to AI SDK's sandbox session interfaces.
 - `apps/bot/src/lib/sandbox/tools/index.ts` exposes host-executed AI SDK tools to the harness. `showFile` reads from the restricted sandbox session and uploads the file to Slack.
 - `packages/ai/src/prompts/sandbox/*` owns the full sandbox system prompt.
 - `packages/db/src/schema/sandbox.ts` stores the thread-to-sandbox runtime mapping and opaque harness resume state.
@@ -21,7 +23,9 @@ Old RPC token handling was removed because the sandbox no longer calls back into
 
 ### Use E2B as a Harness Sandbox Provider
 
-The repo has a custom E2B adapter because AI SDK's initial sandbox providers do not include E2B. The adapter maps E2B file and command APIs to the AI SDK sandbox interface:
+The repo has a custom E2B adapter because AI SDK's initial sandbox providers do not include E2B. The adapter is split like a provider package: `providers/index.ts` owns the public surface, `providers/e2b.ts` owns E2B create/resume/destroy and DB persistence, and `providers/e2b-session.ts` owns file, command, network-port, and restricted-session adaptation.
+
+The session adapter maps E2B file and command APIs to the AI SDK sandbox interface:
 
 - `readTextFile`, `readBinaryFile`, `writeTextFile`, `writeBinaryFile`
 - `run` and `spawn`

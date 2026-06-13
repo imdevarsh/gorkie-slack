@@ -93,3 +93,15 @@ _Avoid_: Input file, upload
 **Resume State**:
 The opaque state needed to reconnect a later Slack request to the same Sandbox Session and conversation state.
 _Avoid_: Checkpoint, snapshot
+
+**Sandbox Provider**:
+The host-side adapter that satisfies AI SDK's harness sandbox contract. It creates and resumes Sandbox Sessions, maps E2B lifecycle calls into AI SDK lifecycle calls, and persists the thread-to-sandbox runtime mapping.
+_Avoid_: Sandbox manager, proxy, RPC layer
+
+**Restricted Sandbox Session**:
+The limited file/process interface passed to host-executed tools. It can read, write, and run inside the Sandbox Session, but cannot stop, pause, or destroy the E2B sandbox.
+_Avoid_: Client, handle
+
+**Network Sandbox Session**:
+The full AI SDK harness session interface returned by the Sandbox Provider. It includes the Restricted Sandbox Session surface plus network port URLs and lifecycle controls.
+_Avoid_: Runtime object, container handle
