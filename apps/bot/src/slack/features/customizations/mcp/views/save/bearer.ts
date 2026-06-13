@@ -1,35 +1,12 @@
 import { createMCPServer } from '@repo/db/queries';
-import { errorMessage, toLogError } from '@repo/utils/error';
-import logger from '@/lib/logger';
-import { connectBearerServer } from '@/lib/mcp/connection';
-import { mdText } from '@/slack/blocks';
+import { errorMessage } from '@repo/utils/error';
 import { publishHome } from '../../../publish';
 import { blocks } from '../../ids';
 import { textFieldValue } from '../../schema';
 import type { SubmitArgs } from '../../types';
-import { bearerModal, statusModal } from '../../view';
+import { statusModal } from '../../view';
 import { parseBaseFields } from './base';
-
-function updateView({
-  client,
-  userId,
-  view,
-  viewId,
-}: {
-  client: SubmitArgs['client'];
-  userId: string;
-  view: ReturnType<typeof statusModal>;
-  viewId: string;
-}) {
-  return client.views
-    .update({ view_id: viewId, view })
-    .catch((error: unknown) => {
-      logger.warn(
-        { ...toLogError(error), userId, viewId },
-        'Failed to update MCP bearer save modal'
-      );
-    });
-}
+import { connectBearerAndRender, updateView } from './connect-bearer-flow';
 
 export async function executeBearerSave({
   ack,
@@ -94,33 +71,5 @@ export async function executeBearerSave({
     return;
   }
 
-  try {
-    await connectBearerServer({
-      rawToken: bearerToken,
-      server,
-      teamId: body.team?.id,
-      userId,
-    });
-    await updateView({
-      client,
-      userId,
-      view: statusModal({
-        title: 'Connect MCP',
-        text: `*${mdText(server.name)} is connected and enabled.*\nIts tools are ready to use. You can close this.`,
-      }),
-      viewId,
-    });
-  } catch (error) {
-    await updateView({
-      client,
-      userId,
-      view: bearerModal({
-        error: errorMessage(error),
-        serverId: server.id,
-        serverName: server.name,
-      }),
-      viewId,
-    });
-  }
-  await publishHome({ client, userId });
+  await connectBearerAndRender({ bearerToken, body, client, server, viewId });
 }
