@@ -11,12 +11,12 @@ import type {
 import { getContextId } from '@/utils/context';
 
 const ATTACHMENTS_DIR = 'attachments';
-const ATTACHMENTS_ABS_DIR = `${sandboxConfig.runtime.workdir}/${ATTACHMENTS_DIR}`;
 const MAX_ATTACHMENT_BYTES = sandboxConfig.attachments.maxBytes;
 
 export async function syncAttachments(
   sandbox: Experimental_SandboxSession,
   context: SlackMessageContext,
+  sessionWorkDir: string,
   files?: SlackFile[]
 ): Promise<PromptResourceLink[]> {
   if (!files?.length) {
@@ -29,13 +29,14 @@ export async function syncAttachments(
   }
 
   const ctxId = getContextId(context);
+  const attachmentsDir = `${sessionWorkDir}/${ATTACHMENTS_DIR}`;
 
   await Promise.resolve(
-    sandbox.run({ command: `mkdir -p ${JSON.stringify(ATTACHMENTS_ABS_DIR)}` })
+    sandbox.run({ command: `mkdir -p ${JSON.stringify(attachmentsDir)}` })
   ).catch(() => undefined);
 
   const results = await Promise.all(
-    files.map((file) => syncFile(sandbox, file, ctxId))
+    files.map((file) => syncFile({ attachmentsDir, ctxId, file, sandbox }))
   );
 
   const uploaded = results.filter(
@@ -58,11 +59,17 @@ export async function syncAttachments(
   return uploaded;
 }
 
-async function syncFile(
-  sandbox: Experimental_SandboxSession,
-  file: SlackFile,
-  ctxId: string
-): Promise<PromptResourceLink | null> {
+async function syncFile({
+  attachmentsDir,
+  ctxId,
+  file,
+  sandbox,
+}: {
+  attachmentsDir: string;
+  ctxId: string;
+  file: SlackFile;
+  sandbox: Experimental_SandboxSession;
+}): Promise<PromptResourceLink | null> {
   const content = await downloadAttachment(file, ctxId);
   if (!content) {
     return null;
@@ -72,7 +79,7 @@ async function syncFile(
     replacement: '_',
   });
   const safeName = name || `file-${file.id ?? 'unknown'}`;
-  const path = `${ATTACHMENTS_ABS_DIR}/${safeName}`;
+  const path = `${attachmentsDir}/${safeName}`;
   const uri = new URL(`file://${path}`).toString();
   const fileData = Uint8Array.from(content).buffer;
 

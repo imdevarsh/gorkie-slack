@@ -29,6 +29,10 @@ function abortReason(abortSignal?: AbortSignal): unknown {
   return abortSignal?.reason ?? new DOMException('Aborted', 'AbortError');
 }
 
+function commandTimeoutMs(): number {
+  return Math.max(config.timeoutMs, config.runtime.executionTimeoutMs + 60_000);
+}
+
 async function waitForBackgroundCommand({
   abortSignal,
   handle,
@@ -69,6 +73,10 @@ class E2BSandboxSession implements Experimental_SandboxSession {
     this.sandbox = sandbox;
   }
 
+  protected extendTimeout(timeoutMs = config.timeoutMs): Promise<void> {
+    return this.sandbox.setTimeout(timeoutMs);
+  }
+
   get description(): string {
     return [
       `E2B sandbox ${this.sandbox.sandboxId}.`,
@@ -97,7 +105,10 @@ class E2BSandboxSession implements Experimental_SandboxSession {
     abortSignal?.throwIfAborted();
 
     return this.sandbox.files
-      .read(path, { format: 'bytes', ...toRequestOptions(abortSignal) })
+      .read(path, {
+        format: 'bytes',
+        ...toRequestOptions(abortSignal),
+      })
       .catch((error: unknown) => {
         if (isMissingSandboxError(error)) {
           return null;
@@ -209,6 +220,7 @@ class E2BSandboxSession implements Experimental_SandboxSession {
     workingDirectory?: string;
   }): Promise<{ exitCode: number; stderr: string; stdout: string }> {
     abortSignal?.throwIfAborted();
+    await this.extendTimeout(commandTimeoutMs());
 
     try {
       const result = await this.sandbox.commands.run(command, {
@@ -246,6 +258,7 @@ class E2BSandboxSession implements Experimental_SandboxSession {
     workingDirectory?: string;
   }): Promise<Experimental_SandboxProcess> {
     abortSignal?.throwIfAborted();
+    await this.extendTimeout(commandTimeoutMs());
 
     const stdout = streamFromText();
     const stderr = streamFromText();

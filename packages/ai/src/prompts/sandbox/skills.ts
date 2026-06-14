@@ -32,7 +32,7 @@ Email automation skill via AgentMail API/SDK (Node and Python). Supports inbox l
 <playbook>
 - Common goals: inbox triage, sending/replying, label updates, attachment retrieval, and draft-first workflows.
 - Core APIs: Inboxes (create/list/get/delete), Messages (send/reply/list/get/update), Threads (list/get), Attachments (get), Drafts (create/send), Pods (tenant isolation).
-- Execution: identify target inbox/thread scope, perform requested operations, persist exports in /home/user/output, upload deliverables with showFile, and report inbox/thread/message/draft IDs.
+- Execution: identify target inbox/thread scope, perform requested operations, persist exports in output/, upload deliverables with showFile, and report inbox/thread/message/draft IDs.
 </playbook>
 </skill>
 

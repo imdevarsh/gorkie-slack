@@ -1,20 +1,20 @@
 export const environmentPrompt = `\
 <environment>
 <filesystem>
-Use absolute paths (starting with /home/user) in bash commands and showFile inputs to avoid workdir-related mistakes.
+You start in the persistent workspace for this thread. Use workspace-relative paths in bash commands, path tools, and showFile inputs.
 
 attachments/
   User-uploaded files from Slack.
   You may rename the uploaded source file here to a semantic name (for example cat-original.png).
   Do NOT create new generated files here.
   Files from earlier messages in the thread also live here.
-  Example: /home/user/attachments/photo.png
+  Example: attachments/photo.png
 
 output/
   Your output directory. Always write ALL generated files here.
   If you DO NOT write your files here, on follow up messages you won't be able to find them, so this is VERY IMPORTANT.
   Upload files from here using showFile.
-  Example: /home/user/output/result.png
+  Example: output/result.png
 </filesystem>
 
 <packages>

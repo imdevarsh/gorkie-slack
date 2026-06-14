@@ -9,6 +9,7 @@ import {
   upsert,
 } from '@repo/db/queries';
 import { toLogError } from '@repo/utils/error';
+import { asRecord } from '@repo/utils/record';
 import { sandbox as config } from '@/config';
 import { env } from '@/env';
 import logger from '@/lib/logger';
@@ -19,6 +20,18 @@ interface E2BSandboxProviderSettings {
 }
 
 const E2B_PROVIDER_ID = 'e2b';
+
+function connectE2BSandbox(sandboxId: string): Promise<Sandbox | null> {
+  return Sandbox.connect(sandboxId, {
+    apiKey: env.E2B_API_KEY,
+    timeoutMs: config.timeoutMs,
+  }).catch((error: unknown) => {
+    if (isMissingSandboxError(error)) {
+      return null;
+    }
+    throw error;
+  });
+}
 
 class E2BSandboxProvider implements HarnessV1SandboxProvider {
   readonly providerId = E2B_PROVIDER_ID;
@@ -95,15 +108,7 @@ class E2BSandboxProvider implements HarnessV1SandboxProvider {
       throw new Error(`[sandbox] Missing E2B sandbox for ${sessionId}`);
     }
 
-    const sandbox = await Sandbox.connect(existing.sandboxId, {
-      apiKey: env.E2B_API_KEY,
-      timeoutMs: config.timeoutMs,
-    }).catch((error: unknown) => {
-      if (isMissingSandboxError(error)) {
-        return null;
-      }
-      throw error;
-    });
+    const sandbox = await connectE2BSandbox(existing.sandboxId);
 
     if (!sandbox) {
       await clearDestroyed(sessionId);
@@ -146,4 +151,54 @@ export async function destroyE2BSandboxById({
       );
     }
   );
+}
+
+export async function refreshE2BSandboxTimeout({
+  minimumTimeoutMs,
+  sessionId,
+}: {
+  minimumTimeoutMs?: number;
+  sessionId: string;
+}): Promise<void> {
+  const existing = await getByThread(sessionId);
+  if (!existing) {
+    return;
+  }
+
+  const sandbox = await connectE2BSandbox(existing.sandboxId);
+  if (!sandbox) {
+    await clearDestroyed(sessionId);
+    return;
+  }
+
+  const requiredRemainingMs = Math.max(
+    minimumTimeoutMs ?? 0,
+    config.timeoutMs / 2
+  );
+  const targetTimeoutMs = Math.max(config.timeoutMs, minimumTimeoutMs ?? 0);
+
+  try {
+    const info = await sandbox.getInfo();
+    const endAt = asRecord(info)?.endAt;
+    let endAtMs = 0;
+    if (endAt instanceof Date) {
+      endAtMs = endAt.getTime();
+    } else if (typeof endAt === 'string' || typeof endAt === 'number') {
+      const parsed = new Date(endAt).getTime();
+      endAtMs = Number.isFinite(parsed) ? parsed : 0;
+    }
+    const remainingMs = Number.isFinite(endAtMs) ? endAtMs - Date.now() : 0;
+
+    if (remainingMs >= requiredRemainingMs) {
+      return;
+    }
+
+    await sandbox.setTimeout(targetTimeoutMs);
+    await markActivity(sessionId);
+  } catch (error) {
+    logger.warn(
+      { ...toLogError(error), requiredRemainingMs, sessionId },
+      '[sandbox] Failed to refresh E2B timeout'
+    );
+  }
 }

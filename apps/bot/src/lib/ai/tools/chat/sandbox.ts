@@ -12,11 +12,16 @@ import {
   clearActiveSandboxController,
   setActiveSandboxController,
 } from '@/lib/sandbox/active';
-import { finishSession, resolveSession } from '@/lib/sandbox/session';
+import {
+  finishSession,
+  refreshSessionTimeout,
+  resolveSession,
+} from '@/lib/sandbox/session';
 import type { SlackFile, SlackMessageContext, Stream } from '@/types';
 import { getContextId } from '@/utils/context';
 
 const KEEP_ALIVE_INTERVAL_MS = 3 * 60 * 1000;
+const SANDBOX_MIN_REMAINING_MS = 5 * 60 * 1000;
 
 const toolTitles = {
   bash: 'Run command',
@@ -167,6 +172,13 @@ export const sandbox = ({
       const tasks = new Map<string, string>();
       const textChunks: string[] = [];
       const queue = new PQueue({ concurrency: 1 });
+      const keepSandboxAlive = () =>
+        runtime
+          ? refreshSessionTimeout({
+              minimumTimeoutMs: SANDBOX_MIN_REMAINING_MS,
+              runtime,
+            })
+          : Promise.resolve();
       const enqueue = (fn: () => Promise<unknown>) => {
         queue.add(fn).catch((error: unknown) => {
           logger.warn(
@@ -191,6 +203,12 @@ export const sandbox = ({
       );
 
       const keepAlive = setInterval(() => {
+        keepSandboxAlive().catch((error: unknown) => {
+          logger.warn(
+            { ...toLogError(error), ctxId },
+            '[sandbox] Keep-alive failed'
+          );
+        });
         enqueue(() => updateTask(stream, { taskId, status: 'in_progress' }));
       }, KEEP_ALIVE_INTERVAL_MS);
 
@@ -208,6 +226,15 @@ export const sandbox = ({
           prompt,
           session: runtime.session,
         });
+        const responsePromise = Promise.resolve(result.response).catch(
+          (error: unknown) => {
+            logger.debug(
+              { ...toLogError(error), ctxId },
+              '[sandbox] Stream response promise rejected'
+            );
+            return null;
+          }
+        );
 
         for await (const part of result.stream) {
           if (part.type === 'text-delta') {
@@ -217,6 +244,12 @@ export const sandbox = ({
 
           if (part.type === 'tool-call') {
             const input = normalizeToolInput(part.input);
+            keepSandboxAlive().catch((error: unknown) => {
+              logger.warn(
+                { ...toLogError(error), ctxId, tool: part.toolName },
+                '[sandbox] Failed to extend timeout'
+              );
+            });
             logger.info(
               { ctxId, tool: part.toolName, input },
               '[sandbox] Tool started'
@@ -274,6 +307,7 @@ export const sandbox = ({
         }
 
         await queue.onIdle();
+        await responsePromise;
 
         const response = textChunks.join('').trim() || 'Done';
 

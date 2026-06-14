@@ -19,7 +19,10 @@ import type {
 } from '@/types';
 import { getContextId } from '@/utils/context';
 import { syncAttachments } from './attachments';
-import { createE2BSandboxProvider } from './providers';
+import {
+  createE2BSandboxProvider,
+  refreshE2BSandboxTimeout,
+} from './providers';
 import { createSandboxTools } from './tools';
 
 const e2bProvider = createE2BSandboxProvider({ template: config.template });
@@ -60,6 +63,7 @@ function createSandboxAgent({
   if (/\bpi\b|coding agent|badlogic|pi-mono/i.test(prompt)) {
     throw new Error('Sandbox prompt contains provider-blocked terms.');
   }
+  const sessionWorkDir = `${config.runtime.workdir}/pi-${ctxId}`;
   const harness = createPi({
     auth: {
       customEnv: {
@@ -76,7 +80,11 @@ function createSandboxAgent({
     id: 'gorkie-sandbox',
     permissionMode: 'allow-all',
     sandbox: e2bProvider,
-    tools: createSandboxTools({ context, ctxId }),
+    tools: createSandboxTools({
+      context,
+      ctxId,
+      sessionWorkDir,
+    }),
     onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
       const safeSessionId = ctxId.replace(/[\\/: ]/g, '-');
       const hostAgentDir = path.join(
@@ -96,8 +104,6 @@ function createSandboxAgent({
           `mkdir -p ${JSON.stringify(`${sessionWorkDir}/.pi`)}`,
           `mkdir -p ${JSON.stringify(`${sessionWorkDir}/attachments`)}`,
           `mkdir -p ${JSON.stringify(`${sessionWorkDir}/output`)}`,
-          `mkdir -p ${JSON.stringify(config.runtime.workdir)}/attachments`,
-          `mkdir -p ${JSON.stringify(config.runtime.workdir)}/output`,
         ].join(' && '),
       });
       await session.writeTextFile({
@@ -121,7 +127,7 @@ function createSandboxAgent({
       if (writtenPrompt !== prompt || writtenLegacyPrompt !== prompt) {
         throw new Error('Sandbox system prompt override was not written.');
       }
-      onUploads(await syncAttachments(session, context, files));
+      onUploads(await syncAttachments(session, context, sessionWorkDir, files));
     },
   });
 }
@@ -174,5 +180,18 @@ export async function finishSession({
     resumeState: JSON.stringify(resumeState),
     status,
     threadId: runtime.threadId,
+  });
+}
+
+export async function refreshSessionTimeout({
+  minimumTimeoutMs,
+  runtime,
+}: {
+  minimumTimeoutMs?: number;
+  runtime: ResolvedSandboxRuntime;
+}): Promise<void> {
+  await refreshE2BSandboxTimeout({
+    minimumTimeoutMs,
+    sessionId: runtime.threadId,
   });
 }

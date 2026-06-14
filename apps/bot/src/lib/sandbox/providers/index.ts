@@ -1,1 +1,5 @@
-export { createE2BSandboxProvider, destroyE2BSandboxById } from './e2b';
+export {
+  createE2BSandboxProvider,
+  destroyE2BSandboxById,
+  refreshE2BSandboxTimeout,
+} from './e2b';

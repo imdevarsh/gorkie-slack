@@ -1,4 +1,4 @@
-import nodePath from 'node:path';
+import nodePath from 'node:path/posix';
 import { type ToolSet, tool } from '@ai-sdk/provider-utils';
 import { errorMessage, toLogError } from '@repo/utils/error';
 import { showFileInputSchema } from '@repo/validators';
@@ -31,9 +31,11 @@ async function postThreadError({
 export function createSandboxTools({
   context,
   ctxId,
+  sessionWorkDir,
 }: {
   context: SlackMessageContext;
   ctxId: string;
+  sessionWorkDir: string;
 }): ToolSet {
   return {
     showFile: tool({
@@ -48,9 +50,9 @@ export function createSandboxTools({
           ),
       }),
       execute: async ({ path, title }, { experimental_sandbox }) => {
-        if (!nodePath.isAbsolute(path)) {
-          throw new Error('showFile.path must be absolute');
-        }
+        const sandboxPath = nodePath.isAbsolute(path)
+          ? path
+          : nodePath.join(sessionWorkDir, path);
 
         const channelId = context.event.channel;
         const threadTs = context.event.thread_ts;
@@ -59,14 +61,37 @@ export function createSandboxTools({
           return { uploaded: false, path, reason: 'missing Slack channel' };
         }
 
+        const relativePath = nodePath.relative(sessionWorkDir, sandboxPath);
+        if (
+          relativePath !== '' &&
+          (relativePath === '..' || relativePath.startsWith('../'))
+        ) {
+          logger.warn(
+            { path: sandboxPath, sessionWorkDir, ctxId },
+            '[sandbox] showFile: path escapes workspace'
+          );
+          await postThreadError({
+            context,
+            channelId,
+            threadTs,
+            messageTs,
+            text: `showFile failed: \`${path}\` is outside the sandbox workspace.`,
+          });
+          return {
+            uploaded: false,
+            path,
+            reason: 'path outside sandbox workspace',
+          };
+        }
+
         const file = experimental_sandbox
           ? await Promise.resolve(
-              experimental_sandbox.readBinaryFile({ path })
+              experimental_sandbox.readBinaryFile({ path: sandboxPath })
             ).catch(() => null)
           : null;
         if (!file) {
           logger.warn(
-            { path, ctxId },
+            { path: sandboxPath, ctxId },
             '[sandbox] showFile: file not found in sandbox'
           );
           await postThreadError({
@@ -79,7 +104,7 @@ export function createSandboxTools({
           return { uploaded: false, path, reason: 'file not found' };
         }
 
-        const filename = nodePath.basename(path) || 'artifact';
+        const filename = nodePath.basename(sandboxPath) || 'artifact';
 
         try {
           await context.client.files.uploadV2({
@@ -90,14 +115,14 @@ export function createSandboxTools({
             title: title ?? filename,
           });
           logger.info(
-            { path, filename, ctxId },
+            { path: sandboxPath, filename, ctxId },
             '[sandbox] showFile: uploaded to Slack'
           );
           return { uploaded: true, path, title: title ?? filename };
         } catch (error) {
           const cause = errorMessage(error).slice(0, 140);
           logger.warn(
-            { ...toLogError(error), path, ctxId },
+            { ...toLogError(error), path: sandboxPath, ctxId },
             '[sandbox] showFile: failed to upload to Slack'
           );
           await postThreadError({
