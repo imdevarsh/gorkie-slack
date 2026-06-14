@@ -9,8 +9,12 @@
   },
   "typesVersions": {
     "*": {
-      "keys": ["./src/keys.ts"],
-      "*": ["./src/*.ts"]
+      "keys": [
+        "./src/keys.ts"
+      ],
+      "*": [
+        "./src/*.ts"
+      ]
     }
   },
   "scripts": {

@@ -1,11 +1,27 @@
-/**
- * Gorkie v2 — bare-bones skeleton.
- *
- * Rebuilt from scratch per ../../REWRITE_PLAN.md. The old implementation is
- * REFERENCE-ONLY at ../reference (commit d7ce686) — understand it, do not copy it.
- * Prefer fresh, innovative design and good abstractions/libraries over porting old logic.
- *
- * Next: Phase 1 — vercel/chat Slack platform layer (socket mode).
- */
+import { bot } from '@/bot';
+import logger from '@/lib/logger';
 
-export {};
+async function shutdown(signal: string): Promise<void> {
+  logger.info({ signal }, '[bot] shutting down');
+  await bot.shutdown().catch((error: unknown) => {
+    logger.error({ err: error }, '[bot] error during shutdown');
+  });
+  process.exit(0);
+}
+
+try {
+  await bot.initialize();
+  logger.info('[bot] gorkie is online (slack · socket mode)');
+} catch (error) {
+  logger.error({ err: error }, '[bot] failed to start');
+  process.exit(1);
+}
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    shutdown(signal).catch((error: unknown) => {
+      logger.error({ err: error }, '[bot] shutdown failed');
+      process.exit(1);
+    });
+  });
+}

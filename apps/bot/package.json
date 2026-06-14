@@ -10,6 +10,8 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@chat-adapter/slack": "^4.30.0",
+    "@chat-adapter/state-memory": "^4.30.0",
     "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logging": "workspace:*",
@@ -18,6 +20,7 @@
     "@repo/validators": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "ai": "catalog:",
+    "chat": "^4.30.0",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },
