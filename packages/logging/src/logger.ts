@@ -32,7 +32,9 @@ export async function createLogger({
     return pino(base);
   }
 
-  if (!isProduction) {
+  const shouldFile = fileLogging ?? isProduction;
+
+  if (!(isProduction || shouldFile)) {
     return pino(
       base,
       createTransport({
@@ -47,14 +49,23 @@ export async function createLogger({
     );
   }
 
-  const shouldFile = fileLogging ?? true;
   if (!shouldFile) {
     return pino(base);
   }
 
-  const targets: TransportTargetOptions[] = [
-    { target: 'pino/file', options: { destination: 1 }, level: logLevel },
-  ];
+  const targets: TransportTargetOptions[] = isProduction
+    ? [{ target: 'pino/file', options: { destination: 1 }, level: logLevel }]
+    : [
+        {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
+            ignore: 'pid,hostname,ctxId',
+            messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
+          },
+        },
+      ];
 
   try {
     await mkdir(logDirectory, { recursive: true });
