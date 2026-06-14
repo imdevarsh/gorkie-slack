@@ -291,6 +291,14 @@ core. When it does land it will be re-derived cleanly (not copied) and gated per
   envelope / per-user key derivation?
 - **D7 — Provider fallback under pi.** pi owns model routing; does `ai-retry`-style fallback
   still apply, or do we rely on AI Gateway / pi's own routing?
+- **D8 — e2b template (Phase 2).** pi runs on host, so the sandbox only needs a base image +
+  whatever runtimes code-exec needs. Use a stock e2b base or build a custom `gorkie` template?
+- **D9 — Part-1 model + key (Phase 2).** Which model does pi use with the single shared key —
+  AI Gateway (`AI_GATEWAY_API_KEY`), or a direct provider via `auth.customEnv`? Pick one model
+  for the core happy path.
+- **D10 — Env/secrets schema (Phase 0).** Define `packages/config` env: `SLACK_BOT_TOKEN`,
+  `SLACK_APP_TOKEN`, `SLACK_SIGNING_SECRET`, `E2B_API_KEY`, `DATABASE_URL`, the model key. (Old
+  `.env.example` deleted; regenerate from the new schema.)
 
 ## 10. Build plan
 
