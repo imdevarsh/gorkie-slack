@@ -5,7 +5,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./error": "./src/error.ts",
-    "./record": "./src/record.ts",
     "./text": "./src/text.ts",
     "./time": "./src/time.ts",
     "./*": "./src/*.ts"

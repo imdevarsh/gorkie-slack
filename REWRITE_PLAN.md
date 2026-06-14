@@ -2,6 +2,13 @@
 
 > Status: planning. Branch `feat/rewrite-from-scratch` (reset onto `feat/ai-sdk-harness`).
 > Last updated: 2026-06-14.
+>
+> ### 📂 Original codebase (read-only reference)
+> **`/workspaces/worktrees/gorkie-slack/reference`** — branch `feat/ai-sdk-harness`,
+> commit `d7ce686`. This is the full v1 implementation: old DB schemas (MCP, scheduled
+> tasks), the MCP layer, sandbox/e2b logic, Slack/Bolt code, prompts — everything we
+> deleted here lives there. **Read it to understand *how* a hard piece was solved, then
+> re-derive cleanly. Never copy/paste it into v2.** (`cd ../reference` from `apps/bot`.)
 
 ## 1. Goal
 
@@ -69,8 +76,12 @@ the new framework is explicitly a failure mode to avoid.
 `comments.md`, **all of `apps/bot/src`**, **`packages/ai`**, the `ai-retry` patch, and
 `apps/bot/.env.example`. Removed `server`/`build:sandbox` scripts, `nitro`/`srvx`/`ai-retry`
 from the catalog, and the `patchedDependencies` block. `apps/bot` is now a stub
-(`src/index.ts` + minimal `package.json`). The monorepo intentionally does **not** typecheck/
-build yet — that's expected. All old code is preserved in the `reference` worktree.
+(`src/index.ts` + minimal `package.json`). Also trimmed `packages/db` to the core schema
+(`sandbox_sessions` + `customizations`; removed MCP + scheduled-task schema/queries) and
+`packages/utils` to generic helpers (`error`/`text`/`time`; removed `guarded-fetch`,
+`secret`, `mcp`, `mcp-oauth-state`, `record`). The monorepo intentionally does **not**
+typecheck/build yet — that's expected. All removed code (incl. old schemas) lives in the
+`reference` worktree and is re-derived when Part 2 lands.
 
 **Target package layout (fresh):**
 
