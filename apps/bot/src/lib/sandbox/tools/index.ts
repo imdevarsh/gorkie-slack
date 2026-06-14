@@ -50,9 +50,10 @@ export function createSandboxTools({
           ),
       }),
       execute: async ({ path, title }, { experimental_sandbox }) => {
-        const sandboxPath = nodePath.isAbsolute(path)
-          ? path
-          : nodePath.join(sessionWorkDir, path);
+        const workspacePath = nodePath.resolve(sessionWorkDir);
+        const sandboxPath = nodePath.resolve(
+          nodePath.isAbsolute(path) ? path : nodePath.join(workspacePath, path)
+        );
 
         const channelId = context.event.channel;
         const threadTs = context.event.thread_ts;
@@ -61,27 +62,35 @@ export function createSandboxTools({
           return { uploaded: false, path, reason: 'missing Slack channel' };
         }
 
-        const relativePath = nodePath.relative(sessionWorkDir, sandboxPath);
-        if (
-          relativePath !== '' &&
-          (relativePath === '..' || relativePath.startsWith('../'))
-        ) {
-          logger.warn(
-            { path: sandboxPath, sessionWorkDir, ctxId },
-            '[sandbox] showFile: path escapes workspace'
-          );
+        const fail = async ({
+          reason,
+          text,
+        }: {
+          reason: string;
+          text: string;
+        }) => {
           await postThreadError({
             context,
             channelId,
             threadTs,
             messageTs,
+            text,
+          });
+          return { uploaded: false, path, reason };
+        };
+
+        const outsideWorkspace =
+          sandboxPath !== workspacePath &&
+          !sandboxPath.startsWith(`${workspacePath}/`);
+        if (outsideWorkspace) {
+          logger.warn(
+            { path: sandboxPath, workspacePath, ctxId },
+            '[sandbox] showFile: path escapes workspace'
+          );
+          return fail({
+            reason: 'path outside sandbox workspace',
             text: `showFile failed: \`${path}\` is outside the sandbox workspace.`,
           });
-          return {
-            uploaded: false,
-            path,
-            reason: 'path outside sandbox workspace',
-          };
         }
 
         const file = experimental_sandbox
@@ -94,14 +103,10 @@ export function createSandboxTools({
             { path: sandboxPath, ctxId },
             '[sandbox] showFile: file not found in sandbox'
           );
-          await postThreadError({
-            context,
-            channelId,
-            threadTs,
-            messageTs,
+          return fail({
+            reason: 'file not found',
             text: `showFile failed: could not find \`${path}\` in sandbox.`,
           });
-          return { uploaded: false, path, reason: 'file not found' };
         }
 
         const filename = nodePath.basename(sandboxPath) || 'artifact';
@@ -125,14 +130,10 @@ export function createSandboxTools({
             { ...toLogError(error), path: sandboxPath, ctxId },
             '[sandbox] showFile: failed to upload to Slack'
           );
-          await postThreadError({
-            context,
-            channelId,
-            threadTs,
-            messageTs,
+          return fail({
+            reason: cause,
             text: `showFile failed while uploading \`${filename}\`: ${cause}`,
           });
-          return { uploaded: false, path, reason: cause };
         }
       },
     }),
