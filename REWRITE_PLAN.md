@@ -98,10 +98,9 @@ typecheck/build yet — that's expected. All removed code (incl. old schemas) li
 
 | Package | Purpose |
 |---|---|
-| `apps/bot` | Runtime: `vercel/chat` Slack adapter + wiring. Gutted to a skeleton, rebuilt. |
-| `packages/config` | **New.** Centralized static config + env validation (replaces scattered `apps/bot/src/{config,env}.ts`). Fixes the "config is cluttered" problem. |
-| `packages/agent` | **New.** The HarnessAgent(pi) core: `createPi`, system-prompt assembly, host-tool registry, streaming. **Replaces `packages/ai`** (which gets removed once ported). |
-| `packages/sandbox` | **New.** e2b `HarnessV1SandboxProvider` + session lifecycle (re-derived from reference). |
+| `apps/bot` | Thin runtime: `vercel/chat` Slack wiring + env (`src/env.ts`). **No `packages/config`** — env lives here, monorepo like the previous version. |
+| `packages/ai` | **Kept.** The agent core: `createPi`/`HarnessAgent` assembly, system prompts, host tools, and AI env keys (`./keys`). |
+| `packages/sandbox` | **New.** The e2b `HarnessV1SandboxProvider` + session lifecycle (incl. the DB session-file mirror). |
 | `packages/db` | Keep — drizzle. |
 | `packages/validators` | Keep — zod schemas. |
 | `packages/utils` | Keep (trim). |
@@ -282,9 +281,20 @@ core. When it does land it will be re-derived cleanly (not copied) and gated per
   a later step, not launch.
 - **D4 — Reply/skip. ✅** Drop **both** `reply` and `skip`; pi's streamed text is the message.
 
+**Resolved (this round)**
+- **D3 — Sandbox eagerness. ✅** **Every thread boots a sandbox** for now (pi requires a sandbox
+  provider). AI SDK may relax pi's sandbox requirement later — revisit then.
+- **D8 — e2b template. ✅** **Custom template**, re-derived from the reference's
+  `build-template.ts` (base image + ripgrep/fd/imagemagick/ffmpeg/python/node 24 + agent-browser).
+  Built in Phase 2.
+- **D9 — Part-1 model. ✅** **HackClub AI** via pi `auth.customEnv` (OpenAI-compatible:
+  `OPENROUTER_API_KEY=<hackclub key>`, base URL `https://ai.hackclub.com/proxy/v1`), like the
+  reference. Multi-provider fallback/retry is a later step.
+- **D10 — Env/secrets. ✅** Env in **`apps/bot/src/env.ts`** (t3-oss `createEnv`, extends
+  `@repo/db/keys` + `@repo/logging/keys`, HackClub key inlined). Part-1 vars only; replicate
+  `.env.example` + `slack-manifest.json` from the reference. **`db:push` targets the staging DB.**
+
 **Still open**
-- **D3 — Sandbox eagerness.** Boot e2b on every thread, or lazily on first coding-tool use?
-  Needs a harness capability check.
 - **D5 — `apps/server` fate. ✅ (deferred-decided)** Deleted now; re-introduced in the MCP
   phase as the MCP OAuth callback host (+ webhook receiver if not socket-mode).
 - **D6 — Single MCP encryption key.** v1 uses one server-wide `MCP_ENCRYPTION_KEY`. Move to
@@ -306,13 +316,15 @@ Each phase: design fresh (reference for understanding only) → build clean → 
 (types, ultracite, a full-turn smoke test) → mark done.
 
 ### Part 1 — Core layer (single shared key, thread-only)
-- **Phase 0 — Skeleton.** Gut `apps/bot` (done); keep `tooling/*` + `packages/{db,validators,utils,logging}`;
-  scaffold `packages/{config,agent,sandbox}`; pin `@ai-sdk/harness*@canary`, AI SDK 7,
-  `chat` + `@chat-adapter/slack`; `bun install`. Wire env + logging.
+- **Phase 0 — Skeleton.** Gut `apps/bot` (done); keep `tooling/*` + `packages/{db,validators,utils,logging}`.
+  Replicate `apps/bot/src/env.ts` (Part-1 vars) + `.env.example` + `slack-manifest.json` from the
+  reference; add deps (`chat`, `@chat-adapter/slack`, `@chat-adapter/state-pg`, `e2b`,
+  `@e2b/code-interpreter`; harness already pinned); `bun install`; `db:push` to staging.
 - **Phase 1 — Platform layer.** `vercel/chat` Slack adapter (socket mode), event routing,
   streaming sink to `thread.post`. Hello-world reply, no agent.
-- **Phase 2 — Harness brain.** `HarnessAgent(pi)` per thread (shared key); unified system
-  prompt; e2b provider (re-derived); stream pi text → Slack (no `reply`/`skip` tools).
+- **Phase 2 — Harness brain.** `HarnessAgent(pi)` per thread, **HackClub** via `auth.customEnv`;
+  unified system prompt; e2b provider + **custom template** (re-derive `build-template.ts`);
+  every thread boots a sandbox; stream pi text → Slack (no `reply`/`skip` tools).
 - **Phase 2.5 — Steering.** Ship abort-&-re-prompt first; then patch `@ai-sdk/harness` to expose
   `submitUserMessage` so a mid-turn follow-up queues and delivers at the next tool boundary
   (pi `one-at-a-time`). See §4a.

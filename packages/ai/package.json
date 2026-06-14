@@ -1,0 +1,33 @@
+{
+  "name": "@repo/ai",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./keys": "./src/keys.ts",
+    "./*": "./src/*.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "keys": ["./src/keys.ts"],
+      "*": ["./src/*.ts"]
+    }
+  },
+  "scripts": {
+    "clean": "git clean -xdf .turbo dist node_modules",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/harness": "catalog:",
+    "@ai-sdk/harness-pi": "catalog:",
+    "@repo/logging": "workspace:*",
+    "@t3-oss/env-core": "catalog:",
+    "ai": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

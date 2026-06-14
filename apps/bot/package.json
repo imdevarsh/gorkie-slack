@@ -10,10 +10,10 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@ai-sdk/harness": "catalog:",
-    "@ai-sdk/harness-pi": "catalog:",
+    "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logging": "workspace:*",
+    "@repo/sandbox": "workspace:*",
     "@repo/utils": "workspace:*",
     "@repo/validators": "workspace:*",
     "@t3-oss/env-core": "catalog:",
