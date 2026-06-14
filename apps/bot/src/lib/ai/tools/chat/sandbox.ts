@@ -139,6 +139,24 @@ function getToolOutput({
   return;
 }
 
+function observeHarnessPromise({
+  ctxId,
+  label,
+  promise,
+}: {
+  ctxId: string;
+  label: string;
+  promise: PromiseLike<unknown>;
+}): Promise<unknown> {
+  return Promise.resolve(promise).catch((error: unknown) => {
+    logger.debug(
+      { ...toLogError(error), ctxId, label },
+      '[sandbox] Harness result promise rejected'
+    );
+    return null;
+  });
+}
+
 export const sandbox = ({
   context,
   files,
@@ -226,15 +244,43 @@ export const sandbox = ({
           prompt,
           session: runtime.session,
         });
-        const responsePromise = Promise.resolve(result.response).catch(
-          (error: unknown) => {
-            logger.debug(
-              { ...toLogError(error), ctxId },
-              '[sandbox] Stream response promise rejected'
-            );
-            return null;
-          }
-        );
+        const resultPromises = [
+          observeHarnessPromise({
+            ctxId,
+            label: 'response',
+            promise: result.response,
+          }),
+          observeHarnessPromise({
+            ctxId,
+            label: 'steps',
+            promise: result.steps,
+          }),
+          observeHarnessPromise({
+            ctxId,
+            label: 'usage',
+            promise: result.usage,
+          }),
+          observeHarnessPromise({
+            ctxId,
+            label: 'finishReason',
+            promise: result.finishReason,
+          }),
+          observeHarnessPromise({
+            ctxId,
+            label: 'responseMessages',
+            promise: result.responseMessages,
+          }),
+          observeHarnessPromise({
+            ctxId,
+            label: 'toolCalls',
+            promise: result.toolCalls,
+          }),
+          observeHarnessPromise({
+            ctxId,
+            label: 'toolResults',
+            promise: result.toolResults,
+          }),
+        ];
 
         for await (const part of result.stream) {
           if (part.type === 'text-delta') {
@@ -307,7 +353,7 @@ export const sandbox = ({
         }
 
         await queue.onIdle();
-        await responsePromise;
+        await Promise.all(resultPromises);
 
         const response = textChunks.join('').trim() || 'Done';
 

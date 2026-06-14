@@ -1,3 +1,4 @@
+import { getErrorDetails, toLogError } from '@repo/utils/error';
 import { env } from '@/env';
 import { startTelemetry } from '@/lib/ai/telemetry';
 import logger from '@/lib/logger';
@@ -8,7 +9,19 @@ import { createSlackApp } from '@/slack/app';
 const telemetry = startTelemetry({ logger });
 
 process.on('unhandledRejection', (reason) => {
-  logger.error({ error: reason }, 'Unhandled promise rejection');
+  const details = getErrorDetails(reason);
+  const reasonRecord =
+    typeof reason === 'object' && reason !== null
+      ? {
+          constructorName: reason.constructor?.name,
+          keys: Object.keys(reason),
+        }
+      : undefined;
+
+  logger.error(
+    { ...toLogError(reason), details, reasonRecord },
+    'Unhandled promise rejection'
+  );
 });
 
 process.on('uncaughtException', (error) => {
