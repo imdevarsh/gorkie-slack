@@ -10,6 +10,17 @@
 > deleted here lives there. **Read it to understand *how* a hard piece was solved, then
 > re-derive cleanly. Never copy/paste it into v2.** (`cd ../reference` from `apps/bot`.)
 
+## How to use this plan
+
+**This plan is a map, not the full spec.** It captures the decisions, architecture, and build
+order — the *details* live in the actual docs and source (see §13). When something is unclear,
+**read the docs/source rather than guessing, and ask as many questions as you need.**
+
+**Work step by step; clarity and quality >> one-shotting.** Don't rush into implementation —
+get each step's design right, confirm it, then build. A correct, well-understood small step
+beats a large speculative one. Before/while building, do a quick go-through of the relevant
+prompts and references (Chat SDK + `chat/ai`, AI SDK harness, relevant GitHub issues).
+
 ## 1. Goal
 
 Rewrite gorkie into a cleaner, more abstracted, multi-surface-capable AI agent where
@@ -397,3 +408,29 @@ AI SDK 7, and `vercel/chat` are canary/under-documented. Clone and inspect:
 **Use the skills** when the task touches their area: `ai-sdk`, `chat-sdk`, `slack-agent`,
 `coding-best-practices`, `ultracite`, `neon-postgres`. They carry current patterns the model
 shouldn't reinvent.
+
+## 13. References & docs
+
+This plan summarizes; the **source of truth is the docs/repos** — read them when implementing,
+and ask questions freely.
+
+**Chat SDK packages:**
+- `chat` — core SDK: the `Chat` class, types, JSX runtime, and utilities.
+- `chat/ai` — AI utilities: `createChatTools` (expose chat operations as AI SDK tools) and
+  `toAiMessages` (convert chat history → AI SDK prompt messages).
+- `@chat-adapter/slack` — Slack adapter: webhooks, Block Kit cards, OAuth, slash commands, AI
+  streaming; plus the raw `WebClient` + `callSlackApi` escape hatches.
+
+**Docs / source to consult:**
+- Skills: `chat-sdk`, `ai-sdk`, `slack-agent`, `ultracite`, `coding-best-practices`, `neon-postgres`.
+- AI SDK harness docs: `https://ai-sdk.dev/v7/docs/ai-sdk-harnesses/*` (overview, harness-agent,
+  adapters, tools, ui, terminal-ui) + the pi provider page.
+- Clone & read source for canary/undocumented APIs: `vercel/ai`, `vercel/chat`,
+  `earendil-works/pi`.
+- **GitHub issues** — check the relevant repos' open issues for known bugs/limitations before
+  relying on undocumented behavior.
+- The `reference` worktree (v1) for how a hard piece was previously solved.
+
+**Plan of attack:** before each phase, walk through the relevant prompts + the references above
+(Chat SDK + `chat/ai`, AI SDK harness, GitHub issues). Don't build blind; confirm understanding,
+then implement step by step.
