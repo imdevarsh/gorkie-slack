@@ -76,7 +76,7 @@ the new framework is explicitly a failure mode to avoid.
 | Sandbox | **Stay on e2b** (only provider with warm FS+memory resume + indefinite pause; adapter already written). |
 | Multi-user threads | The **replying user** runs the turn with **their own** keys/MCP. Never expose one user's BYOK secrets/OAuth MCP to another. |
 | BYOK | **Part 2.** Per-user model keys → `createPi({ auth: { customEnv } })` per session. Part 1 uses one shared service key. |
-| Persistence | **DB is primary; sandbox is disposable.** Postgres `resumeState` (harness-owned conversation history) is the source of truth. The e2b sandbox is a throwaway file cache — the janitor may kill it freely; if it's gone next turn, spin a **fresh** sandbox and resume the conversation from `resumeState` (workspace files are lost — acceptable). Resume path must fall back to create-fresh on connect-by-id failure, never error. |
+| Persistence | **Sandbox-primary + a DB session-file mirror.** `resumeState` (a *pointer*) lives in Postgres; pi's transcript is a session file in the sandbox snapshot. To survive a sandbox kill, mirror that session file's bytes to Postgres each turn and re-seed it into a fresh sandbox on resume (Phase 3 — see §4a). Conversation durability must not depend on any single sandbox staying alive. |
 | Tooling | Keep turborepo, ultracite/biome, cspell, knip, lefthook, bun catalog, drizzle. |
 | Reference | `feat/ai-sdk-harness` lives read-only at `../reference`. Understand, don't copy. |
 | Deferred | **MCP** and **`apps/server`** come *after* gorkie works end-to-end (they need low-level Bolt/OAuth code). Build the core agent first. |
@@ -124,7 +124,7 @@ Slack / (later Discord) ──▶ vercel/chat adapter ──▶ Runtime (apps/bo
    pi built-in tools (bash/read/write/edit/grep/glob) ──▶ e2b sandbox (FS/shell)
    pi assistant text ──stream──▶ thread.post(stream) ──▶ Slack
                                                        │
-   on finish: session.detach()/stop() ──▶ Postgres (resumeState) + message mirror
+   on finish: session.detach()/stop() ──▶ Postgres (resumeState pointer + pi session-file bytes)
 ```
 
 - **One `HarnessAgent(pi)` per thread.** pi's native history + compaction + approval are the
@@ -132,15 +132,14 @@ Slack / (later Discord) ──▶ vercel/chat adapter ──▶ Runtime (apps/bo
 - **pi runs on the host.** The sandbox is only a remote FS/shell for pi's coding tools. This
   is what makes per-user BYOK + MCP safe: secrets live in the host agent instance for that
   turn, never in the sandbox.
-- **Slack affordances become host-executed AI SDK tools** on the HarnessAgent
-  (`react`, `searchWeb`, `searchSlack`, `getWeather`, `getUserInfo`, `generateImage`,
-  `mermaid`, `scheduleTask`/reminder/list/cancel, `leaveChannel`, `summariseThread`, file
-  upload). **`reply` and `skip` are dropped** — pi's streamed assistant text *is* the
-  message; "no response needed" is just an empty/short turn, not a tool.
-- **Steering is a built-in default.** pi supports mid-turn steering, so a follow-up message
-  that arrives while a turn is in flight is fed into the **live** session to redirect it
-  (rather than queued or dropped). Wire this in Phase 2 via the harness steering /
-  `suspendTurn`+continue API (confirm exact surface against `@ai-sdk/harness-pi`).
+- **Slack affordances become host-executed AI SDK tools** on the HarnessAgent. Many come free
+  from `createChatTools` from `chat/ai` (`fetchMessages`, `getUser`, `addReaction`,
+  `fetchThread`, … with `needsApproval` built in on writes); hand-write only the rest
+  (`searchWeb`, `getWeather`, `generateImage`, `mermaid`, scheduling, file upload). **`reply`
+  and `skip` are dropped** — pi's streamed text *is* the message.
+- **Steering: pi supports it, the AI SDK wrapper doesn't surface it yet** (see §4a). Target:
+  queue a mid-turn follow-up and deliver it at the next tool boundary (pi `one-at-a-time`) via
+  a small patch exposing `submitUserMessage`. Part-1 fallback: abort + re-prompt.
 - **MCP tools** are injected as additional host tools, per replying user.
 
 ### Per-turn lifecycle
@@ -156,55 +155,68 @@ Slack / (later Discord) ──▶ vercel/chat adapter ──▶ Runtime (apps/bo
 
 ## 4a. Core mechanics — how the harness brain actually works
 
-### Sessions & `resumeState`
-A `HarnessAgent` is stateless; a **session** holds state. The session owns pi's native
-history (every user/assistant message **and every tool call + result** pi made), compaction
-state, pending tool approvals, and the link to its sandbox. That is serializable into one
-opaque blob: **`resumeState`** (`HarnessAgentResumeSessionState`).
+### Sessions, `resumeState`, and where the transcript actually lives
+*(Verified against `vercel/ai` `packages/harness*` + `earendil-works/pi` source.)*
+
+- **`resumeState` is a small pointer/reconnect token, NOT the transcript.** Shape:
+  `{ type:'resume-session', harnessId, specificationVersion, data:{ sessionFileName }, continueFrom? }`.
+- **The transcript** (every message + tool call + result) is a **session file** pi's
+  `SessionManager` writes — mirrored on the host (`hostSessionDir`, tmp) during a turn and
+  copied **into the sandbox** at `${workdir}/.pi-sessions/<sessionFileName>` on `detach`/`stop`.
+  Durability is "via the **sandbox snapshot**." On resume, pi pulls that file back from the
+  sandbox (`pullSessionFileFromSandbox`).
+- So `resumeState` "resumes the task" by pointing at *which* session file to reopen (and, via
+  `continueFrom`, how to continue a turn that was mid-flight) — it does not carry the bytes.
 
 Per turn = read-modify-write, keyed by `threadId`:
-1. Load `resumeState` JSON from Postgres (`sandboxSessions.resumeState`).
-2. `agent.createSession({ sessionId: threadId, resumeFrom: resumeState })` → harness rebuilds
-   pi's in-memory session from the blob. **No replay of Slack history** — pi already remembers.
-3. `agent.stream({ session, prompt: <new user message> })` → pi runs, appending new messages +
-   tool calls/results into the session.
-4. `session.detach()` / `stop()` → returns the **updated** `resumeState`; write it back to PG.
-
-This loop *is* the v1 fix: tool calls/results live in `resumeState`, restored every turn;
-compaction is the harness summarizing old history inside that same blob, automatically.
+1. Load `resumeState` from Postgres (`sandboxSessions.resumeState`).
+2. `agent.createSession({ sessionId: threadId, resumeFrom })` → reopens the session file.
+3. `agent.stream({ session, prompt })` → pi runs, appending to the session file.
+4. `session.detach()`/`stop()` → returns updated `resumeState` (+ persists the session file into
+   the sandbox); write `resumeState` back to PG.
 
 ### detach vs stop vs destroy
 - `detach()` — parks runtime, **keeps the sandbox warm**, returns resume state. (active/dev)
 - `stop()` — saves resume state, **pauses the sandbox** (→ e2b `betaPause`). (idle/prod)
 - `destroy()` — tears down, **discards** resumability.
 
-### What `resumeState` does NOT contain
-Workspace **files** — those live in the e2b sandbox, not the blob.
-
-### DB-primary, sandbox-disposable
-`resumeState` in Postgres is the source of truth; the sandbox is a throwaway file cache.
-- Janitor kills idle sandboxes → only files are lost, never conversation.
-- Next turn: if `Sandbox.connect(oldId)` fails (killed/expired), **create a fresh sandbox** and
-  still `resumeFrom` the DB blob. pi keeps full memory; the new sandbox is empty. Files lost =
-  acceptable. Resume must fall back to create-fresh, never error.
-- ⚠️ **Phase 3 verify:** confirm the harness accepts `resumeFrom` against a *new* sandbox
-  (the reference reconnects to the same `sandboxId`). If the blob hard-pins a sandbox id,
-  strip/rewrite it on resume.
+### Persistence decision (Option 1 + mandatory mirror)
+**Sandbox-primary, with a DB session-file mirror so history survives a sandbox kill.**
+- While a sandbox lives (paused/active), resume reconnects to it — transcript file is present.
+- e2b paused sandboxes persist indefinitely today; the janitor's window (e.g. 7 days) is our
+  *own* policy, not an e2b limit. We do **not** want to depend on that (cost / future pricing).
+- **Mirror (Phase 3, not "later"):** after each turn, read the pi session-file bytes and store
+  them in Postgres; on resume into a **fresh** sandbox, re-seed the file into
+  `${workdir}/.pi-sessions/<sessionFileName>` via `onSandboxSession` *before* pi reopens it.
+  This makes conversation durability independent of any single sandbox. Uses pi's own file
+  format — no upstream API needed.
+- ⚠️ **Phase 3 verify:** confirm `resumeFrom` works against a *new* sandbox id (reference
+  reconnects to the same one) and that `onSandboxSession` runs before pi's pull on resume.
 
 ### `onSandboxSession` (idempotent setup)
 Runs on **fresh and resumed** sessions — (re)write pi's `SYSTEM.md`, make working dirs,
-re-sync attachments. Must be safe to run every turn.
+re-seed the mirrored session file, re-sync attachments. Must be safe to run every turn.
 
 ### Streaming to Slack
-`agent.stream()` returns an AI-SDK-shaped result. Consume `result.stream` server-side:
-`text-delta` → accumulate into the Slack message; `tool-call`/`tool-result` → optional status
-blocks; `error` → throw. `vercel/chat`'s `thread.post(stream)` handles `chat.update`
-throttling. No `reply`/`skip` tool — pi's streamed text *is* the message.
+`agent.stream()` returns a `StreamTextResult` (has `.fullStream`/`.textStream`). `vercel/chat`'s
+`thread.post(result.fullStream)` auto-detects it, extracts `text-delta`, injects `\n\n` between
+steps, and handles `chat.update` throttling. No `reply`/`skip` tool — pi's streamed text *is*
+the message.
 
-### Steering
-A follow-up message arriving mid-turn is injected into the **live** session to redirect pi,
-not queued. Wire via the harness steering / `suspendTurn`+continue surface (confirm exact API
-against `@ai-sdk/harness-pi` in Phase 2.5).
+### Steering (pi supports it; the AI SDK wrapper does not surface it yet)
+*(Verified: `pi` `coding-agent` has `session.steer(msg)` with modes `one-at-a-time` "deliver
+one, wait for response" and `all`. The harness V1 protocol defines
+`HarnessV1PromptControl.submitUserMessage` and the pi adapter implements it as
+`piSession.steer`. **But** `@ai-sdk/harness`'s `run-prompt` only calls `submitToolResult`/
+`submitToolApproval`; the public `HarnessAgentSession` is one-turn-at-a-time and exposes no
+`steer()`.)*
+- **Target behavior** (your model): a follow-up that arrives mid-turn is **queued and
+  delivered at the next tool boundary** (`one-at-a-time`), then pi resumes.
+- **How:** small patch/extension to expose `submitUserMessage` from the live session (the
+  protocol field already exists — low-risk, like the v1 `ai-retry` patch), keeping a live
+  session handle for the in-flight turn.
+- **Part-1 fallback** until that lands: **abort the turn + re-prompt** with the new message
+  (history is preserved in the session file).
 
 ## 5. Chat SDK — verdict (verified by cloning `vercel/chat`)
 
@@ -241,7 +253,7 @@ harness own conversation history (don't double-store via `bot.transcripts`).
 3. **Shared-thread MCP data leak (RESOLVED → D1).** Tool *definitions* are loaded per
    replying user, so there is no cross-user exposure of *which* MCP tools/servers a user has.
    The only residual is that tool *results* fetched with user A's creds land in the
-   per-thread `resumeState` history, which user B could see on resume. Resolution: MCP in
+   per-thread pi transcript, which user B could see on resume. Resolution: MCP in
    shared/public threads is **opt-in per user** ("allow my MCP in public threads"); default
    is DMs / single-user threads only. Surface the result-in-history caveat at opt-in time.
 4. **Canary coupling (low concern).** The brain depends on `@ai-sdk/harness@canary` +
@@ -293,13 +305,16 @@ Each phase: design fresh (reference for understanding only) → build clean → 
   streaming sink to `thread.post`. Hello-world reply, no agent.
 - **Phase 2 — Harness brain.** `HarnessAgent(pi)` per thread (shared key); unified system
   prompt; e2b provider (re-derived); stream pi text → Slack (no `reply`/`skip` tools).
-- **Phase 2.5 — Steering.** Feed mid-turn follow-up messages into the live session to redirect
-  it; confirm the harness steering / `suspendTurn`+continue surface.
-- **Phase 3 — Persistence (DB-primary).** `resumeState` + message-mirror tables (drizzle);
-  sandbox is disposable — resume conversation into a fresh sandbox when the old one is gone;
-  verify history + compaction survive restart, sandbox death, and long threads.
-- **Phase 4 — Core conversation tools.** Host tools: `react`, `searchWeb`/`searchSlack`,
-  `getWeather`, `getUserInfo`, `generateImage`, `mermaid`, `summariseThread`, file upload.
+- **Phase 2.5 — Steering.** Ship abort-&-re-prompt first; then patch `@ai-sdk/harness` to expose
+  `submitUserMessage` so a mid-turn follow-up queues and delivers at the next tool boundary
+  (pi `one-at-a-time`). See §4a.
+- **Phase 3 — Persistence + session-file mirror.** `resumeState` pointer in `sandbox_sessions`
+  **plus** mirroring pi's session-file bytes to Postgres each turn and re-seeding into a fresh
+  sandbox via `onSandboxSession` on resume. Verify: history survives sandbox **death** (not
+  just restart), `resumeFrom` works against a new sandbox id, and compaction holds on long threads.
+- **Phase 4 — Core conversation tools.** Use `createChatTools` (`chat/ai`) for `fetchMessages`/
+  `getUser`/`addReaction`/etc.; hand-write `searchWeb`, `getWeather`, `generateImage`, `mermaid`,
+  file upload. (`summariseThread` may be unneeded — pi has native history.)
 
 ### Part 2 — later (must not block Part 1)
 - **Phase 5 — BYOK.** Per-user keys → `customEnv`; per-user agent instances closed over the
@@ -318,8 +333,8 @@ Each phase: design fresh (reference for understanding only) → build clean → 
   or `state-redis` directly.
 - **`packages/ai` deleted** → reborn as `packages/agent`; new `packages/config`, `packages/sandbox`.
 - `ai-retry` + patch removed (not v7/harness-compatible; revisit later for host-tool model calls).
-- New drizzle tables (fresh, no back-compat): `sandboxSessions` (with `resumeState`) + a
-  message mirror; MCP/scheduled tables arrive with Part 2.
+- New drizzle tables (fresh, no back-compat): `sandbox_sessions` (with `resumeState` pointer +
+  mirrored pi session-file bytes); MCP/scheduled tables arrive with Part 2.
 - Keep: drizzle, cspell, knip, ultracite, lefthook, turbo.
 
 
