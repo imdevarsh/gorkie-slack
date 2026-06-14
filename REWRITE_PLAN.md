@@ -12,11 +12,18 @@ sandbox per conversation [thread]. Fix the v1 pains — *the agent forgot what t
 brain, not a side tool. BYOK-first, strict per-user secret isolation, ability to diversify
 to other platforms (Discord, etc.).
 
-**v1-critical scope (build this first):** gorkie converses **thread-only** (every
-conversation is a Slack thread; no channel-wide/non-threaded mode for now). **MCP and
-`apps/server` are explicitly out of scope** until the core thread agent works end-to-end —
-do not let MCP complexity block the core. Trying to make everything work at once is the
-failure we're avoiding.
+**No backward/data compatibility required** — v1 has no data we must preserve; design the
+schema fresh.
+
+**Two-part build:**
+- **Part 1 — Core layer (build first):** gorkie converses **thread-only**; one
+  `HarnessAgent(pi)` per thread on a **single shared service key** (no per-user keys yet);
+  persistence + steering + the core Slack conversation tools. That's the whole focus.
+- **Part 2 — later, do not let it block Part 1:** **BYOK** (per-user keys), **MCP** (+ its
+  `apps/server` OAuth callback + low-level Bolt UI), and **Scheduled Tasks**. Per-user secret
+  isolation belongs here too, since it only matters once BYOK/MCP exist.
+
+Trying to make everything work at once is the failure we're avoiding.
 
 ## 2. Reference branch — proof of feasibility, NOT code to copy
 
@@ -50,8 +57,8 @@ the new framework is explicitly a failure mode to avoid.
 | Platform layer | **Adopt `vercel/chat`** (`chat` + `@chat-adapter/slack`), **Slack socket mode for now**, `WebClient` escape hatch for App Home/custom surfaces. |
 | Sandbox | **Stay on e2b** (only provider with warm FS+memory resume + indefinite pause; adapter already written). |
 | Multi-user threads | The **replying user** runs the turn with **their own** keys/MCP. Never expose one user's BYOK secrets/OAuth MCP to another. |
-| BYOK | First-class: per-user model keys → `createPi({ auth: { customEnv } })` per session; per-user MCP creds. |
-| Persistence | Mandatory. `resumeState` (harness-owned history) + a message mirror table. Not "optional because e2b pauses." |
+| BYOK | **Part 2.** Per-user model keys → `createPi({ auth: { customEnv } })` per session. Part 1 uses one shared service key. |
+| Persistence | **DB is primary; sandbox is disposable.** Postgres `resumeState` (harness-owned conversation history) is the source of truth. The e2b sandbox is a throwaway file cache — the janitor may kill it freely; if it's gone next turn, spin a **fresh** sandbox and resume the conversation from `resumeState` (workspace files are lost — acceptable). Resume path must fall back to create-fresh on connect-by-id failure, never error. |
 | Tooling | Keep turborepo, ultracite/biome, cspell, knip, lefthook, bun catalog, drizzle. |
 | Reference | `feat/ai-sdk-harness` lives read-only at `../reference`. Understand, don't copy. |
 | Deferred | **MCP** and **`apps/server`** come *after* gorkie works end-to-end (they need low-level Bolt/OAuth code). Build the core agent first. |
@@ -125,6 +132,58 @@ Slack / (later Discord) ──▶ vercel/chat adapter ──▶ Runtime (apps/bo
 6. On finish: `session.detach()` (dev) / `stop()` (prod pause) → persist `resumeState` +
    mirror messages/tool-calls to Postgres.
 
+## 4a. Core mechanics — how the harness brain actually works
+
+### Sessions & `resumeState`
+A `HarnessAgent` is stateless; a **session** holds state. The session owns pi's native
+history (every user/assistant message **and every tool call + result** pi made), compaction
+state, pending tool approvals, and the link to its sandbox. That is serializable into one
+opaque blob: **`resumeState`** (`HarnessAgentResumeSessionState`).
+
+Per turn = read-modify-write, keyed by `threadId`:
+1. Load `resumeState` JSON from Postgres (`sandboxSessions.resumeState`).
+2. `agent.createSession({ sessionId: threadId, resumeFrom: resumeState })` → harness rebuilds
+   pi's in-memory session from the blob. **No replay of Slack history** — pi already remembers.
+3. `agent.stream({ session, prompt: <new user message> })` → pi runs, appending new messages +
+   tool calls/results into the session.
+4. `session.detach()` / `stop()` → returns the **updated** `resumeState`; write it back to PG.
+
+This loop *is* the v1 fix: tool calls/results live in `resumeState`, restored every turn;
+compaction is the harness summarizing old history inside that same blob, automatically.
+
+### detach vs stop vs destroy
+- `detach()` — parks runtime, **keeps the sandbox warm**, returns resume state. (active/dev)
+- `stop()` — saves resume state, **pauses the sandbox** (→ e2b `betaPause`). (idle/prod)
+- `destroy()` — tears down, **discards** resumability.
+
+### What `resumeState` does NOT contain
+Workspace **files** — those live in the e2b sandbox, not the blob.
+
+### DB-primary, sandbox-disposable
+`resumeState` in Postgres is the source of truth; the sandbox is a throwaway file cache.
+- Janitor kills idle sandboxes → only files are lost, never conversation.
+- Next turn: if `Sandbox.connect(oldId)` fails (killed/expired), **create a fresh sandbox** and
+  still `resumeFrom` the DB blob. pi keeps full memory; the new sandbox is empty. Files lost =
+  acceptable. Resume must fall back to create-fresh, never error.
+- ⚠️ **Phase 3 verify:** confirm the harness accepts `resumeFrom` against a *new* sandbox
+  (the reference reconnects to the same `sandboxId`). If the blob hard-pins a sandbox id,
+  strip/rewrite it on resume.
+
+### `onSandboxSession` (idempotent setup)
+Runs on **fresh and resumed** sessions — (re)write pi's `SYSTEM.md`, make working dirs,
+re-sync attachments. Must be safe to run every turn.
+
+### Streaming to Slack
+`agent.stream()` returns an AI-SDK-shaped result. Consume `result.stream` server-side:
+`text-delta` → accumulate into the Slack message; `tool-call`/`tool-result` → optional status
+blocks; `error` → throw. `vercel/chat`'s `thread.post(stream)` handles `chat.update`
+throttling. No `reply`/`skip` tool — pi's streamed text *is* the message.
+
+### Steering
+A follow-up message arriving mid-turn is injected into the **live** session to redirect pi,
+not queued. Wire via the harness steering / `suspendTurn`+continue surface (confirm exact API
+against `@ai-sdk/harness-pi` in Phase 2.5).
+
 ## 5. Chat SDK — verdict (verified by cloning `vercel/chat`)
 
 `@chat-adapter/slack` does **not** box us in:
@@ -135,7 +194,7 @@ Slack / (later Discord) ──▶ vercel/chat adapter ──▶ Runtime (apps/bo
 
 → **Adopt it.** Full low-level Slack access is preserved, and we get the multi-platform seam
 for free. Because we're rewriting the Slack layer anyway, there is no Bolt-migration cost.
-Use `state-pg` (or `state-redis` via `packages/kv`) for subscriptions/locks/dedup; let the
+Use `@chat-adapter/state-pg` (or `state-redis`) for subscriptions/locks/dedup; let the
 harness own conversation history (don't double-store via `bot.transcripts`).
 
 ## 6. Security model
@@ -199,36 +258,131 @@ core. When it does land it will be re-derived cleanly (not copied) and gated per
 - **D7 — Provider fallback under pi.** pi owns model routing; does `ai-retry`-style fallback
   still apply, or do we rely on AI Gateway / pi's own routing?
 
-## 10. Port plan (deliberate, subsystem by subsystem)
+## 10. Build plan
 
-Each subsystem: review on the source branch → rewrite clean into the new skeleton → vet
-(types, ultracite, a smoke test) → mark done.
+Each phase: design fresh (reference for understanding only) → build clean → vet
+(types, ultracite, a full-turn smoke test) → mark done.
 
-- **Phase 0 — Skeleton.** Clean `apps/bot`; keep `tooling/*` and `packages/{db,validators,utils,logging}`;
-  pin `@ai-sdk/harness*@canary`, AI SDK 7, `chat` + `@chat-adapter/slack`. Wire env + logging.
+### Part 1 — Core layer (single shared key, thread-only)
+- **Phase 0 — Skeleton.** Gut `apps/bot` (done); keep `tooling/*` + `packages/{db,validators,utils,logging}`;
+  scaffold `packages/{config,agent,sandbox}`; pin `@ai-sdk/harness*@canary`, AI SDK 7,
+  `chat` + `@chat-adapter/slack`; `bun install`. Wire env + logging.
 - **Phase 1 — Platform layer.** `vercel/chat` Slack adapter (socket mode), event routing,
   streaming sink to `thread.post`. Hello-world reply, no agent.
-- **Phase 2 — Harness orchestrator.** `HarnessAgent(pi)` as the brain; unified system prompt;
-  e2b provider (port from branch); stream pi text → Slack (no `reply`/`skip` tools).
-  Single-user happy path.
+- **Phase 2 — Harness brain.** `HarnessAgent(pi)` per thread (shared key); unified system
+  prompt; e2b provider (re-derived); stream pi text → Slack (no `reply`/`skip` tools).
 - **Phase 2.5 — Steering.** Feed mid-turn follow-up messages into the live session to redirect
   it; confirm the harness steering / `suspendTurn`+continue surface.
-- **Phase 3 — Persistence.** `resumeState` + message mirror tables (drizzle); verify history
-  + compaction survive restart and long threads.
-- **Phase 4 — Slack-affordance tools.** Port `react`, `searchWeb/Slack`, `getWeather`,
-  `getUserInfo`, `generateImage`, `mermaid`, scheduling, file upload as host tools.
-- **Phase 5 — BYOK.** Per-user keys → `customEnv`; per-user agent instances; key storage.
-- **Phase 6 — MCP (per D1/D2).** Port `lib/mcp/*` + approval flow; gate to DMs first.
-- **Phase 7 — App Home.** Rebuild customization/MCP UI on Chat SDK + `WebClient.views.publish`.
-- **Phase 8 — Scheduled tasks** + janitor.
-- **Phase 9 — Diversification proof.** Add a second platform adapter (Discord) to validate the seam.
+- **Phase 3 — Persistence (DB-primary).** `resumeState` + message-mirror tables (drizzle);
+  sandbox is disposable — resume conversation into a fresh sandbox when the old one is gone;
+  verify history + compaction survive restart, sandbox death, and long threads.
+- **Phase 4 — Core conversation tools.** Host tools: `react`, `searchWeb`/`searchSlack`,
+  `getWeather`, `getUserInfo`, `generateImage`, `mermaid`, `summariseThread`, file upload.
+
+### Part 2 — later (must not block Part 1)
+- **Phase 5 — BYOK.** Per-user keys → `customEnv`; per-user agent instances closed over the
+  replying user's secrets; key storage. Introduces per-user secret isolation.
+- **Phase 6 — MCP (per D1).** Re-derive MCP (encrypted creds, OAuth, approval) + bring back
+  `apps/server` for the OAuth callback; gate to DMs / single-user threads first.
+- **Phase 7 — App Home & MCP UI.** Build on Chat SDK + `WebClient.views.publish`.
+- **Phase 8 — Scheduled tasks** + janitor tuning.
+- **Phase 9 — Diversification proof.** Add a Discord adapter to validate the seam.
 
 ## 11. Stack / tooling changes
-- AI SDK v6 → **v7 canary** (`@ai-sdk/harness*`, `@ai-sdk/harness-pi`, `@ai-sdk/mcp`).
-- **Bolt removed**, replaced by `vercel/chat` + `@chat-adapter/slack`.
-- **`apps/server` (nitro) shrinks** — model-key proxy/token logic mostly gone (pi-on-host).
-  Likely repurposed for OAuth callbacks + webhook receiver.
-- **`packages/kv`** finally wired — Chat SDK state adapter (locks/dedup/subscriptions).
-- New drizzle tables: message mirror; keep `sandboxSessions`, MCP tables, `scheduledTasks`,
-  `userCustomizations`; drop `proxyTokens`.
+- On **AI SDK 7 canary** (`@ai-sdk/harness*`, `@ai-sdk/harness-pi`, and `@ai-sdk/mcp` in Part 2).
+- **Bolt removed**, replaced by `vercel/chat` + `@chat-adapter/slack` (socket mode).
+- **`apps/server` deleted** — returns in Part 2 only as the MCP OAuth callback host.
+- **`packages/kv` deleted.** If we need Chat SDK state (locks/dedup), use `@chat-adapter/state-pg`
+  or `state-redis` directly.
+- **`packages/ai` deleted** → reborn as `packages/agent`; new `packages/config`, `packages/sandbox`.
+- `ai-retry` + patch removed (not v7/harness-compatible; revisit later for host-tool model calls).
+- New drizzle tables (fresh, no back-compat): `sandboxSessions` (with `resumeState`) + a
+  message mirror; MCP/scheduled tables arrive with Part 2.
 - Keep: drizzle, cspell, knip, ultracite, lefthook, turbo.
+
+
+## Coding Guidelines
+
+### Inline over extract
+Prefer inlining over creating utility functions. Only extract to a named function when the logic is called in **multiple places** or is genuinely complex. A helper called exactly once is worse than the code it replaced.
+
+```ts
+// bad — one-shot helper
+function getFileExtension(mime: string) { return MAP[mime] ?? 'png'; }
+const ext = getFileExtension(image.mediaType);
+
+// good — just inline it
+const ext = EXTENSION[image.mediaType] ?? 'png';
+```
+
+### Dict params
+Functions with more than one parameter should take a single options object. Prefer this even for one-param functions when that parameter is logically a "config" rather than a plain value.
+
+```ts
+// bad
+logReply(ctxId, author, result, reason);
+
+// good
+logReply({ ctxId, author, result, reason });
+```
+
+### No `as const` on type discriminants
+When building objects that need a literal type for a discriminant field (e.g. `type: 'text'`), prefer assigning the whole expression to an SDK-typed variable or returning through a typed function. Do not use `as const` on the property.
+
+```ts
+// bad
+{ type: 'text' as const, text }
+
+// good — use the SDK's UserContent type as an annotation
+const content: UserContent = [{ type: 'text', text }, ...images];
+```
+
+### Avoid type casting
+Do not use type casts to silence TypeScript. Prefer schema parsing, typed builders, narrower function signatures, or explicit runtime checks. A cast is acceptable only at a real external boundary where TypeScript cannot know the shape after validation, and the validation should live next to the cast.
+
+```ts
+// bad
+const meta = JSON.parse(view.private_metadata || '{}') as ServerMeta;
+
+// good
+const meta = serverMetaSchema.parse(JSON.parse(view.private_metadata || '{}'));
+```
+
+### No comments explaining what code does
+Only add a comment when the **why** is non-obvious — a hidden constraint, a workaround for a specific bug, or behaviour that would genuinely surprise a reader. Never describe what the code already says.
+
+### No JSDoc / docstrings
+No multi-line block comments on functions. Self-documenting names are enough.
+
+### Config for tuneable values
+Anything that could reasonably change per deployment (thresholds, message lists, locale) belongs in `pkgs/config`
+
+### Feature-enclosed architecture
+Slack features live under `apps/bot/src/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts` when applicable. Keep feature-specific UI/actions near the feature that owns them.
+
+### Code review
+Use the `/coding-best-practices` skill when reviewing or auditing code for quality issues.
+
+### Review cleanup findings
+When addressing review comments, prefer deleting compatibility wrappers and one-shot helpers over renaming them. Keep MCP naming direct (`OAuth`, `URL`, concise function names), parse Slack modal metadata with schemas, and avoid adding files that only re-export another module without real ownership.
+
+## Formatting and Linting (Ultracite)
+
+This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+
+- **Format code**: `bun x ultracite fix`
+- **Check for issues**: `bun x ultracite check`
+- **Diagnose setup**: `bun x ultracite doctor`
+
+Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+
+
+**When you don't know how something works — read the source, don't guess.** The harness/pi,
+AI SDK 7, and `vercel/chat` are canary/under-documented. Clone and inspect:
+`git clone --depth 1 https://github.com/vercel/ai /tmp/ai` ·
+`git clone --depth 1 https://github.com/vercel/chat /tmp/chat` ·
+`https://github.com/earendil-works/pi`.
+
+**Use the skills** when the task touches their area: `ai-sdk`, `chat-sdk`, `slack-agent`,
+`coding-best-practices`, `ultracite`, `neon-postgres`. They carry current patterns the model
+shouldn't reinvent.

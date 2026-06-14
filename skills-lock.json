@@ -7,6 +7,12 @@
       "skillPath": "skills/use-ai-sdk/SKILL.md",
       "computedHash": "2249889eb47ef0f61c4dba4cf2afe01c1c8dd793bb4c24230347c1ab909bb7dd"
     },
+    "chat-sdk": {
+      "source": "vercel/chat",
+      "sourceType": "github",
+      "skillPath": "skills/chat/SKILL.md",
+      "computedHash": "eec16293cb0044b8e4376dec986b96dc70bf425854c6fb7aa062890faa020a25"
+    },
     "grill-with-docs": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -30,6 +36,12 @@
       "sourceType": "github",
       "skillPath": "skills/neon-postgres/SKILL.md",
       "computedHash": "6c6dc205493216d88fb0ee040eafec1d3a722926f6f8f3f568ce26740c53eb74"
+    },
+    "slack-agent": {
+      "source": "vercel-labs/slack-agent-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "c40b751775659892fa9f3eb28f77d570243e07c85c575b24ee0fb19dc824f43f"
     },
     "tsdown": {
       "source": "rolldown/tsdown",
