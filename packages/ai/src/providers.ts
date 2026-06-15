@@ -5,7 +5,7 @@ import { keys } from './keys';
 const env = keys();
 
 export const HACKCLUB_BASE_URL = 'https://ai.hackclub.com/proxy/v1';
-export const CHAT_MODEL_ID = 'google/gemini-3-flash-preview';
+export const CHAT_MODEL_ID = 'openai/gpt-5.4-mini';
 
 const hackclub = createOpenRouter({
   apiKey: env.HACKCLUB_API_KEY,

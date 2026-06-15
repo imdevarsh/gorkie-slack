@@ -45,6 +45,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "dev:bot": "turbo run dev --filter=bot",
+    "start": "bun run start:bot",
     "start:bot": "bun --filter=bot run start",
     "update-pkgs": "taze -w -r",
     "update:major": "taze -w -r major",

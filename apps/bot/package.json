@@ -6,12 +6,12 @@
     "clean": "git clean -xdf .turbo dist node_modules",
     "build": "tsdown",
     "dev": "bun run --hot src/index.ts",
-    "start": "NODE_ENV=production bun run dist/index.mjs",
+    "start": "NODE_ENV=production bun run src/index.ts",
     "typecheck": "tsc -b"
   },
   "dependencies": {
     "@chat-adapter/slack": "^4.30.0",
-    "@chat-adapter/state-memory": "^4.30.0",
+    "@chat-adapter/state-pg": "^4.30.0",
     "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logging": "workspace:*",
@@ -22,6 +22,10 @@
     "ai": "catalog:",
     "chat": "^4.30.0",
     "dotenv": "catalog:",
+    "p-queue": "^6.6.2",
+    "pino": "catalog:",
+    "pino-pretty": "catalog:",
+    "thread-stream": "^4.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {

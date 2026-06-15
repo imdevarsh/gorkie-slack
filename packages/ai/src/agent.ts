@@ -4,6 +4,9 @@ import path from 'node:path';
 import type { HarnessV1SandboxProvider } from '@ai-sdk/harness';
 import {
   HarnessAgent,
+  type HarnessAgentAdapter,
+  type HarnessAgentAdapterSession,
+  type HarnessAgentPromptControl,
   type HarnessAgentResumeSessionState,
   type HarnessAgentSession,
 } from '@ai-sdk/harness/agent';
@@ -13,6 +16,18 @@ import type { ToolSet } from 'ai';
 import { CHAT_MODEL_ID, HACKCLUB_BASE_URL } from './providers';
 
 const PI_SESSIONS_DIR = '.pi-sessions';
+const activePromptControls = new Map<string, HarnessAgentPromptControl>();
+
+export interface GorkieSandboxContext {
+  session: {
+    readBinaryFile(input: { path: string }): PromiseLike<Uint8Array | null>;
+    writeBinaryFile(input: {
+      content: Uint8Array;
+      path: string;
+    }): PromiseLike<void>;
+  };
+  sessionWorkDir: string;
+}
 
 // The harness lays pi's host files under tmpdir()/ai-sdk-harness/pi/<safeSessionId>.
 function piHostRoot(sessionId: string): string {
@@ -36,33 +51,99 @@ function sessionFileNameOf(
   return;
 }
 
+function trackPromptControl({
+  control,
+  sessionId,
+}: {
+  control: HarnessAgentPromptControl;
+  sessionId: string;
+}): HarnessAgentPromptControl {
+  activePromptControls.set(sessionId, control);
+  Promise.resolve(control.done)
+    .finally(() => {
+      if (activePromptControls.get(sessionId) === control) {
+        activePromptControls.delete(sessionId);
+      }
+    })
+    .catch(() => undefined);
+  return control;
+}
+
+function makeSteerableSession(
+  session: HarnessAgentAdapterSession
+): HarnessAgentAdapterSession {
+  return {
+    ...session,
+    doContinueTurn: async (options) =>
+      trackPromptControl({
+        control: await session.doContinueTurn(options),
+        sessionId: session.sessionId,
+      }),
+    doPromptTurn: async (options) =>
+      trackPromptControl({
+        control: await session.doPromptTurn(options),
+        sessionId: session.sessionId,
+      }),
+  };
+}
+
+function makeSteerableHarness(
+  harness: HarnessAgentAdapter
+): HarnessAgentAdapter {
+  return {
+    ...harness,
+    doStart: async (options) =>
+      makeSteerableSession(await harness.doStart(options)),
+  };
+}
+
+export async function steerThread({
+  text,
+  threadId,
+}: {
+  text: string;
+  threadId: string;
+}): Promise<boolean> {
+  const control = activePromptControls.get(threadId);
+  if (!control?.submitUserMessage) {
+    return false;
+  }
+  await control.submitUserMessage(text);
+  return true;
+}
+
 export function createGorkieAgent({
   apiKey,
+  onSandboxReady,
   sandbox,
   systemPrompt,
   tools,
 }: {
   apiKey: string;
+  onSandboxReady?: (input: GorkieSandboxContext) => PromiseLike<void> | void;
   sandbox: HarnessV1SandboxProvider;
   systemPrompt: string;
   tools: ToolSet;
 }) {
   return new HarnessAgent({
-    harness: createPi({
-      auth: {
-        customEnv: {
-          OPENROUTER_API_KEY: apiKey,
-          OPENROUTER_BASE_URL: HACKCLUB_BASE_URL,
+    harness: makeSteerableHarness(
+      createPi({
+        auth: {
+          customEnv: {
+            OPENROUTER_API_KEY: apiKey,
+            OPENROUTER_BASE_URL: HACKCLUB_BASE_URL,
+          },
         },
-      },
-      model: CHAT_MODEL_ID,
-      thinkingLevel: 'medium',
-    }),
+        model: CHAT_MODEL_ID,
+        thinkingLevel: 'medium',
+      })
+    ),
     id: 'gorkie',
     permissionMode: 'allow-all',
     sandbox,
     tools,
     onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
+      await onSandboxReady?.({ session, sessionWorkDir });
       const sessionId = sessionIdFromWorkDir(sessionWorkDir);
 
       // HackClub 403s pi's default prompt, so replace it via <agentDir>/SYSTEM.md

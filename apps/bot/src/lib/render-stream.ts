@@ -27,6 +27,7 @@ const TASK_TITLES: Record<string, string> = {
   searchWeb: 'Searching the web',
   sendDirectMessage: 'Sending DM',
   startTyping: 'Typing',
+  uploadFile: 'Uploading file',
 };
 
 const DETAIL_MAX = 180;
