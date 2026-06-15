@@ -6,9 +6,9 @@ import { env } from '@/env';
 import { toChatLogger } from '@/lib/chat-logger';
 import logger from '@/lib/logger';
 
-// Phase 1: the platform layer only — Slack over socket mode, in-memory state.
-// No agent yet (that's Phase 2); handlers just confirm the wiring is live.
 // State moves to @chat-adapter/state-pg in Phase 3.
+const chatLogger = toChatLogger(logger);
+
 export const bot = new Chat({
   userName: 'gorkie',
   adapters: {
@@ -16,10 +16,11 @@ export const bot = new Chat({
       mode: 'socket',
       appToken: env.SLACK_APP_TOKEN,
       botToken: env.SLACK_BOT_TOKEN,
+      logger: chatLogger,
     }),
   },
   state: createMemoryState(),
-  logger: toChatLogger(logger),
+  logger: chatLogger,
 });
 
 bot.onNewMention(async (thread, message) => {

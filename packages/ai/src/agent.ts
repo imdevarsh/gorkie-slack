@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { HarnessV1SandboxProvider } from '@ai-sdk/harness';
 import {
   HarnessAgent,
@@ -32,17 +35,24 @@ export function createGorkieAgent({
     id: 'gorkie',
     permissionMode: 'allow-all',
     sandbox,
-    // pi's default system prompt is on HackClub's blocklist (and identifies as
-    // pi). Writing gorkie's prompt to <workdir>/.pi/SYSTEM.md fully *replaces*
-    // pi's base prompt (the project is trusted; the VFS maps .pi/ to where pi
-    // reads). This is the clean fix — no global-fetch hack. Runs on fresh and
-    // resumed sessions; writeTextFile creates the .pi dir.
-    onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
-      await session.writeTextFile({
-        abortSignal,
-        content: buildSystemPrompt(),
-        path: `${sessionWorkDir}/.pi/SYSTEM.md`,
-      });
+    // pi resolves its system prompt from <agentDir>/SYSTEM.md on the *host* fs
+    // (pi runs on the host, not the sandbox) and HackClub 403s pi's default
+    // prompt, so replace it before pi boots. The harness derives agentDir as
+    // tmpdir()/ai-sdk-harness/pi/<safeSessionId>/agent and hands us a
+    // sessionWorkDir of `<workdir>/pi-<sessionId>`; recover sessionId from its
+    // basename to rebuild the same path (one shared agent, no per-call closure).
+    onSandboxSession: async ({ sessionWorkDir }) => {
+      const sessionId = path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
+      const safeSessionId = sessionId.replace(/[\\/: ]/g, '-');
+      const agentDir = path.join(
+        tmpdir(),
+        'ai-sdk-harness',
+        'pi',
+        safeSessionId,
+        'agent'
+      );
+      await mkdir(agentDir, { recursive: true });
+      await writeFile(path.join(agentDir, 'SYSTEM.md'), buildSystemPrompt());
     },
   });
 }
@@ -57,7 +67,6 @@ function parseResumeState(
     : undefined;
 }
 
-// Resume the thread's harness session (or start fresh), keyed by Slack thread id.
 export async function openSession({
   agent,
   threadId,
@@ -72,8 +81,7 @@ export async function openSession({
   );
 }
 
-// End the turn and persist the updated resume state. `paused` also pauses the
-// sandbox (e2b betaPause); `active` keeps it warm.
+// `paused` pauses the sandbox (e2b betaPause); `active` keeps it warm.
 export async function persistSession({
   session,
   status,
