@@ -10,16 +10,19 @@ import {
 import { createPi } from '@ai-sdk/harness-pi';
 import { getByThread, updateResumeState } from '@repo/db/queries';
 import { modelConfig } from './config';
-import { buildSystemPrompt } from './prompt';
 
-// One HarnessAgent is reused across threads; per-thread state lives in sessions.
-// Part 1 uses a single shared HackClub key; per-user BYOK arrives in Phase 5.
+// A fresh agent is built per turn, closed over that turn's resolved system
+// prompt (persona + requestHints). Per-thread conversation state lives in the
+// session, not the agent. Part 1 uses a single shared HackClub key; per-user
+// BYOK arrives in Phase 5.
 export function createGorkieAgent({
   apiKey,
   sandbox,
+  systemPrompt,
 }: {
   apiKey: string;
   sandbox: HarnessV1SandboxProvider;
+  systemPrompt: string;
 }) {
   return new HarnessAgent({
     harness: createPi({
@@ -52,7 +55,7 @@ export function createGorkieAgent({
         'agent'
       );
       await mkdir(agentDir, { recursive: true });
-      await writeFile(path.join(agentDir, 'SYSTEM.md'), buildSystemPrompt());
+      await writeFile(path.join(agentDir, 'SYSTEM.md'), systemPrompt);
     },
   });
 }

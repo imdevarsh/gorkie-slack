@@ -1,22 +1,81 @@
-import { createGorkieAgent, openSession, persistSession } from '@repo/ai';
+import {
+  buildSystemPrompt,
+  createGorkieAgent,
+  modelConfig,
+  openSession,
+  persistSession,
+  type RequestHints,
+} from '@repo/ai';
+import { getUserCustomization } from '@repo/db/queries';
 import { createE2BSandboxProvider } from '@repo/sandbox';
+import { getTime } from '@repo/utils/time';
 import type { Message, Thread } from 'chat';
+import { StreamingPlan } from 'chat';
 import { env } from '@/env';
 import logger from '@/lib/logger';
 import { renderHarnessStream } from '@/lib/render-stream';
+import { slack } from '@/slack';
 
 const sandbox = createE2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
   logger,
 });
 
-const agent = createGorkieAgent({
-  apiKey: env.HACKCLUB_API_KEY,
-  sandbox,
-});
+const channelNames = new Map<string, string>();
+let serverName: string | undefined;
 
-// One harness turn for a Slack message: resume the thread's session, stream pi's
-// reply straight into the thread, then persist the updated resume state.
+async function resolveChannelName(
+  channelId: string
+): Promise<string | undefined> {
+  const cached = channelNames.get(channelId);
+  if (cached) {
+    return cached;
+  }
+  try {
+    const info = await slack.webClient.conversations.info({
+      channel: channelId,
+    });
+    const name = info.channel?.name;
+    if (name) {
+      channelNames.set(channelId, name);
+    }
+    return name;
+  } catch {
+    return;
+  }
+}
+
+async function resolveServerName(): Promise<string | undefined> {
+  if (serverName) {
+    return serverName;
+  }
+  try {
+    const info = await slack.webClient.team.info();
+    serverName = info.team?.name;
+    return serverName;
+  } catch {
+    return;
+  }
+}
+
+async function resolveHints(
+  thread: Thread,
+  userId: string
+): Promise<RequestHints> {
+  const [channel, server, customization] = await Promise.all([
+    resolveChannelName(thread.channelId),
+    resolveServerName(),
+    getUserCustomization(userId).catch(() => null),
+  ]);
+  return {
+    channel,
+    customization,
+    model: modelConfig.modelId,
+    server,
+    time: getTime(),
+  };
+}
+
 export async function runTurn({
   message,
   thread,
@@ -27,11 +86,22 @@ export async function runTurn({
   const threadId = thread.id;
   logger.info({ text: message.text, threadId }, '[agent] turn started');
   await thread.startTyping().catch(() => undefined);
+
+  const hints = await resolveHints(thread, message.author.userId);
+  const agent = createGorkieAgent({
+    apiKey: env.HACKCLUB_API_KEY,
+    sandbox,
+    systemPrompt: buildSystemPrompt(hints),
+  });
   const session = await openSession({ agent, threadId });
 
   try {
     const result = await agent.stream({ prompt: message.text, session });
-    await thread.post(renderHarnessStream(result.fullStream));
+    await thread.post(
+      new StreamingPlan(renderHarnessStream(result.fullStream), {
+        groupTasks: 'plan',
+      })
+    );
     const [text, finishReason] = await Promise.all([
       result.text,
       result.finishReason,
