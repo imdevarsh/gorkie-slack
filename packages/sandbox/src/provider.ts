@@ -2,7 +2,6 @@ import type { HarnessV1SandboxProvider } from '@ai-sdk/harness';
 import type { Experimental_SandboxSession } from '@ai-sdk/provider-utils';
 import { Sandbox } from '@e2b/code-interpreter';
 import {
-  clearDestroyed,
   getByThread,
   markActivity,
   updateRuntime,
@@ -50,6 +49,24 @@ class E2BSandboxProvider implements HarnessV1SandboxProvider {
     this.logger = options.logger;
   }
 
+  private readonly spawnSandbox = async (
+    sessionId?: string
+  ): Promise<Sandbox> => {
+    const sandbox = await Sandbox.betaCreate(this.template, {
+      apiKey: this.apiKey,
+      autoPause: true,
+      allowInternetAccess: true,
+      timeoutMs: sandboxConfig.timeoutMs,
+      metadata: {
+        app: 'gorkie',
+        ...(sessionId ? { threadId: sessionId } : {}),
+      },
+    });
+    await sandbox.setTimeout(sandboxConfig.timeoutMs);
+    await sandbox.files.makeDir(sandboxConfig.workdir).catch(() => undefined);
+    return sandbox;
+  };
+
   createSession = async ({
     abortSignal,
     onFirstCreate,
@@ -65,20 +82,8 @@ class E2BSandboxProvider implements HarnessV1SandboxProvider {
   } = {}) => {
     abortSignal?.throwIfAborted();
 
-    const sandbox = await Sandbox.betaCreate(this.template, {
-      apiKey: this.apiKey,
-      autoPause: true,
-      allowInternetAccess: true,
-      timeoutMs: sandboxConfig.timeoutMs,
-      metadata: {
-        app: 'gorkie',
-        ...(sessionId ? { threadId: sessionId } : {}),
-      },
-    });
-
-    await sandbox.setTimeout(sandboxConfig.timeoutMs);
+    const sandbox = await this.spawnSandbox(sessionId);
     const session = new E2BNetworkSandboxSession(sandbox);
-    await sandbox.files.makeDir(sandboxConfig.workdir).catch(() => undefined);
     await onFirstCreate?.(session.restricted(), { abortSignal });
 
     if (sessionId) {
@@ -112,24 +117,33 @@ class E2BSandboxProvider implements HarnessV1SandboxProvider {
       throw new Error(`[sandbox] missing e2b sandbox for ${sessionId}`);
     }
 
-    const sandbox = await connectE2BSandbox(existing.sandboxId, this.apiKey);
-    if (!sandbox) {
-      await clearDestroyed(sessionId);
-      throw new Error(`[sandbox] e2b sandbox ${existing.sandboxId} not found`);
+    let sandbox = await connectE2BSandbox(existing.sandboxId, this.apiKey);
+    if (sandbox) {
+      await sandbox.setTimeout(sandboxConfig.timeoutMs);
+      this.logger.debug(
+        { sessionId, sandboxId: sandbox.sandboxId },
+        '[sandbox] resumed e2b sandbox'
+      );
+    } else {
+      // The old sandbox is gone (killed / expired). Start a fresh one; pi's
+      // mirrored transcript is re-seeded into it via onSandboxSession.
+      sandbox = await this.spawnSandbox(sessionId);
+      this.logger.info(
+        {
+          sessionId,
+          sandboxId: sandbox.sandboxId,
+          previous: existing.sandboxId,
+        },
+        '[sandbox] recreated e2b sandbox from mirror'
+      );
     }
 
-    await sandbox.setTimeout(sandboxConfig.timeoutMs);
     await updateRuntime(sessionId, {
       sandboxId: sandbox.sandboxId,
       sessionId,
       status: 'active',
     });
     await markActivity(sessionId);
-
-    this.logger.debug(
-      { sessionId, sandboxId: sandbox.sandboxId },
-      '[sandbox] resumed e2b sandbox'
-    );
 
     return new E2BNetworkSandboxSession(sandbox);
   };

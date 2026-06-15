@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { HarnessV1SandboxProvider } from '@ai-sdk/harness';
@@ -11,6 +11,30 @@ import { createPi } from '@ai-sdk/harness-pi';
 import { getByThread, updateResumeState } from '@repo/db/queries';
 import type { ToolSet } from 'ai';
 import { CHAT_MODEL_ID, HACKCLUB_BASE_URL } from './providers';
+
+const PI_SESSIONS_DIR = '.pi-sessions';
+
+// The harness lays pi's host files under tmpdir()/ai-sdk-harness/pi/<safeSessionId>.
+function piHostRoot(sessionId: string): string {
+  const safeSessionId = sessionId.replace(/[\\/: ]/g, '-');
+  return path.join(tmpdir(), 'ai-sdk-harness', 'pi', safeSessionId);
+}
+
+// sessionWorkDir is `<workdir>/pi-<sessionId>`.
+function sessionIdFromWorkDir(sessionWorkDir: string): string {
+  return path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
+}
+
+function sessionFileNameOf(
+  resumeState: HarnessAgentResumeSessionState
+): string | undefined {
+  const { data } = resumeState;
+  if (data && typeof data === 'object' && 'sessionFileName' in data) {
+    const name = data.sessionFileName;
+    return typeof name === 'string' ? name : undefined;
+  }
+  return;
+}
 
 export function createGorkieAgent({
   apiKey,
@@ -38,21 +62,39 @@ export function createGorkieAgent({
     permissionMode: 'allow-all',
     sandbox,
     tools,
-    // HackClub 403s pi's default prompt, so replace it via <agentDir>/SYSTEM.md
-    // on the host fs before pi boots. The harness derives agentDir from the
-    // sessionId, which we recover from sessionWorkDir's `pi-<sessionId>` basename.
-    onSandboxSession: async ({ sessionWorkDir }) => {
-      const sessionId = path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
-      const safeSessionId = sessionId.replace(/[\\/: ]/g, '-');
-      const agentDir = path.join(
-        tmpdir(),
-        'ai-sdk-harness',
-        'pi',
-        safeSessionId,
-        'agent'
-      );
+    onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
+      const sessionId = sessionIdFromWorkDir(sessionWorkDir);
+
+      // HackClub 403s pi's default prompt, so replace it via <agentDir>/SYSTEM.md
+      // on the host fs before pi boots.
+      const agentDir = path.join(piHostRoot(sessionId), 'agent');
       await mkdir(agentDir, { recursive: true });
       await writeFile(path.join(agentDir, 'SYSTEM.md'), systemPrompt);
+
+      // Re-seed pi's mirrored transcript when the sandbox is fresh (the previous
+      // one was killed), so the conversation survives. A reconnected sandbox
+      // already has the file, so we only write when it's missing — then pi pulls
+      // it on resume.
+      const existing = await getByThread(sessionId);
+      if (!(existing?.sessionFile && existing.sessionFileName)) {
+        return;
+      }
+      const sessionFilePath = `${sessionWorkDir}/${PI_SESSIONS_DIR}/${existing.sessionFileName}`;
+      try {
+        await session.readTextFile({ abortSignal, path: sessionFilePath });
+        return;
+      } catch {
+        // Missing in this sandbox — re-seed it below.
+      }
+      await session.run({
+        abortSignal,
+        command: `mkdir -p ${JSON.stringify(`${sessionWorkDir}/${PI_SESSIONS_DIR}`)}`,
+      });
+      await session.writeTextFile({
+        abortSignal,
+        content: existing.sessionFile,
+        path: sessionFilePath,
+      });
     },
   });
 }
@@ -81,7 +123,21 @@ export async function openSession({
   );
 }
 
-// `paused` pauses the sandbox (e2b betaPause); `active` keeps it warm.
+// Read pi's live session file from the host so we can mirror it to Postgres.
+function readHostSessionFile(
+  sessionId: string,
+  sessionFileName: string
+): Promise<string | null> {
+  const hostPath = path.join(
+    piHostRoot(sessionId),
+    'sessions',
+    sessionFileName
+  );
+  return readFile(hostPath, 'utf8').catch(() => null);
+}
+
+// `paused` pauses the sandbox (e2b betaPause); `active` keeps it warm. Either
+// way we mirror pi's transcript so the thread survives the sandbox being killed.
 export async function persistSession({
   session,
   status,
@@ -93,9 +149,22 @@ export async function persistSession({
 }): Promise<void> {
   const resumeState =
     status === 'paused' ? await session.stop() : await session.detach();
-  await updateResumeState({
-    resumeState: JSON.stringify(resumeState),
-    status,
-    threadId,
-  });
+  const serialized = JSON.stringify(resumeState);
+
+  const sessionFileName = sessionFileNameOf(resumeState);
+  const sessionFile = sessionFileName
+    ? await readHostSessionFile(threadId, sessionFileName)
+    : null;
+
+  if (sessionFileName && sessionFile !== null) {
+    await updateResumeState({
+      resumeState: serialized,
+      status,
+      threadId,
+      sessionFileName,
+      sessionFile,
+    });
+    return;
+  }
+  await updateResumeState({ resumeState: serialized, status, threadId });
 }
