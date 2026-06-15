@@ -1,7 +1,10 @@
 import { createSlackAdapter } from '@chat-adapter/slack';
 import { createMemoryState } from '@chat-adapter/state-memory';
 import { Chat } from 'chat';
+import { runTurn } from '@/agent';
 import { env } from '@/env';
+import { toChatLogger } from '@/lib/chat-logger';
+import logger from '@/lib/logger';
 
 // Phase 1: the platform layer only — Slack over socket mode, in-memory state.
 // No agent yet (that's Phase 2); handlers just confirm the wiring is live.
@@ -16,21 +19,19 @@ export const bot = new Chat({
     }),
   },
   state: createMemoryState(),
-  logger: env.LOG_LEVEL,
+  logger: toChatLogger(logger),
 });
 
-bot.onNewMention(async (thread) => {
+bot.onNewMention(async (thread, message) => {
   await thread.subscribe();
-  await thread.post(
-    'gorkie here — platform layer is live. The agent lands in Phase 2.'
-  );
+  await runTurn({ message, thread });
 });
 
-bot.onDirectMessage(async (thread) => {
+bot.onDirectMessage(async (thread, message) => {
   await thread.subscribe();
-  await thread.post('gorkie here (DM) — platform layer is live.');
+  await runTurn({ message, thread });
 });
 
 bot.onSubscribedMessage(async (thread, message) => {
-  await thread.post(`echo: ${message.text}`);
+  await runTurn({ message, thread });
 });

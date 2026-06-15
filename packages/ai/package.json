@@ -24,9 +24,8 @@
   "dependencies": {
     "@ai-sdk/harness": "catalog:",
     "@ai-sdk/harness-pi": "catalog:",
-    "@repo/logging": "workspace:*",
+    "@repo/db": "workspace:*",
     "@t3-oss/env-core": "catalog:",
-    "ai": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -1,0 +1,46 @@
+import { createGorkieAgent, openSession, persistSession } from '@repo/ai';
+import { createE2BSandboxProvider } from '@repo/sandbox';
+import type { Message, Thread } from 'chat';
+import { env } from '@/env';
+import logger from '@/lib/logger';
+
+const sandbox = createE2BSandboxProvider({
+  apiKey: env.E2B_API_KEY,
+  logger,
+});
+
+const agent = createGorkieAgent({
+  apiKey: env.HACKCLUB_API_KEY,
+  sandbox,
+});
+
+// One harness turn for a Slack message: resume the thread's session, stream pi's
+// reply straight into the thread, then persist the updated resume state.
+export async function runTurn({
+  message,
+  thread,
+}: {
+  message: Message;
+  thread: Thread;
+}): Promise<void> {
+  const threadId = thread.id;
+  const session = await openSession({ agent, threadId });
+
+  try {
+    const result = await agent.stream({ prompt: message.text, session });
+    await thread.post(result.fullStream);
+    await persistSession({
+      session,
+      status: env.NODE_ENV === 'production' ? 'paused' : 'active',
+      threadId,
+    });
+  } catch (error) {
+    logger.error({ err: error, threadId }, '[agent] turn failed');
+    await persistSession({ session, status: 'active', threadId }).catch(
+      async () => {
+        await session.destroy().catch(() => undefined);
+      }
+    );
+    await thread.post('Sorry — something went wrong handling that.');
+  }
+}
