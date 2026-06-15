@@ -1,9 +1,9 @@
 import type { TextStreamPart, ToolSet } from 'ai';
 import type { StreamChunk } from 'chat';
 
-// Maps pi's harness stream into Chat SDK chunks so Slack shows live progress:
-// text streams as the reply, and each tool call renders as a task card
-// (Running command, Reading file, …) — the v1 "thinking/working" UI.
+// Bridges pi's harness stream to Chat SDK: text-delta passes through as plain
+// strings (Chat SDK's proven text path), and each tool call renders as a task
+// card (Running command, Reading file, …) — the v1 "thinking/working" UI.
 
 const TASK_TITLES: Record<string, string> = {
   bash: 'Running command',
@@ -31,6 +31,10 @@ function field(input: unknown, key: string): string | undefined {
   return;
 }
 
+function taskTitle(toolName: string): string {
+  return TASK_TITLES[toolName] ?? toolName;
+}
+
 function taskDetails(toolName: string, input: unknown): string | undefined {
   const detail =
     field(input, 'command') ??
@@ -48,34 +52,47 @@ function resultOutput(output: unknown): string | undefined {
 
 export async function* renderHarnessStream(
   stream: AsyncIterable<TextStreamPart<ToolSet>>
-): AsyncGenerator<StreamChunk> {
+): AsyncGenerator<string | StreamChunk> {
   for await (const part of stream) {
-    if (part.type === 'text-delta') {
-      yield { type: 'markdown_text', text: part.text };
-    } else if (part.type === 'tool-call') {
-      yield {
-        type: 'task_update',
-        id: part.toolCallId,
-        title: TASK_TITLES[part.toolName] ?? part.toolName,
-        status: 'in_progress',
-        details: taskDetails(part.toolName, part.input),
-      };
-    } else if (part.type === 'tool-result') {
-      yield {
-        type: 'task_update',
-        id: part.toolCallId,
-        title: TASK_TITLES[part.toolName] ?? part.toolName,
-        status: 'complete',
-        output: resultOutput(part.output),
-      };
-    } else if (part.type === 'tool-error') {
-      yield {
-        type: 'task_update',
-        id: part.toolCallId,
-        title: TASK_TITLES[part.toolName] ?? part.toolName,
-        status: 'error',
-        output: resultOutput(part.error),
-      };
+    switch (part.type) {
+      case 'text-delta': {
+        if (part.text) {
+          yield part.text;
+        }
+        break;
+      }
+      case 'tool-call': {
+        yield {
+          details: taskDetails(part.toolName, part.input),
+          id: part.toolCallId,
+          status: 'in_progress',
+          title: taskTitle(part.toolName),
+          type: 'task_update',
+        };
+        break;
+      }
+      case 'tool-result': {
+        yield {
+          id: part.toolCallId,
+          output: resultOutput(part.output),
+          status: 'complete',
+          title: taskTitle(part.toolName),
+          type: 'task_update',
+        };
+        break;
+      }
+      case 'tool-error': {
+        yield {
+          id: part.toolCallId,
+          output: resultOutput(part.error),
+          status: 'error',
+          title: taskTitle(part.toolName),
+          type: 'task_update',
+        };
+        break;
+      }
+      default:
+        break;
     }
   }
 }

@@ -32,12 +32,19 @@ export async function runTurn({
   try {
     const result = await agent.stream({ prompt: message.text, session });
     await thread.post(renderHarnessStream(result.fullStream));
+    const [text, finishReason] = await Promise.all([
+      result.text,
+      result.finishReason,
+    ]);
     await persistSession({
       session,
       status: env.NODE_ENV === 'production' ? 'paused' : 'active',
       threadId,
     });
-    logger.info({ threadId }, '[agent] turn complete');
+    logger.info(
+      { finishReason, textLength: text.length, threadId },
+      '[agent] turn complete'
+    );
   } catch (error) {
     logger.error({ err: error, threadId }, '[agent] turn failed');
     await persistSession({ session, status: 'active', threadId }).catch(
