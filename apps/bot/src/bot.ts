@@ -1,18 +1,10 @@
-import { createMemoryState } from '@chat-adapter/state-memory';
-import { Chat, type Message } from 'chat';
+import type { Message } from 'chat';
 import { runTurn } from '@/agent';
-import { toChatLogger } from '@/lib/chat-logger';
-import logger from '@/lib/logger';
-import { slack } from '@/slack';
+import { bot } from '@/chat';
 
-// State moves to @chat-adapter/state-pg in Phase 3.
-export const bot = new Chat({
-  userName: 'gorkie',
-  adapters: { slack },
-  state: createMemoryState(),
-  logger: toChatLogger(logger),
-});
+export { bot } from '@/chat';
 
+// Ignore other bots and our own posts; `##` is the user opt-out prefix.
 function shouldRespond(message: Message): boolean {
   if (message.author.isBot === true || message.author.isMe) {
     return false;

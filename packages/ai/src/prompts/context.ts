@@ -10,6 +10,12 @@ export function contextPrompt(hints: RequestHints): string {
   if (hints.model) {
     lines.push(`You are running on the ${hints.model} model.`);
   }
+  lines.push(`The current thread id is ${hints.threadId}.`);
+  if (hints.messageId) {
+    lines.push(
+      `The message you're responding to has id ${hints.messageId} (use it to react).`
+    );
+  }
   lines.push(
     "Gorkie's source code is at https://github.com/imdevarsh/gorkie-slack"
   );

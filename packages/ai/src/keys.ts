@@ -7,9 +7,11 @@ export const keys = () =>
   createEnv({
     server: {
       HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
+      EXA_API_KEY: z.string().min(1),
     },
     runtimeEnv: {
       HACKCLUB_API_KEY: process.env.HACKCLUB_API_KEY,
+      EXA_API_KEY: process.env.EXA_API_KEY,
     },
     emptyStringAsUndefined: true,
   });

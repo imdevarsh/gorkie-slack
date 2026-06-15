@@ -24,8 +24,11 @@
   "dependencies": {
     "@ai-sdk/harness": "catalog:",
     "@ai-sdk/harness-pi": "catalog:",
+    "@openrouter/ai-sdk-provider": "catalog:",
     "@repo/db": "workspace:*",
     "@t3-oss/env-core": "catalog:",
+    "ai": "catalog:",
+    "exa-js": "^2.13.0",
     "zod": "catalog:"
   },
   "devDependencies": {

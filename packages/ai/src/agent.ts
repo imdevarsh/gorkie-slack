@@ -9,31 +9,35 @@ import {
 } from '@ai-sdk/harness/agent';
 import { createPi } from '@ai-sdk/harness-pi';
 import { getByThread, updateResumeState } from '@repo/db/queries';
-import { modelConfig } from './config';
+import type { ToolSet } from 'ai';
+import { CHAT_MODEL_ID, HACKCLUB_BASE_URL } from './providers';
 
 export function createGorkieAgent({
   apiKey,
   sandbox,
   systemPrompt,
+  tools,
 }: {
   apiKey: string;
   sandbox: HarnessV1SandboxProvider;
   systemPrompt: string;
+  tools: ToolSet;
 }) {
   return new HarnessAgent({
     harness: createPi({
       auth: {
         customEnv: {
           OPENROUTER_API_KEY: apiKey,
-          OPENROUTER_BASE_URL: modelConfig.baseUrl,
+          OPENROUTER_BASE_URL: HACKCLUB_BASE_URL,
         },
       },
-      model: modelConfig.modelId,
-      thinkingLevel: modelConfig.thinkingLevel,
+      model: CHAT_MODEL_ID,
+      thinkingLevel: 'medium',
     }),
     id: 'gorkie',
     permissionMode: 'allow-all',
     sandbox,
+    tools,
     // HackClub 403s pi's default prompt, so replace it via <agentDir>/SYSTEM.md
     // on the host fs before pi boots. The harness derives agentDir from the
     // sessionId, which we recover from sessionWorkDir's `pi-<sessionId>` basename.

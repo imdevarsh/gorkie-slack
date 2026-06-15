@@ -6,6 +6,7 @@ import type { StreamChunk } from 'chat';
 // card (Running command, Reading file, …) — the v1 "thinking/working" UI.
 
 const TASK_TITLES: Record<string, string> = {
+  // pi sandbox builtins
   bash: 'Running command',
   edit: 'Editing file',
   glob: 'Finding files',
@@ -13,6 +14,19 @@ const TASK_TITLES: Record<string, string> = {
   ls: 'Listing files',
   read: 'Reading file',
   write: 'Writing file',
+  // host tools
+  addReaction: 'Adding reaction',
+  fetchMessages: 'Reading messages',
+  fetchThread: 'Reading thread',
+  generateImage: 'Generating image',
+  getChannelInfo: 'Reading channel',
+  getUser: 'Looking up user',
+  postChannelMessage: 'Posting to channel',
+  postMessage: 'Sending message',
+  removeReaction: 'Removing reaction',
+  searchWeb: 'Searching the web',
+  sendDirectMessage: 'Sending DM',
+  startTyping: 'Typing',
 };
 
 const DETAIL_MAX = 180;
@@ -53,12 +67,38 @@ function resultOutput(output: unknown): string | undefined {
 export async function* renderHarnessStream(
   stream: AsyncIterable<TextStreamPart<ToolSet>>
 ): AsyncGenerator<string | StreamChunk> {
+  const reasoning = new Map<string, string>();
   for await (const part of stream) {
     switch (part.type) {
       case 'text-delta': {
         if (part.text) {
           yield part.text;
         }
+        break;
+      }
+      case 'reasoning-start': {
+        reasoning.set(part.id, '');
+        yield {
+          id: `reasoning-${part.id}`,
+          status: 'in_progress',
+          title: 'Thinking',
+          type: 'task_update',
+        };
+        break;
+      }
+      case 'reasoning-delta': {
+        reasoning.set(part.id, (reasoning.get(part.id) ?? '') + part.text);
+        break;
+      }
+      case 'reasoning-end': {
+        yield {
+          id: `reasoning-${part.id}`,
+          output: resultOutput(reasoning.get(part.id)),
+          status: 'complete',
+          title: 'Thinking',
+          type: 'task_update',
+        };
+        reasoning.delete(part.id);
         break;
       }
       case 'tool-call': {
