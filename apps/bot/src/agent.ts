@@ -3,6 +3,7 @@ import { createE2BSandboxProvider } from '@repo/sandbox';
 import type { Message, Thread } from 'chat';
 import { env } from '@/env';
 import logger from '@/lib/logger';
+import { renderHarnessStream } from '@/lib/render-stream';
 
 const sandbox = createE2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
@@ -24,16 +25,19 @@ export async function runTurn({
   thread: Thread;
 }): Promise<void> {
   const threadId = thread.id;
+  logger.info({ text: message.text, threadId }, '[agent] turn started');
+  await thread.startTyping().catch(() => undefined);
   const session = await openSession({ agent, threadId });
 
   try {
     const result = await agent.stream({ prompt: message.text, session });
-    await thread.post(result.fullStream);
+    await thread.post(renderHarnessStream(result.fullStream));
     await persistSession({
       session,
       status: env.NODE_ENV === 'production' ? 'paused' : 'active',
       threadId,
     });
+    logger.info({ threadId }, '[agent] turn complete');
   } catch (error) {
     logger.error({ err: error, threadId }, '[agent] turn failed');
     await persistSession({ session, status: 'active', threadId }).catch(
