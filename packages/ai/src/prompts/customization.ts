@@ -1,4 +1,4 @@
-import type { RequestHints } from './types';
+import type { RequestHints } from './hints';
 
 export function customizationPrompt(hints: RequestHints): string | null {
   const prompt = hints.customization?.prompt;

@@ -76,7 +76,29 @@ async function resolveHints(
   };
 }
 
-export async function runTurn({
+const threadTurns = new Map<string, Promise<void>>();
+
+// pi sessions are one turn at a time per thread, and a turn can outlive the Chat
+// SDK's 30s thread lock — so we serialize turns per thread ourselves to keep
+// concurrent turns off the same pi session.
+export function runTurn(input: {
+  message: Message;
+  thread: Thread;
+}): Promise<void> {
+  const threadId = input.thread.id;
+  const next = (threadTurns.get(threadId) ?? Promise.resolve()).then(() =>
+    executeTurn(input)
+  );
+  threadTurns.set(threadId, next);
+  next.finally(() => {
+    if (threadTurns.get(threadId) === next) {
+      threadTurns.delete(threadId);
+    }
+  });
+  return next;
+}
+
+async function executeTurn({
   message,
   thread,
 }: {

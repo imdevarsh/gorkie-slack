@@ -1,6 +1,4 @@
-import type { RequestHints } from './types';
-
-const SOURCE_URL = 'https://github.com/imdevarsh/gorkie-slack';
+import type { RequestHints } from './hints';
 
 export function contextPrompt(hints: RequestHints): string {
   const lines = [`The current date and time is ${hints.time}.`];
@@ -12,6 +10,8 @@ export function contextPrompt(hints: RequestHints): string {
   if (hints.model) {
     lines.push(`You are running on the ${hints.model} model.`);
   }
-  lines.push(`Gorkie's source code is at ${SOURCE_URL}`);
+  lines.push(
+    "Gorkie's source code is at https://github.com/imdevarsh/gorkie-slack"
+  );
   return `<context>\n${lines.join('\n')}\n</context>`;
 }

@@ -11,10 +11,6 @@ import { createPi } from '@ai-sdk/harness-pi';
 import { getByThread, updateResumeState } from '@repo/db/queries';
 import { modelConfig } from './config';
 
-// A fresh agent is built per turn, closed over that turn's resolved system
-// prompt (persona + requestHints). Per-thread conversation state lives in the
-// session, not the agent. Part 1 uses a single shared HackClub key; per-user
-// BYOK arrives in Phase 5.
 export function createGorkieAgent({
   apiKey,
   sandbox,
@@ -38,12 +34,9 @@ export function createGorkieAgent({
     id: 'gorkie',
     permissionMode: 'allow-all',
     sandbox,
-    // pi resolves its system prompt from <agentDir>/SYSTEM.md on the *host* fs
-    // (pi runs on the host, not the sandbox) and HackClub 403s pi's default
-    // prompt, so replace it before pi boots. The harness derives agentDir as
-    // tmpdir()/ai-sdk-harness/pi/<safeSessionId>/agent and hands us a
-    // sessionWorkDir of `<workdir>/pi-<sessionId>`; recover sessionId from its
-    // basename to rebuild the same path (one shared agent, no per-call closure).
+    // HackClub 403s pi's default prompt, so replace it via <agentDir>/SYSTEM.md
+    // on the host fs before pi boots. The harness derives agentDir from the
+    // sessionId, which we recover from sessionWorkDir's `pi-<sessionId>` basename.
     onSandboxSession: async ({ sessionWorkDir }) => {
       const sessionId = path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
       const safeSessionId = sessionId.replace(/[\\/: ]/g, '-');

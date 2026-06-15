@@ -5,4 +5,4 @@ export {
   persistSession,
 } from './agent';
 export { modelConfig } from './config';
-export { buildSystemPrompt, type RequestHints } from './prompt';
+export { buildSystemPrompt, type RequestHints } from './prompts';
