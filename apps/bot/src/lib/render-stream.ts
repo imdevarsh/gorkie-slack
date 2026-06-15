@@ -28,7 +28,7 @@ function field(input: unknown, key: string): string | undefined {
     const value = (input as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : undefined;
   }
-  return undefined;
+  return;
 }
 
 function taskDetails(toolName: string, input: unknown): string | undefined {
