@@ -30,9 +30,20 @@ export function createGorkieAgent({
       thinkingLevel: modelConfig.thinkingLevel,
     }),
     id: 'gorkie',
-    instructions: buildSystemPrompt(),
     permissionMode: 'allow-all',
     sandbox,
+    // pi's default system prompt is on HackClub's blocklist (and identifies as
+    // pi). Writing gorkie's prompt to <workdir>/.pi/SYSTEM.md fully *replaces*
+    // pi's base prompt (the project is trusted; the VFS maps .pi/ to where pi
+    // reads). This is the clean fix — no global-fetch hack. Runs on fresh and
+    // resumed sessions; writeTextFile creates the .pi dir.
+    onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
+      await session.writeTextFile({
+        abortSignal,
+        content: buildSystemPrompt(),
+        path: `${sessionWorkDir}/.pi/SYSTEM.md`,
+      });
+    },
   });
 }
 

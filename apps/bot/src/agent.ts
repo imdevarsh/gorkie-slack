@@ -36,18 +36,15 @@ export async function runTurn({
       result.text,
       result.finishReason,
     ]);
-    await persistSession({
-      session,
-      status: env.NODE_ENV === 'production' ? 'paused' : 'active',
-      threadId,
-    });
+    // Pause the sandbox after each turn (e2b betaPause); the next turn resumes it.
+    await persistSession({ session, status: 'paused', threadId });
     logger.info(
       { finishReason, textLength: text.length, threadId },
       '[agent] turn complete'
     );
   } catch (error) {
     logger.error({ err: error, threadId }, '[agent] turn failed');
-    await persistSession({ session, status: 'active', threadId }).catch(
+    await persistSession({ session, status: 'paused', threadId }).catch(
       async () => {
         await session.destroy().catch(() => undefined);
       }
