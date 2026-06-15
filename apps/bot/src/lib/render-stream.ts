@@ -31,6 +31,9 @@ const TASK_TITLES: Record<string, string> = {
 
 const DETAIL_MAX = 180;
 const OUTPUT_MAX = 280;
+// Reasoning is the point of the "Thinking" card, so give it room (Slack section
+// text caps at 3000 chars).
+const REASONING_MAX = 2800;
 
 function clamp(value: string, max: number): string {
   const trimmed = value.trim();
@@ -91,9 +94,10 @@ export async function* renderHarnessStream(
         break;
       }
       case 'reasoning-end': {
+        const text = reasoning.get(part.id)?.trim();
         yield {
           id: `reasoning-${part.id}`,
-          output: resultOutput(reasoning.get(part.id)),
+          output: text ? clamp(text, REASONING_MAX) : undefined,
           status: 'complete',
           title: 'Thinking',
           type: 'task_update',
