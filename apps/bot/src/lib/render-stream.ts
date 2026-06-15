@@ -16,8 +16,10 @@ const TASK_TITLES: Record<string, string> = {
   write: 'Writing file',
   // host tools
   addReaction: 'Adding reaction',
+  compaction: 'Compacting context',
   fetchMessages: 'Reading messages',
   fetchThread: 'Reading thread',
+  fileChange: 'Updating file',
   generateImage: 'Generating image',
   getChannelInfo: 'Reading channel',
   getUser: 'Looking up user',
@@ -69,9 +71,12 @@ function resultOutput(output: unknown): string | undefined {
 }
 
 export async function* renderHarnessStream(
-  stream: AsyncIterable<TextStreamPart<ToolSet>>
+  stream: AsyncIterable<TextStreamPart<ToolSet>>,
+  options: { initialReasoningTaskId?: string } = {}
 ): AsyncGenerator<string | StreamChunk> {
   const reasoning = new Map<string, string>();
+  const reasoningTaskIds = new Map<string, string>();
+  let usedInitialReasoningTask = false;
   for await (const part of stream) {
     switch (part.type) {
       case 'text-delta': {
@@ -82,8 +87,14 @@ export async function* renderHarnessStream(
       }
       case 'reasoning-start': {
         reasoning.set(part.id, '');
+        const taskId =
+          options.initialReasoningTaskId && !usedInitialReasoningTask
+            ? options.initialReasoningTaskId
+            : `reasoning-${part.id}`;
+        reasoningTaskIds.set(part.id, taskId);
+        usedInitialReasoningTask = true;
         yield {
-          id: `reasoning-${part.id}`,
+          id: taskId,
           status: 'in_progress',
           title: 'Thinking',
           type: 'task_update',
@@ -97,13 +108,14 @@ export async function* renderHarnessStream(
       case 'reasoning-end': {
         const text = reasoning.get(part.id)?.trim();
         yield {
-          id: `reasoning-${part.id}`,
+          id: reasoningTaskIds.get(part.id) ?? `reasoning-${part.id}`,
           output: text ? clamp(text, REASONING_MAX) : undefined,
           status: 'complete',
           title: 'Thinking',
           type: 'task_update',
         };
         reasoning.delete(part.id);
+        reasoningTaskIds.delete(part.id);
         break;
       }
       case 'tool-call': {
@@ -139,5 +151,13 @@ export async function* renderHarnessStream(
       default:
         break;
     }
+  }
+  if (options.initialReasoningTaskId && !usedInitialReasoningTask) {
+    yield {
+      id: options.initialReasoningTaskId,
+      status: 'complete',
+      title: 'Thinking',
+      type: 'task_update',
+    };
   }
 }

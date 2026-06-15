@@ -49,22 +49,56 @@ interface SeededAttachment {
   type: string;
 }
 
-// Slack encodes thread ids as `slack:<channel>:<threadTs>`.
-function threadTsOf(thread: Thread): string | undefined {
-  return thread.id.split(':').at(2) || undefined;
+function slackThreadOf(thread: Thread):
+  | {
+      channel: string;
+      threadTs: string;
+    }
+  | undefined {
+  const [adapter, channel, threadTs] = thread.id.split(':');
+  if (adapter !== 'slack' || !(channel && threadTs)) {
+    return;
+  }
+  return { channel, threadTs };
 }
 
 async function setThinking(thread: Thread, status: string): Promise<void> {
-  const threadTs = threadTsOf(thread);
-  if (!threadTs) {
+  const slackThread = slackThreadOf(thread);
+  if (!slackThread) {
     return;
   }
   await slack.webClient.assistant.threads
     .setStatus({
-      channel_id: thread.channelId,
-      thread_ts: threadTs,
+      channel_id: slackThread.channel,
+      thread_ts: slackThread.threadTs,
       status,
       ...(status ? { loading_messages: LOADING_MESSAGES } : {}),
+    })
+    .catch(() => undefined);
+}
+
+async function acknowledgeSteer({
+  message,
+  thread,
+}: {
+  message: Message;
+  thread: Thread;
+}): Promise<void> {
+  await setThinking(thread, 'got your update');
+  const slackThread = slackThreadOf(thread);
+  if (!slackThread) {
+    return;
+  }
+
+  const preview = message.text.trim().replace(/\s+/g, ' ').slice(0, 120);
+  await slack.webClient.chat
+    .postEphemeral({
+      channel: slackThread.channel,
+      text: preview
+        ? `Got it - applying this to the current run: "${preview}"`
+        : 'Got it - applying your latest message to the current run.',
+      thread_ts: slackThread.threadTs,
+      user: message.author.userId,
     })
     .catch(() => undefined);
 }
@@ -90,16 +124,20 @@ function buildTools({
     ...createTools({ exaApiKey: env.EXA_API_KEY }),
     generateImage: generateImageTool({
       upload: async ({ bytes, mediaType, index, total }) => {
-        const threadTs = threadTsOf(thread);
+        const slackThread = slackThreadOf(thread);
+        if (!slackThread) {
+          throw new Error('Cannot upload image outside a Slack thread.');
+        }
         const file = {
-          channel_id: thread.channelId,
+          channel_id: slackThread.channel,
           file: Buffer.from(bytes),
           filename: `gorkie-image-${index + 1}.${mediaType.split('/').at(1) ?? 'png'}`,
           title: total > 1 ? `Generated image ${index + 1}` : 'Generated image',
         };
-        await slack.webClient.files.uploadV2(
-          threadTs ? { ...file, thread_ts: threadTs } : file
-        );
+        await slack.webClient.files.uploadV2({
+          ...file,
+          thread_ts: slackThread.threadTs,
+        });
       },
     }),
     uploadFile: uploadFileTool({
@@ -129,16 +167,20 @@ function buildTools({
 
         const resolvedFilename =
           filename ?? nodePath.basename(sandboxPath) ?? 'artifact';
-        const threadTs = threadTsOf(thread);
+        const slackThread = slackThreadOf(thread);
+        if (!slackThread) {
+          throw new Error('Cannot upload file outside a Slack thread.');
+        }
         const file = {
-          channel_id: thread.channelId,
+          channel_id: slackThread.channel,
           file: Buffer.from(bytes),
           filename: resolvedFilename,
           title: title ?? resolvedFilename,
         };
-        await slack.webClient.files.uploadV2(
-          threadTs ? { ...file, thread_ts: threadTs } : file
-        );
+        await slack.webClient.files.uploadV2({
+          ...file,
+          thread_ts: slackThread.threadTs,
+        });
         return { filename: resolvedFilename, uploaded: true };
       },
     }),
@@ -194,14 +236,16 @@ async function resolveHints({
   thread: Thread;
   message: Message;
 }): Promise<RequestHints> {
+  const slackThread = slackThreadOf(thread);
+  const channelId = slackThread?.channel ?? thread.channelId;
   const [channel, server, customization] = await Promise.all([
-    resolveChannelName(thread.channelId),
+    resolveChannelName(channelId),
     resolveServerName(),
     getUserCustomization(message.author.userId).catch(() => null),
   ]);
   return {
     channel,
-    channelId: thread.channelId,
+    channelId,
     customization,
     messageId: message.id,
     model: CHAT_MODEL_ID,
@@ -228,8 +272,9 @@ export function runTurn(input: {
         logger.warn({ err: error, threadId }, '[agent] steering failed');
         return false;
       })
-      .then((steered) => {
+      .then(async (steered) => {
         if (steered) {
+          await acknowledgeSteer(input);
           logger.info(
             { text: input.message.text, threadId },
             '[agent] turn steered'
@@ -428,18 +473,20 @@ async function executeTurn({
       prompt: promptWithAttachments({ attachments, text: message.text }),
       session,
     });
-    yield* renderHarnessStream(result.fullStream);
-
-    const [text, finishReason] = await Promise.all([
-      result.text,
-      result.finishReason,
-    ]);
-    completion = { finishReason, textLength: text.length };
     yield {
       id: taskId,
       status: 'complete',
       title: 'Thinking',
       type: 'task_update',
     };
+    yield* renderHarnessStream(result.fullStream, {
+      initialReasoningTaskId: taskId,
+    });
+
+    const [text, finishReason] = await Promise.all([
+      result.text,
+      result.finishReason,
+    ]);
+    completion = { finishReason, textLength: text.length };
   }
 }
