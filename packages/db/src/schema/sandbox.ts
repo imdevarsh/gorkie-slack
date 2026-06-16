@@ -7,11 +7,6 @@ export const sandboxSessions = pgTable(
     sandboxId: text('sandbox_id').notNull(),
     sessionId: text('session_id').notNull(),
     resumeState: text('resume_state'),
-    // Mirror of pi's transcript so a conversation survives the sandbox being
-    // killed: the session file's name + its bytes (base64), re-seeded into a
-    // fresh sandbox on resume. See packages/ai session handling.
-    sessionFileName: text('session_file_name'),
-    sessionFile: text('session_file'),
     status: text('status').notNull().default('creating'),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),

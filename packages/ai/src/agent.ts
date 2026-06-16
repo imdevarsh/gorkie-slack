@@ -1,20 +1,20 @@
+import path from 'node:path';
 import type { HarnessV1SandboxProvider } from '@ai-sdk/harness';
 import { HarnessAgent } from '@ai-sdk/harness/agent';
 import { createPi } from '@ai-sdk/harness-pi';
 import type { ToolSet } from 'ai';
-import { sessionIdFromWorkDir, syncSession } from './files/session';
 import { writeSystemPrompt } from './files/system';
-import { CHAT_MODEL, HACKCLUB_BASE_URL } from './providers';
+import type { PiAttempt } from './providers';
 import type { SandboxContext } from './types';
 
 export function createAgent({
-  apiKey,
+  attempt,
   onSandboxReady,
   sandbox,
   systemPrompt,
   tools,
 }: {
-  apiKey: string;
+  attempt: PiAttempt;
   onSandboxReady?: (input: SandboxContext) => PromiseLike<void> | void;
   sandbox: HarnessV1SandboxProvider;
   systemPrompt: string;
@@ -23,28 +23,19 @@ export function createAgent({
   return new HarnessAgent({
     harness: createPi({
       auth: {
-        customEnv: {
-          OPENROUTER_API_KEY: apiKey,
-          OPENROUTER_BASE_URL: HACKCLUB_BASE_URL,
-        },
+        customEnv: attempt.customEnv,
       },
-      model: CHAT_MODEL,
+      model: attempt.model,
       thinkingLevel: 'medium',
     }),
     id: 'gorkie',
     permissionMode: 'allow-all',
     sandbox,
     tools,
-    onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
+    onSandboxSession: async ({ session, sessionWorkDir }) => {
       await onSandboxReady?.({ session, sessionWorkDir });
-      const sessionId = sessionIdFromWorkDir(sessionWorkDir);
+      const sessionId = path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
       await writeSystemPrompt({ sessionId, systemPrompt });
-      await syncSession({
-        abortSignal,
-        session,
-        sessionId,
-        sessionWorkDir,
-      });
     },
   });
 }

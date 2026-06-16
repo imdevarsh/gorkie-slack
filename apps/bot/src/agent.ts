@@ -1,7 +1,11 @@
 import {
   buildSystemPrompt,
+  chatAttempts,
   createAgent,
+  isRetryableProviderError,
+  isRetryableSameAttempt,
   openSession,
+  type PiAttempt,
   persistSession,
   type SandboxContext,
 } from '@repo/ai';
@@ -55,6 +59,8 @@ async function executeTurn(
   await setThinking(thread, 'is thinking');
 
   let session: Awaited<ReturnType<typeof openSession>> | undefined;
+  let activeAttempt: PiAttempt | undefined;
+  let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
 
   try {
@@ -68,29 +74,25 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
-    await persistSession({ session, status: 'paused', threadId });
-    logger.info({ ...completion, threadId }, '[agent] turn complete');
+    await persistSession({ session, threadId });
+    logger.info(
+      { ...completion, attempt: attemptLog(activeAttempt), threadId },
+      '[agent] turn complete'
+    );
   } catch (error) {
-    // Interrupted by a follow-up: pi already stopped gracefully and persisted
-    // its partial transcript, so finalize quietly — the new turn handles the reply.
+    // Interrupted by a follow-up; the new turn handles the reply.
     if (controller.signal.aborted) {
       logger.info({ threadId }, '[agent] turn interrupted');
       if (session) {
-        await persistSession({ session, status: 'paused', threadId }).catch(
-          () => undefined
-        );
+        await session.detach().catch(() => undefined);
       }
     } else {
-      logger.error({ err: error, threadId }, '[agent] turn failed');
+      logger.error(
+        { attempt: attemptLog(activeAttempt), err: error, threadId },
+        '[agent] turn failed'
+      );
       if (session) {
-        const failedSession = session;
-        await persistSession({
-          session: failedSession,
-          status: 'paused',
-          threadId,
-        }).catch(async () => {
-          await failedSession.destroy().catch(() => undefined);
-        });
+        await session.detach().catch(() => undefined);
       }
       await thread.post(agentErrorMessage(error));
     }
@@ -106,37 +108,87 @@ async function executeTurn(
     thread: Thread;
   }) {
     const hints = await requestHints({ thread, message });
-    let sandboxContext: SandboxContext | undefined;
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
-    const agent = createAgent({
-      apiKey: env.HACKCLUB_API_KEY,
-      onSandboxReady: async (context) => {
-        sandboxContext = context;
-        attachments = await seedAttachments({
-          message,
-          sandboxContext: context,
-        });
-      },
-      sandbox,
-      systemPrompt: buildSystemPrompt(hints),
-      tools: buildTools({
-        bot,
-        getSandboxContext: () => sandboxContext,
-        thread,
-      }),
-    });
-    session = await openSession({ agent, threadId });
-    const result = await agent.stream({
-      abortSignal: controller.signal,
-      prompt: promptWithAttachments({ attachments, text: message.text }),
-      session,
-    });
-    yield* renderStream(result.fullStream);
+    for (const [index, attempt] of chatAttempts.entries()) {
+      for (let tryNumber = 1; tryNumber <= attempt.retries; tryNumber++) {
+        try {
+          activeAttempt = attempt;
+          const agent = createAgent({
+            attempt,
+            onSandboxReady: async (context) => {
+              sandboxContext = context;
+              attachments = await seedAttachments({
+                message,
+                sandboxContext: context,
+              });
+            },
+            sandbox,
+            systemPrompt: buildSystemPrompt({ ...hints, model: attempt.model }),
+            tools: buildTools({
+              bot,
+              getSandboxContext: () => sandboxContext,
+              thread,
+            }),
+          });
+          session = await openSession({ agent, threadId });
+          const result = await agent.stream({
+            abortSignal: controller.signal,
+            prompt: promptWithAttachments({ attachments, text: message.text }),
+            session,
+          });
+          yield* renderStream(result.fullStream);
 
-    const [text, finishReason] = await Promise.all([
-      result.text,
-      result.finishReason,
-    ]);
-    completion = { finishReason, textLength: text.length };
+          const [text, finishReason] = await Promise.all([
+            result.text,
+            result.finishReason,
+          ]);
+          completion = { finishReason, textLength: text.length };
+          return;
+        } catch (error) {
+          const retrySameModel =
+            tryNumber < attempt.retries && isRetryableSameAttempt(error);
+          const nextAttempt = retrySameModel
+            ? attempt
+            : chatAttempts[index + 1];
+          if (
+            controller.signal.aborted ||
+            !isRetryableProviderError(error) ||
+            !nextAttempt
+          ) {
+            throw error;
+          }
+          logger.warn(
+            {
+              attempt: attemptLog(attempt),
+              err: error,
+              nextAttempt: attemptLog(nextAttempt),
+              retry: retrySameModel
+                ? {
+                    next: tryNumber + 1,
+                    remaining: attempt.retries - tryNumber,
+                  }
+                : undefined,
+              threadId,
+            },
+            retrySameModel
+              ? '[agent] model attempt failed, retrying same model'
+              : '[agent] model attempt failed, retrying next model'
+          );
+          if (session) {
+            await session.detach().catch(() => undefined);
+            session = undefined;
+          }
+          if (!retrySameModel) {
+            break;
+          }
+        }
+      }
+    }
   }
+}
+
+function attemptLog(attempt: PiAttempt | undefined) {
+  return attempt
+    ? { model: attempt.model, provider: attempt.provider }
+    : undefined;
 }

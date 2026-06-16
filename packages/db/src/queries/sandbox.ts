@@ -72,14 +72,10 @@ export async function updateResumeState({
   resumeState,
   status,
   threadId,
-  sessionFileName,
-  sessionFile,
 }: {
   resumeState: string | null;
   status?: string;
   threadId: string;
-  sessionFileName?: string | null;
-  sessionFile?: string | null;
 }): Promise<void> {
   await db
     .update(sandboxSessions)
@@ -88,8 +84,6 @@ export async function updateResumeState({
       ...(status ? { status } : {}),
       ...(status === 'paused' && { pausedAt: new Date() }),
       ...(status === 'active' && { resumedAt: new Date() }),
-      ...(sessionFileName === undefined ? {} : { sessionFileName }),
-      ...(sessionFile === undefined ? {} : { sessionFile }),
       updatedAt: new Date(),
     })
     .where(eq(sandboxSessions.threadId, threadId));

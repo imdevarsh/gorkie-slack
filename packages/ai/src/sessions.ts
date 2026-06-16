@@ -1,7 +1,6 @@
 import type { HarnessAgentSession } from '@ai-sdk/harness/agent';
 import { getByThread, updateResumeState } from '@repo/db/queries';
 import type { Agent } from './agent';
-import { readSession, sessionFileNameOf } from './files/session';
 
 export async function openSession({
   agent,
@@ -21,31 +20,15 @@ export async function openSession({
 
 export async function persistSession({
   session,
-  status,
   threadId,
 }: {
   session: HarnessAgentSession;
-  status: 'active' | 'paused';
   threadId: string;
 }): Promise<void> {
-  const resumeState =
-    status === 'paused' ? await session.stop() : await session.detach();
-  const serialized = JSON.stringify(resumeState);
-
-  const sessionFileName = sessionFileNameOf(resumeState);
-  const sessionFile = sessionFileName
-    ? await readSession({ sessionId: threadId, sessionFileName })
-    : null;
-
-  if (sessionFileName && sessionFile !== null) {
-    await updateResumeState({
-      resumeState: serialized,
-      status,
-      threadId,
-      sessionFileName,
-      sessionFile,
-    });
-    return;
-  }
-  await updateResumeState({ resumeState: serialized, status, threadId });
+  const resumeState = await session.detach();
+  await updateResumeState({
+    resumeState: JSON.stringify(resumeState),
+    status: 'paused',
+    threadId,
+  });
 }

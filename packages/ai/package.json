@@ -24,7 +24,6 @@
   "dependencies": {
     "@ai-sdk/harness": "catalog:",
     "@ai-sdk/harness-pi": "catalog:",
-    "@ai-sdk/provider-utils": "catalog:",
     "@openrouter/ai-sdk-provider": "catalog:",
     "@repo/db": "workspace:*",
     "@t3-oss/env-core": "catalog:",
