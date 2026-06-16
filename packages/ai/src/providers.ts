@@ -12,9 +12,8 @@ const hackclub = createOpenRouter({
   baseURL: HACKCLUB_BASE_URL,
 });
 
-// AI SDK provider for host tools (e.g. generateImage). pi routes the chat model
-// itself via the OPENROUTER_API_KEY / OPENROUTER_BASE_URL it reads from
-// auth.customEnv, so it does not go through this provider.
+// pi routes chat model calls itself via auth.customEnv; this provider is for
+// host-side AI SDK calls, such as image generation.
 export const provider: Provider = customProvider({
   languageModels: { 'chat-model': hackclub.languageModel(CHAT_MODEL_ID) },
   imageModels: {

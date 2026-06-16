@@ -28,7 +28,6 @@
     "@repo/db": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "ai": "catalog:",
-    "exa-js": "^2.13.0",
     "zod": "catalog:"
   },
   "devDependencies": {

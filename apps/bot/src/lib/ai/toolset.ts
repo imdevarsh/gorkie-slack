@@ -1,15 +1,13 @@
 import nodePath from 'node:path/posix';
-import {
-  type GorkieSandboxContext,
-  generateImageTool,
-  searchWeb,
-  uploadFileTool,
-} from '@repo/ai';
+import type { GorkieSandboxContext } from '@repo/ai';
 import type { ToolSet } from 'ai';
 import type { Chat, Thread } from 'chat';
 import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
 import { uploadToThread } from '@/lib/slack/thread';
+import { generateImageTool } from './tools/generate-image';
+import { searchWeb } from './tools/search-web';
+import { uploadFileTool } from './tools/upload-file';
 
 export function buildTools({
   bot,

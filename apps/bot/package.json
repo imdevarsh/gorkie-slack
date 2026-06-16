@@ -4,10 +4,9 @@
   "main": "src/index.ts",
   "scripts": {
     "clean": "git clean -xdf .turbo dist node_modules",
-    "build": "tsdown",
     "dev": "bun run --hot src/index.ts",
     "start": "NODE_ENV=production bun run src/index.ts",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@chat-adapter/slack": "^4.30.0",
@@ -21,13 +20,13 @@
     "ai": "catalog:",
     "chat": "^4.30.0",
     "dotenv": "catalog:",
+    "exa-js": "^2.13.0",
     "p-queue": "^6.6.2",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",
     "@types/bun": "catalog:",
-    "tsdown": "^0.22.0",
     "typescript": "catalog:"
   }
 }

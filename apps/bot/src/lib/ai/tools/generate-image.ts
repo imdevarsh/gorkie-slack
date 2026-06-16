@@ -1,6 +1,10 @@
+import { provider } from '@repo/ai';
 import { generateImage, tool } from 'ai';
 import { z } from 'zod';
-import { provider } from '../providers';
+
+const aspectRatioSchema = z.custom<`${number}:${number}`>(
+  (value) => typeof value === 'string' && /^\d+:\d+$/.test(value)
+);
 
 export interface GeneratedImage {
   bytes: Uint8Array;
@@ -30,9 +34,7 @@ export function generateImageTool({
         .max(4)
         .default(1)
         .describe('How many images to generate.'),
-      aspectRatio: z
-        .string()
-        .regex(/^\d+:\d+$/)
+      aspectRatio: aspectRatioSchema
         .optional()
         .describe('Optional aspect ratio like 16:9 or 1:1.'),
     }),
@@ -41,9 +43,7 @@ export function generateImageTool({
         model: provider.imageModel('image-model'),
         prompt,
         n,
-        ...(aspectRatio
-          ? { aspectRatio: aspectRatio as `${number}:${number}` }
-          : {}),
+        ...(aspectRatio ? { aspectRatio } : {}),
       });
       const total = result.images.length;
       for (const [index, image] of result.images.entries()) {
