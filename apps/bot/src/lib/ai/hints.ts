@@ -21,7 +21,7 @@ export async function requestHints({
   ]);
   return {
     channel,
-    channelId,
+    channelId: thread.channelId,
     customization,
     messageId: message.id,
     model: 'openai/gpt-5.4-mini',

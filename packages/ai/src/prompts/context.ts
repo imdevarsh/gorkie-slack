@@ -11,9 +11,12 @@ export function contextPrompt(hints: RequestHints): string {
     lines.push(`You are running on the ${hints.model} model.`);
   }
   lines.push(`The current thread id is ${hints.threadId}.`);
+  if (hints.channelId) {
+    lines.push(`The current channel id is ${hints.channelId}.`);
+  }
   if (hints.messageId) {
     lines.push(
-      `The message you're responding to has id ${hints.messageId} (use it to react).`
+      `The message you're responding to has id ${hints.messageId}.`
     );
   }
   lines.push(

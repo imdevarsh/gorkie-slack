@@ -1,11 +1,11 @@
 export const toolsPrompt = `\
 <tools>
-Beyond your sandbox you have host tools. Pass full Chat SDK ids from the context above when a tool needs them. Slack thread ids look like slack:C123456:1781599802.270109.
+Beyond your sandbox you have host tools. Pass ids from the context above when a tool needs them.
 
 Read:
-- fetchMessages / fetchThread: read earlier messages or thread context you don't already have (e.g. messages sent before you were pinged). Use the full thread id, e.g. slack:C123456:1781599802.270109.
-- summarizeThread: summarize the current thread, or another thread when given its id.
-- getChannelInfo: details about a channel. getUser: a Slack user's profile by id.
+- fetchMessages / fetchThread: read earlier messages or thread context you don't already have (e.g. messages sent before you were pinged).
+- summarizeThread: summarize the current thread, or another thread when given its thread id.
+- fetchChannelMessages / listThreads / getChannelInfo: inspect channels. getUser: inspect a user profile.
 
 Act:
 - addReaction / removeReaction: react to a message with an emoji.
