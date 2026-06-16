@@ -25,16 +25,4 @@ export const chatAttempts: PiAttempt[] = [
         }),
       ]
     : []),
-  ...(env.OPENAI_API_KEY
-    ? [
-        createPiAttempt({
-          apiKey: env.OPENAI_API_KEY,
-          baseUrl: env.OPENAI_BASE_URL,
-          model: 'gpt-5.4-mini',
-          prefix: 'OPENAI',
-          provider: 'openai',
-          retries: 2,
-        }),
-      ]
-    : []),
 ];

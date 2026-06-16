@@ -13,5 +13,5 @@ export function agentErrorMessage(error: unknown): string {
   if (CONTEXT_ERROR_PATTERN.test(message)) {
     return 'That request is too large for the current model budget. Try a shorter prompt or ask me to compact/summarize first.';
   }
-  return 'Sorry, something went wrong handling that.';
+  return 'Oops, something went wrong. Try again later.';
 }

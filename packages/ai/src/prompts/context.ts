@@ -15,9 +15,7 @@ export function contextPrompt(hints: RequestHints): string {
     lines.push(`The current channel id is ${hints.channelId}.`);
   }
   if (hints.messageId) {
-    lines.push(
-      `The message you're responding to has id ${hints.messageId}.`
-    );
+    lines.push(`The message you're responding to has id ${hints.messageId}.`);
   }
   lines.push(
     "Gorkie's source code is at https://github.com/imdevarsh/gorkie-slack"
