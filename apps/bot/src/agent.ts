@@ -1,3 +1,4 @@
+import { deleteSlackMessage, postSlackMessage } from '@chat-adapter/slack/api';
 import {
   chatAttempts,
   createAgent,
@@ -16,7 +17,6 @@ import {
   type AttemptFailure,
   attemptDelayMs,
   nextAttempt,
-  sameAttempt,
 } from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
 import { renderStream } from '@/lib/ai/stream';
@@ -24,13 +24,82 @@ import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
-import { setThinking } from '@/lib/slack/thread';
+import { getThread, setThinking } from '@/lib/slack/thread';
 import { slack } from '@/slack';
+
+export const STOP_TURN_ACTION = 'gorkie_stop_turn';
+
+const activeTurns = new Map<string, AbortController>();
 
 const sandbox = new E2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
   logger,
 });
+
+interface SlackControlMessage {
+  channel: string;
+  ts: string;
+}
+
+function stopBlocks({ threadId }: { threadId: string }): unknown[] {
+  return [
+    {
+      elements: [
+        {
+          action_id: STOP_TURN_ACTION,
+          style: 'danger',
+          text: { text: 'Stop', type: 'plain_text' },
+          type: 'button',
+          value: threadId,
+        },
+      ],
+      type: 'actions',
+    },
+  ];
+}
+
+async function postControlMessage({
+  thread,
+}: {
+  thread: Thread;
+}): Promise<SlackControlMessage | null> {
+  const slackThread = getThread(thread);
+  if (!slackThread) {
+    return null;
+  }
+
+  const posted = await postSlackMessage({
+    blocks: stopBlocks({ threadId: thread.id }),
+    channel: slackThread.channel,
+    text: 'Gorkie is responding...',
+    threadTs: slackThread.threadTs,
+    token: env.SLACK_BOT_TOKEN,
+  }).catch((error: unknown) => {
+    logger.warn(
+      { err: error, threadId: thread.id },
+      'Failed to post stop button'
+    );
+    return null;
+  });
+
+  return posted?.channel ? { channel: posted.channel, ts: posted.id } : null;
+}
+
+async function deleteControlMessage({
+  control,
+}: {
+  control: SlackControlMessage | null;
+}): Promise<void> {
+  if (!control) {
+    return;
+  }
+
+  await deleteSlackMessage({
+    channel: control.channel,
+    token: env.SLACK_BOT_TOKEN,
+    ts: control.ts,
+  }).catch(() => undefined);
+}
 
 export function runTurn(input: {
   message: Message;
@@ -52,16 +121,27 @@ export function runTurn(input: {
   });
 }
 
+export function stopTurn({ threadId }: { threadId: string }): boolean {
+  const controller = activeTurns.get(threadId);
+  if (!controller) {
+    return false;
+  }
+  controller.abort();
+  return true;
+}
+
 async function executeTurn(
   { message, thread }: { message: Message; thread: Thread },
   controller: AbortController
 ): Promise<void> {
   const threadId = thread.id;
   logger.info({ text: message.text, threadId }, '[agent] turn started');
+  activeTurns.set(threadId, controller);
   await setThinking(thread, 'is thinking');
 
   let session: Awaited<ReturnType<typeof openSession>> | undefined;
   let activeAttempt: PiAttempt | undefined;
+  let control: SlackControlMessage | null = null;
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
 
@@ -93,6 +173,7 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
+    await deleteControlMessage({ control });
     await parkSession({ pause: true });
     logger.info(
       { ...completion, attempt: attemptLog(activeAttempt), threadId },
@@ -101,6 +182,7 @@ async function executeTurn(
   } catch (error) {
     if (controller.signal.aborted) {
       logger.info({ threadId }, '[agent] turn interrupted');
+      await deleteControlMessage({ control });
       await parkSession({ pause: false });
     } else {
       logger.error(
@@ -108,7 +190,12 @@ async function executeTurn(
         '[agent] turn failed'
       );
       await parkSession({ pause: true });
+      await deleteControlMessage({ control });
       await thread.post(agentErrorMessage(error));
+    }
+  } finally {
+    if (activeTurns.get(threadId) === controller) {
+      activeTurns.delete(threadId);
     }
   }
 
@@ -155,6 +242,7 @@ async function executeTurn(
         for await (const chunk of renderStream(result.fullStream)) {
           hasStreamed = true;
           yield chunk;
+          control ??= await postControlMessage({ thread });
         }
 
         const [text, finishReason] = await Promise.all([
@@ -171,6 +259,18 @@ async function executeTurn(
           failures: attemptHistory,
         });
         if (controller.signal.aborted || hasStreamed || !retryAttempt) {
+          if (!(controller.signal.aborted || hasStreamed)) {
+            logger.warn(
+              {
+                attempts: chatAttempts.map(attemptLog),
+                failures: attemptHistory.map((failure) =>
+                  attemptLog(failure.attempt)
+                ),
+                threadId,
+              },
+              '[agent] attempt failed, no fallback attempt available'
+            );
+          }
           throw error;
         }
         logger.warn(
@@ -180,16 +280,19 @@ async function executeTurn(
             nextAttempt: attemptLog(retryAttempt),
             threadId,
           },
-          sameAttempt(retryAttempt, currentAttempt)
+          retryAttempt.provider === currentAttempt.provider &&
+            retryAttempt.model === currentAttempt.model
             ? '[agent] attempt failed, retrying same model'
             : '[agent] attempt failed, falling back'
         );
         await session?.detach().catch(() => undefined);
         session = undefined;
-        if (sameAttempt(retryAttempt, currentAttempt)) {
+        if (
+          retryAttempt.provider === currentAttempt.provider &&
+          retryAttempt.model === currentAttempt.model
+        ) {
           const delayMs = attemptDelayMs({
             attempt: currentAttempt,
-            error,
             failures: attemptHistory,
           });
           await new Promise((resolve) => setTimeout(resolve, delayMs));
