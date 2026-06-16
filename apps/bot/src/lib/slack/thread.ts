@@ -1,24 +1,14 @@
+import { uploadSlackFiles } from '@chat-adapter/slack/api';
 import type { Thread } from 'chat';
+import { env } from '@/env';
 import { slack } from '@/slack';
 
-const LOADING_MESSAGES = [
-  'is pondering your question',
-  'is working on it',
-  'is putting thoughts together',
-  'is mulling this over',
-  'is figuring this out',
-  'is cooking up a response',
-  'is connecting the dots',
-  'is piecing things together',
-  'is giving it a good think',
-];
-
-export interface RawSlackThread {
+export interface SlackThread {
   channel: string;
   threadTs: string;
 }
 
-export function rawSlackThreadFrom(thread: Thread): RawSlackThread | undefined {
+export function getThread(thread: Thread): SlackThread | undefined {
   const [adapter, channel, threadTs] = thread.id.split(':');
   if (adapter !== 'slack' || !(channel && threadTs)) {
     return;
@@ -26,22 +16,25 @@ export function rawSlackThreadFrom(thread: Thread): RawSlackThread | undefined {
   return { channel, threadTs };
 }
 
+export async function postSteeringNotice({
+  thread,
+  userId,
+}: {
+  thread: Thread;
+  userId: string;
+}): Promise<void> {
+  await slack
+    .postEphemeral(thread.id, userId, 'Got it! Steering conversation.')
+    .catch(() => undefined);
+}
+
+// Assistant thinking indicator. It auto-clears once a message posts to the
+// thread, so there's no explicit clear call.
 export async function setThinking(
   thread: Thread,
   status: string
 ): Promise<void> {
-  const slackThread = rawSlackThreadFrom(thread);
-  if (!slackThread) {
-    return;
-  }
-  await slack.webClient.assistant.threads
-    .setStatus({
-      channel_id: slackThread.channel,
-      thread_ts: slackThread.threadTs,
-      status,
-      ...(status ? { loading_messages: LOADING_MESSAGES } : {}),
-    })
-    .catch(() => undefined);
+  await slack.startTyping(thread.id, status).catch(() => undefined);
 }
 
 export async function uploadSlackFileToThread({
@@ -55,15 +48,13 @@ export async function uploadSlackFileToThread({
   thread: Thread;
   title: string;
 }): Promise<void> {
-  const slackThread = rawSlackThreadFrom(thread);
+  const slackThread = getThread(thread);
   if (!slackThread) {
     throw new Error('Cannot upload file outside a Slack thread.');
   }
-  await slack.webClient.files.uploadV2({
-    channel_id: slackThread.channel,
-    file,
-    filename,
-    thread_ts: slackThread.threadTs,
-    title,
+  await uploadSlackFiles([{ data: file, filename, title }], {
+    channelId: slackThread.channel,
+    threadTs: slackThread.threadTs,
+    token: env.SLACK_BOT_TOKEN,
   });
 }

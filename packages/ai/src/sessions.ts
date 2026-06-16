@@ -1,7 +1,7 @@
 import type { HarnessAgentSession } from '@ai-sdk/harness/agent';
 import { getByThread, updateResumeState } from '@repo/db/queries';
 import type { Agent } from './agent';
-import { readSnapshot, sessionFileNameOf } from './files/session';
+import { getSessionFile, sessionFileNameOf } from './files/session';
 import type { SandboxContext } from './types';
 
 export async function openSession({
@@ -37,7 +37,7 @@ export async function persistSession({
   const file = sessionFileNameOf(resumeState);
   const snapshot =
     file && snapshotSource
-      ? await readSnapshot({ file, source: snapshotSource })
+      ? await getSessionFile({ file, source: snapshotSource })
       : undefined;
 
   await updateResumeState({

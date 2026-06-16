@@ -2,13 +2,10 @@ export {
   type Agent,
   createAgent,
 } from './agent';
-export { buildSystemPrompt, type RequestHints } from './prompts';
-export {
-  CHAT_MODEL,
-  chatAttempts,
-  type PiAttempt,
-  provider,
-} from './providers';
-export { isRetryableProviderError, isRetryableSameAttempt } from './retry';
+export { type RequestHints, systemPrompt } from './prompts';
+export { provider } from './providers/models';
+export { chatAttempts } from './providers/pi';
+export type { PiAttempt } from './providers/utils';
+export { isRetryable, isRetryableSameAttempt } from './retry';
 export { openSession, persistSession } from './sessions';
 export type { SandboxContext } from './types';

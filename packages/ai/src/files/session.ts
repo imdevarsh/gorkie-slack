@@ -1,14 +1,9 @@
-import path from 'node:path';
 import type { HarnessAgentResumeSessionState } from '@ai-sdk/harness/agent';
 import type { Experimental_SandboxSession } from '@ai-sdk/provider-utils';
 import { getByThread } from '@repo/db/queries';
 import type { SandboxContext } from '../types';
 
 const PI_SESSIONS_DIR = '.pi-sessions';
-
-export function sessionIdFromWorkDir(sessionWorkDir: string): string {
-  return path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
-}
 
 export function sessionFileNameOf(
   resumeState: HarnessAgentResumeSessionState

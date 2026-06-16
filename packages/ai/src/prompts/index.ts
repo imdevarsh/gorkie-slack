@@ -8,7 +8,7 @@ import { toolsPrompt } from './tools';
 
 export type { RequestHints } from './hints';
 
-export function buildSystemPrompt(hints: RequestHints): string {
+export function systemPrompt(hints: RequestHints): string {
   return [
     corePrompt,
     personalityPrompt,

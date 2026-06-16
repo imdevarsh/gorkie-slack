@@ -1,15 +1,15 @@
 import {
-  buildSystemPrompt,
   chatAttempts,
   createAgent,
-  isRetryableProviderError,
+  isRetryable,
   isRetryableSameAttempt,
   openSession,
   type PiAttempt,
   persistSession,
   type SandboxContext,
+  systemPrompt,
 } from '@repo/ai';
-import { createE2BSandboxProvider } from '@repo/sandbox';
+import { E2BSandboxProvider } from '@repo/sandbox';
 import { type Message, StreamingPlan, type Thread } from 'chat';
 import { bot } from '@/chat';
 import { env } from '@/env';
@@ -20,10 +20,9 @@ import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
-import { rawSlackThreadFrom, setThinking } from '@/lib/slack/thread';
-import { slack } from '@/slack';
+import { postSteeringNotice, setThinking } from '@/lib/slack/thread';
 
-const sandbox = createE2BSandboxProvider({
+const sandbox = new E2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
   logger,
 });
@@ -34,18 +33,11 @@ export function runTurn(input: {
 }): Promise<void> {
   return runQueuedTurn({
     threadId: input.thread.id,
-    onInterrupt: async () => {
-      const slackThread = rawSlackThreadFrom(input.thread);
-      if (!slackThread) {
-        return;
-      }
-      await slack.webClient.chat.postEphemeral({
-        channel: slackThread.channel,
-        text: 'Got it! Steering conversation.',
-        thread_ts: slackThread.threadTs,
-        user: input.message.author.userId,
-      });
-    },
+    onInterrupt: () =>
+      postSteeringNotice({
+        thread: input.thread,
+        userId: input.message.author.userId,
+      }),
     run: (controller) => executeTurn(input, controller),
   });
 }
@@ -63,6 +55,26 @@ async function executeTurn(
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
 
+  // Persist the transcript, then optionally park the sandbox. We keep it warm
+  // (pause: false) only when interrupted, so the steering turn restarts fast.
+  // If persistence itself fails the session is unusable — tear it down.
+  const parkSession = async ({ pause }: { pause: boolean }): Promise<void> => {
+    if (!session) {
+      return;
+    }
+    const ending = session;
+    await persistSession({
+      session: ending,
+      snapshotSource: sandboxContext,
+      threadId,
+    }).catch(async () => {
+      await ending.destroy().catch(() => undefined);
+    });
+    if (pause) {
+      await sandbox.pauseSession(threadId);
+    }
+  };
+
   try {
     await thread.post(
       new StreamingPlan(renderTurn({ message, thread }), {
@@ -74,44 +86,23 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
-    await persistSession({ session, snapshotSource: sandboxContext, threadId });
-    await sandbox.pauseSession(threadId);
+    await parkSession({ pause: true });
     logger.info(
       { ...completion, attempt: attemptLog(activeAttempt), threadId },
       '[agent] turn complete'
     );
   } catch (error) {
-    // Interrupted by a follow-up: persist the partial transcript but leave the
-    // sandbox warm so the steering turn restarts instantly.
     if (controller.signal.aborted) {
       logger.info({ threadId }, '[agent] turn interrupted');
-      if (session) {
-        await persistSession({
-          session,
-          snapshotSource: sandboxContext,
-          threadId,
-        }).catch(() => undefined);
-      }
+      await parkSession({ pause: false });
     } else {
       logger.error(
         { attempt: attemptLog(activeAttempt), err: error, threadId },
         '[agent] turn failed'
       );
-      if (session) {
-        const failedSession = session;
-        await persistSession({
-          session: failedSession,
-          snapshotSource: sandboxContext,
-          threadId,
-        }).catch(async () => {
-          await failedSession.destroy().catch(() => undefined);
-        });
-        await sandbox.pauseSession(threadId);
-      }
+      await parkSession({ pause: true });
       await thread.post(agentErrorMessage(error));
     }
-  } finally {
-    await setThinking(thread, '');
   }
 
   async function* renderTurn({
@@ -123,9 +114,8 @@ async function executeTurn(
   }) {
     const hints = await requestHints({ thread, message });
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
-    // Once any chunk has reached Slack, switching models would re-stream from
-    // scratch and duplicate the message — so fallback is only allowed while
-    // nothing visible has been emitted yet.
+    // Once a chunk has reached Slack, switching attempts would re-stream and
+    // duplicate the message — so fallback is only allowed before any output.
     let hasStreamed = false;
     for (const [index, attempt] of chatAttempts.entries()) {
       for (let tryNumber = 1; tryNumber <= attempt.retries; tryNumber++) {
@@ -141,7 +131,8 @@ async function executeTurn(
               });
             },
             sandbox,
-            systemPrompt: buildSystemPrompt({ ...hints, model: attempt.model }),
+            sessionId: threadId,
+            systemPrompt: systemPrompt({ ...hints, model: attempt.model }),
             tools: buildTools({
               bot,
               getSandboxContext: () => sandboxContext,
@@ -166,16 +157,15 @@ async function executeTurn(
           completion = { finishReason, textLength: text.length };
           return;
         } catch (error) {
-          const retrySameModel =
+          // Transient blip → retry the same model; otherwise move on to the
+          // next provider. Never fall back once output has streamed.
+          const retrySame =
             tryNumber < attempt.retries && isRetryableSameAttempt(error);
-          const nextAttempt = retrySameModel
-            ? attempt
-            : chatAttempts[index + 1];
+          const nextAttempt = retrySame ? attempt : chatAttempts[index + 1];
           if (
             controller.signal.aborted ||
             hasStreamed ||
-            !isRetryableProviderError(error) ||
-            !nextAttempt
+            !(isRetryable(error) && nextAttempt)
           ) {
             throw error;
           }
@@ -184,23 +174,15 @@ async function executeTurn(
               attempt: attemptLog(attempt),
               err: error,
               nextAttempt: attemptLog(nextAttempt),
-              retry: retrySameModel
-                ? {
-                    next: tryNumber + 1,
-                    remaining: attempt.retries - tryNumber,
-                  }
-                : undefined,
               threadId,
             },
-            retrySameModel
-              ? '[agent] model attempt failed, retrying same model'
-              : '[agent] model attempt failed, retrying next model'
+            retrySame
+              ? '[agent] attempt failed, retrying same model'
+              : '[agent] attempt failed, falling back'
           );
-          if (session) {
-            await session.detach().catch(() => undefined);
-            session = undefined;
-          }
-          if (!retrySameModel) {
+          await session?.detach().catch(() => undefined);
+          session = undefined;
+          if (!retrySame) {
             break;
           }
         }

@@ -36,11 +36,7 @@ function connectE2BSandbox(
   });
 }
 
-export interface E2BSandboxProvider extends HarnessV1SandboxProvider {
-  pauseSession(threadId: string): Promise<void>;
-}
-
-class E2BSandboxProviderImpl implements E2BSandboxProvider {
+export class E2BSandboxProvider implements HarnessV1SandboxProvider {
   readonly providerId = PROVIDER_ID;
   readonly specificationVersion = SPECIFICATION_VERSION;
 
@@ -188,10 +184,4 @@ class E2BSandboxProviderImpl implements E2BSandboxProvider {
 
     return new E2BNetworkSandboxSession(sandbox);
   };
-}
-
-export function createE2BSandboxProvider(
-  options: E2BSandboxProviderOptions
-): E2BSandboxProvider {
-  return new E2BSandboxProviderImpl(options);
 }
