@@ -1,191 +1,31 @@
-import nodePath from 'node:path/posix';
 import {
   buildSystemPrompt,
   CHAT_MODEL_ID,
   createGorkieAgent,
-  createTools,
   type GorkieSandboxContext,
-  generateImageTool,
   openSession,
   persistSession,
   type RequestHints,
   steerThread,
-  uploadFileTool,
 } from '@repo/ai';
 import { getUserCustomization } from '@repo/db/queries';
 import { createE2BSandboxProvider } from '@repo/sandbox';
 import { getTime } from '@repo/utils/time';
-import type { ToolSet } from 'ai';
-import {
-  type Message,
-  type StreamChunk,
-  StreamingPlan,
-  type Thread,
-} from 'chat';
-import { createChatTools } from 'chat/ai';
+import { type Message, StreamingPlan, type Thread } from 'chat';
 import PQueue from 'p-queue';
 import { bot } from '@/chat';
 import { env } from '@/env';
+import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
+import { renderHarnessStream } from '@/lib/ai/stream';
+import { buildTools } from '@/lib/ai/toolset';
+import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
-import { renderHarnessStream } from '@/lib/render-stream';
+import {
+  acknowledgeSteer,
+  setThinking,
+  slackThreadOf,
+} from '@/lib/slack/thread';
 import { slack } from '@/slack';
-
-const LOADING_MESSAGES = [
-  'is pondering your question',
-  'is working on it',
-  'is putting thoughts together',
-  'is mulling this over',
-  'is figuring this out',
-  'is cooking up a response',
-  'is connecting the dots',
-  'is piecing things together',
-  'is giving it a good think',
-];
-
-interface SeededAttachment {
-  mimeType?: string;
-  name: string;
-  path: string;
-  type: string;
-}
-
-function slackThreadOf(thread: Thread):
-  | {
-      channel: string;
-      threadTs: string;
-    }
-  | undefined {
-  const [adapter, channel, threadTs] = thread.id.split(':');
-  if (adapter !== 'slack' || !(channel && threadTs)) {
-    return;
-  }
-  return { channel, threadTs };
-}
-
-async function setThinking(thread: Thread, status: string): Promise<void> {
-  const slackThread = slackThreadOf(thread);
-  if (!slackThread) {
-    return;
-  }
-  await slack.webClient.assistant.threads
-    .setStatus({
-      channel_id: slackThread.channel,
-      thread_ts: slackThread.threadTs,
-      status,
-      ...(status ? { loading_messages: LOADING_MESSAGES } : {}),
-    })
-    .catch(() => undefined);
-}
-
-async function acknowledgeSteer({
-  message,
-  thread,
-}: {
-  message: Message;
-  thread: Thread;
-}): Promise<void> {
-  await setThinking(thread, 'got your update');
-  const slackThread = slackThreadOf(thread);
-  if (!slackThread) {
-    return;
-  }
-
-  const preview = message.text.trim().replace(/\s+/g, ' ').slice(0, 120);
-  await slack.webClient.chat
-    .postEphemeral({
-      channel: slackThread.channel,
-      text: preview
-        ? `Got it - applying this to the current run: "${preview}"`
-        : 'Got it - applying your latest message to the current run.',
-      thread_ts: slackThread.threadTs,
-      user: message.author.userId,
-    })
-    .catch(() => undefined);
-}
-
-// chat/ai Slack tools (the `messenger` preset: reads + post/DM/react/typing) plus
-// gorkie's own host tools. Approval is off in Part 1 (no approval UI yet); the
-// pause→Slack-buttons→resume flow returns with MCP in Part 2.
-function buildTools({
-  getSandboxContext,
-  thread,
-}: {
-  getSandboxContext: () => GorkieSandboxContext | undefined;
-  thread: Thread;
-}): ToolSet {
-  const { startTyping: _startTyping, ...chatTools } = createChatTools({
-    chat: bot,
-    preset: 'messenger',
-    requireApproval: false,
-  });
-
-  return {
-    ...chatTools,
-    ...createTools({ exaApiKey: env.EXA_API_KEY }),
-    generateImage: generateImageTool({
-      upload: async ({ bytes, mediaType, index, total }) => {
-        const slackThread = slackThreadOf(thread);
-        if (!slackThread) {
-          throw new Error('Cannot upload image outside a Slack thread.');
-        }
-        const file = {
-          channel_id: slackThread.channel,
-          file: Buffer.from(bytes),
-          filename: `gorkie-image-${index + 1}.${mediaType.split('/').at(1) ?? 'png'}`,
-          title: total > 1 ? `Generated image ${index + 1}` : 'Generated image',
-        };
-        await slack.webClient.files.uploadV2({
-          ...file,
-          thread_ts: slackThread.threadTs,
-        });
-      },
-    }),
-    uploadFile: uploadFileTool({
-      upload: async ({ filename, path, title }) => {
-        const sandboxContext = getSandboxContext();
-        if (!sandboxContext) {
-          throw new Error('No active sandbox session is available.');
-        }
-
-        const { session, sessionWorkDir } = sandboxContext;
-        const sandboxPath = nodePath.normalize(
-          path.startsWith('/') ? path : nodePath.join(sessionWorkDir, path)
-        );
-        if (
-          sandboxPath !== sessionWorkDir &&
-          !sandboxPath.startsWith(`${sessionWorkDir}/`)
-        ) {
-          throw new Error(
-            'uploadFile can only upload files from the workspace.'
-          );
-        }
-
-        const bytes = await session.readBinaryFile({ path: sandboxPath });
-        if (!bytes) {
-          throw new Error(`Could not find file: ${path}`);
-        }
-
-        const resolvedFilename =
-          filename ?? nodePath.basename(sandboxPath) ?? 'artifact';
-        const slackThread = slackThreadOf(thread);
-        if (!slackThread) {
-          throw new Error('Cannot upload file outside a Slack thread.');
-        }
-        const file = {
-          channel_id: slackThread.channel,
-          file: Buffer.from(bytes),
-          filename: resolvedFilename,
-          title: title ?? resolvedFilename,
-        };
-        await slack.webClient.files.uploadV2({
-          ...file,
-          thread_ts: slackThread.threadTs,
-        });
-        return { filename: resolvedFilename, uploaded: true };
-      },
-    }),
-  };
-}
 
 const sandbox = createE2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
@@ -288,81 +128,6 @@ export function runTurn(input: {
   return enqueueTurn(input);
 }
 
-function safeAttachmentName({
-  fallback,
-  name,
-}: {
-  fallback: string;
-  name?: string;
-}): string {
-  const base = nodePath.basename(name || fallback) || fallback;
-  return base.replace(/[^a-zA-Z0-9._-]/g, '_');
-}
-
-async function seedAttachments({
-  message,
-  sandboxContext,
-}: {
-  message: Message;
-  sandboxContext: GorkieSandboxContext;
-}): Promise<SeededAttachment[]> {
-  const seeded: SeededAttachment[] = [];
-  for (const [index, attachment] of message.attachments.entries()) {
-    const data = attachment.fetchData
-      ? await attachment.fetchData()
-      : attachment.data;
-    if (!data) {
-      continue;
-    }
-
-    const filename = safeAttachmentName({
-      fallback: `attachment-${index + 1}`,
-      name: attachment.name,
-    });
-    const path = nodePath.join(
-      sandboxContext.sessionWorkDir,
-      'attachments',
-      message.id.replace(/[^a-zA-Z0-9._-]/g, '_'),
-      filename
-    );
-    const bytes =
-      data instanceof Blob
-        ? new Uint8Array(await data.arrayBuffer())
-        : new Uint8Array(data);
-    await sandboxContext.session.writeBinaryFile({ content: bytes, path });
-    seeded.push({
-      mimeType: attachment.mimeType,
-      name: filename,
-      path,
-      type: attachment.type,
-    });
-  }
-  return seeded;
-}
-
-function promptWithAttachments({
-  attachments,
-  text,
-}: {
-  attachments: SeededAttachment[];
-  text: string;
-}): string {
-  if (attachments.length === 0) {
-    return text;
-  }
-  const lines = attachments.map(
-    (attachment) =>
-      `- ${attachment.name} (${attachment.type}${attachment.mimeType ? `, ${attachment.mimeType}` : ''}): ${attachment.path}`
-  );
-  return [
-    text,
-    '',
-    'Attached files have already been downloaded into the sandbox workspace:',
-    ...lines,
-    'Use these local paths when reading, editing, or uploading the files.',
-  ].join('\n');
-}
-
 function getThreadQueue(threadId: string): { queue: PQueue; turns: number } {
   const existing = threadQueues.get(threadId);
   if (existing) {
@@ -431,7 +196,7 @@ async function executeTurn({
         await failedSession.destroy().catch(() => undefined);
       });
     }
-    await thread.post('Sorry — something went wrong handling that.');
+    await thread.post(agentErrorMessage(error));
   } finally {
     await setThinking(thread, '');
   }
@@ -442,16 +207,7 @@ async function executeTurn({
   }: {
     message: Message;
     thread: Thread;
-  }): AsyncGenerator<string | StreamChunk> {
-    const taskId = `turn-${message.id}`;
-    yield {
-      id: taskId,
-      status: 'in_progress',
-      title: 'Thinking',
-      type: 'task_update',
-    };
-    await setThinking(thread, '');
-
+  }) {
     const hints = await resolveHints({ thread, message });
     let sandboxContext: GorkieSandboxContext | undefined;
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
@@ -466,22 +222,18 @@ async function executeTurn({
       },
       sandbox,
       systemPrompt: buildSystemPrompt(hints),
-      tools: buildTools({ getSandboxContext: () => sandboxContext, thread }),
+      tools: buildTools({
+        bot,
+        getSandboxContext: () => sandboxContext,
+        thread,
+      }),
     });
     session = await openSession({ agent, threadId });
     const result = await agent.stream({
       prompt: promptWithAttachments({ attachments, text: message.text }),
       session,
     });
-    yield {
-      id: taskId,
-      status: 'complete',
-      title: 'Thinking',
-      type: 'task_update',
-    };
-    yield* renderHarnessStream(result.fullStream, {
-      initialReasoningTaskId: taskId,
-    });
+    yield* renderHarnessStream(result.fullStream);
 
     const [text, finishReason] = await Promise.all([
       result.text,

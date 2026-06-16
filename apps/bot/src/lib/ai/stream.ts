@@ -71,12 +71,9 @@ function resultOutput(output: unknown): string | undefined {
 }
 
 export async function* renderHarnessStream(
-  stream: AsyncIterable<TextStreamPart<ToolSet>>,
-  options: { initialReasoningTaskId?: string } = {}
+  stream: AsyncIterable<TextStreamPart<ToolSet>>
 ): AsyncGenerator<string | StreamChunk> {
   const reasoning = new Map<string, string>();
-  const reasoningTaskIds = new Map<string, string>();
-  let usedInitialReasoningTask = false;
   for await (const part of stream) {
     switch (part.type) {
       case 'text-delta': {
@@ -87,14 +84,8 @@ export async function* renderHarnessStream(
       }
       case 'reasoning-start': {
         reasoning.set(part.id, '');
-        const taskId =
-          options.initialReasoningTaskId && !usedInitialReasoningTask
-            ? options.initialReasoningTaskId
-            : `reasoning-${part.id}`;
-        reasoningTaskIds.set(part.id, taskId);
-        usedInitialReasoningTask = true;
         yield {
-          id: taskId,
+          id: `reasoning-${part.id}`,
           status: 'in_progress',
           title: 'Thinking',
           type: 'task_update',
@@ -108,14 +99,13 @@ export async function* renderHarnessStream(
       case 'reasoning-end': {
         const text = reasoning.get(part.id)?.trim();
         yield {
-          id: reasoningTaskIds.get(part.id) ?? `reasoning-${part.id}`,
+          id: `reasoning-${part.id}`,
           output: text ? clamp(text, REASONING_MAX) : undefined,
           status: 'complete',
           title: 'Thinking',
           type: 'task_update',
         };
         reasoning.delete(part.id);
-        reasoningTaskIds.delete(part.id);
         break;
       }
       case 'tool-call': {
@@ -151,13 +141,5 @@ export async function* renderHarnessStream(
       default:
         break;
     }
-  }
-  if (options.initialReasoningTaskId && !usedInitialReasoningTask) {
-    yield {
-      id: options.initialReasoningTaskId,
-      status: 'complete',
-      title: 'Thinking',
-      type: 'task_update',
-    };
   }
 }
