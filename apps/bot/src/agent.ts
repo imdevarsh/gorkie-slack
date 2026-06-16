@@ -6,7 +6,6 @@ import {
   openSession,
   persistSession,
   type RequestHints,
-  steerThread,
 } from '@repo/ai';
 import { getUserCustomization } from '@repo/db/queries';
 import { createE2BSandboxProvider } from '@repo/sandbox';
@@ -95,45 +94,38 @@ async function resolveHints({
   };
 }
 
-const threadQueues = new Map<string, { queue: PQueue; turns: number }>();
+interface ThreadQueue {
+  controller?: AbortController;
+  queue: PQueue;
+  turns: number;
+}
+const threadQueues = new Map<string, ThreadQueue>();
 
-// pi sessions are one turn at a time per thread, and a turn can outlive the Chat
-// SDK's thread lock. We keep Chat SDK concurrent so follow-ups can steer the
-// live pi turn; p-queue is only the FIFO fallback when steering is unavailable.
-export function runTurn(input: {
+// pi runs one turn at a time per thread (p-queue, concurrency 1). Steering: a
+// follow-up that arrives mid-turn gracefully aborts the live turn (pi stops at a
+// tool boundary and persists its partial transcript), then runs as a fresh turn
+// that resumes that transcript — so the new message redirects the current work.
+export async function runTurn(input: {
   message: Message;
   thread: Thread;
 }): Promise<void> {
-  const threadId = input.thread.id;
-  const existing = threadQueues.get(threadId);
-  if (existing?.turns && input.message.attachments.length === 0) {
-    return steerThread({ text: input.message.text, threadId })
-      .catch((error) => {
-        logger.warn({ err: error, threadId }, '[agent] steering failed');
-        return false;
-      })
-      .then(async (steered) => {
-        if (steered) {
-          await acknowledgeSteer(input);
-          logger.info(
-            { text: input.message.text, threadId },
-            '[agent] turn steered'
-          );
-          return;
-        }
-        return enqueueTurn(input);
-      });
+  const existing = threadQueues.get(input.thread.id);
+  if (existing?.controller) {
+    existing.controller.abort();
+    await acknowledgeSteer(input).catch(() => undefined);
   }
-
   return enqueueTurn(input);
 }
 
-function getThreadQueue(threadId: string): { queue: PQueue; turns: number } {
+function getThreadQueue(threadId: string): ThreadQueue {
   const existing = threadQueues.get(threadId);
   if (existing) {
     return existing;
   }
-  const entry = { queue: new PQueue({ concurrency: 1 }), turns: 0 };
+  const entry: ThreadQueue = {
+    queue: new PQueue({ concurrency: 1 }),
+    turns: 0,
+  };
   threadQueues.set(threadId, entry);
   return entry;
 }
@@ -146,9 +138,14 @@ function enqueueTurn(input: {
   const entry = getThreadQueue(threadId);
   entry.turns += 1;
   return entry.queue.add(async () => {
+    const controller = new AbortController();
+    entry.controller = controller;
     try {
-      await executeTurn(input);
+      await executeTurn(input, controller);
     } finally {
+      if (entry.controller === controller) {
+        entry.controller = undefined;
+      }
       entry.turns -= 1;
       if (entry.turns === 0) {
         threadQueues.delete(threadId);
@@ -157,13 +154,10 @@ function enqueueTurn(input: {
   });
 }
 
-async function executeTurn({
-  message,
-  thread,
-}: {
-  message: Message;
-  thread: Thread;
-}): Promise<void> {
+async function executeTurn(
+  { message, thread }: { message: Message; thread: Thread },
+  controller: AbortController
+): Promise<void> {
   const threadId = thread.id;
   logger.info({ text: message.text, threadId }, '[agent] turn started');
   await setThinking(thread, 'is thinking');
@@ -185,18 +179,29 @@ async function executeTurn({
     await persistSession({ session, status: 'paused', threadId });
     logger.info({ ...completion, threadId }, '[agent] turn complete');
   } catch (error) {
-    logger.error({ err: error, threadId }, '[agent] turn failed');
-    if (session) {
-      const failedSession = session;
-      await persistSession({
-        session: failedSession,
-        status: 'paused',
-        threadId,
-      }).catch(async () => {
-        await failedSession.destroy().catch(() => undefined);
-      });
+    // Interrupted by a follow-up: pi already stopped gracefully and persisted
+    // its partial transcript, so finalize quietly — the new turn handles the reply.
+    if (controller.signal.aborted) {
+      logger.info({ threadId }, '[agent] turn interrupted');
+      if (session) {
+        await persistSession({ session, status: 'paused', threadId }).catch(
+          () => undefined
+        );
+      }
+    } else {
+      logger.error({ err: error, threadId }, '[agent] turn failed');
+      if (session) {
+        const failedSession = session;
+        await persistSession({
+          session: failedSession,
+          status: 'paused',
+          threadId,
+        }).catch(async () => {
+          await failedSession.destroy().catch(() => undefined);
+        });
+      }
+      await thread.post(agentErrorMessage(error));
     }
-    await thread.post(agentErrorMessage(error));
   } finally {
     await setThinking(thread, '');
   }
@@ -230,6 +235,7 @@ async function executeTurn({
     });
     session = await openSession({ agent, threadId });
     const result = await agent.stream({
+      abortSignal: controller.signal,
       prompt: promptWithAttachments({ attachments, text: message.text }),
       session,
     });
