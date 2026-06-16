@@ -14,9 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/validators": "workspace:*",
-    "strip-ansi": "^7.2.0",
-    "zod": "catalog:"
+    "strip-ansi": "^7.2.0"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",

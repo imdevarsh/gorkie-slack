@@ -15,9 +15,7 @@
     "@ai-sdk/provider-utils": "catalog:",
     "@e2b/code-interpreter": "^2.4.2",
     "@repo/db": "workspace:*",
-    "@repo/logging": "workspace:*",
-    "e2b": "^2.21.0",
-    "zod": "catalog:"
+    "@repo/logging": "workspace:*"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",

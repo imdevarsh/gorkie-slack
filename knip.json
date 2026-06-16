@@ -4,22 +4,7 @@
   "workspaces": {
     ".": {},
     "apps/bot": {
-      "entry": ["src/index.ts", "src/scripts/*.ts"],
-      "project": ["src/**/*.ts"],
-      "ignore": ["extensions/**"]
-    },
-    "apps/server": {
-      "entry": [
-        "src/index.ts",
-        "nitro.config.ts",
-        "src/routes/**/*.ts",
-        "src/middleware/**/*.ts",
-        "src/plugins/**/*.ts",
-        "src/tasks/**/*.ts",
-        "src/renderer.ts",
-        "src/config.ts",
-        "src/env.ts"
-      ],
+      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/ai": {
@@ -30,19 +15,15 @@
       "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
-    "packages/kv": {
-      "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
-    },
     "packages/logging": {
       "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
-    "packages/utils": {
+    "packages/sandbox": {
       "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
-    "packages/validators": {
+    "packages/utils": {
       "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     }

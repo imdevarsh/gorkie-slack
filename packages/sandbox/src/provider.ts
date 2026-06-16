@@ -103,6 +103,24 @@ class E2BSandboxProvider implements HarnessV1SandboxProvider {
     return session;
   };
 
+  // Pause the thread's sandbox (e2b betaPause) without holding its session
+  // handle — the agent reads pi's transcript from the warm sandbox first, then
+  // calls this to park it for cost. No-op when the thread has no sandbox.
+  pauseSession = async (threadId: string): Promise<void> => {
+    const existing = await getByThread(threadId);
+    if (!existing) {
+      return;
+    }
+    await Sandbox.pause(existing.sandboxId, { apiKey: this.apiKey }).catch(
+      (error: unknown) => {
+        this.logger.warn(
+          { err: error, threadId },
+          '[sandbox] failed to pause e2b sandbox'
+        );
+      }
+    );
+  };
+
   resumeSession = async ({
     abortSignal,
     sessionId,
@@ -153,21 +171,4 @@ export function createE2BSandboxProvider(
   options: E2BSandboxProviderOptions
 ): HarnessV1SandboxProvider {
   return new E2BSandboxProvider(options);
-}
-
-export async function destroyE2BSandboxById({
-  apiKey,
-  logger,
-  sandboxId,
-}: {
-  apiKey: string;
-  logger: Logger;
-  sandboxId: string;
-}): Promise<void> {
-  await Sandbox.kill(sandboxId, { apiKey }).catch((error: unknown) => {
-    logger.warn(
-      { err: error, sandboxId },
-      '[sandbox] failed to destroy e2b sandbox'
-    );
-  });
 }

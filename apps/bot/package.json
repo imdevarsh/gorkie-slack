@@ -17,15 +17,11 @@
     "@repo/logging": "workspace:*",
     "@repo/sandbox": "workspace:*",
     "@repo/utils": "workspace:*",
-    "@repo/validators": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "ai": "catalog:",
     "chat": "^4.30.0",
     "dotenv": "catalog:",
     "p-queue": "^6.6.2",
-    "pino": "catalog:",
-    "pino-pretty": "catalog:",
-    "thread-stream": "^4.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {
