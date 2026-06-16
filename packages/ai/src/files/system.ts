@@ -6,11 +6,9 @@ import path from 'node:path';
 // only augments it, and HackClub rejects Pi's default prompt.
 // TODO: replace this path reconstruction if Harness exposes the host agent dir.
 export async function writeSystemPrompt({
-  modelsConfig,
   sessionId,
   systemPrompt,
 }: {
-  modelsConfig?: Record<string, unknown>;
   sessionId: string;
   systemPrompt: string;
 }): Promise<void> {
@@ -24,10 +22,4 @@ export async function writeSystemPrompt({
   );
   await mkdir(agentDir, { recursive: true });
   await writeFile(path.join(agentDir, 'SYSTEM.md'), systemPrompt);
-  if (modelsConfig) {
-    await writeFile(
-      path.join(agentDir, 'models.json'),
-      `${JSON.stringify(modelsConfig, null, 2)}\n`
-    );
-  }
 }

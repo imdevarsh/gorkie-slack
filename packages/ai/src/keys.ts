@@ -6,8 +6,6 @@ export const keys = () =>
     server: {
       HACKCLUB_API_KEY: z.string().min(1).startsWith('sk-hc-'),
       GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
-      OPENAI_API_KEY: z.string().min(1).optional(),
-      OPENAI_BASE_URL: z.url().optional(),
       OPENROUTER_API_KEY: z.string().min(1).optional(),
       OPENROUTER_BASE_URL: z.url().optional(),
       EXA_API_KEY: z.string().min(1),
@@ -15,8 +13,6 @@ export const keys = () =>
     runtimeEnv: {
       HACKCLUB_API_KEY: process.env.HACKCLUB_API_KEY,
       GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-      OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
       OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
       OPENROUTER_BASE_URL: process.env.OPENROUTER_BASE_URL,
       EXA_API_KEY: process.env.EXA_API_KEY,

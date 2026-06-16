@@ -36,11 +36,7 @@ export function createAgent({
     tools,
     onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
       await onSandboxReady?.({ session, sessionWorkDir });
-      await writeSystemPrompt({
-        modelsConfig: attempt.modelsConfig,
-        sessionId,
-        systemPrompt,
-      });
+      await writeSystemPrompt({ sessionId, systemPrompt });
       await syncSession({ abortSignal, session, sessionId, sessionWorkDir });
     },
   });
