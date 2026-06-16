@@ -74,17 +74,23 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
-    await persistSession({ session, threadId });
+    await persistSession({ session, snapshotSource: sandboxContext, threadId });
+    await sandbox.pauseSession(threadId);
     logger.info(
       { ...completion, attempt: attemptLog(activeAttempt), threadId },
       '[agent] turn complete'
     );
   } catch (error) {
-    // Interrupted by a follow-up; the new turn handles the reply.
+    // Interrupted by a follow-up: persist the partial transcript but leave the
+    // sandbox warm so the steering turn restarts instantly.
     if (controller.signal.aborted) {
       logger.info({ threadId }, '[agent] turn interrupted');
       if (session) {
-        await session.detach().catch(() => undefined);
+        await persistSession({
+          session,
+          snapshotSource: sandboxContext,
+          threadId,
+        }).catch(() => undefined);
       }
     } else {
       logger.error(
@@ -92,7 +98,15 @@ async function executeTurn(
         '[agent] turn failed'
       );
       if (session) {
-        await session.detach().catch(() => undefined);
+        const failedSession = session;
+        await persistSession({
+          session: failedSession,
+          snapshotSource: sandboxContext,
+          threadId,
+        }).catch(async () => {
+          await failedSession.destroy().catch(() => undefined);
+        });
+        await sandbox.pauseSession(threadId);
       }
       await thread.post(agentErrorMessage(error));
     }
@@ -109,6 +123,10 @@ async function executeTurn(
   }) {
     const hints = await requestHints({ thread, message });
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
+    // Once any chunk has reached Slack, switching models would re-stream from
+    // scratch and duplicate the message — so fallback is only allowed while
+    // nothing visible has been emitted yet.
+    let hasStreamed = false;
     for (const [index, attempt] of chatAttempts.entries()) {
       for (let tryNumber = 1; tryNumber <= attempt.retries; tryNumber++) {
         try {
@@ -136,7 +154,10 @@ async function executeTurn(
             prompt: promptWithAttachments({ attachments, text: message.text }),
             session,
           });
-          yield* renderStream(result.fullStream);
+          for await (const chunk of renderStream(result.fullStream)) {
+            hasStreamed = true;
+            yield chunk;
+          }
 
           const [text, finishReason] = await Promise.all([
             result.text,
@@ -152,6 +173,7 @@ async function executeTurn(
             : chatAttempts[index + 1];
           if (
             controller.signal.aborted ||
+            hasStreamed ||
             !isRetryableProviderError(error) ||
             !nextAttempt
           ) {

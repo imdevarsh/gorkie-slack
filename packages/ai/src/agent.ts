@@ -1,8 +1,8 @@
-import path from 'node:path';
 import type { HarnessV1SandboxProvider } from '@ai-sdk/harness';
 import { HarnessAgent } from '@ai-sdk/harness/agent';
 import { createPi } from '@ai-sdk/harness-pi';
 import type { ToolSet } from 'ai';
+import { sessionIdFromWorkDir, syncSession } from './files/session';
 import { writeSystemPrompt } from './files/system';
 import type { PiAttempt } from './providers';
 import type { SandboxContext } from './types';
@@ -32,10 +32,11 @@ export function createAgent({
     permissionMode: 'allow-all',
     sandbox,
     tools,
-    onSandboxSession: async ({ session, sessionWorkDir }) => {
+    onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
       await onSandboxReady?.({ session, sessionWorkDir });
-      const sessionId = path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
+      const sessionId = sessionIdFromWorkDir(sessionWorkDir);
       await writeSystemPrompt({ sessionId, systemPrompt });
+      await syncSession({ abortSignal, session, sessionId, sessionWorkDir });
     },
   });
 }

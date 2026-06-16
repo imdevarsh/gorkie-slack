@@ -70,10 +70,12 @@ export async function updateRuntime(
 
 export async function updateResumeState({
   resumeState,
+  session,
   status,
   threadId,
 }: {
   resumeState: string | null;
+  session?: { data: string; file: string };
   status?: string;
   threadId: string;
 }): Promise<void> {
@@ -81,6 +83,7 @@ export async function updateResumeState({
     .update(sandboxSessions)
     .set({
       resumeState,
+      ...(session === undefined ? {} : { session }),
       ...(status ? { status } : {}),
       ...(status === 'paused' && { pausedAt: new Date() }),
       ...(status === 'active' && { resumedAt: new Date() }),

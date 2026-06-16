@@ -1,4 +1,4 @@
-import type { RequestHints } from '@repo/ai';
+import { CHAT_MODEL, type RequestHints } from '@repo/ai';
 import { getUserCustomization } from '@repo/db/queries';
 import { getTime } from '@repo/utils/time';
 import type { Message, Thread } from 'chat';
@@ -24,7 +24,7 @@ export async function requestHints({
     channelId,
     customization,
     messageId: message.id,
-    model: 'openai/gpt-5.4-mini',
+    model: CHAT_MODEL,
     server,
     threadId: thread.id,
     time: getTime(),

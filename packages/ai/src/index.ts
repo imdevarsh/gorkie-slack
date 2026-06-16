@@ -4,6 +4,7 @@ export {
 } from './agent';
 export { buildSystemPrompt, type RequestHints } from './prompts';
 export {
+  CHAT_MODEL,
   chatAttempts,
   type PiAttempt,
   provider,

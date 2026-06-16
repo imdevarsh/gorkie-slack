@@ -4,6 +4,7 @@ import { Sandbox } from '@e2b/code-interpreter';
 import {
   getByThread,
   markActivity,
+  updateResumeState,
   updateRuntime,
   upsert,
 } from '@repo/db/queries';
@@ -35,7 +36,11 @@ function connectE2BSandbox(
   });
 }
 
-class E2BSandboxProvider implements HarnessV1SandboxProvider {
+export interface E2BSandboxProvider extends HarnessV1SandboxProvider {
+  pauseSession(threadId: string): Promise<void>;
+}
+
+class E2BSandboxProviderImpl implements E2BSandboxProvider {
   readonly providerId = PROVIDER_ID;
   readonly specificationVersion = SPECIFICATION_VERSION;
 
@@ -117,6 +122,28 @@ class E2BSandboxProvider implements HarnessV1SandboxProvider {
     return session;
   };
 
+  // Park the thread's sandbox after the agent has mirrored pi's transcript out
+  // of it. No-op when the thread has no sandbox.
+  pauseSession = async (threadId: string): Promise<void> => {
+    const existing = await getByThread(threadId);
+    if (!existing) {
+      return;
+    }
+    try {
+      await Sandbox.pause(existing.sandboxId, { apiKey: this.apiKey });
+      await updateResumeState({
+        resumeState: existing.resumeState,
+        status: 'paused',
+        threadId,
+      });
+    } catch (error) {
+      this.logger.warn(
+        { err: error, threadId },
+        '[sandbox] failed to pause e2b sandbox'
+      );
+    }
+  };
+
   resumeSession = async ({
     abortSignal,
     sessionId,
@@ -131,15 +158,26 @@ class E2BSandboxProvider implements HarnessV1SandboxProvider {
       throw new Error(`[sandbox] missing e2b sandbox for ${sessionId}`);
     }
 
-    const sandbox = await connectE2BSandbox(existing.sandboxId, this.apiKey);
-    if (!sandbox) {
-      throw new Error(`[sandbox] e2b sandbox ${existing.sandboxId} is gone`);
+    let sandbox = await connectE2BSandbox(existing.sandboxId, this.apiKey);
+    if (sandbox) {
+      await sandbox.setTimeout(sandboxConfig.timeoutMs);
+      this.logger.debug(
+        { sessionId, sandboxId: sandbox.sandboxId },
+        '[sandbox] resumed e2b sandbox'
+      );
+    } else {
+      // Old sandbox is gone; pi's mirrored transcript is re-seeded into the
+      // fresh one via onSandboxSession.
+      sandbox = await this.spawnSandbox(sessionId);
+      this.logger.info(
+        {
+          previous: existing.sandboxId,
+          sandboxId: sandbox.sandboxId,
+          sessionId,
+        },
+        '[sandbox] recreated e2b sandbox from mirror'
+      );
     }
-    await sandbox.setTimeout(sandboxConfig.timeoutMs);
-    this.logger.debug(
-      { sessionId, sandboxId: sandbox.sandboxId },
-      '[sandbox] resumed e2b sandbox'
-    );
 
     await updateRuntime(sessionId, {
       sandboxId: sandbox.sandboxId,
@@ -154,6 +192,6 @@ class E2BSandboxProvider implements HarnessV1SandboxProvider {
 
 export function createE2BSandboxProvider(
   options: E2BSandboxProviderOptions
-): HarnessV1SandboxProvider {
-  return new E2BSandboxProvider(options);
+): E2BSandboxProvider {
+  return new E2BSandboxProviderImpl(options);
 }

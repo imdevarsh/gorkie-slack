@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const sandboxSessions = pgTable(
   'sandbox_sessions',
@@ -7,6 +7,9 @@ export const sandboxSessions = pgTable(
     sandboxId: text('sandbox_id').notNull(),
     sessionId: text('session_id').notNull(),
     resumeState: text('resume_state'),
+    // Mirror of pi's transcript file so a conversation survives the sandbox
+    // being killed, re-seeded into a fresh sandbox on resume.
+    session: jsonb('session').$type<{ data: string; file: string }>(),
     status: text('status').notNull().default('creating'),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),

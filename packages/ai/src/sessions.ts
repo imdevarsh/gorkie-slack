@@ -1,6 +1,8 @@
 import type { HarnessAgentSession } from '@ai-sdk/harness/agent';
 import { getByThread, updateResumeState } from '@repo/db/queries';
 import type { Agent } from './agent';
+import { readSnapshot, sessionFileNameOf } from './files/session';
+import type { SandboxContext } from './types';
 
 export async function openSession({
   agent,
@@ -20,15 +22,27 @@ export async function openSession({
 
 export async function persistSession({
   session,
+  snapshotSource,
   threadId,
 }: {
   session: HarnessAgentSession;
+  snapshotSource?: SandboxContext;
   threadId: string;
 }): Promise<void> {
+  // detach() flushes pi's transcript into the (still warm) sandbox; we then
+  // mirror those bytes out so the conversation survives the sandbox being killed.
   const resumeState = await session.detach();
+  const serialized = JSON.stringify(resumeState);
+
+  const file = sessionFileNameOf(resumeState);
+  const snapshot =
+    file && snapshotSource
+      ? await readSnapshot({ file, source: snapshotSource })
+      : undefined;
+
   await updateResumeState({
-    resumeState: JSON.stringify(resumeState),
-    status: 'paused',
+    resumeState: serialized,
+    session: snapshot,
     threadId,
   });
 }
