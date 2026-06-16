@@ -11,7 +11,7 @@ const hostProvider = createOpenRouter({
 
 export const provider: Provider = customProvider({
   languageModels: {
-    'chat-model': hostProvider.languageModel('openai/gpt-5.4-mini'),
+    'chat-model': hostProvider.languageModel('google/gemini-3-flash-preview'),
   },
   imageModels: {
     'image-model': hostProvider.imageModel(

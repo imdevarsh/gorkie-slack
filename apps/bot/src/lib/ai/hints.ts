@@ -24,7 +24,7 @@ export async function requestHints({
     channelId: thread.channelId,
     customization,
     messageId: message.id,
-    model: 'openai/gpt-5.4-mini',
+    model: 'google/gemini-3-flash-preview',
     server,
     threadId: thread.id,
     time: getTime(),

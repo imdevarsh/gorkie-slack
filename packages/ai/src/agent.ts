@@ -4,8 +4,8 @@ import { createPi } from '@ai-sdk/harness-pi';
 import type { ToolSet } from 'ai';
 import { syncSession } from './files/session';
 import { writeSystemPrompt } from './files/system';
-import type { PiAttempt } from './providers/utils';
 import type { SandboxContext } from './types';
+import type { PiAttempt } from './types/providers';
 
 export function createAgent({
   attempt,
