@@ -1,7 +1,7 @@
 import { uploadSlackFiles } from '@chat-adapter/slack/api';
 import type { Thread } from 'chat';
 import { env } from '@/env';
-import { slack } from '@/slack';
+import { slack } from '@/lib/chat';
 
 export interface SlackThread {
   channel: string;
@@ -16,11 +16,24 @@ export function getThread(thread: Thread): SlackThread | undefined {
   return { channel, threadTs };
 }
 
-export async function setThinking(
-  thread: Thread,
-  status: string
-): Promise<void> {
-  await slack.startTyping(thread.id, status).catch(() => undefined);
+export async function setThinking(thread: Thread): Promise<void> {
+  await slack
+    .startTyping(
+      thread.id,
+      [
+        'is pondering your question',
+        'is working on it',
+        'is putting thoughts together',
+        'is mulling this over',
+        'is figuring this out',
+        'is cooking up a response',
+        'is connecting the dots',
+        'is working through this',
+        'is piecing things together',
+        'is giving it a good think',
+      ][Math.floor(Math.random() * 10)]
+    )
+    .catch(() => undefined);
 }
 
 export async function uploadSlackFileToThread({

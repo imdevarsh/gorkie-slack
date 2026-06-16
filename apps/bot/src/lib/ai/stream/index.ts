@@ -26,7 +26,12 @@ function taskDetails(toolName: string, input: unknown): string | undefined {
 
 function resultOutput(output: unknown): string | undefined {
   const text =
-    typeof output === 'string' ? output : (field(output, 'text') ?? '');
+    typeof output === 'string'
+      ? output
+      : (field(output, 'summary') ??
+        field(output, 'actionSummary') ??
+        field(output, 'text') ??
+        '');
   return text ? clamp(text, OUTPUT_MAX) : undefined;
 }
 

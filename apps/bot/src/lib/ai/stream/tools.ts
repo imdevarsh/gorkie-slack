@@ -16,6 +16,7 @@ const TOOL_TITLES: Record<string, string> = {
   postMessage: 'Sending message',
   read: 'Reading file',
   removeReaction: 'Removing reaction',
+  searchSlack: 'Searching Slack',
   searchWeb: 'Searching the web',
   sendDirectMessage: 'Sending DM',
   startTyping: 'Typing',

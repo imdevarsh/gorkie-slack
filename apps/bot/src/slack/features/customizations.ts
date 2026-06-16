@@ -12,8 +12,8 @@ import {
 } from '@repo/db/queries';
 import { toLogError } from '@repo/utils/error';
 import { z } from 'zod';
-import { bot } from '@/chat';
 import { env } from '@/env';
+import { bot } from '@/lib/chat';
 import logger from '@/lib/logger';
 
 const PROMPT_INPUT = 'prompt';

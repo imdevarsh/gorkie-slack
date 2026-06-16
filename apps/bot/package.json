@@ -9,8 +9,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/otel": "catalog:",
     "@chat-adapter/slack": "^4.30.0",
     "@chat-adapter/state-pg": "^4.30.0",
+    "@langfuse/otel": "^5.4.1",
+    "@langfuse/tracing": "^5.4.1",
+    "@opentelemetry/sdk-trace-node": "^2.8.0",
     "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logging": "workspace:*",

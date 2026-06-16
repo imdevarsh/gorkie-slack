@@ -10,7 +10,6 @@ import {
 } from '@repo/ai';
 import { E2BSandboxProvider } from '@repo/sandbox';
 import { type Message, StreamingPlan, type Thread } from 'chat';
-import { bot } from '@/chat';
 import { env } from '@/env';
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
 import {
@@ -22,10 +21,10 @@ import { requestHints } from '@/lib/ai/hints';
 import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
+import { bot, slack } from '@/lib/chat';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
 import { getThread, setThinking } from '@/lib/slack/thread';
-import { slack } from '@/slack';
 
 export const STOP_TURN_ACTION = 'gorkie_stop_turn';
 
@@ -137,7 +136,7 @@ async function executeTurn(
   const threadId = thread.id;
   logger.info({ text: message.text, threadId }, '[agent] turn started');
   activeTurns.set(threadId, controller);
-  await setThinking(thread, 'is thinking');
+  await setThinking(thread);
 
   let session: Awaited<ReturnType<typeof openSession>> | undefined;
   let activeAttempt: PiAttempt | undefined;
@@ -226,17 +225,24 @@ async function executeTurn(
           },
           sandbox,
           sessionId: threadId,
-          systemPrompt: systemPrompt({ ...hints, model: currentAttempt.model }),
+          systemPrompt: systemPrompt({
+            ...hints,
+            model: currentAttempt.model,
+          }),
           tools: buildTools({
             bot,
             getSandboxContext: () => sandboxContext,
+            message,
             thread,
           }),
         });
         session = await openSession({ agent, threadId });
         const result = await agent.stream({
           abortSignal: controller.signal,
-          prompt: promptWithAttachments({ attachments, text: message.text }),
+          prompt: promptWithAttachments({
+            attachments,
+            text: message.text,
+          }),
           session,
         });
         for await (const chunk of renderStream(result.fullStream)) {

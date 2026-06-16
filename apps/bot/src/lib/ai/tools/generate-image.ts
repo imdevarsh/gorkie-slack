@@ -53,7 +53,11 @@ export function generateImageTool({
           total,
         });
       }
-      return { uploaded: total };
+      return {
+        prompt,
+        summary: `Generated and uploaded ${total} image${total === 1 ? '' : 's'} to this Slack thread.`,
+        uploaded: total,
+      };
     },
   });
 }

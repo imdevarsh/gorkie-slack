@@ -1,4 +1,4 @@
-import { slack } from '@/slack';
+import { slack } from '@/lib/chat';
 
 const channelNames = new Map<string, string>();
 let serverName: string | undefined;

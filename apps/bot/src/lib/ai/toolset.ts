@@ -1,11 +1,12 @@
 import nodePath from 'node:path/posix';
 import type { SandboxContext } from '@repo/ai';
 import type { ToolSet } from 'ai';
-import type { Chat, Thread } from 'chat';
+import type { Chat, Message, Thread } from 'chat';
 import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
 import { uploadSlackFileToThread } from '@/lib/slack/thread';
 import { generateImageTool } from './tools/generate-image';
+import { searchSlack } from './tools/search-slack';
 import { searchWeb } from './tools/search-web';
 import { summarizeThreadTool } from './tools/summarize-thread';
 import { uploadFileTool } from './tools/upload-file';
@@ -13,10 +14,12 @@ import { uploadFileTool } from './tools/upload-file';
 export function buildTools({
   bot,
   getSandboxContext,
+  message,
   thread,
 }: {
   bot: Chat;
   getSandboxContext: () => SandboxContext | undefined;
+  message: Message;
   thread: Thread;
 }): ToolSet {
   const { startTyping: _startTyping, ...chatTools } = createChatTools({
@@ -27,6 +30,7 @@ export function buildTools({
 
   return {
     ...chatTools,
+    searchSlack: searchSlack({ message }),
     searchWeb: searchWeb({ apiKey: env.EXA_API_KEY }),
     summarizeThread: summarizeThreadTool({ bot, threadId: thread.id }),
     generateImage: generateImageTool({

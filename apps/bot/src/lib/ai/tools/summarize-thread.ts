@@ -50,6 +50,7 @@ export function summarizeThreadTool({
       return {
         messageCount: result.messages.length,
         success: true,
+        actionSummary: `Summarized ${result.messages.length} message${result.messages.length === 1 ? '' : 's'} from ${targetThreadId}.`,
         summary: text,
       };
     },

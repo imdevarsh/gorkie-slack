@@ -1,13 +1,12 @@
 import { postSlackMessage } from '@chat-adapter/slack/api';
 import type { Message } from 'chat';
 import { runTurn, STOP_TURN_ACTION, stopTurn } from '@/agent';
-import { bot } from '@/chat';
 import { env } from '@/env';
+import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 import '@/slack/features/customizations';
-import { slack } from '@/slack';
 
-export { bot } from '@/chat';
+export { bot } from '@/lib/chat';
 
 const IGNORE_PREFIX = /^\s*(?:<@[A-Z0-9][A-Z0-9._-]*(?:\|[^>]+)?>\s*)*##/;
 const SLACK_MENTION = /<@[A-Z0-9][A-Z0-9._-]*(?:\|[^>]+)?>/;
@@ -122,9 +121,24 @@ bot.onAction(STOP_TURN_ACTION, async (event) => {
 bot.onAssistantThreadStarted(async (event) => {
   await slack
     .setSuggestedPrompts(event.channelId, event.threadTs, [
-      { message: 'What can you help me with?', title: 'Get started' },
-      { message: 'Summarize the current channel', title: 'Summarize' },
-      { message: 'Find recent action items', title: 'Action items' },
+      {
+        message: 'What are the top AI news stories today?',
+        title: 'Search the web',
+      },
+      {
+        message:
+          'Write and run a Python script that plots a sine wave and sends me the image.',
+        title: 'Write and run code',
+      },
+      {
+        message: 'Generate an image of a futuristic city at night.',
+        title: 'Generate an image',
+      },
+      {
+        message:
+          'Take a screenshot of https://example.com and describe what you see.',
+        title: 'Browse a website',
+      },
     ])
     .catch((error: unknown) => {
       logger.warn({ err: error }, 'Failed to set assistant suggested prompts');
@@ -136,20 +150,24 @@ bot.onAssistantContextChanged(async (event) => {
     .setAssistantStatus(event.channelId, event.threadTs, 'Updating context...')
     .catch(() => undefined);
 
-  const contextChannel = event.context.channelId;
   await slack
     .setSuggestedPrompts(event.channelId, event.threadTs, [
       {
-        message: contextChannel
-          ? `Summarize <#${contextChannel}>`
-          : 'Summarize the current channel',
-        title: 'Summarize',
+        message: 'Summarize the recent activity in this channel.',
+        title: 'Summarize this channel',
       },
       {
-        message: contextChannel
-          ? `Find recent action items in <#${contextChannel}>`
-          : 'Find recent action items',
-        title: 'Action items',
+        message: 'Search Slack for recent messages about this project.',
+        title: 'Search Slack',
+      },
+      {
+        message:
+          'Write and run a Python script that plots a sine wave and sends me the image.',
+        title: 'Write and run code',
+      },
+      {
+        message: 'Generate an image of a futuristic city at night.',
+        title: 'Generate an image',
       },
     ])
     .catch((error: unknown) => {

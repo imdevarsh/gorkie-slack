@@ -20,13 +20,20 @@ export function searchWeb({ apiKey }: { apiKey: string }) {
         numResults: 8,
         text: { maxCharacters: 1200 },
       });
+      const links = results.slice(0, 5).map((result) => result.url);
       return {
+        links,
+        resultCount: results.length,
         results: results.map((result) => ({
           title: result.title ?? result.url,
           url: result.url,
           text: result.text ?? '',
           publishedDate: result.publishedDate,
         })),
+        summary:
+          results.length === 0
+            ? `Search web found no results for "${query}".`
+            : `Search web found ${results.length} result${results.length === 1 ? '' : 's'} for "${query}". Top links: ${links.join(', ')}`,
       };
     },
   });

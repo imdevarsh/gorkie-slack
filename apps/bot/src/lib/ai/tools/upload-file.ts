@@ -31,6 +31,15 @@ export function uploadFileTool({
         .optional()
         .describe('Optional Slack file title.'),
     }),
-    execute: upload,
+    execute: async (input) => {
+      const result = await upload(input);
+      return {
+        ...result,
+        path: input.path,
+        summary: result.uploaded
+          ? `Uploaded ${result.filename} to this Slack thread.`
+          : `Could not upload ${result.filename} from ${input.path}.`,
+      };
+    },
   });
 }

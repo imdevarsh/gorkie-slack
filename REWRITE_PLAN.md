@@ -73,13 +73,24 @@ the new framework is explicitly a failure mode to avoid.
 | Agent core | **`HarnessAgent` + `pi` is the brain**, one per thread. Pure harness, **no abstraction seam**. |
 | Build approach | **True rewrite, fresh architecture.** Reference is read-only inspiration; innovate and use good abstractions/libraries rather than transcribing old logic. |
 | Platform layer | **Adopt `vercel/chat`** (`chat` + `@chat-adapter/slack`), **Slack socket mode for now**, `WebClient` escape hatch for App Home/custom surfaces. |
-| Sandbox | **Stay on e2b** (only provider with warm FS+memory resume + indefinite pause; adapter already written). |
+| Sandbox | **Stay on e2b** for now (only provider with warm FS+memory resume + indefinite pause; adapter already written). Switch to the official AI SDK e2b provider once it ships and supports the same resume/session-file hooks we need. |
 | Multi-user threads | The **replying user** runs the turn with **their own** keys/MCP. Never expose one user's BYOK secrets/OAuth MCP to another. |
 | BYOK | **Part 2.** Per-user model keys → `createPi({ auth: { customEnv } })` per session. Part 1 uses one shared service key. |
 | Persistence | **Sandbox-primary + a DB session-file mirror.** `resumeState` (a *pointer*) lives in Postgres; pi's transcript is a session file in the sandbox snapshot. To survive a sandbox kill, mirror that session file's bytes to Postgres each turn and re-seed it into a fresh sandbox on resume (Phase 3 — see §4a). Conversation durability must not depend on any single sandbox staying alive. |
 | Tooling | Keep turborepo, ultracite/biome, cspell, knip, lefthook, bun catalog, drizzle. |
 | Reference | `feat/ai-sdk-harness` lives read-only at `../reference`. Understand, don't copy. |
 | Deferred | **MCP** and **`apps/server`** come *after* gorkie works end-to-end (they need low-level Bolt/OAuth code). Build the core agent first. |
+
+This rewrite intentionally bets on AI SDK/Harness/pi maturing underneath us. Local provider
+fallback, E2B sandbox wiring, steering patches, MCP glue, skills, plugin wiring, and Langfuse/OTel
+tracing are bridge code, not permanent product architecture. Prefer upstream support as it lands:
+- native MCP support and skill support;
+- native steering support;
+- a refactored pi provider implementation that is not ENV-prefix and model-id dependent;
+- `ai-retry` support at the Harness/pi boundary so we can delete custom retry logic;
+- native Langfuse / OTel support;
+- official AI SDK e2b provider support;
+- pi plugin support.
 
 ## 3a. Repo layout & cleanup
 
@@ -132,14 +143,20 @@ Slack / (later Discord) ──▶ vercel/chat adapter ──▶ Runtime (apps/bo
 - **pi runs on the host.** The sandbox is only a remote FS/shell for pi's coding tools. This
   is what makes per-user BYOK + MCP safe: secrets live in the host agent instance for that
   turn, never in the sandbox.
-- **Slack affordances become host-executed AI SDK tools** on the HarnessAgent. Many come free
+- **Slack affordances become host-executed AI SDK tools** on the HarnessAgent. The compatibility
+  goal for Part 1 is **1:1 old Gorkie native tool coverage** before expanding new behavior:
+  `searchSlack`, `searchWeb`, `generateImage`, `getUserInfo`, `getWeather`, `summariseThread`,
+  `readConversationHistory`, `mermaid`, `react`, `leaveChannel`, scheduling tools, and sandbox
+  file-sharing affordances. Many platform tools come free
   from `createChatTools` from `chat/ai` (`fetchMessages`, `getUser`, `addReaction`,
   `fetchThread`, … with `needsApproval` built in on writes); hand-write only the rest
   (`searchWeb`, `getWeather`, `generateImage`, `mermaid`, scheduling, file upload). **`reply`
   and `skip` are dropped** — pi's streamed text *is* the message.
-- **Steering: pi supports it, the AI SDK wrapper doesn't surface it yet** (see §4a). Target:
-  queue a mid-turn follow-up and deliver it at the next tool boundary (pi `one-at-a-time`) via
-  a small patch exposing `submitUserMessage`. Part-1 fallback: abort + re-prompt.
+- **Steering: pi supports it, the AI SDK wrapper doesn't surface it yet** (see §4a). The current
+  abort + re-prompt fallback is too janky because it re-enters provider retry/fallback and can
+  feel like a fresh turn. Revert toward the old steering behavior: queue a mid-turn follow-up and
+  deliver it at the next tool boundary (pi `one-at-a-time`) via a small patch exposing
+  `submitUserMessage`.
 - **MCP tools** are injected as additional host tools, per replying user.
 
 ### Per-turn lifecycle
@@ -215,8 +232,10 @@ one, wait for response" and `all`. The harness V1 protocol defines
 - **How:** small patch/extension to expose `submitUserMessage` from the live session (the
   protocol field already exists — low-risk, like the v1 `ai-retry` patch), keeping a live
   session handle for the in-flight turn.
-- **Part-1 fallback** until that lands: **abort the turn + re-prompt** with the new message
-  (history is preserved in the session file).
+- **Current fallback:** abort + re-prompt exists, but should be treated as temporary and replaced
+  with the old-style queued steering path because retry/fallback orchestration makes it feel noisy.
+- **TODO:** reduce visible reasoning/thinking gaps between tools; acceptable for now, but tool-to-tool
+  flow should feel more immediate.
 
 ## 5. Chat SDK — verdict (verified by cloning `vercel/chat`)
 
@@ -331,9 +350,9 @@ Each phase: design fresh (reference for understanding only) → build clean → 
 - **Phase 2 — Harness brain.** `HarnessAgent(pi)` per thread, **HackClub** via `auth.customEnv`;
   unified system prompt; e2b provider + **custom template** (re-derive `build-template.ts`);
   every thread boots a sandbox; stream pi text → Slack (no `reply`/`skip` tools).
-- **Phase 2.5 — Steering.** Ship abort-&-re-prompt first; then patch `@ai-sdk/harness` to expose
-  `submitUserMessage` so a mid-turn follow-up queues and delivers at the next tool boundary
-  (pi `one-at-a-time`). See §4a.
+- **Phase 2.5 — Steering.** Abort-&-re-prompt shipped, but it is temporary and should be reverted
+  toward the old steering behavior: patch `@ai-sdk/harness` to expose `submitUserMessage` so a
+  mid-turn follow-up queues and delivers at the next tool boundary (pi `one-at-a-time`). See §4a.
 - **Phase 2.75 — Harness retry/fallback.** Rebuild the useful `ai-retry` behavior for Harness/pi
   turns: provider-error classification, output-token caps, transient retry, and alternate provider
   fallback without dropping the pi transcript or Slack stream state.
@@ -341,27 +360,31 @@ Each phase: design fresh (reference for understanding only) → build clean → 
   **plus** mirroring pi's session-file bytes to Postgres each turn and re-seeding into a fresh
   sandbox via `onSandboxSession` on resume. Verify: history survives sandbox **death** (not
   just restart), `resumeFrom` works against a new sandbox id, and compaction holds on long threads.
-- **Phase 4 — Core conversation tools.** Use `createChatTools` (`chat/ai`) for `fetchMessages`/
-  `getUser`/`addReaction`/etc.; hand-write bot-owned tools under `apps/bot/src/lib/ai/tools/*`
-  (`searchWeb`, `getWeather`, `generateImage`, `mermaid`, file upload). (`summariseThread` may
-  be unneeded — pi has native history.)
-- **Phase 4.5 — Langfuse observability.** The env schema already accepts `LANGFUSE_*`; wire it
-  into one trace per Slack turn with thread/message ids, model id, finish reason, tool activity,
-  sandbox lifecycle events, and final error/completion status. Keep tracing optional and inert
-  when the env vars are absent. Validate with one live Slack turn and confirm the trace contains
-  model/tool timing plus the final outcome.
+- **Phase 4 — Core conversation tools.** Bring back every old Gorkie native tool or an intentional
+  v2 equivalent. Use `createChatTools` (`chat/ai`) for compatible platform operations
+  (`fetchMessages`/`getUser`/`addReaction`/etc.); hand-write bot-owned tools under
+  `apps/bot/src/lib/ai/tools/*` (`searchSlack`, `searchWeb`, `getWeather`, `generateImage`,
+  `mermaid`, file upload, scheduling). Do not remove old tool capability just because pi has
+  built-ins; preserve the old user-facing affordance first, then simplify internals later.
+- **Phase 4.5 — Langfuse observability.** Use AI SDK telemetry via `@ai-sdk/otel` plus
+  Langfuse's `LangfuseSpanProcessor`; do not maintain custom stream-derived Langfuse spans.
+  The env schema already accepts `LANGFUSE_*`; tracing stays optional and inert when the env vars
+  are absent. Validate with one live Slack turn and confirm Langfuse receives AI SDK model/tool
+  spans plus the final outcome. If Harness/pi later exposes richer native telemetry, prefer the
+  upstream signal over app-level glue.
 
 ### Part 2 — later (must not block Part 1)
-- **Phase 5 — BYOK.** Per-user keys → `customEnv`; per-user agent instances closed over the
-  replying user's secrets; key storage. Introduces per-user secret isolation.
-- **Phase 6 — MCP (per D1).** Re-derive MCP (encrypted creds, OAuth, approval) + bring back
-  `apps/server` for the OAuth callback; gate to DMs / single-user threads first.
+- **Phase 5 — BYOK.** Postponed much further. Per-user keys → `customEnv`; per-user agent
+  instances closed over the replying user's secrets; key storage. Introduces per-user secret isolation.
+- **Phase 6 — MCP (per D1).** Postponed much further. Re-derive MCP (encrypted creds, OAuth,
+  approval) + bring back `apps/server` for the OAuth callback; gate to DMs / single-user threads first.
 - **Phase 7 — App Home & MCP UI.** Build on Chat SDK + `WebClient.views.publish`.
 - **Phase 8 — Scheduled tasks** + janitor tuning.
-- **Phase 9 — Diversification proof.** Add a Discord adapter to validate the seam.
+- **Phase 9 — Diversification proof.** Postponed much further. Add a Discord adapter to validate the seam.
 
 ## 11. Stack / tooling changes
-- On **AI SDK 7 canary** (`@ai-sdk/harness*`, `@ai-sdk/harness-pi`, and `@ai-sdk/mcp` in Part 2).
+- On **AI SDK 7 beta** (`ai`, `@ai-sdk/harness*`, `@ai-sdk/harness-pi`, `@ai-sdk/otel`, and
+  `@ai-sdk/mcp` in Part 2).
 - **Bolt removed**, replaced by `vercel/chat` + `@chat-adapter/slack` (socket mode).
 - **`apps/server` deleted** — returns in Part 2 only as the MCP OAuth callback host.
 - **`packages/kv` deleted.** If we need Chat SDK state (locks/dedup), use `@chat-adapter/state-pg`
