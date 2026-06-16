@@ -1,8 +1,6 @@
 import {
   chatAttempts,
   createAgent,
-  isRetryable,
-  isRetryableSameAttempt,
   openSession,
   type PiAttempt,
   persistSession,
@@ -14,6 +12,12 @@ import { type Message, StreamingPlan, type Thread } from 'chat';
 import { bot } from '@/chat';
 import { env } from '@/env';
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
+import {
+  type AttemptFailure,
+  attemptDelayMs,
+  nextAttempt,
+  sameAttempt,
+} from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
 import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
@@ -118,73 +122,79 @@ async function executeTurn(
     const hints = await requestHints({ thread, message });
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
     let hasStreamed = false;
-    for (const [index, attempt] of chatAttempts.entries()) {
-      for (let tryNumber = 1; tryNumber <= attempt.retries; tryNumber++) {
-        try {
-          activeAttempt = attempt;
-          const agent = createAgent({
-            attempt,
-            onSandboxReady: async (context) => {
-              sandboxContext = context;
-              attachments = await seedAttachments({
-                message,
-                sandboxContext: context,
-              });
-            },
-            sandbox,
-            sessionId: threadId,
-            systemPrompt: systemPrompt({ ...hints, model: attempt.model }),
-            tools: buildTools({
-              bot,
-              getSandboxContext: () => sandboxContext,
-              thread,
-            }),
-          });
-          session = await openSession({ agent, threadId });
-          const result = await agent.stream({
-            abortSignal: controller.signal,
-            prompt: promptWithAttachments({ attachments, text: message.text }),
-            session,
-          });
-          for await (const chunk of renderStream(result.fullStream)) {
-            hasStreamed = true;
-            yield chunk;
-          }
-
-          const [text, finishReason] = await Promise.all([
-            result.text,
-            result.finishReason,
-          ]);
-          completion = { finishReason, textLength: text.length };
-          return;
-        } catch (error) {
-          const retrySame =
-            tryNumber < attempt.retries && isRetryableSameAttempt(error);
-          const nextAttempt = retrySame ? attempt : chatAttempts[index + 1];
-          if (
-            controller.signal.aborted ||
-            hasStreamed ||
-            !(isRetryable(error) && nextAttempt)
-          ) {
-            throw error;
-          }
-          logger.warn(
-            {
-              attempt: attemptLog(attempt),
-              err: error,
-              nextAttempt: attemptLog(nextAttempt),
-              threadId,
-            },
-            retrySame
-              ? '[agent] attempt failed, retrying same model'
-              : '[agent] attempt failed, falling back'
-          );
-          await session?.detach().catch(() => undefined);
-          session = undefined;
-          if (!retrySame) {
-            break;
-          }
+    const attemptHistory: AttemptFailure[] = [];
+    let attempt = chatAttempts[0];
+    while (attempt) {
+      const currentAttempt = attempt;
+      try {
+        activeAttempt = currentAttempt;
+        const agent = createAgent({
+          attempt: currentAttempt,
+          onSandboxReady: async (context) => {
+            sandboxContext = context;
+            attachments = await seedAttachments({
+              message,
+              sandboxContext: context,
+            });
+          },
+          sandbox,
+          sessionId: threadId,
+          systemPrompt: systemPrompt({ ...hints, model: currentAttempt.model }),
+          tools: buildTools({
+            bot,
+            getSandboxContext: () => sandboxContext,
+            thread,
+          }),
+        });
+        session = await openSession({ agent, threadId });
+        const result = await agent.stream({
+          abortSignal: controller.signal,
+          prompt: promptWithAttachments({ attachments, text: message.text }),
+          session,
+        });
+        for await (const chunk of renderStream(result.fullStream)) {
+          hasStreamed = true;
+          yield chunk;
         }
+
+        const [text, finishReason] = await Promise.all([
+          result.text,
+          result.finishReason,
+        ]);
+        completion = { finishReason, textLength: text.length };
+        return;
+      } catch (error) {
+        attemptHistory.push({ attempt: currentAttempt, error });
+        const retryAttempt = nextAttempt({
+          attempts: chatAttempts,
+          error,
+          failures: attemptHistory,
+        });
+        if (controller.signal.aborted || hasStreamed || !retryAttempt) {
+          throw error;
+        }
+        logger.warn(
+          {
+            attempt: attemptLog(currentAttempt),
+            err: error,
+            nextAttempt: attemptLog(retryAttempt),
+            threadId,
+          },
+          sameAttempt(retryAttempt, currentAttempt)
+            ? '[agent] attempt failed, retrying same model'
+            : '[agent] attempt failed, falling back'
+        );
+        await session?.detach().catch(() => undefined);
+        session = undefined;
+        if (sameAttempt(retryAttempt, currentAttempt)) {
+          const delayMs = attemptDelayMs({
+            attempt: currentAttempt,
+            error,
+            failures: attemptHistory,
+          });
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+        attempt = retryAttempt;
       }
     }
   }

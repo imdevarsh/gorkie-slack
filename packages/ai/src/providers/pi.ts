@@ -32,10 +32,12 @@ export const chatAttempts: PiAttempt[] = [
   ...(env.GEMINI_API_KEY
     ? [
         {
+          backoffFactor: 2,
           customEnv: {},
+          delayMs: 15_000,
           model: 'Gemini 3 Flash Preview',
           provider: 'google',
-          retries: 2,
+          retries: 4,
         },
       ]
     : []),
