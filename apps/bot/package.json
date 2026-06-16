@@ -5,7 +5,7 @@
   "scripts": {
     "clean": "git clean -xdf .turbo dist node_modules",
     "dev": "bun run --hot src/index.ts",
-    "start": "NODE_ENV=production bun run src/index.ts",
+    "start": "bun run src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

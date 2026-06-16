@@ -1,8 +1,8 @@
 import { createPostgresState } from '@chat-adapter/state-pg';
 import { Chat } from 'chat';
 import { env } from '@/env';
-import { toChatLogger } from '@/lib/chat-logger';
 import logger from '@/lib/logger';
+import { toChatLogger } from '@/lib/logger/chat';
 import { slack } from '@/slack';
 
 export const bot = new Chat({

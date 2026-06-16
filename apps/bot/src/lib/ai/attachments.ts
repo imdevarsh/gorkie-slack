@@ -1,6 +1,7 @@
 import nodePath from 'node:path/posix';
-import type { GorkieSandboxContext } from '@repo/ai';
+import type { SandboxContext } from '@repo/ai';
 import type { Message } from 'chat';
+import { sanitizeFilename } from '@/lib/utils/sanitize';
 
 export interface SeededAttachment {
   mimeType?: string;
@@ -9,23 +10,12 @@ export interface SeededAttachment {
   type: string;
 }
 
-function safeAttachmentName({
-  fallback,
-  name,
-}: {
-  fallback: string;
-  name?: string;
-}): string {
-  const base = nodePath.basename(name || fallback) || fallback;
-  return base.replace(/[^a-zA-Z0-9._-]/g, '_');
-}
-
 export async function seedAttachments({
   message,
   sandboxContext,
 }: {
   message: Message;
-  sandboxContext: GorkieSandboxContext;
+  sandboxContext: SandboxContext;
 }): Promise<SeededAttachment[]> {
   const seeded: SeededAttachment[] = [];
   for (const [index, attachment] of message.attachments.entries()) {
@@ -36,14 +26,15 @@ export async function seedAttachments({
       continue;
     }
 
-    const filename = safeAttachmentName({
-      fallback: `attachment-${index + 1}`,
-      name: attachment.name,
-    });
+    const fallback = `attachment-${index + 1}`;
+    const filename =
+      sanitizeFilename(nodePath.basename(attachment.name || fallback)) ||
+      fallback;
+    const messageDir = sanitizeFilename(message.id) || 'message';
     const path = nodePath.join(
       sandboxContext.sessionWorkDir,
       'attachments',
-      message.id.replace(/[^a-zA-Z0-9._-]/g, '_'),
+      messageDir,
       filename
     );
     const bytes =

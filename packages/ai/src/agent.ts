@@ -1,53 +1,13 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import type { HarnessV1SandboxProvider } from '@ai-sdk/harness';
-import {
-  HarnessAgent,
-  type HarnessAgentResumeSessionState,
-  type HarnessAgentSession,
-} from '@ai-sdk/harness/agent';
+import { HarnessAgent } from '@ai-sdk/harness/agent';
 import { createPi } from '@ai-sdk/harness-pi';
-import { getByThread, updateResumeState } from '@repo/db/queries';
 import type { ToolSet } from 'ai';
-import { CHAT_MODEL_ID, HACKCLUB_BASE_URL } from './providers';
+import { sessionIdFromWorkDir, syncSession } from './files/session';
+import { writeSystemPrompt } from './files/system';
+import { CHAT_MODEL, HACKCLUB_BASE_URL } from './providers';
+import type { SandboxContext } from './types';
 
-const PI_SESSIONS_DIR = '.pi-sessions';
-
-export interface GorkieSandboxContext {
-  session: {
-    readBinaryFile(input: { path: string }): PromiseLike<Uint8Array | null>;
-    writeBinaryFile(input: {
-      content: Uint8Array;
-      path: string;
-    }): PromiseLike<void>;
-  };
-  sessionWorkDir: string;
-}
-
-// The harness lays pi's host files under tmpdir()/ai-sdk-harness/pi/<safeSessionId>.
-function piHostRoot(sessionId: string): string {
-  const safeSessionId = sessionId.replace(/[\\/: ]/g, '-');
-  return path.join(tmpdir(), 'ai-sdk-harness', 'pi', safeSessionId);
-}
-
-// sessionWorkDir is `<workdir>/pi-<sessionId>`.
-function sessionIdFromWorkDir(sessionWorkDir: string): string {
-  return path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
-}
-
-function sessionFileNameOf(
-  resumeState: HarnessAgentResumeSessionState
-): string | undefined {
-  const { data } = resumeState;
-  if (data && typeof data === 'object' && 'sessionFileName' in data) {
-    const name = data.sessionFileName;
-    return typeof name === 'string' ? name : undefined;
-  }
-  return;
-}
-
-export function createGorkieAgent({
+export function createAgent({
   apiKey,
   onSandboxReady,
   sandbox,
@@ -55,7 +15,7 @@ export function createGorkieAgent({
   tools,
 }: {
   apiKey: string;
-  onSandboxReady?: (input: GorkieSandboxContext) => PromiseLike<void> | void;
+  onSandboxReady?: (input: SandboxContext) => PromiseLike<void> | void;
   sandbox: HarnessV1SandboxProvider;
   systemPrompt: string;
   tools: ToolSet;
@@ -68,7 +28,7 @@ export function createGorkieAgent({
           OPENROUTER_BASE_URL: HACKCLUB_BASE_URL,
         },
       },
-      model: CHAT_MODEL_ID,
+      model: CHAT_MODEL,
       thinkingLevel: 'medium',
     }),
     id: 'gorkie',
@@ -78,107 +38,15 @@ export function createGorkieAgent({
     onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
       await onSandboxReady?.({ session, sessionWorkDir });
       const sessionId = sessionIdFromWorkDir(sessionWorkDir);
-
-      // HackClub 403s pi's default prompt, so replace it via <agentDir>/SYSTEM.md
-      // on the host fs before pi boots.
-      const agentDir = path.join(piHostRoot(sessionId), 'agent');
-      await mkdir(agentDir, { recursive: true });
-      await writeFile(path.join(agentDir, 'SYSTEM.md'), systemPrompt);
-
-      // Re-seed pi's mirrored transcript when the sandbox is fresh (the previous
-      // one was killed), so the conversation survives. A reconnected sandbox
-      // already has the file, so we only write when it's missing — then pi pulls
-      // it on resume.
-      const existing = await getByThread(sessionId);
-      if (!(existing?.sessionFile && existing.sessionFileName)) {
-        return;
-      }
-      const sessionFilePath = `${sessionWorkDir}/${PI_SESSIONS_DIR}/${existing.sessionFileName}`;
-      try {
-        await session.readTextFile({ abortSignal, path: sessionFilePath });
-        return;
-      } catch {
-        // Missing in this sandbox — re-seed it below.
-      }
-      await session.run({
+      await writeSystemPrompt({ sessionId, systemPrompt });
+      await syncSession({
         abortSignal,
-        command: `mkdir -p ${JSON.stringify(`${sessionWorkDir}/${PI_SESSIONS_DIR}`)}`,
-      });
-      await session.writeTextFile({
-        abortSignal,
-        content: existing.sessionFile,
-        path: sessionFilePath,
+        session,
+        sessionId,
+        sessionWorkDir,
       });
     },
   });
 }
 
-export type GorkieAgent = ReturnType<typeof createGorkieAgent>;
-
-function parseResumeState(
-  value: string | null
-): HarnessAgentResumeSessionState | undefined {
-  return value
-    ? (JSON.parse(value) as HarnessAgentResumeSessionState)
-    : undefined;
-}
-
-export async function openSession({
-  agent,
-  threadId,
-}: {
-  agent: GorkieAgent;
-  threadId: string;
-}): Promise<HarnessAgentSession> {
-  const existing = await getByThread(threadId);
-  const resumeFrom = parseResumeState(existing?.resumeState ?? null);
-  return await agent.createSession(
-    resumeFrom ? { resumeFrom, sessionId: threadId } : { sessionId: threadId }
-  );
-}
-
-// Read pi's live session file from the host so we can mirror it to Postgres.
-function readHostSessionFile(
-  sessionId: string,
-  sessionFileName: string
-): Promise<string | null> {
-  const hostPath = path.join(
-    piHostRoot(sessionId),
-    'sessions',
-    sessionFileName
-  );
-  return readFile(hostPath, 'utf8').catch(() => null);
-}
-
-// `paused` pauses the sandbox (e2b betaPause); `active` keeps it warm. Either
-// way we mirror pi's transcript so the thread survives the sandbox being killed.
-export async function persistSession({
-  session,
-  status,
-  threadId,
-}: {
-  session: HarnessAgentSession;
-  status: 'active' | 'paused';
-  threadId: string;
-}): Promise<void> {
-  const resumeState =
-    status === 'paused' ? await session.stop() : await session.detach();
-  const serialized = JSON.stringify(resumeState);
-
-  const sessionFileName = sessionFileNameOf(resumeState);
-  const sessionFile = sessionFileName
-    ? await readHostSessionFile(threadId, sessionFileName)
-    : null;
-
-  if (sessionFileName && sessionFile !== null) {
-    await updateResumeState({
-      resumeState: serialized,
-      status,
-      threadId,
-      sessionFileName,
-      sessionFile,
-    });
-    return;
-  }
-  await updateResumeState({ resumeState: serialized, status, threadId });
-}
+export type Agent = ReturnType<typeof createAgent>;

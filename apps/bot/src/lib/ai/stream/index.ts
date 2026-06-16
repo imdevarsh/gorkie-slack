@@ -1,47 +1,11 @@
 import type { TextStreamPart, ToolSet } from 'ai';
 import type { StreamChunk } from 'chat';
-
-// Bridges pi's harness stream to Chat SDK: text-delta passes through as plain
-// strings (Chat SDK's proven text path), and each tool call renders as a task
-// card (Running command, Reading file, …) — the v1 "thinking/working" UI.
-
-const TASK_TITLES: Record<string, string> = {
-  // pi sandbox builtins
-  bash: 'Running command',
-  edit: 'Editing file',
-  glob: 'Finding files',
-  grep: 'Searching',
-  ls: 'Listing files',
-  read: 'Reading file',
-  write: 'Writing file',
-  // host tools
-  addReaction: 'Adding reaction',
-  compaction: 'Compacting context',
-  fetchMessages: 'Reading messages',
-  fetchThread: 'Reading thread',
-  fileChange: 'Updating file',
-  generateImage: 'Generating image',
-  getChannelInfo: 'Reading channel',
-  getUser: 'Looking up user',
-  postChannelMessage: 'Posting to channel',
-  postMessage: 'Sending message',
-  removeReaction: 'Removing reaction',
-  searchWeb: 'Searching the web',
-  sendDirectMessage: 'Sending DM',
-  startTyping: 'Typing',
-  uploadFile: 'Uploading file',
-};
+import { clamp } from '@/lib/utils/text';
+import { toolTitle } from './tools';
 
 const DETAIL_MAX = 180;
 const OUTPUT_MAX = 280;
-// Reasoning is the point of the "Thinking" card, so give it room (Slack section
-// text caps at 3000 chars).
 const REASONING_MAX = 2800;
-
-function clamp(value: string, max: number): string {
-  const trimmed = value.trim();
-  return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
-}
 
 function field(input: unknown, key: string): string | undefined {
   if (input && typeof input === 'object' && key in input) {
@@ -49,10 +13,6 @@ function field(input: unknown, key: string): string | undefined {
     return typeof value === 'string' ? value : undefined;
   }
   return;
-}
-
-function taskTitle(toolName: string): string {
-  return TASK_TITLES[toolName] ?? toolName;
 }
 
 function taskDetails(toolName: string, input: unknown): string | undefined {
@@ -70,7 +30,7 @@ function resultOutput(output: unknown): string | undefined {
   return text ? clamp(text, OUTPUT_MAX) : undefined;
 }
 
-export async function* renderHarnessStream(
+export async function* renderStream(
   stream: AsyncIterable<TextStreamPart<ToolSet>>
 ): AsyncGenerator<string | StreamChunk> {
   const reasoning = new Map<string, string>();
@@ -113,7 +73,7 @@ export async function* renderHarnessStream(
           details: taskDetails(part.toolName, part.input),
           id: part.toolCallId,
           status: 'in_progress',
-          title: taskTitle(part.toolName),
+          title: toolTitle(part.toolName),
           type: 'task_update',
         };
         break;
@@ -123,7 +83,7 @@ export async function* renderHarnessStream(
           id: part.toolCallId,
           output: resultOutput(part.output),
           status: 'complete',
-          title: taskTitle(part.toolName),
+          title: toolTitle(part.toolName),
           type: 'task_update',
         };
         break;
@@ -133,7 +93,7 @@ export async function* renderHarnessStream(
           id: part.toolCallId,
           output: resultOutput(part.error),
           status: 'error',
-          title: taskTitle(part.toolName),
+          title: toolTitle(part.toolName),
           type: 'task_update',
         };
         break;

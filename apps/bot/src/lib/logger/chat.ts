@@ -1,8 +1,6 @@
 import type { Logger as PinoLogger } from '@repo/logging/logger';
 import type { Logger as ChatLogger } from 'chat';
 
-// Chat SDK logs as `info(message, ...meta)`; pino wants `info(mergeObject, message)`.
-// This adapter flips the order so Chat SDK's logs flow through our pino instance.
 function metaFrom(args: unknown[]): Record<string, unknown> {
   const [first] = args;
   if (args.length === 1 && typeof first === 'object' && first !== null) {

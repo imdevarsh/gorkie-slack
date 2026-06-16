@@ -98,17 +98,18 @@ typecheck/build yet — that's expected. All removed code (incl. old schemas) li
 
 | Package | Purpose |
 |---|---|
-| `apps/bot` | Thin runtime: `vercel/chat` Slack wiring + env (`src/env.ts`). **No `packages/config`** — env lives here, monorepo like the previous version. |
-| `packages/ai` | **Kept.** The agent core: `createPi`/`HarnessAgent` assembly, system prompts, host tools, and AI env keys (`./keys`). |
+| `apps/bot` | Runtime: `vercel/chat` Slack wiring, env (`src/env.ts`), and bot-owned host tools under `src/lib/ai/tools/*` (`searchWeb`, `generateImage`, `uploadFile`, etc.). **No `packages/config`** — env lives here, monorepo like the previous version. |
+| `packages/ai` | **Kept.** Platform-neutral agent core: `createPi`/`HarnessAgent` assembly, system prompts, provider setup, and AI env keys (`./keys`). No Slack/app-specific tools. |
 | `packages/sandbox` | **New.** The e2b `HarnessV1SandboxProvider` + session lifecycle (incl. the DB session-file mirror). |
 | `packages/db` | Keep — drizzle. |
 | `packages/validators` | Keep — zod schemas. |
 | `packages/utils` | Keep (trim). |
 | `packages/logging` | Keep — pino. |
 
-**AI deps:** `ai-retry` + patch already removed (can't wrap a harness; pi owns model
-routing). Keep only the provider deps host tools actually need (e.g. image generation),
-added when those tools land. `apps/server` (MCP OAuth callback) returns only in the MCP phase.
+**AI deps:** the old `ai-retry` dependency/patch is removed, but the behavior is still needed.
+Rebuild an ai-powered retry/fallback layer for Harness/pi model calls instead of trying to wrap
+AI SDK `generateText` directly. Keep app-specific host-tool deps in `apps/bot`, not `packages/ai`.
+`apps/server` (MCP OAuth callback) returns only in the MCP phase.
 
 ## 4. Target architecture
 
@@ -258,10 +259,14 @@ harness own conversation history (don't double-store via `bot.transcripts`).
 4. **Canary coupling (low concern).** The brain depends on `@ai-sdk/harness@canary` +
    `@ai-sdk/harness-pi@canary`. Judged stable enough to build on directly (no seam).
    Light mitigation only: pin exact canary versions and keep one full-turn smoke test green
-   when bumping. (`ai-retry` is removed — it can't wrap the harness; pi owns model routing.)
-5. **BYOK is currently stubbed** — `createPi` hardcodes `OPENROUTER_API_KEY: env.HACKCLUB_API_KEY`.
+   when bumping. (`ai-retry` is removed as a dependency; rebuild its behavior at the Harness/pi
+   boundary where model routing happens.)
+5. **Harness retry/fallback is missing** — replicate the useful `ai-retry` behavior around
+   Harness/pi turns so transient provider failures and provider-specific credit/token errors can
+   retry with adjusted settings or an alternate provider without losing the thread session.
+6. **BYOK is currently stubbed** — `createPi` hardcodes `OPENROUTER_API_KEY: env.HACKCLUB_API_KEY`.
    Real per-user keys must flow into `customEnv` per session.
-6. **Compaction over long, multi-day Slack threads** is unverified for a coding harness — test it.
+7. **Compaction over long, multi-day Slack threads** is unverified for a coding harness — test it.
 
 ## 8. MCP — LATER STAGE, do not worry about it now
 
@@ -299,8 +304,9 @@ core. When it does land it will be re-derived cleanly (not copied) and gated per
   phase as the MCP OAuth callback host (+ webhook receiver if not socket-mode).
 - **D6 — Single MCP encryption key.** v1 uses one server-wide `MCP_ENCRYPTION_KEY`. Move to
   envelope / per-user key derivation?
-- **D7 — Provider fallback under pi.** pi owns model routing; does `ai-retry`-style fallback
-  still apply, or do we rely on AI Gateway / pi's own routing?
+- **D7 — Provider fallback under pi.** Replicate `ai-retry` semantics for Harness/pi: classify
+  provider failures, cap excessive output-token defaults, retry transient failures, and fall back
+  across configured providers/models while preserving the current thread/session state.
 - **D8 — e2b template (Phase 2).** pi runs on host, so the sandbox only needs a base image +
   whatever runtimes code-exec needs. Use a stock e2b base or build a custom `gorkie` template?
 - **D9 — Part-1 model + key (Phase 2).** Which model does pi use with the single shared key —
@@ -328,13 +334,22 @@ Each phase: design fresh (reference for understanding only) → build clean → 
 - **Phase 2.5 — Steering.** Ship abort-&-re-prompt first; then patch `@ai-sdk/harness` to expose
   `submitUserMessage` so a mid-turn follow-up queues and delivers at the next tool boundary
   (pi `one-at-a-time`). See §4a.
+- **Phase 2.75 — Harness retry/fallback.** Rebuild the useful `ai-retry` behavior for Harness/pi
+  turns: provider-error classification, output-token caps, transient retry, and alternate provider
+  fallback without dropping the pi transcript or Slack stream state.
 - **Phase 3 — Persistence + session-file mirror.** `resumeState` pointer in `sandbox_sessions`
   **plus** mirroring pi's session-file bytes to Postgres each turn and re-seeding into a fresh
   sandbox via `onSandboxSession` on resume. Verify: history survives sandbox **death** (not
   just restart), `resumeFrom` works against a new sandbox id, and compaction holds on long threads.
 - **Phase 4 — Core conversation tools.** Use `createChatTools` (`chat/ai`) for `fetchMessages`/
-  `getUser`/`addReaction`/etc.; hand-write `searchWeb`, `getWeather`, `generateImage`, `mermaid`,
-  file upload. (`summariseThread` may be unneeded — pi has native history.)
+  `getUser`/`addReaction`/etc.; hand-write bot-owned tools under `apps/bot/src/lib/ai/tools/*`
+  (`searchWeb`, `getWeather`, `generateImage`, `mermaid`, file upload). (`summariseThread` may
+  be unneeded — pi has native history.)
+- **Phase 4.5 — Langfuse observability.** The env schema already accepts `LANGFUSE_*`; wire it
+  into one trace per Slack turn with thread/message ids, model id, finish reason, tool activity,
+  sandbox lifecycle events, and final error/completion status. Keep tracing optional and inert
+  when the env vars are absent. Validate with one live Slack turn and confirm the trace contains
+  model/tool timing plus the final outcome.
 
 ### Part 2 — later (must not block Part 1)
 - **Phase 5 — BYOK.** Per-user keys → `customEnv`; per-user agent instances closed over the
@@ -351,8 +366,12 @@ Each phase: design fresh (reference for understanding only) → build clean → 
 - **`apps/server` deleted** — returns in Part 2 only as the MCP OAuth callback host.
 - **`packages/kv` deleted.** If we need Chat SDK state (locks/dedup), use `@chat-adapter/state-pg`
   or `state-redis` directly.
-- **`packages/ai` deleted** → reborn as `packages/agent`; new `packages/config`, `packages/sandbox`.
-- `ai-retry` + patch removed (not v7/harness-compatible; revisit later for host-tool model calls).
+- **`packages/ai` kept** for platform-neutral harness/provider/prompt code; bot-owned tools live
+  under `apps/bot/src/lib/ai/tools/*`.
+- **No bot bundling while running locally.** `apps/bot` runs TypeScript directly with Bun; do not
+  keep `tsdown` or a `build` script unless a real deploy/distribution target is added.
+- `ai-retry` + patch removed as a dependency; re-implement its fallback behavior around Harness/pi
+  where the model call actually happens.
 - New drizzle tables (fresh, no back-compat): `sandbox_sessions` (with `resumeState` pointer +
   mirrored pi session-file bytes); MCP/scheduled tables arrive with Part 2.
 - Keep: drizzle, cspell, knip, ultracite, lefthook, turbo.
@@ -412,7 +431,7 @@ Only add a comment when the **why** is non-obvious — a hidden constraint, a wo
 No multi-line block comments on functions. Self-documenting names are enough.
 
 ### Config for tuneable values
-Anything that could reasonably change per deployment (thresholds, message lists, locale) belongs in `pkgs/config`
+Anything that could reasonably change per deployment (thresholds, message lists, locale) belongs in the owning app/package config, not inline in feature code.
 
 ### Feature-enclosed architecture
 Slack features live under `apps/bot/src/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts` when applicable. Keep feature-specific UI/actions near the feature that owns them.

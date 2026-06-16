@@ -1,4 +1,4 @@
-import type { Message, Thread } from 'chat';
+import type { Thread } from 'chat';
 import { slack } from '@/slack';
 
 const LOADING_MESSAGES = [
@@ -13,12 +13,12 @@ const LOADING_MESSAGES = [
   'is giving it a good think',
 ];
 
-export function slackThreadOf(thread: Thread):
-  | {
-      channel: string;
-      threadTs: string;
-    }
-  | undefined {
+export interface RawSlackThread {
+  channel: string;
+  threadTs: string;
+}
+
+export function rawSlackThreadFrom(thread: Thread): RawSlackThread | undefined {
   const [adapter, channel, threadTs] = thread.id.split(':');
   if (adapter !== 'slack' || !(channel && threadTs)) {
     return;
@@ -30,7 +30,7 @@ export async function setThinking(
   thread: Thread,
   status: string
 ): Promise<void> {
-  const slackThread = slackThreadOf(thread);
+  const slackThread = rawSlackThreadFrom(thread);
   if (!slackThread) {
     return;
   }
@@ -44,33 +44,7 @@ export async function setThinking(
     .catch(() => undefined);
 }
 
-export async function acknowledgeSteer({
-  message,
-  thread,
-}: {
-  message: Message;
-  thread: Thread;
-}): Promise<void> {
-  await setThinking(thread, 'got your update');
-  const slackThread = slackThreadOf(thread);
-  if (!slackThread) {
-    return;
-  }
-
-  const preview = message.text.trim().replace(/\s+/g, ' ').slice(0, 120);
-  await slack.webClient.chat
-    .postEphemeral({
-      channel: slackThread.channel,
-      text: preview
-        ? `Got it - applying this to the current run: "${preview}"`
-        : 'Got it - applying your latest message to the current run.',
-      thread_ts: slackThread.threadTs,
-      user: message.author.userId,
-    })
-    .catch(() => undefined);
-}
-
-export async function uploadToThread({
+export async function uploadSlackFileToThread({
   file,
   filename,
   thread,
@@ -81,7 +55,7 @@ export async function uploadToThread({
   thread: Thread;
   title: string;
 }): Promise<void> {
-  const slackThread = slackThreadOf(thread);
+  const slackThread = rawSlackThreadFrom(thread);
   if (!slackThread) {
     throw new Error('Cannot upload file outside a Slack thread.');
   }

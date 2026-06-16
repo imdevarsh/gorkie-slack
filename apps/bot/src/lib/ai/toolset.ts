@@ -1,10 +1,10 @@
 import nodePath from 'node:path/posix';
-import type { GorkieSandboxContext } from '@repo/ai';
+import type { SandboxContext } from '@repo/ai';
 import type { ToolSet } from 'ai';
 import type { Chat, Thread } from 'chat';
 import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
-import { uploadToThread } from '@/lib/slack/thread';
+import { uploadSlackFileToThread } from '@/lib/slack/thread';
 import { generateImageTool } from './tools/generate-image';
 import { searchWeb } from './tools/search-web';
 import { uploadFileTool } from './tools/upload-file';
@@ -15,7 +15,7 @@ export function buildTools({
   thread,
 }: {
   bot: Chat;
-  getSandboxContext: () => GorkieSandboxContext | undefined;
+  getSandboxContext: () => SandboxContext | undefined;
   thread: Thread;
 }): ToolSet {
   const { startTyping: _startTyping, ...chatTools } = createChatTools({
@@ -30,7 +30,7 @@ export function buildTools({
     generateImage: generateImageTool({
       upload: async ({ bytes, mediaType, index, total }) => {
         const filename = `gorkie-image-${index + 1}.${mediaType.split('/').at(1) ?? 'png'}`;
-        await uploadToThread({
+        await uploadSlackFileToThread({
           file: Buffer.from(bytes),
           filename,
           thread,
@@ -65,7 +65,7 @@ export function buildTools({
 
         const resolvedFilename =
           filename ?? nodePath.basename(sandboxPath) ?? 'artifact';
-        await uploadToThread({
+        await uploadSlackFileToThread({
           file: Buffer.from(bytes),
           filename: resolvedFilename,
           thread,

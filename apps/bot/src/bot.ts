@@ -4,7 +4,6 @@ import { bot } from '@/chat';
 
 export { bot } from '@/chat';
 
-// Ignore other bots and our own posts; `##` is the user opt-out prefix.
 function shouldRespond(message: Message): boolean {
   if (message.author.isBot === true || message.author.isMe) {
     return false;
