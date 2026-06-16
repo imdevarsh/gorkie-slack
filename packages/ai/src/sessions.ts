@@ -29,8 +29,7 @@ export async function persistSession({
   snapshotSource?: SandboxContext;
   threadId: string;
 }): Promise<void> {
-  // detach() flushes pi's transcript into the (still warm) sandbox; we then
-  // mirror those bytes out so the conversation survives the sandbox being killed.
+  // Pi writes its transcript during detach; mirror it before the sandbox pauses.
   const resumeState = await session.detach();
   const serialized = JSON.stringify(resumeState);
 

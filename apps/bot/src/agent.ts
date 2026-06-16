@@ -20,7 +20,8 @@ import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
-import { postSteeringNotice, setThinking } from '@/lib/slack/thread';
+import { setThinking } from '@/lib/slack/thread';
+import { slack } from '@/slack';
 
 const sandbox = new E2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
@@ -33,11 +34,16 @@ export function runTurn(input: {
 }): Promise<void> {
   return runQueuedTurn({
     threadId: input.thread.id,
-    onInterrupt: () =>
-      postSteeringNotice({
-        thread: input.thread,
-        userId: input.message.author.userId,
-      }),
+    onInterrupt: async () => {
+      await slack
+        .postEphemeral(
+          input.thread.id,
+          input.message.author.userId,
+          'Got it! Steering conversation.'
+        )
+        .then(() => undefined)
+        .catch(() => undefined);
+    },
     run: (controller) => executeTurn(input, controller),
   });
 }
@@ -55,9 +61,6 @@ async function executeTurn(
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
 
-  // Persist the transcript, then optionally park the sandbox. We keep it warm
-  // (pause: false) only when interrupted, so the steering turn restarts fast.
-  // If persistence itself fails the session is unusable — tear it down.
   const parkSession = async ({ pause }: { pause: boolean }): Promise<void> => {
     if (!session) {
       return;
@@ -114,8 +117,6 @@ async function executeTurn(
   }) {
     const hints = await requestHints({ thread, message });
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
-    // Once a chunk has reached Slack, switching attempts would re-stream and
-    // duplicate the message — so fallback is only allowed before any output.
     let hasStreamed = false;
     for (const [index, attempt] of chatAttempts.entries()) {
       for (let tryNumber = 1; tryNumber <= attempt.retries; tryNumber++) {
@@ -157,8 +158,6 @@ async function executeTurn(
           completion = { finishReason, textLength: text.length };
           return;
         } catch (error) {
-          // Transient blip → retry the same model; otherwise move on to the
-          // next provider. Never fall back once output has streamed.
           const retrySame =
             tryNumber < attempt.retries && isRetryableSameAttempt(error);
           const nextAttempt = retrySame ? attempt : chatAttempts[index + 1];

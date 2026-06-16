@@ -16,20 +16,6 @@ export function getThread(thread: Thread): SlackThread | undefined {
   return { channel, threadTs };
 }
 
-export async function postSteeringNotice({
-  thread,
-  userId,
-}: {
-  thread: Thread;
-  userId: string;
-}): Promise<void> {
-  await slack
-    .postEphemeral(thread.id, userId, 'Got it! Steering conversation.')
-    .catch(() => undefined);
-}
-
-// Assistant thinking indicator. It auto-clears once a message posts to the
-// thread, so there's no explicit clear call.
 export async function setThinking(
   thread: Thread,
   status: string

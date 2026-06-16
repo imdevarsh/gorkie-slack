@@ -3,15 +3,7 @@ import { createPiAttempt, type PiAttempt } from './utils';
 
 const env = keys();
 
-// `prefix` picks which `<PREFIX>_API_KEY` / `<PREFIX>_BASE_URL` pair pi reads
-// and which provider it registers. OPENROUTER gives an OpenRouter/OpenAI-style
-// client (model ids like `openai/gpt-5.4-mini`); HackClub's proxy speaks that
-// same protocol, so we just point OPENROUTER_BASE_URL at it. (Special prefixes
-// — AI_GATEWAY/OPENAI/ANTHROPIC — would change pi's client behaviour.)
-//
-// Tried in order until one starts streaming. Each attempt retries its own model
-// on a transient blip (e.g. HackClub 504); a non-retryable failure (e.g. out of
-// credits) skips straight to the next provider.
+// HackClub speaks OpenRouter protocol, so Pi must register an OPENROUTER client.
 export const chatAttempts: PiAttempt[] = [
   createPiAttempt({
     apiKey: env.HACKCLUB_API_KEY,
@@ -29,6 +21,18 @@ export const chatAttempts: PiAttempt[] = [
           model: 'openai/gpt-5.4-mini',
           prefix: 'OPENROUTER',
           provider: 'openrouter',
+          retries: 2,
+        }),
+      ]
+    : []),
+  ...(env.OPENAI_API_KEY
+    ? [
+        createPiAttempt({
+          apiKey: env.OPENAI_API_KEY,
+          baseUrl: env.OPENAI_BASE_URL,
+          model: 'gpt-5.4-mini',
+          prefix: 'OPENAI',
+          provider: 'openai',
           retries: 2,
         }),
       ]

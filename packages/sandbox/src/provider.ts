@@ -118,8 +118,6 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
     return session;
   };
 
-  // Park the thread's sandbox after the agent has mirrored pi's transcript out
-  // of it. No-op when the thread has no sandbox.
   pauseSession = async (threadId: string): Promise<void> => {
     const existing = await getByThread(threadId);
     if (!existing) {
@@ -162,8 +160,6 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
         '[sandbox] resumed e2b sandbox'
       );
     } else {
-      // Old sandbox is gone; pi's mirrored transcript is re-seeded into the
-      // fresh one via onSandboxSession.
       sandbox = await this.spawnSandbox(sessionId);
       this.logger.info(
         {

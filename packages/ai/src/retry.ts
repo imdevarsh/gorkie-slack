@@ -1,7 +1,4 @@
-// Statuses worth retrying at all (transient infra + provider credit/quota).
 const RETRYABLE_STATUSES = new Set([402, 408, 409, 429, 500, 502, 503, 504]);
-// Subset safe to retry on the SAME provider — credit/quota (402/429) are not,
-// they need a different provider.
 const TRANSIENT_STATUSES = new Set([408, 500, 502, 503, 504]);
 
 const RETRYABLE_PATTERN =
@@ -26,7 +23,6 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-// Should we retry this turn at all (same model or next provider)?
 export function isRetryable(error: unknown): boolean {
   const status = statusOf(error);
   if (status !== undefined) {
@@ -35,8 +31,6 @@ export function isRetryable(error: unknown): boolean {
   return RETRYABLE_PATTERN.test(messageOf(error));
 }
 
-// Is it safe to retry on the SAME provider/model (transient blip), vs. having to
-// move to the next provider (credit/quota exhaustion)?
 export function isRetryableSameAttempt(error: unknown): boolean {
   const status = statusOf(error);
   if (status !== undefined) {

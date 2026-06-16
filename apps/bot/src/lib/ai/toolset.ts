@@ -7,6 +7,7 @@ import { env } from '@/env';
 import { uploadSlackFileToThread } from '@/lib/slack/thread';
 import { generateImageTool } from './tools/generate-image';
 import { searchWeb } from './tools/search-web';
+import { summarizeThreadTool } from './tools/summarize-thread';
 import { uploadFileTool } from './tools/upload-file';
 
 export function buildTools({
@@ -27,6 +28,7 @@ export function buildTools({
   return {
     ...chatTools,
     searchWeb: searchWeb({ apiKey: env.EXA_API_KEY }),
+    summarizeThread: summarizeThreadTool({ bot, threadId: thread.id }),
     generateImage: generateImageTool({
       upload: async ({ bytes, mediaType, index, total }) => {
         const filename = `gorkie-image-${index + 1}.${mediaType.split('/').at(1) ?? 'png'}`;

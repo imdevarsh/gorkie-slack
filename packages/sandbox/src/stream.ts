@@ -1,6 +1,3 @@
-// Small stream adapters between e2b's byte/text I/O and the harness sandbox
-// session's ReadableStream surface.
-
 export async function collectStream(
   stream: ReadableStream<Uint8Array>
 ): Promise<Uint8Array> {
