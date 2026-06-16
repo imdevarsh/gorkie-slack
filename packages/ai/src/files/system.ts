@@ -1,11 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
-
-export function piHostRoot(sessionId: string): string {
-  const safeSessionId = sessionId.replace(/[/: ]/g, '-');
-  return path.join(tmpdir(), 'ai-sdk-harness', 'pi', safeSessionId);
-}
+import { hostWorkdir } from './utils';
 
 export async function writeSystemPrompt({
   sessionId,
@@ -14,7 +9,7 @@ export async function writeSystemPrompt({
   sessionId: string;
   systemPrompt: string;
 }): Promise<void> {
-  const agentDir = path.join(piHostRoot(sessionId), 'agent');
+  const agentDir = path.join(hostWorkdir(sessionId), 'agent');
   await mkdir(agentDir, { recursive: true });
   await writeFile(path.join(agentDir, 'SYSTEM.md'), systemPrompt);
 }

@@ -1,7 +1,7 @@
 import type { HarnessAgentSession } from '@ai-sdk/harness/agent';
 import { getByThread, updateResumeState } from '@repo/db/queries';
 import type { Agent } from './agent';
-import { readHostSessionFile, sessionFileNameOf } from './files/session';
+import { readSession, sessionFileNameOf } from './files/session';
 
 export async function openSession({
   agent,
@@ -34,7 +34,7 @@ export async function persistSession({
 
   const sessionFileName = sessionFileNameOf(resumeState);
   const sessionFile = sessionFileName
-    ? await readHostSessionFile({ sessionId: threadId, sessionFileName })
+    ? await readSession({ sessionId: threadId, sessionFileName })
     : null;
 
   if (sessionFileName && sessionFile !== null) {

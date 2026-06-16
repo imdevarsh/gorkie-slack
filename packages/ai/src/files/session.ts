@@ -1,26 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { HarnessAgentResumeSessionState } from '@ai-sdk/harness/agent';
+import type { Experimental_SandboxSession } from '@ai-sdk/provider-utils';
 import { getByThread } from '@repo/db/queries';
-import { piHostRoot } from './system';
-
-const PI_SESSIONS_DIR = '.pi-sessions';
-
-interface PiSandboxSession {
-  readTextFile(input: {
-    abortSignal?: AbortSignal;
-    path: string;
-  }): PromiseLike<string | null>;
-  run(input: {
-    abortSignal?: AbortSignal;
-    command: string;
-  }): PromiseLike<unknown>;
-  writeTextFile(input: {
-    abortSignal?: AbortSignal;
-    content: string;
-    path: string;
-  }): PromiseLike<void>;
-}
+import { hostWorkdir, PI_SESSIONS_DIR } from './utils';
 
 export function sessionIdFromWorkDir(sessionWorkDir: string): string {
   return path.posix.basename(sessionWorkDir).replace(/^pi-/, '');
@@ -37,7 +20,7 @@ export function sessionFileNameOf(
   return;
 }
 
-export function readHostSessionFile({
+export function readSession({
   sessionFileName,
   sessionId,
 }: {
@@ -45,7 +28,7 @@ export function readHostSessionFile({
   sessionId: string;
 }): Promise<string | null> {
   const hostPath = path.join(
-    piHostRoot(sessionId),
+    hostWorkdir(sessionId),
     'sessions',
     sessionFileName
   );
@@ -59,7 +42,7 @@ export async function syncSession({
   sessionWorkDir,
 }: {
   abortSignal?: AbortSignal;
-  session: PiSandboxSession;
+  session: Experimental_SandboxSession;
   sessionId: string;
   sessionWorkDir: string;
 }): Promise<void> {
