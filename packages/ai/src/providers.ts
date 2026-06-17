@@ -84,14 +84,14 @@ const chatModel = createRetryable({
 const summariserModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3.1-flash-lite-preview'),
   retries: [
-    ...(inference
-      ? [retry(inference.languageModel('deepseek/deepseek-4-flash'))]
-      : []),
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3.1-flash-lite-preview')
     ),
     ...(google
       ? [requestNotRetryable(google('gemini-3.1-flash-lite-preview'))]
+      : []),
+    ...(inference
+      ? [retry(inference.languageModel('deepseek/deepseek-4-flash'))]
       : []),
     retry(hackclub.languageModel('openai/gpt-5-nano')),
     retry(openrouter.languageModel('google/gemini-3.1-flash-lite-preview')),
