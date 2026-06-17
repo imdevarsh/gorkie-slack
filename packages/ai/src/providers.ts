@@ -71,14 +71,14 @@ const retry = (model: LanguageModel): Retry<LanguageModel> => ({
 const chatModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3-flash-preview'),
   retries: [
-    requestNotRetryable(hackclub.languageModel('openai/gpt-5.4-mini')),
+    ...(inference
+      ? [retry(inference.languageModel('moonshotai/kimi-k2.6'))]
+      : []),
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3-flash-preview')
     ),
     requestNotRetryable(openrouter.languageModel('openai/gpt-5.4-mini')),
-    ...(inference
-      ? [retry(inference.languageModel('moonshotai/kimi-k2.6'))]
-      : []),
+    requestNotRetryable(hackclub.languageModel('openai/gpt-5.4-mini')),
     retry(hackclub.languageModel('openai/gpt-5.4-mini')),
     retry(openrouter.languageModel('google/gemini-3-flash-preview')),
     retry(openrouter.languageModel('openai/gpt-5.4-mini')),
@@ -89,14 +89,14 @@ const chatModel = createRetryable({
 const summariserModel = createRetryable({
   model: hackclub.languageModel('google/gemini-3.1-flash-lite-preview'),
   retries: [
+    ...(inference
+      ? [retry(inference.languageModel('deepseek/deepseek-4-flash'))]
+      : []),
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3.1-flash-lite-preview')
     ),
     ...(google
       ? [requestNotRetryable(google('gemini-3.1-flash-lite-preview'))]
-      : []),
-    ...(inference
-      ? [retry(inference.languageModel('deepseek/deepseek-4-flash'))]
       : []),
     retry(hackclub.languageModel('openai/gpt-5-nano')),
     retry(openrouter.languageModel('google/gemini-3.1-flash-lite-preview')),
