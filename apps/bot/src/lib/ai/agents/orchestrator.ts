@@ -12,7 +12,7 @@ import type {
   Stream,
   ToolApprovalRequest,
 } from '@/types';
-import { createTask, finishTask, updateTask } from '../utils/task';
+import { createTask, finishTask } from '../utils/task';
 
 const taskMap = new Map<string, { taskId: string; startTime: number }>();
 
@@ -47,17 +47,11 @@ export async function resolveOrchestratorTask({
 }
 
 export async function collectToolApprovalsFromStream({
-  context,
-  stream,
   fullStream,
 }: {
-  context: SlackMessageContext;
-  stream: Stream;
   fullStream: AsyncIterable<ReasoningStreamPart>;
 }): Promise<ToolApprovalRequest[]> {
-  const eventTs = context.event.event_ts;
   const approvals: ToolApprovalRequest[] = [];
-  let reasoningText = '';
 
   for await (const part of fullStream) {
     if (part.type === 'tool-approval-request' && 'toolCall' in part) {
@@ -73,38 +67,7 @@ export async function collectToolApprovalsFromStream({
           toolName: mcp.toolName,
         });
       }
-      continue;
     }
-
-    if (part.type === 'start-step') {
-      continue;
-    }
-
-    if (part.type !== 'reasoning-delta' || !('text' in part)) {
-      continue;
-    }
-
-    if (!part.text) {
-      continue;
-    }
-
-    reasoningText += part.text;
-    const output = reasoningText.trim();
-    if (!output) {
-      continue;
-    }
-
-    const entry = taskMap.get(eventTs);
-    if (!entry) {
-      logger.warn({ eventTs }, 'No taskId found in taskMap');
-      continue;
-    }
-
-    await updateTask(stream, {
-      taskId: entry.taskId,
-      status: 'in_progress',
-      output,
-    });
   }
 
   return approvals;
@@ -141,7 +104,7 @@ export const orchestratorAgent = async ({
         },
       },
     },
-    toolChoice: 'required',
+    toolChoice: 'auto',
     tools,
     stopWhen: [
       stepCountIs(40),

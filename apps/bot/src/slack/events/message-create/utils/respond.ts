@@ -18,6 +18,7 @@ import { setStatus } from '@/lib/ai/utils/status';
 import { closeStream, initStream, setPlanTitle } from '@/lib/ai/utils/stream';
 import { finishTask } from '@/lib/ai/utils/task';
 import { setConversationTitle } from '@/lib/ai/utils/title';
+import logger from '@/lib/logger';
 import type {
   ChatRequestHints,
   SlackMessageContext,
@@ -32,6 +33,34 @@ import {
   postApprovalRequest,
   recordApprovalTask,
 } from './approval-helpers';
+
+function collectTextFromContent(content: unknown): string {
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+
+  if (!Array.isArray(content)) {
+    return '';
+  }
+
+  return content
+    .flatMap((part) => {
+      if (
+        typeof part === 'object' &&
+        part !== null &&
+        'type' in part &&
+        part.type === 'text' &&
+        'text' in part &&
+        typeof part.text === 'string'
+      ) {
+        return [part.text];
+      }
+
+      return [];
+    })
+    .join('\n')
+    .trim();
+}
 
 async function runAgent({
   context,
@@ -74,8 +103,6 @@ async function runAgent({
       abortSignal: controller.signal,
     });
     const approvals = await collectToolApprovalsFromStream({
-      context,
-      stream,
       fullStream: streamResult.fullStream,
     });
     const response = await streamResult.response;
@@ -104,6 +131,70 @@ async function runAgent({
     }
 
     const toolCalls = await streamResult.toolCalls;
+    logger.info(
+      {
+        approvals: approvals.length,
+        ctxId,
+        responseMessages: response.messages.map((message) => ({
+          content: JSON.stringify(message.content).slice(0, 1000),
+          role: message.role,
+        })),
+        toolCalls: toolCalls.map((call) => ({
+          args: JSON.stringify(call.input).slice(0, 1000),
+          toolName: call.toolName,
+        })),
+      },
+      'Agent stream completed'
+    );
+    const delivered = toolCalls.some((call) =>
+      ['leaveChannel', 'reply', 'skip'].includes(call.toolName)
+    );
+    if (!(delivered || approvals.length > 0)) {
+      const fallbackText = response.messages
+        .filter((message) => message.role === 'assistant')
+        .map((message) => collectTextFromContent(message.content))
+        .filter(Boolean)
+        .join('\n\n')
+        .trim();
+
+      if (fallbackText && context.event.channel) {
+        logger.warn(
+          { ctxId, fallbackText: fallbackText.slice(0, 1000) },
+          'Agent returned text without terminal Slack response tool'
+        );
+        await context.client.chat.postMessage({
+          channel: context.event.channel,
+          markdown_text: fallbackText,
+          thread_ts: context.event.thread_ts ?? context.event.ts,
+        });
+        await closeStream(stream);
+        await setStatus(context, { status: '' });
+        return { success: true, toolCalls };
+      }
+
+      logger.warn(
+        {
+          approvals: approvals.length,
+          ctxId,
+          responseMessageCount: response.messages.length,
+          toolNames: toolCalls.map((call) => call.toolName),
+        },
+        'Agent finished without terminal Slack response tool'
+      );
+      await setPlanTitle(stream, 'No Reply Generated');
+      await resolveOrchestratorTask({
+        context,
+        stream,
+        title: 'No Reply Generated',
+        details: 'The model finished without calling a Slack response tool.',
+      });
+      await closeStream(stream);
+      await setStatus(context, { status: 'failed to generate' });
+      return {
+        success: false,
+        error: 'Oops! Something went wrong, try again later.',
+      };
+    }
     await closeStream(stream);
     await setStatus(context, { status: '' });
     return { success: true, toolCalls };
