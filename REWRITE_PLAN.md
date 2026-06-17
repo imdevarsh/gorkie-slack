@@ -152,6 +152,13 @@ Slack / (later Discord) ──▶ vercel/chat adapter ──▶ Runtime (apps/bo
   `fetchThread`, … with `needsApproval` built in on writes); hand-write only the rest
   (`searchWeb`, `getWeather`, `generateImage`, `mermaid`, scheduling, file upload). **`reply`
   and `skip` are dropped** — pi's streamed text *is* the message.
+- **Tool/task rendering is per tool, not generic JSON summaries.** Do not rely on every tool
+  returning a `summary` string. Keep a renderer layer that maps tool name + input/result/error to
+  user-facing task rows: e.g. `generateImage` → "Generating image" / upload count / image error,
+  `searchSlack` → result count, `sendDirectMessage` → recipient + success/failure, `postMessage`
+  → target thread/channel, `addReaction` → emoji added, `fetchMessages` → message count. Internal
+  Chat SDK tools need renderers too; wrap/override or post-process their results at the stream
+  layer rather than weakening tool return types just for UI.
 - **Steering: pi supports it, the AI SDK wrapper doesn't surface it yet** (see §4a). The current
   abort + re-prompt fallback is too janky because it re-enters provider retry/fallback and can
   feel like a fresh turn. Revert toward the old steering behavior: queue a mid-turn follow-up and
@@ -366,6 +373,13 @@ Each phase: design fresh (reference for understanding only) → build clean → 
   `apps/bot/src/lib/ai/tools/*` (`searchSlack`, `searchWeb`, `getWeather`, `generateImage`,
   `mermaid`, file upload, scheduling). Do not remove old tool capability just because pi has
   built-ins; preserve the old user-facing affordance first, then simplify internals later.
+  Verify every restored old Gorkie skill/tool with at least one live or harnessed smoke path:
+  Slack search, web search, image generation/upload, user lookup, weather, thread summary,
+  conversation history, Mermaid upload, reactions, leaving channels, reminders, recurring tasks,
+  scheduled-task listing/cancel, sandbox file sharing, and Chat SDK internal tools (`sendDirectMessage`,
+  `postMessage`, `postChannelMessage`, `fetchMessages`, `fetchChannelMessages`, `listThreads`,
+  `getChannelInfo`, `getUser`, `addReaction`, `removeReaction`). Add per-tool task renderers for
+  success and error states as each tool lands; avoid generic `summary` as the primary UI contract.
 - **Phase 4.5 — Langfuse observability.** Use AI SDK telemetry via `@ai-sdk/otel` plus
   Langfuse's `LangfuseSpanProcessor`; do not maintain custom stream-derived Langfuse spans.
   The env schema already accepts `LANGFUSE_*`; tracing stays optional and inert when the env vars

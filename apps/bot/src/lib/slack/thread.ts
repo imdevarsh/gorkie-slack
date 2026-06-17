@@ -17,10 +17,15 @@ export function getThread(thread: Thread): SlackThread | undefined {
 }
 
 export async function setThinking(thread: Thread): Promise<void> {
-  await slack
-    .startTyping(
-      thread.id,
-      [
+  const slackThread = getThread(thread);
+  if (!slackThread) {
+    return;
+  }
+
+  await slack.webClient
+    .apiCall('assistant.threads.setStatus', {
+      channel_id: slackThread.channel,
+      loading_messages: [
         'is pondering your question',
         'is working on it',
         'is putting thoughts together',
@@ -31,8 +36,10 @@ export async function setThinking(thread: Thread): Promise<void> {
         'is working through this',
         'is piecing things together',
         'is giving it a good think',
-      ][Math.floor(Math.random() * 10)]
-    )
+      ],
+      status: 'is thinking',
+      thread_ts: slackThread.threadTs,
+    })
     .catch(() => undefined);
 }
 
