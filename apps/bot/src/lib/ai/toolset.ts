@@ -6,6 +6,8 @@ import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
 import { uploadSlackFileToThread } from '@/lib/slack/thread';
 import { generateImageTool } from './tools/generate-image';
+import { mermaidTool } from './tools/mermaid';
+import { scheduleReminderTool } from './tools/schedule-reminder';
 import { searchSlack } from './tools/search-slack';
 import { searchWeb } from './tools/search-web';
 import { summarizeThreadTool } from './tools/summarize-thread';
@@ -30,6 +32,8 @@ export function buildTools({
 
   return {
     ...chatTools,
+    mermaid: mermaidTool({ thread }),
+    scheduleReminder: scheduleReminderTool({ message }),
     searchSlack: searchSlack({ message }),
     searchWeb: searchWeb({ apiKey: env.EXA_API_KEY }),
     summarizeThread: summarizeThreadTool({ bot, threadId: thread.id }),

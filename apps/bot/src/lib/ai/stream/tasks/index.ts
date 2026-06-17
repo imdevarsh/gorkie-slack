@@ -17,7 +17,12 @@ import {
   defaultToolResult,
 } from './default';
 import { generateImageCall, generateImageResult } from './generate-image';
+import { mermaidCall, mermaidResult } from './mermaid';
 import { commandCall, fileCall, searchCall } from './pi';
+import {
+  scheduleReminderCall,
+  scheduleReminderResult,
+} from './schedule-reminder';
 import { searchSlackCall, searchSlackResult } from './search-slack';
 import { searchWebCall, searchWebResult } from './search-web';
 import { summarizeThreadCall, summarizeThreadResult } from './summarize-thread';
@@ -40,10 +45,12 @@ const TOOL_TITLES: Record<string, string> = {
   grep: 'Searching files',
   listThreads: 'Listing threads',
   ls: 'Listing files',
+  mermaid: 'Creating diagram',
   postChannelMessage: 'Posting to channel',
   postMessage: 'Sending message',
   read: 'Reading file',
   removeReaction: 'Removing reaction',
+  scheduleReminder: 'Scheduling reminder',
   searchSlack: 'Searching Slack',
   searchWeb: 'Searching the web',
   sendDirectMessage: 'Sending DM',
@@ -61,10 +68,12 @@ const callRenderers: Record<string, ToolTaskRenderer> = {
   generateImage: generateImageCall,
   glob: searchCall,
   grep: searchCall,
+  mermaid: mermaidCall,
   postChannelMessage: messageCall,
   postMessage: messageCall,
   read: fileCall,
   removeReaction: reactionCall,
+  scheduleReminder: scheduleReminderCall,
   searchSlack: searchSlackCall,
   searchWeb: searchWebCall,
   sendDirectMessage: messageCall,
@@ -82,9 +91,11 @@ const resultRenderers: Record<string, ToolTaskRenderer> = {
   getChannelInfo: getChannelInfoResult,
   getUser: getUserResult,
   listThreads: listThreadsResult,
+  mermaid: mermaidResult,
   postChannelMessage: messageResult,
   postMessage: messageResult,
   removeReaction: reactionResult,
+  scheduleReminder: scheduleReminderResult,
   searchSlack: searchSlackResult,
   searchWeb: searchWebResult,
   sendDirectMessage: messageResult,

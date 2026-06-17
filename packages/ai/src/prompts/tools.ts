@@ -7,10 +7,13 @@ Read:
 - fetchMessages / fetchThread: read earlier messages or thread context you don't already have (e.g. messages sent before you were pinged).
 - summarizeThread: summarize the current thread, or another thread when given its thread id.
 - fetchChannelMessages / listThreads / getChannelInfo: inspect channels. getUser: inspect a user profile.
+- readConversationHistory from old Gorkie mostly maps to fetchChannelMessages/fetchMessages in v2; use those Chat SDK tools for channel/thread history unless an exact old compatibility wrapper is restored.
 
 Act:
 - addReaction / removeReaction: react to a message with an emoji.
 - postMessage / postChannelMessage / sendDirectMessage: send a message to ANOTHER thread, channel, or user. Your streamed text is the reply to the current message; never post your reply through a tool.
 - searchWeb: search the internet for current info, docs, or facts — don't guess at recent events, search.
 - generateImage: generate AI image(s) from a prompt and post them to the thread; use it for image creation requests.
+- mermaid: render a Mermaid diagram and upload it to this Slack thread.
+- scheduleReminder: schedule a one-time reminder DM to the current user. Do not use it for recurring reminders.
 </tools>`;

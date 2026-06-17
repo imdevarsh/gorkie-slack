@@ -1,5 +1,6 @@
 import type { TextStreamPart, ToolSet } from 'ai';
 import type { StreamChunk } from 'chat';
+import logger from '@/lib/logger';
 import { clamp } from '@/lib/utils/text';
 import { renderToolCall, renderToolError, renderToolResult } from './tasks';
 
@@ -46,6 +47,14 @@ export async function* renderStream(
       }
       case 'tool-call': {
         toolInputs.set(part.toolCallId, part.input);
+        logger.info(
+          {
+            input: part.input,
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+          },
+          '[tool] called'
+        );
         const rendered = renderToolCall({
           input: part.input,
           toolName: part.toolName,
@@ -60,8 +69,18 @@ export async function* renderStream(
         break;
       }
       case 'tool-result': {
+        const input = toolInputs.get(part.toolCallId);
+        logger.info(
+          {
+            input,
+            output: part.output,
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+          },
+          '[tool] completed'
+        );
         const rendered = renderToolResult({
-          input: toolInputs.get(part.toolCallId),
+          input,
           output: part.output,
           toolName: part.toolName,
         });
@@ -76,8 +95,18 @@ export async function* renderStream(
         break;
       }
       case 'tool-error': {
+        const input = toolInputs.get(part.toolCallId);
+        logger.warn(
+          {
+            error: part.error,
+            input,
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+          },
+          '[tool] failed'
+        );
         const rendered = renderToolError({
-          input: toolInputs.get(part.toolCallId),
+          input,
           output: part.error,
           toolName: part.toolName,
         });
