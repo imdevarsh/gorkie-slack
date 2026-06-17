@@ -27,10 +27,10 @@ const openrouter = createOpenRouter({
   baseURL: env.OPENROUTER_BASE_URL ?? undefined,
 });
 
-const inference = process.env.INFERENCE_API_KEY
+const inference = env.INFERENCE_API_KEY
   ? createOpenRouter({
-      apiKey: process.env.INFERENCE_API_KEY,
-      baseURL: process.env.INFERENCE_BASE_URL ?? undefined,
+      apiKey: env.INFERENCE_API_KEY,
+      baseURL: env.INFERENCE_BASE_URL ?? undefined,
     })
   : null;
 
