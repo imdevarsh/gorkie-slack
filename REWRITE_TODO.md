@@ -47,6 +47,7 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - `ai-retry` support at the Harness/Pi boundary so custom retry logic can be deleted.
 - Native Langfuse / OTel support deep enough for Harness/Pi model/tool/session internals.
 - Official AI SDK E2B provider support with the resume/session-file hooks Gorkie needs.
+- Pi plugin support.
 
-TODO v2:
-- Decide if we use the AI SDK chat tools as messenger or keep it as read-only. Messengar allows it to dm
+## Tool Scope Decisions
+- Decide whether to use AI SDK Chat SDK tools as `messenger` or restrict them to read-only. `messenger` allows cross-thread/channel posts and DMs, which may be useful for old Gorkie parity but needs clear routing and approval expectations.

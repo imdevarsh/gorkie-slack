@@ -25,7 +25,9 @@ try {
   await bot.initialize();
   logger.info(
     {
-      tag: slack.botUserId ? `<@${slack.botUserId}>` : undefined
+      botUserId: slack.botUserId,
+      tag: slack.botUserId ? `<@${slack.botUserId}>` : undefined,
+      userName: 'gorkie',
     },
     '[bot] gorkie is online'
   );
