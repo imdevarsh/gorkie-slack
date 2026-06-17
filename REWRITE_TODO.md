@@ -3,12 +3,8 @@
 Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this file tracks concrete remaining work, refactors, verification, and upstream bets.
 
 ## Old Gorkie Tool Parity
-- Add `mermaid`: generate Mermaid PNG via Mermaid Ink and upload it to the current Slack thread.
-- Add `scheduleReminder`: one-off reminder using Slack scheduled messages.
-- Decide `readConversationHistory`: old Gorkie used direct Slack `conversations.history` / `conversations.replies` for public channels only. In v2 this overlaps Chat SDK `fetchChannelMessages` / `fetchMessages`; keep a compatibility wrapper only if the old prompt/tool name is still useful.
 - Add `getWeather`.
 - Add `leaveChannel`.
-- Decide `skip`: pi streamed text is the reply, so skip should probably become routing behavior or a no-op compatibility tool only if needed.
 - Scheduled recurring tasks are later: `scheduleTask`, `listScheduledTasks`, `cancelScheduledTask`.
 
 ## Tool UX
@@ -28,16 +24,6 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - Verify Langfuse receives AI SDK spans using `@ai-sdk/otel` + `LangfuseSpanProcessor`.
 
 ## Refactors
-- Split `apps/bot/src/slack/features/customizations.ts` into feature-owned files:
-  - `schema.ts` for Zod parsing.
-  - `types.ts` for Slack view/block types.
-  - `views.ts` for App Home and modal builders.
-  - `service.ts` for publish/open/update helpers.
-  - `index.ts` for event registration.
-- Clean `apps/bot/src/bot.ts`:
-  - Keep routing helpers small and direct.
-  - Move assistant suggested prompt lists out of handler bodies if they grow.
-  - Keep event handlers focused on routing decisions and call `runTurn`.
 - Keep `apps/bot/src/lib/chat.ts` as the adapter/runtime construction point.
 
 ## Upstream AI SDK / Harness Expectations
@@ -51,3 +37,6 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 
 ## Tool Scope Decisions
 - Decide whether to use AI SDK Chat SDK tools as `messenger` or restrict them to read-only. `messenger` allows cross-thread/channel posts and DMs, which may be useful for old Gorkie parity but needs clear routing and approval expectations.
+
+- Improve prompts for Gorkie DEV, since it doesn't have previous context.
+  Maybe force readConversationHistory tool for channels ince it doesn't know the old one?

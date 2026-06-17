@@ -18,6 +18,9 @@ export function contextPrompt(hints: RequestHints): string {
     lines.push(`The message you're responding to has id ${hints.messageId}.`);
   }
   lines.push(
+    'When earlier channel or thread context matters, fetch it with the Slack/Chat SDK tools instead of pretending you already saw it.'
+  );
+  lines.push(
     "Gorkie's source code is at https://github.com/imdevarsh/gorkie-slack"
   );
   return `<context>\n${lines.join('\n')}\n</context>`;
