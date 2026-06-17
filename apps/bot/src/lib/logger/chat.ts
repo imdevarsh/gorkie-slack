@@ -12,9 +12,11 @@ function metaFrom(args: unknown[]): Record<string, unknown> {
 export function toChatLogger(pino: PinoLogger): ChatLogger {
   return {
     child: (prefix: string) => toChatLogger(pino.child({ component: prefix })),
-    debug: (message, ...args) => pino.debug(metaFrom(args), message),
-    info: (message, ...args) => pino.info(metaFrom(args), message),
-    warn: (message, ...args) => pino.warn(metaFrom(args), message),
-    error: (message, ...args) => pino.error(metaFrom(args), message),
+    debug: (message, ...args) =>
+      pino.debug(metaFrom(args), `[chat] ${message}`),
+    error: (message, ...args) =>
+      pino.error(metaFrom(args), `[chat] ${message}`),
+    info: (message, ...args) => pino.info(metaFrom(args), `[chat] ${message}`),
+    warn: (message, ...args) => pino.warn(metaFrom(args), `[chat] ${message}`),
   };
 }

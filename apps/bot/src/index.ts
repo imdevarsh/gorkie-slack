@@ -1,4 +1,5 @@
 import { bot } from '@/bot';
+import { slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 import { shutdownLangfuse } from '@/lib/observability/langfuse';
 
@@ -22,7 +23,12 @@ async function shutdown(signal: string): Promise<void> {
 
 try {
   await bot.initialize();
-  logger.info('[bot] gorkie is online (slack · socket mode)');
+  logger.info(
+    {
+      tag: slack.botUserId ? `<@${slack.botUserId}>` : undefined
+    },
+    '[bot] gorkie is online'
+  );
 } catch (error) {
   logger.error({ err: error }, '[bot] failed to start');
   process.exit(1);
