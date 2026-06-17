@@ -1,4 +1,3 @@
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createLogger } from '@repo/logging/logger';
 import { APICallError, customProvider, type Provider, wrapProvider } from 'ai';
@@ -46,10 +45,6 @@ const hackclub = wrapProvider({
   },
 });
 
-const google = env.GOOGLE_GENERATIVE_AI_API_KEY
-  ? createGoogleGenerativeAI({ apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY })
-  : null;
-
 const onModelError = (context: {
   current: { model: { provider: string; modelId: string }; error?: unknown };
 }) => {
@@ -87,9 +82,6 @@ const summariserModel = createRetryable({
     requestNotRetryable(
       openrouter.languageModel('google/gemini-3.1-flash-lite-preview')
     ),
-    ...(google
-      ? [requestNotRetryable(google('gemini-3.1-flash-lite-preview'))]
-      : []),
     ...(inference
       ? [retry(inference.languageModel('deepseek/deepseek-4-flash'))]
       : []),
