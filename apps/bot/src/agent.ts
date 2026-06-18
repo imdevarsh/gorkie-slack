@@ -18,7 +18,7 @@ import {
   nextAttempt,
 } from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
-import { renderStream } from '@/lib/ai/stream';
+import { type RenderStreamState, renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
 import { bot, slack } from '@/lib/chat';
@@ -29,6 +29,8 @@ import { getThread, setThinking } from '@/lib/slack/thread';
 export const STOP_TURN_ACTION = 'gorkie_stop_turn';
 
 const activeTurns = new Map<string, AbortController>();
+const turnVersions = new Map<string, symbol>();
+const SLACK_FOLLOW_UP_TEXT_MAX = 30_000;
 
 const sandbox = new E2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
@@ -100,12 +102,54 @@ async function deleteControlMessage({
   }).catch(() => undefined);
 }
 
+function splitSlackFollowUpText(text: string): string[] {
+  const chunks: string[] = [];
+  let current = '';
+  const lines = text.match(/[^\n]*\n|[^\n]+/g) ?? [];
+
+  for (const line of lines) {
+    if (line.length > SLACK_FOLLOW_UP_TEXT_MAX) {
+      if (current) {
+        chunks.push(current.trimEnd());
+        current = '';
+      }
+      for (
+        let index = 0;
+        index < line.length;
+        index += SLACK_FOLLOW_UP_TEXT_MAX
+      ) {
+        chunks.push(line.slice(index, index + SLACK_FOLLOW_UP_TEXT_MAX));
+      }
+      continue;
+    }
+
+    if (current.length + line.length > SLACK_FOLLOW_UP_TEXT_MAX) {
+      chunks.push(current.trimEnd());
+      current = line;
+      continue;
+    }
+
+    current += line;
+  }
+
+  if (current.trim()) {
+    chunks.push(current.trimEnd());
+  }
+
+  return chunks;
+}
+
 export function runTurn(input: {
   message: Message;
   thread: Thread;
 }): Promise<void> {
+  const threadId = input.thread.id;
+  const turnToken = Symbol(threadId);
+  turnVersions.set(threadId, turnToken);
+  activeTurns.get(threadId)?.abort();
+
   return runQueuedTurn({
-    threadId: input.thread.id,
+    threadId,
     onInterrupt: async () => {
       await slack
         .postEphemeral(
@@ -116,7 +160,7 @@ export function runTurn(input: {
         .then(() => undefined)
         .catch(() => undefined);
     },
-    run: (controller) => executeTurn(input, controller),
+    run: (controller) => executeTurn(input, controller, turnToken),
   });
 }
 
@@ -131,9 +175,11 @@ export function stopTurn({ threadId }: { threadId: string }): boolean {
 
 async function executeTurn(
   { message, thread }: { message: Message; thread: Thread },
-  controller: AbortController
+  controller: AbortController,
+  turnToken: symbol
 ): Promise<void> {
   const threadId = thread.id;
+  const isCurrentTurn = () => turnVersions.get(threadId) === turnToken;
   logger.info({ text: message.text, threadId }, '[agent] turn started');
   activeTurns.set(threadId, controller);
   await setThinking(thread);
@@ -167,6 +213,10 @@ async function executeTurn(
         groupTasks: 'plan',
       })
     );
+    if (!isCurrentTurn()) {
+      await deleteControlMessage({ control });
+      return;
+    }
     if (!(session && completion)) {
       throw new Error(
         'Agent turn ended before session completion was recorded.'
@@ -179,10 +229,12 @@ async function executeTurn(
       '[agent] turn complete'
     );
   } catch (error) {
-    if (controller.signal.aborted) {
+    if (controller.signal.aborted || !isCurrentTurn()) {
       logger.info({ threadId }, '[agent] turn interrupted');
       await deleteControlMessage({ control });
-      await parkSession({ pause: false });
+      if (isCurrentTurn()) {
+        await parkSession({ pause: false });
+      }
     } else {
       logger.error(
         { attempt: attemptLog(activeAttempt), err: error, threadId },
@@ -195,6 +247,9 @@ async function executeTurn(
   } finally {
     if (activeTurns.get(threadId) === controller) {
       activeTurns.delete(threadId);
+    }
+    if (isCurrentTurn()) {
+      turnVersions.delete(threadId);
     }
   }
 
@@ -211,6 +266,9 @@ async function executeTurn(
     const attemptHistory: AttemptFailure[] = [];
     let attempt = chatAttempts[0];
     while (attempt) {
+      if (!isCurrentTurn()) {
+        return;
+      }
       const currentAttempt = attempt;
       try {
         activeAttempt = currentAttempt;
@@ -237,6 +295,9 @@ async function executeTurn(
           }),
         });
         session = await openSession({ agent, threadId });
+        if (!isCurrentTurn()) {
+          return;
+        }
         const result = await agent.stream({
           abortSignal: controller.signal,
           prompt: promptWithAttachments({
@@ -245,7 +306,11 @@ async function executeTurn(
           }),
           session,
         });
-        for await (const chunk of renderStream(result.fullStream)) {
+        const streamState: RenderStreamState = {};
+        for await (const chunk of renderStream(
+          result.fullStream,
+          streamState
+        )) {
           hasStreamed = true;
           yield chunk;
           control ??= await postControlMessage({ thread });
@@ -255,6 +320,16 @@ async function executeTurn(
           result.text,
           result.finishReason,
         ]);
+        if (
+          typeof streamState.truncatedAt === 'number' &&
+          text.length > streamState.truncatedAt
+        ) {
+          for (const chunk of splitSlackFollowUpText(
+            text.slice(streamState.truncatedAt).trimStart()
+          )) {
+            await thread.post(chunk);
+          }
+        }
         completion = { finishReason, textLength: text.length };
         return;
       } catch (error) {

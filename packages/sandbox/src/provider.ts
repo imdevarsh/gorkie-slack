@@ -21,21 +21,6 @@ export interface E2BSandboxProviderOptions {
   template?: string;
 }
 
-function connectE2BSandbox(
-  sandboxId: string,
-  apiKey: string
-): Promise<Sandbox | null> {
-  return Sandbox.connect(sandboxId, {
-    apiKey,
-    timeoutMs: sandboxConfig.timeoutMs,
-  }).catch((error: unknown) => {
-    if (isMissingSandboxError(error)) {
-      return null;
-    }
-    throw error;
-  });
-}
-
 export class E2BSandboxProvider implements HarnessV1SandboxProvider {
   readonly providerId = PROVIDER_ID;
   readonly specificationVersion = SPECIFICATION_VERSION;
@@ -84,11 +69,31 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
     abortSignal?.throwIfAborted();
 
     const existing = sessionId ? await getByThread(sessionId) : null;
-    const sandbox = existing
-      ? await connectE2BSandbox(existing.sandboxId, this.apiKey)
+    let sandbox = existing
+      ? await Sandbox.connect(existing.sandboxId, {
+          apiKey: this.apiKey,
+          timeoutMs: sandboxConfig.timeoutMs,
+        }).catch((error: unknown) => {
+          if (isMissingSandboxError(error)) {
+            return null;
+          }
+          throw error;
+        })
       : null;
     if (sandbox && sessionId) {
-      await sandbox.setTimeout(sandboxConfig.timeoutMs);
+      await sandbox
+        .setTimeout(sandboxConfig.timeoutMs)
+        .then(() => sandbox?.files.makeDir(sandboxConfig.workdir))
+        .catch((error: unknown) => {
+          if (isMissingSandboxError(error)) {
+            sandbox = null;
+            return;
+          }
+          throw error;
+        });
+    }
+
+    if (sandbox && sessionId) {
       await markActivity(sessionId);
       this.logger.debug(
         { sessionId, sandboxId: sandbox.sandboxId },
@@ -152,7 +157,15 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
       throw new Error(`[sandbox] missing e2b sandbox for ${sessionId}`);
     }
 
-    let sandbox = await connectE2BSandbox(existing.sandboxId, this.apiKey);
+    let sandbox = await Sandbox.connect(existing.sandboxId, {
+      apiKey: this.apiKey,
+      timeoutMs: sandboxConfig.timeoutMs,
+    }).catch((error: unknown) => {
+      if (isMissingSandboxError(error)) {
+        return null;
+      }
+      throw error;
+    });
     if (sandbox) {
       await sandbox.setTimeout(sandboxConfig.timeoutMs);
       this.logger.debug(

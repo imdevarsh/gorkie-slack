@@ -5,17 +5,42 @@ import { clamp } from '@/lib/utils/text';
 import { renderToolCall, renderToolError, renderToolResult } from './tasks';
 
 const REASONING_MAX = 2800;
+const SLACK_STREAM_TEXT_MAX = 32_000;
+const TRUNCATED_NOTICE =
+  '\n\n_Response continued in follow-up messages because it exceeded Slack message length limits._';
+
+export interface RenderStreamState {
+  truncatedAt?: number;
+}
 
 export async function* renderStream(
-  stream: AsyncIterable<TextStreamPart<ToolSet>>
+  stream: AsyncIterable<TextStreamPart<ToolSet>>,
+  state: RenderStreamState = {}
 ): AsyncGenerator<string | StreamChunk> {
   const toolInputs = new Map<string, unknown>();
   const reasoning = new Map<string, string>();
+  let textLength = 0;
+  let truncated = false;
   for await (const part of stream) {
     switch (part.type) {
       case 'text-delta': {
-        if (part.text) {
-          yield part.text;
+        if (part.text && !truncated) {
+          const remaining = SLACK_STREAM_TEXT_MAX - textLength;
+          if (part.text.length <= remaining) {
+            textLength += part.text.length;
+            yield part.text;
+          } else {
+            const available = Math.max(0, remaining - TRUNCATED_NOTICE.length);
+            const text = `${part.text.slice(0, available)}${TRUNCATED_NOTICE}`;
+            state.truncatedAt = textLength + available;
+            textLength += text.length;
+            truncated = true;
+            yield text;
+            logger.warn(
+              { textLength },
+              '[stream] truncated Slack response before message limit'
+            );
+          }
         }
         break;
       }
