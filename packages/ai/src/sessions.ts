@@ -12,9 +12,17 @@ export async function openSession({
   threadId: string;
 }): Promise<HarnessAgentSession> {
   const existing = await getByThread(threadId);
-  const resumeFrom = existing?.resumeState
+  let resumeFrom = existing?.resumeState
     ? JSON.parse(existing.resumeState)
     : undefined;
+  if (resumeFrom && 'continueFrom' in resumeFrom) {
+    const { continueFrom: _continueFrom, ...cleanedResumeFrom } = resumeFrom;
+    resumeFrom = cleanedResumeFrom;
+    await updateResumeState({
+      resumeState: JSON.stringify(resumeFrom),
+      threadId,
+    });
+  }
   return await agent.createSession(
     resumeFrom ? { resumeFrom, sessionId: threadId } : { sessionId: threadId }
   );
@@ -30,7 +38,12 @@ export async function persistSession({
   threadId: string;
 }): Promise<void> {
   // Pi writes its transcript during detach; mirror it before the sandbox pauses.
-  const resumeState = await session.detach();
+  const detachedResumeState = await session.detach();
+  const resumeState =
+    'continueFrom' in detachedResumeState
+      ? (({ continueFrom: _continueFrom, ...cleanedResumeState }) =>
+          cleanedResumeState)(detachedResumeState)
+      : detachedResumeState;
   const serialized = JSON.stringify(resumeState);
 
   const file = sessionFileNameOf(resumeState);
