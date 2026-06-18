@@ -5,12 +5,16 @@ import { clamp } from '@/lib/utils/text';
 import { renderToolCall, renderToolError, renderToolResult } from './tasks';
 
 const REASONING_MAX = 2800;
+const SLACK_VISIBLE_TASK_MAX = 45;
+const HIDDEN_TASK_ID = 'hidden-tool-activity';
 
 export async function* renderStream(
   stream: AsyncIterable<TextStreamPart<ToolSet>>
 ): AsyncGenerator<string | StreamChunk> {
   const toolInputs = new Map<string, unknown>();
   const reasoning = new Map<string, string>();
+  const visibleTaskIds = new Set<string>();
+  let hiddenTaskCount = 0;
   for await (const part of stream) {
     switch (part.type) {
       case 'text-delta': {
@@ -59,6 +63,11 @@ export async function* renderStream(
           input: part.input,
           toolName: part.toolName,
         });
+        if (!showTask({ id: part.toolCallId, visibleTaskIds })) {
+          hiddenTaskCount += 1;
+          yield hiddenTaskUpdate({ count: hiddenTaskCount, done: false });
+          break;
+        }
         yield {
           details: rendered.details,
           id: part.toolCallId,
@@ -85,6 +94,9 @@ export async function* renderStream(
           toolName: part.toolName,
         });
         toolInputs.delete(part.toolCallId);
+        if (!visibleTaskIds.has(part.toolCallId)) {
+          break;
+        }
         yield {
           id: part.toolCallId,
           output: rendered.output,
@@ -111,6 +123,9 @@ export async function* renderStream(
           toolName: part.toolName,
         });
         toolInputs.delete(part.toolCallId);
+        if (!visibleTaskIds.has(part.toolCallId)) {
+          break;
+        }
         yield {
           id: part.toolCallId,
           output: rendered.output,
@@ -124,4 +139,42 @@ export async function* renderStream(
         break;
     }
   }
+  if (hiddenTaskCount > 0) {
+    yield hiddenTaskUpdate({ count: hiddenTaskCount, done: true });
+  }
+}
+
+function showTask({
+  id,
+  visibleTaskIds,
+}: {
+  id: string;
+  visibleTaskIds: Set<string>;
+}): boolean {
+  if (visibleTaskIds.has(id)) {
+    return true;
+  }
+  if (visibleTaskIds.size < SLACK_VISIBLE_TASK_MAX) {
+    visibleTaskIds.add(id);
+    return true;
+  }
+  return false;
+}
+
+function hiddenTaskUpdate({
+  count,
+  done,
+}: {
+  count: number;
+  done: boolean;
+}): StreamChunk {
+  return {
+    id: HIDDEN_TASK_ID,
+    output: done
+      ? `Ran ${count} additional tool${count === 1 ? '' : 's'}.`
+      : undefined,
+    status: done ? 'complete' : 'in_progress',
+    title: `Tool activity: ${count}`,
+    type: 'task_update',
+  };
 }

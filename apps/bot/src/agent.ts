@@ -4,6 +4,7 @@ import {
   createAgent,
   openSession,
   type PiAttempt,
+  type PromptControl,
   persistSession,
   type SandboxContext,
   systemPrompt,
@@ -28,7 +29,13 @@ import { getThread, setThinking } from '@/lib/slack/thread';
 
 export const STOP_TURN_ACTION = 'gorkie_stop_turn';
 
-const activeTurns = new Map<string, AbortController>();
+interface ActiveTurn {
+  controller: AbortController;
+  pendingMessages: Array<{ message: Message; thread: Thread }>;
+  submitUserMessage?: (text: string) => PromiseLike<void>;
+}
+
+const activeTurns = new Map<string, ActiveTurn>();
 
 const sandbox = new E2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
@@ -104,29 +111,73 @@ export function runTurn(input: {
   message: Message;
   thread: Thread;
 }): Promise<void> {
+  const activeTurn = activeTurns.get(input.thread.id);
+  if (activeTurn) {
+    return steerTurn({ activeTurn, input });
+  }
+
   return runQueuedTurn({
     threadId: input.thread.id,
-    onInterrupt: async () => {
-      await slack
-        .postEphemeral(
-          input.thread.id,
-          input.message.author.userId,
-          'Got it! Steering conversation.'
-        )
-        .then(() => undefined)
-        .catch(() => undefined);
-    },
     run: (controller) => executeTurn(input, controller),
   });
 }
 
 export function stopTurn({ threadId }: { threadId: string }): boolean {
-  const controller = activeTurns.get(threadId);
-  if (!controller) {
+  const activeTurn = activeTurns.get(threadId);
+  if (!activeTurn) {
     return false;
   }
-  controller.abort();
+  activeTurn.controller.abort();
   return true;
+}
+
+async function steerTurn({
+  activeTurn,
+  input,
+}: {
+  activeTurn: ActiveTurn;
+  input: { message: Message; thread: Thread };
+}): Promise<void> {
+  activeTurn.pendingMessages.push(input);
+  await flushSteering({ activeTurn, threadId: input.thread.id }).catch(
+    (error: unknown) => {
+      logger.warn(
+        { err: error, threadId: input.thread.id },
+        '[agent] native steering failed, restarting turn'
+      );
+      activeTurn.controller.abort();
+    }
+  );
+  await slack
+    .postEphemeral(
+      input.thread.id,
+      input.message.author.userId,
+      'Got it! Steering conversation.'
+    )
+    .then(() => undefined)
+    .catch(() => undefined);
+}
+
+async function flushSteering({
+  activeTurn,
+  threadId,
+}: {
+  activeTurn: ActiveTurn;
+  threadId: string;
+}): Promise<void> {
+  if (!activeTurn.submitUserMessage) {
+    return;
+  }
+
+  while (activeTurn.pendingMessages.length > 0) {
+    const input = activeTurn.pendingMessages[0];
+    if (!input) {
+      return;
+    }
+    await activeTurn.submitUserMessage(input.message.text);
+    activeTurn.pendingMessages.shift();
+    logger.info({ threadId }, '[agent] turn steered');
+  }
 }
 
 async function executeTurn(
@@ -135,7 +186,11 @@ async function executeTurn(
 ): Promise<void> {
   const threadId = thread.id;
   logger.info({ text: message.text, threadId }, '[agent] turn started');
-  activeTurns.set(threadId, controller);
+  const activeTurn: ActiveTurn = {
+    controller,
+    pendingMessages: [],
+  };
+  activeTurns.set(threadId, activeTurn);
   await setThinking(thread);
 
   let session: Awaited<ReturnType<typeof openSession>> | undefined;
@@ -193,8 +248,17 @@ async function executeTurn(
       await thread.post(agentErrorMessage(error));
     }
   } finally {
-    if (activeTurns.get(threadId) === controller) {
+    const fallbackInput = activeTurn.pendingMessages.at(-1);
+    if (activeTurns.get(threadId) === activeTurn) {
       activeTurns.delete(threadId);
+    }
+    if (fallbackInput) {
+      runTurn(fallbackInput).catch((error: unknown) => {
+        logger.error(
+          { err: error, threadId },
+          '[agent] failed to run fallback steered turn'
+        );
+      });
     }
   }
 
@@ -216,6 +280,9 @@ async function executeTurn(
         activeAttempt = currentAttempt;
         const agent = createAgent({
           attempt: currentAttempt,
+          onPromptControl: (control) => {
+            setPromptControl({ activeTurn, control, threadId });
+          },
           onSandboxReady: async (context) => {
             sandboxContext = context;
             attachments = await seedAttachments({
@@ -307,6 +374,40 @@ async function executeTurn(
       }
     }
   }
+}
+
+function setPromptControl({
+  activeTurn,
+  control,
+  threadId,
+}: {
+  activeTurn: ActiveTurn;
+  control: PromptControl | undefined;
+  threadId: string;
+}): void {
+  if (control?.submitUserMessage) {
+    activeTurn.submitUserMessage = (text) =>
+      control.submitUserMessage?.(text) ?? Promise.resolve();
+  } else {
+    activeTurn.submitUserMessage = undefined;
+  }
+
+  if (
+    control &&
+    !control.submitUserMessage &&
+    activeTurn.pendingMessages.length > 0
+  ) {
+    activeTurn.controller.abort();
+    return;
+  }
+
+  flushSteering({ activeTurn, threadId }).catch((error: unknown) => {
+    logger.warn(
+      { err: error, threadId },
+      '[agent] native steering failed, restarting turn'
+    );
+    activeTurn.controller.abort();
+  });
 }
 
 function attemptLog(attempt: PiAttempt | undefined) {
