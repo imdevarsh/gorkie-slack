@@ -53,8 +53,8 @@ export const assistantThread = {
 export const sandbox = {
   template: 'gorkie-sandbox:3.0',
   model: {
-    provider: 'hackclub',
-    modelId: 'google/gemini-3-flash-preview',
+    provider: 'inference',
+    modelId: 'moonshotai/kimi-k2.6',
     api: 'openai-completions',
   },
   retry: {

@@ -16,6 +16,8 @@ export const env = createEnv({
     OPENROUTER_API_KEY: z.string().min(1).optional(),
     OPENROUTER_BASE_URL: z.url().optional(),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
+    INFERENCE_API_KEY: z.string().min(1).startsWith('sk-').optional(),
+    INFERENCE_BASE_URL: z.url().optional(),
     MCP_TOKEN_ENCRYPTION_KEY: z.string().min(32),
     SERVER_BASE_URL: z.url(),
   },

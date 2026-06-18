@@ -8,7 +8,7 @@ export interface Provider {
 interface ProviderConfig {
   apiKey: string | undefined;
   name: string;
-  url: string;
+  url: string | undefined;
 }
 
 const CONFIGS: ProviderConfig[] = [
@@ -27,11 +27,16 @@ const CONFIGS: ProviderConfig[] = [
     apiKey: env.OPENROUTER_API_KEY,
     url: env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1',
   },
+  {
+    name: 'inference',
+    apiKey: env.INFERENCE_API_KEY,
+    url: env.INFERENCE_BASE_URL,
+  },
 ];
 
 export const providers = Object.fromEntries(
   CONFIGS.flatMap(({ name, apiKey, url }) =>
-    apiKey ? [[name, { apiKey, url }]] : []
+    apiKey && url ? [[name, { apiKey, url }]] : []
   )
 );
 
