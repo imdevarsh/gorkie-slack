@@ -22,7 +22,7 @@ export function createAgent({
   tools,
 }: {
   attempt: PiAttempt;
-  onPromptControl?: (control: HarnessV1PromptControl | undefined) => void;
+  onPromptControl: (control: HarnessV1PromptControl | undefined) => void;
   onSandboxReady?: (input: SandboxContext) => PromiseLike<void> | void;
   sandbox: HarnessV1SandboxProvider;
   sessionId: string;
@@ -37,9 +37,7 @@ export function createAgent({
     thinkingLevel: 'medium',
   });
   return new HarnessAgent({
-    harness: onPromptControl
-      ? capturePromptControl({ harness: pi, onPromptControl })
-      : pi,
+    harness: capturePromptControl({ harness: pi, onPromptControl }),
     id: 'gorkie',
     permissionMode: 'allow-all',
     sandbox,

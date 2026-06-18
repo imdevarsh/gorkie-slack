@@ -3,8 +3,6 @@
 Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this file tracks concrete remaining work, refactors, verification, and upstream bets.
 
 ## Old Gorkie Tool Parity
-- Add `getWeather`.
-- Add `leaveChannel`.
 - Scheduled recurring tasks are later: `scheduleTask`, `listScheduledTasks`, `cancelScheduledTask`.
 
 ## Tool UX
