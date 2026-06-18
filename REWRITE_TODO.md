@@ -4,20 +4,10 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 
 ## P0 - Cleanup Before Slack History
 
-- [x] Move turn orchestration from `apps/bot/src/agent.ts` to `apps/bot/src/lib/agent/index.ts`.
-- [x] Split active-turn stop controls into `apps/bot/src/lib/agent/controls.ts`.
-- [x] Split prompt-control / queued steering helpers into `apps/bot/src/lib/agent/steering.ts`.
-- [x] Remove the exported `STOP_TURN_ACTION` constant; keep the one-use Slack action id inline.
-- [x] Simplify `apps/bot/src/bot.ts` mention/ignore routing.
-- [x] Simplify `apps/bot/src/index.ts` shutdown handling.
-- [x] Rename `uploadSlackFileToThread` to `uploadFileToThread`.
-- [x] Remove `model` from `RequestHints`.
-- [x] Change request channel hints to `channel: { id, name }`.
-- [x] Inline one-use stream constants in `apps/bot/src/lib/ai/stream/index.ts`.
-- [x] Simplify `apps/bot/src/lib/ai/turn-queue.ts` so one map serializes turns directly.
-- [ ] Revisit stop-button placement. Chat SDK `StreamingPlan.endWith` only appends controls after streaming completes, so it does not replace the current active-turn stop button. Look for an active-stream Block Kit/control hook before moving the button into the task list.
-- [ ] Finish task renderer cleanup toward request/response terminology across all task files. `chat.ts` is renamed; remaining files still use `Call`/`Result` names.
 - [ ] Decide whether `apps/bot/src/lib/ai/stream/index.ts` should keep its three stream-state collections or move to a small state object. Do not refactor unless it clearly reduces clutter.
+- [ ] Verify the active-turn stop button still works after the agent folder split. Current placement stays separate from task rows because Chat SDK `StreamingPlan.endWith` appends controls after streaming completes and does not replace an active-stream control.
+- [ ] Live verify long Slack responses split into follow-up messages without `msg_too_long`.
+- [ ] Investigate why E2B template-installed skills are not visible to Pi. Check where `npx skills add` writes files, what `$HOME` is during build and runtime, and which `.agents/skills` roots the Pi adapter actually exposes through its resource loader.
 
 ## P1 - Bounded Slack Context And History
 
@@ -27,6 +17,7 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] Use Chat SDK APIs first: `thread.adapter.fetchMessages(thread.id, { limit })` for thread context, `thread.channel.messages` or adapter `fetchChannelMessages` for channel context, and `thread.messages` / `thread.allMessages` only when pagination behavior is explicitly desired.
 - [ ] Convert fetched Slack messages with `toAiMessages` from `chat/ai` when feeding model-message shaped context is useful. Prefer `includeNames: true` for multi-user thread context so Pi can distinguish speakers.
 - [ ] Keep `createChatTools` reader tools available (`fetchMessages`, `fetchChannelMessages`, `fetchThread`, `listThreads`, `getChannelInfo`, `getUser`) even after preloading context. The preload gives Pi the immediate scene; tools let Pi fetch more when the user asks about older or broader context.
+- [ ] Add Slack reader-tool privacy gates before broad history work. Gorkie can read DMs it has token access to, which is useful for current DM conversations but dangerous if tools let one user fetch or search another user's private DM context. Scope DM reads to the current DM/thread, block or require explicit approval for cross-DM reads, and make the model-facing tool descriptions say private conversations are not general workspace memory.
 - [ ] Do not store a parallel full Slack transcript as the brain. Pi/Harness history remains the durable conversation memory; Slack context preload is bounded retrieval for the current turn.
 - [ ] Make prompt text explicit: tell Pi which context was preloaded, the bounds used, and that anything outside those bounds requires calling Slack/Chat tools rather than pretending it saw the whole workspace.
 - [ ] Bound by message count first, then add a token/character budget if real Slack threads produce oversized prompts. Trim oldest messages first, preserving the triggering message and direct parent/root.
@@ -37,9 +28,6 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 
 ## P1 - Tool UX
 
-- [x] Keep tool outputs as model-facing data, not UI strings.
-- [x] Render task rows through `apps/bot/src/lib/ai/stream/tasks/*`, keyed by `toolName`.
-- [x] Avoid generic `summary` as the primary task-row contract.
 - [ ] Ensure every restored old-Gorkie tool has success and error task rendering.
 - [ ] Finish renderers for Chat SDK internal tools: `sendDirectMessage`, `postMessage`, `postChannelMessage`, `fetchMessages`, `fetchChannelMessages`, `listThreads`, `getChannelInfo`, `getUser`, `addReaction`, `removeReaction`.
 - [ ] Add renderers for Chat SDK tools not currently surfaced in the checklist if they remain enabled by the `messenger` preset.
@@ -53,12 +41,9 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 ## P2 - Reliability Verification
 
 - [ ] Verify sandbox deletion recovery: delete or destroy a stored sandbox, send a follow-up in the same Slack thread, confirm v2 creates a fresh sandbox, re-seeds the mirrored Pi session file, and preserves conversation memory.
-- [ ] Fix Slack truncation without turn-version guards: cap long streamed model responses before Slack's platform limit, preserve final text for the model/session, and post overflow as follow-up messages.
-- [x] Fix stale `continueFrom` recovery at session open/persist boundaries.
 - [ ] Verify attachment seeding after a fresh sandbox resume.
 - [ ] Verify Slack App Home: open, edit instructions, load preset, save preset, clear instructions.
 - [ ] Verify Slack root mention vs reply-only mention vs subscribed thread behavior.
-- [ ] Verify stop button placement/action.
 - [ ] Verify Langfuse receives AI SDK spans using `@ai-sdk/otel` + `LangfuseSpanProcessor`. [it doesn't!!]
 
 ## P3 - Tool Scope Decisions

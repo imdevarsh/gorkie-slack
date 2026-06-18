@@ -11,6 +11,7 @@ import { E2BSandboxProvider } from '@repo/sandbox';
 import { type Message, StreamingPlan, type Thread } from 'chat';
 import { env } from '@/env';
 import { deleteTurnControls, postTurnControls } from '@/lib/agent/controls';
+import { createOverflowReply } from '@/lib/agent/overflow';
 import {
   type ActiveTurn,
   setPromptControl,
@@ -71,6 +72,12 @@ export function stopTurn({ threadId }: { threadId: string }): boolean {
   return true;
 }
 
+export function stopAllTurns(): void {
+  for (const activeTurn of activeTurns.values()) {
+    activeTurn.controller.abort();
+  }
+}
+
 async function executeTurn(
   { message, thread }: { message: Message; thread: Thread },
   controller: AbortController
@@ -89,6 +96,7 @@ async function executeTurn(
   let controls: Awaited<ReturnType<typeof postTurnControls>> = null;
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
+  let overflowReply = createOverflowReply({ threadId });
 
   const parkSession = async ({ pause }: { pause: boolean }): Promise<void> => {
     if (!session) {
@@ -118,6 +126,7 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
+    await overflowReply.post({ thread });
     await deleteTurnControls({ controls });
     await parkSession({ pause: true });
     logger.info(
@@ -192,6 +201,7 @@ async function executeTurn(
           }),
         });
         session = await openSession({ agent, threadId });
+        overflowReply = createOverflowReply({ threadId });
         const result = await agent.stream({
           abortSignal: controller.signal,
           prompt: promptWithAttachments({
@@ -200,7 +210,10 @@ async function executeTurn(
           }),
           session,
         });
-        for await (const chunk of renderStream(result.fullStream)) {
+        for await (const chunk of renderStream({
+          onOverflowText: overflowReply.append,
+          stream: result.fullStream,
+        })) {
           hasStreamed = true;
           yield chunk;
           controls ??= await postTurnControls({ thread });
