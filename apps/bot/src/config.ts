@@ -55,7 +55,7 @@ export const sandbox = {
   model: {
     provider: 'inference',
     modelId: 'moonshotai/kimi-k2.6',
-    api: 'openai-completions',
+    api: 'openrouter',
   },
   retry: {
     enabled: true,
