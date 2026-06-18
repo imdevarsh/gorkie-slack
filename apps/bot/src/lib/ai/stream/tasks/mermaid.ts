@@ -1,18 +1,23 @@
-import { clipped, textField } from './helpers';
-import type { ToolTaskRenderer } from './types';
+import { textField } from './helpers';
+import type { ToolTaskRendererEntry } from './types';
 
-export const mermaidCall: ToolTaskRenderer = ({ input }) => ({
-  details: clipped(textField(input, 'title') ?? textField(input, 'code'), 180),
+export const mermaid: ToolTaskRendererEntry = {
   title: 'Creating diagram',
-});
-
-export const mermaidResult: ToolTaskRenderer = ({ output }) => {
-  const error = textField(output, 'error');
-  if (error) {
-    return { output: clipped(`Error: ${error}`), title: 'Diagram failed' };
-  }
-  return {
-    output: clipped(`Uploaded ${textField(output, 'title') ?? 'diagram'}.`),
-    title: 'Created diagram',
-  };
+  request: ({ input }) => {
+    const detail = textField(input, 'title') ?? textField(input, 'code');
+    return { details: detail };
+  },
+  response: ({ output }) => {
+    const error = textField(output, 'error');
+    if (error) {
+      return {
+        output: `Error: ${error}`,
+        title: 'Diagram failed',
+      };
+    }
+    return {
+      output: `Uploaded ${textField(output, 'title') ?? 'diagram'}.`,
+      title: 'Created diagram',
+    };
+  },
 };

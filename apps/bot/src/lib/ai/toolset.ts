@@ -4,7 +4,7 @@ import type { ToolSet } from 'ai';
 import type { Chat, Message, Thread } from 'chat';
 import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
-import { uploadSlackFileToThread } from '@/lib/slack/thread';
+import { uploadFileToThread } from '@/lib/slack/thread';
 import { generateImageTool } from './tools/generate-image';
 import { mermaidTool } from './tools/mermaid';
 import { scheduleReminderTool } from './tools/schedule-reminder';
@@ -40,7 +40,7 @@ export function buildTools({
     generateImage: generateImageTool({
       upload: async ({ bytes, mediaType, index, total }) => {
         const filename = `gorkie-image-${index + 1}.${mediaType.split('/').at(1) ?? 'png'}`;
-        await uploadSlackFileToThread({
+        await uploadFileToThread({
           file: Buffer.from(bytes),
           filename,
           thread,
@@ -75,7 +75,7 @@ export function buildTools({
 
         const resolvedFilename =
           filename ?? nodePath.basename(sandboxPath) ?? 'artifact';
-        await uploadSlackFileToThread({
+        await uploadFileToThread({
           file: Buffer.from(bytes),
           filename: resolvedFilename,
           thread,

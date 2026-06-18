@@ -1,9 +1,10 @@
 export interface RequestHints {
-  channel?: string;
-  channelId?: string;
+  channel?: {
+    id?: string;
+    name?: string;
+  };
   customization?: { prompt: string } | null;
   messageId?: string;
-  model?: string;
   server?: string;
   threadId: string;
   time: string;

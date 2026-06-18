@@ -1,32 +1,25 @@
-import { clipped, textField } from './helpers';
-import type { ToolTaskRenderer } from './types';
+import { textField } from './helpers';
+import type { ToolTaskRendererEntry } from './types';
 
-export const commandCall: ToolTaskRenderer = ({ input }) => ({
-  details: clipped(textField(input, 'command'), 180),
+export const command: ToolTaskRendererEntry = {
   title: 'Running command',
-});
-
-export const fileCall: ToolTaskRenderer = ({ input, toolName }) => {
-  let title = 'Reading file';
-  if (toolName === 'write') {
-    title = 'Writing file';
-  }
-  if (toolName === 'edit') {
-    title = 'Editing file';
-  }
-  return {
-    details: clipped(
-      textField(input, 'path') ?? textField(input, 'file_path'),
-      180
-    ),
-    title,
-  };
+  request: ({ input }) => ({
+    details: textField(input, 'command'),
+  }),
 };
 
-export const searchCall: ToolTaskRenderer = ({ input, toolName }) => ({
-  details: clipped(
-    textField(input, 'pattern') ?? textField(input, 'path'),
-    180
-  ),
-  title: toolName === 'glob' ? 'Finding files' : 'Searching files',
-});
+export const file: ToolTaskRendererEntry = {
+  title: 'Reading file',
+  request: ({ input }) => {
+    const detail = textField(input, 'path') ?? textField(input, 'file_path');
+    return { details: detail };
+  },
+};
+
+export const search: ToolTaskRendererEntry = {
+  title: 'Searching files',
+  request: ({ input }) => {
+    const detail = textField(input, 'pattern') ?? textField(input, 'path');
+    return { details: detail };
+  },
+};

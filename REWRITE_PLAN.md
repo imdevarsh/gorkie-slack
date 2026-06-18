@@ -428,6 +428,18 @@ const ext = getFileExtension(image.mediaType);
 const ext = EXTENSION[image.mediaType] ?? 'png';
 ```
 
+### Avoid constants unless absolutely needed
+Do not introduce named constants for one-use values, obvious literals, or values that are clearer inline. Constants are allowed only when the name carries real domain meaning, prevents dangerous drift across multiple uses, or centralizes a true tuneable/config value.
+
+```ts
+// bad - the name adds no domain value
+const STOP_TURN_ACTION = 'gorkie_stop_turn';
+bot.onAction(STOP_TURN_ACTION, handler);
+
+// good - keep the local one-use value visible
+bot.onAction('gorkie_stop_turn', handler);
+```
+
 ### Dict params
 Functions with more than one parameter should take a single options object. Prefer this even for one-param functions when that parameter is logically a "config" rather than a plain value.
 

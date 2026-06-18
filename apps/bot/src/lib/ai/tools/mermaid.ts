@@ -3,17 +3,7 @@ import { errorMessage } from '@repo/utils/error';
 import { tool } from 'ai';
 import type { Thread } from 'chat';
 import { z } from 'zod';
-import { uploadSlackFileToThread } from '@/lib/slack/thread';
-
-function mermaidImageUrl({ code }: { code: string }): string {
-  const payload = JSON.stringify({ code, mermaid: {} });
-  const encoded = deflateSync(new TextEncoder().encode(payload))
-    .toString('base64')
-    .replaceAll('+', '-')
-    .replaceAll('/', '_')
-    .replace(/=+$/, '');
-  return `https://mermaid.ink/img/pako:${encoded}?type=png`;
-}
+import { uploadFileToThread } from '@/lib/slack/thread';
 
 export function mermaidTool({ thread }: { thread: Thread }) {
   return tool({
@@ -34,13 +24,21 @@ export function mermaidTool({ thread }: { thread: Thread }) {
     }),
     execute: async ({ code, title }) => {
       try {
-        const response = await fetch(mermaidImageUrl({ code }));
+        const response = await fetch(
+          `https://mermaid.ink/img/pako:${deflateSync(
+            new TextEncoder().encode(JSON.stringify({ code, mermaid: {} }))
+          )
+            .toString('base64')
+            .replaceAll('+', '-')
+            .replaceAll('/', '_')
+            .replace(/=+$/, '')}?type=png`
+        );
         if (!response.ok) {
           throw new Error(
             `Mermaid image generation failed: ${response.status}`
           );
         }
-        await uploadSlackFileToThread({
+        await uploadFileToThread({
           file: Buffer.from(await response.arrayBuffer()),
           filename: 'diagram.png',
           thread,

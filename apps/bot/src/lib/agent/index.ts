@@ -1,10 +1,8 @@
-import { deleteSlackMessage, postSlackMessage } from '@chat-adapter/slack/api';
 import {
   chatAttempts,
   createAgent,
   openSession,
   type PiAttempt,
-  type PromptControl,
   persistSession,
   type SandboxContext,
   systemPrompt,
@@ -12,6 +10,12 @@ import {
 import { E2BSandboxProvider } from '@repo/sandbox';
 import { type Message, StreamingPlan, type Thread } from 'chat';
 import { env } from '@/env';
+import { deleteTurnControls, postTurnControls } from '@/lib/agent/controls';
+import {
+  type ActiveTurn,
+  setPromptControl,
+  steerActiveTurn,
+} from '@/lib/agent/steering';
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
 import {
   type AttemptFailure,
@@ -25,15 +29,7 @@ import { runQueuedTurn } from '@/lib/ai/turn-queue';
 import { bot, slack } from '@/lib/chat';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
-import { getThread, setThinking } from '@/lib/slack/thread';
-
-export const STOP_TURN_ACTION = 'gorkie_stop_turn';
-
-interface ActiveTurn {
-  controller: AbortController;
-  pendingMessages: Array<{ message: Message; thread: Thread }>;
-  submitUserMessage?: (text: string) => PromiseLike<void>;
-}
+import { setThinking } from '@/lib/slack/thread';
 
 const activeTurns = new Map<string, ActiveTurn>();
 
@@ -42,83 +38,27 @@ const sandbox = new E2BSandboxProvider({
   logger,
 });
 
-interface SlackControlMessage {
-  channel: string;
-  ts: string;
-}
-
-function stopBlocks({ threadId }: { threadId: string }): unknown[] {
-  return [
-    {
-      elements: [
-        {
-          action_id: STOP_TURN_ACTION,
-          style: 'danger',
-          text: { text: 'Stop', type: 'plain_text' },
-          type: 'button',
-          value: threadId,
-        },
-      ],
-      type: 'actions',
-    },
-  ];
-}
-
-async function postControlMessage({
-  thread,
-}: {
-  thread: Thread;
-}): Promise<SlackControlMessage | null> {
-  const slackThread = getThread(thread);
-  if (!slackThread) {
-    return null;
-  }
-
-  const posted = await postSlackMessage({
-    blocks: stopBlocks({ threadId: thread.id }),
-    channel: slackThread.channel,
-    text: 'Gorkie is responding...',
-    threadTs: slackThread.threadTs,
-    token: env.SLACK_BOT_TOKEN,
-  }).catch((error: unknown) => {
-    logger.warn(
-      { err: error, threadId: thread.id },
-      'Failed to post stop button'
-    );
-    return null;
-  });
-
-  return posted?.channel ? { channel: posted.channel, ts: posted.id } : null;
-}
-
-async function deleteControlMessage({
-  control,
-}: {
-  control: SlackControlMessage | null;
-}): Promise<void> {
-  if (!control) {
-    return;
-  }
-
-  await deleteSlackMessage({
-    channel: control.channel,
-    token: env.SLACK_BOT_TOKEN,
-    ts: control.ts,
-  }).catch(() => undefined);
-}
-
 export function runTurn(input: {
   message: Message;
   thread: Thread;
 }): Promise<void> {
   const activeTurn = activeTurns.get(input.thread.id);
-  if (activeTurn) {
-    return steerTurn({ activeTurn, input });
+  if (!activeTurn) {
+    return runQueuedTurn({
+      threadId: input.thread.id,
+      run: (controller) => executeTurn(input, controller),
+    });
   }
 
-  return runQueuedTurn({
-    threadId: input.thread.id,
-    run: (controller) => executeTurn(input, controller),
+  return steerActiveTurn({ activeTurn, input }).then(async () => {
+    await slack
+      .postEphemeral(
+        input.thread.id,
+        input.message.author.userId,
+        'Got it! Steering conversation.'
+      )
+      .then(() => undefined)
+      .catch(() => undefined);
   });
 }
 
@@ -129,55 +69,6 @@ export function stopTurn({ threadId }: { threadId: string }): boolean {
   }
   activeTurn.controller.abort();
   return true;
-}
-
-async function steerTurn({
-  activeTurn,
-  input,
-}: {
-  activeTurn: ActiveTurn;
-  input: { message: Message; thread: Thread };
-}): Promise<void> {
-  activeTurn.pendingMessages.push(input);
-  await flushSteering({ activeTurn, threadId: input.thread.id }).catch(
-    (error: unknown) => {
-      logger.warn(
-        { err: error, threadId: input.thread.id },
-        '[agent] native steering failed, restarting turn'
-      );
-      activeTurn.controller.abort();
-    }
-  );
-  await slack
-    .postEphemeral(
-      input.thread.id,
-      input.message.author.userId,
-      'Got it! Steering conversation.'
-    )
-    .then(() => undefined)
-    .catch(() => undefined);
-}
-
-async function flushSteering({
-  activeTurn,
-  threadId,
-}: {
-  activeTurn: ActiveTurn;
-  threadId: string;
-}): Promise<void> {
-  if (!activeTurn.submitUserMessage) {
-    return;
-  }
-
-  while (activeTurn.pendingMessages.length > 0) {
-    const input = activeTurn.pendingMessages[0];
-    if (!input) {
-      return;
-    }
-    await activeTurn.submitUserMessage(input.message.text);
-    activeTurn.pendingMessages.shift();
-    logger.info({ threadId }, '[agent] turn steered');
-  }
 }
 
 async function executeTurn(
@@ -195,7 +86,7 @@ async function executeTurn(
 
   let session: Awaited<ReturnType<typeof openSession>> | undefined;
   let activeAttempt: PiAttempt | undefined;
-  let control: SlackControlMessage | null = null;
+  let controls: Awaited<ReturnType<typeof postTurnControls>> = null;
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
 
@@ -227,7 +118,7 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
-    await deleteControlMessage({ control });
+    await deleteTurnControls({ controls });
     await parkSession({ pause: true });
     logger.info(
       { ...completion, attempt: attemptLog(activeAttempt), threadId },
@@ -236,7 +127,7 @@ async function executeTurn(
   } catch (error) {
     if (controller.signal.aborted) {
       logger.info({ threadId }, '[agent] turn interrupted');
-      await deleteControlMessage({ control });
+      await deleteTurnControls({ controls });
       await parkSession({ pause: false });
     } else {
       logger.error(
@@ -244,7 +135,7 @@ async function executeTurn(
         '[agent] turn failed'
       );
       await parkSession({ pause: true });
-      await deleteControlMessage({ control });
+      await deleteTurnControls({ controls });
       await thread.post(agentErrorMessage(error));
     }
   } finally {
@@ -292,10 +183,7 @@ async function executeTurn(
           },
           sandbox,
           sessionId: threadId,
-          systemPrompt: systemPrompt({
-            ...hints,
-            model: currentAttempt.model,
-          }),
+          systemPrompt: systemPrompt(hints),
           tools: buildTools({
             bot,
             getSandboxContext: () => sandboxContext,
@@ -315,7 +203,7 @@ async function executeTurn(
         for await (const chunk of renderStream(result.fullStream)) {
           hasStreamed = true;
           yield chunk;
-          control ??= await postControlMessage({ thread });
+          controls ??= await postTurnControls({ thread });
         }
 
         const [text, finishReason] = await Promise.all([
@@ -374,40 +262,6 @@ async function executeTurn(
       }
     }
   }
-}
-
-function setPromptControl({
-  activeTurn,
-  control,
-  threadId,
-}: {
-  activeTurn: ActiveTurn;
-  control: PromptControl | undefined;
-  threadId: string;
-}): void {
-  if (control?.submitUserMessage) {
-    activeTurn.submitUserMessage = (text) =>
-      control.submitUserMessage?.(text) ?? Promise.resolve();
-  } else {
-    activeTurn.submitUserMessage = undefined;
-  }
-
-  if (
-    control &&
-    !control.submitUserMessage &&
-    activeTurn.pendingMessages.length > 0
-  ) {
-    activeTurn.controller.abort();
-    return;
-  }
-
-  flushSteering({ activeTurn, threadId }).catch((error: unknown) => {
-    logger.warn(
-      { err: error, threadId },
-      '[agent] native steering failed, restarting turn'
-    );
-    activeTurn.controller.abort();
-  });
 }
 
 function attemptLog(attempt: PiAttempt | undefined) {

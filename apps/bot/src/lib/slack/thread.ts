@@ -43,7 +43,7 @@ export async function setThinking(thread: Thread): Promise<void> {
     .catch(() => undefined);
 }
 
-export async function uploadSlackFileToThread({
+export async function uploadFileToThread({
   file,
   filename,
   thread,

@@ -37,6 +37,7 @@ MCP + `apps/server` are **Part 2** (deferred until the core thread agent works).
 
 ## Coding rules (full detail + examples in `REWRITE_PLAN.md` §12)
 - **Inline over extract** — no one-shot helpers.
+- **Avoid constants unless absolutely needed** — inline one-use literals and values.
 - **Dict params** — >1 arg → single options object.
 - **Small functions** — respect complexity/param limits; early returns over nesting.
 - **No `as const`** on discriminants — annotate with the SDK type.

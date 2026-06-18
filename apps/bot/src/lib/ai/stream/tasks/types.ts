@@ -13,3 +13,15 @@ export interface ToolTaskRenderResult {
 export type ToolTaskRenderer = (
   input: ToolTaskRenderInput
 ) => ToolTaskRenderResult;
+
+export interface DefaultToolTaskRenderer {
+  error: ToolTaskRenderer;
+  request: ToolTaskRenderer;
+  response: ToolTaskRenderer;
+}
+
+export interface ToolTaskRendererEntry {
+  request?: ToolTaskRenderer;
+  response?: ToolTaskRenderer;
+  title: string;
+}

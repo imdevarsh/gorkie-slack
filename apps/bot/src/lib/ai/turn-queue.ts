@@ -1,24 +1,4 @@
-import PQueue from 'p-queue';
-
-interface ThreadQueue {
-  queue: PQueue;
-  turns: number;
-}
-
-const threadQueues = new Map<string, ThreadQueue>();
-
-function threadQueue(threadId: string): ThreadQueue {
-  const existing = threadQueues.get(threadId);
-  if (existing) {
-    return existing;
-  }
-  const entry: ThreadQueue = {
-    queue: new PQueue({ concurrency: 1 }),
-    turns: 0,
-  };
-  threadQueues.set(threadId, entry);
-  return entry;
-}
+const threadQueues = new Map<string, Promise<void>>();
 
 export function runQueuedTurn({
   run,
@@ -27,17 +7,21 @@ export function runQueuedTurn({
   run: (controller: AbortController) => Promise<void>;
   threadId: string;
 }): Promise<void> {
-  const entry = threadQueue(threadId);
-  entry.turns += 1;
-  return entry.queue.add(async () => {
-    const controller = new AbortController();
-    try {
+  const queued = (threadQueues.get(threadId) ?? Promise.resolve())
+    .catch(() => undefined)
+    .then(async () => {
+      const controller = new AbortController();
       await run(controller);
-    } finally {
-      entry.turns -= 1;
-      if (entry.turns === 0) {
+    });
+
+  threadQueues.set(threadId, queued);
+  queued
+    .finally(() => {
+      if (threadQueues.get(threadId) === queued) {
         threadQueues.delete(threadId);
       }
-    }
-  });
+    })
+    .catch(() => undefined);
+
+  return queued;
 }

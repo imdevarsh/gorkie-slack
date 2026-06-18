@@ -4,10 +4,6 @@ import logger from '@/lib/logger';
 import { clamp } from '@/lib/utils/text';
 import { renderToolCall, renderToolError, renderToolResult } from './tasks';
 
-const REASONING_MAX = 2800;
-const SLACK_VISIBLE_TASK_MAX = 45;
-const HIDDEN_TASK_ID = 'hidden-tool-activity';
-
 export async function* renderStream(
   stream: AsyncIterable<TextStreamPart<ToolSet>>
 ): AsyncGenerator<string | StreamChunk> {
@@ -41,7 +37,7 @@ export async function* renderStream(
         const text = reasoning.get(part.id)?.trim();
         yield {
           id: `reasoning-${part.id}`,
-          output: text ? clamp(text, REASONING_MAX) : undefined,
+          output: text ? clamp(text, 2800) : undefined,
           status: 'complete',
           title: 'Thinking',
           type: 'task_update',
@@ -154,7 +150,7 @@ function showTask({
   if (visibleTaskIds.has(id)) {
     return true;
   }
-  if (visibleTaskIds.size < SLACK_VISIBLE_TASK_MAX) {
+  if (visibleTaskIds.size < 45) {
     visibleTaskIds.add(id);
     return true;
   }
@@ -169,7 +165,7 @@ function hiddenTaskUpdate({
   done: boolean;
 }): StreamChunk {
   return {
-    id: HIDDEN_TASK_ID,
+    id: 'hidden-tool-activity',
     output: done
       ? `Ran ${count} additional tool${count === 1 ? '' : 's'}.`
       : undefined,

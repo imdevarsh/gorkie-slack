@@ -20,11 +20,12 @@ export async function requestHints({
     getUserCustomization(message.author.userId).catch(() => null),
   ]);
   return {
-    channel,
-    channelId: thread.channelId,
+    channel: {
+      id: channelId,
+      name: channel,
+    },
     customization,
     messageId: message.id,
-    model: 'google/gemini-3-flash-preview',
     server,
     threadId: thread.id,
     time: getTime(),

@@ -1,15 +1,16 @@
-import { clipped, numberField, plural, textField } from './helpers';
-import type { ToolTaskRenderer } from './types';
+import { numberField, plural, textField } from './helpers';
+import type { ToolTaskRendererEntry } from './types';
 
-export const generateImageCall: ToolTaskRenderer = ({ input }) => ({
-  details: clipped(textField(input, 'prompt'), 180),
+export const generateImage: ToolTaskRendererEntry = {
   title: 'Generating image',
-});
-
-export const generateImageResult: ToolTaskRenderer = ({ output }) => {
-  const uploaded = numberField(output, 'uploaded') ?? 0;
-  return {
-    output: clipped(`Uploaded ${plural(uploaded, 'image')}.`),
-    title: uploaded > 0 ? 'Generated image' : 'Image generation finished',
-  };
+  request: ({ input }) => ({
+    details: textField(input, 'prompt'),
+  }),
+  response: ({ output }) => {
+    const uploaded = numberField(output, 'uploaded') ?? 0;
+    return {
+      output: `Uploaded ${plural(uploaded, 'image')}.`,
+      title: uploaded > 0 ? 'Generated image' : 'Image generation finished',
+    };
+  },
 };

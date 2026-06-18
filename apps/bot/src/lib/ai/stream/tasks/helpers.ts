@@ -1,8 +1,3 @@
-import { clamp } from '@/lib/utils/text';
-
-export const DETAIL_MAX = 180;
-export const OUTPUT_MAX = 280;
-
 export function field(input: unknown, key: string): unknown {
   return input && typeof input === 'object' && key in input
     ? (input as Record<string, unknown>)[key]
@@ -29,13 +24,6 @@ export function arrayLength(input: unknown, key: string): number | undefined {
   return Array.isArray(value) ? value.length : undefined;
 }
 
-export function clipped(
-  input: string | undefined,
-  max = OUTPUT_MAX
-): string | undefined {
-  return input ? clamp(input, max) : undefined;
-}
-
 export function plural(
   count: number,
   singular: string,
@@ -46,11 +34,11 @@ export function plural(
 
 export function errorOutput(output: unknown): string | undefined {
   if (output instanceof Error) {
-    return clipped(`Error: ${output.message}`);
+    return `Error: ${output.message}`;
   }
   if (typeof output === 'string') {
-    return clipped(`Error: ${output}`);
+    return `Error: ${output}`;
   }
   const message = textField(output, 'message') ?? textField(output, 'error');
-  return clipped(message ? `Error: ${message}` : 'Error: tool failed');
+  return message ? `Error: ${message}` : 'Error: tool failed';
 }
