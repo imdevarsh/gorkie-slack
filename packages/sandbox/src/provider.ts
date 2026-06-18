@@ -84,11 +84,23 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
     abortSignal?.throwIfAborted();
 
     const existing = sessionId ? await getByThread(sessionId) : null;
-    const sandbox = existing
+    let sandbox = existing
       ? await connectE2BSandbox(existing.sandboxId, this.apiKey)
       : null;
     if (sandbox && sessionId) {
-      await sandbox.setTimeout(sandboxConfig.timeoutMs);
+      await sandbox
+        .setTimeout(sandboxConfig.timeoutMs)
+        .then(() => sandbox?.files.makeDir(sandboxConfig.workdir))
+        .catch((error: unknown) => {
+          if (isMissingSandboxError(error)) {
+            sandbox = null;
+            return;
+          }
+          throw error;
+        });
+    }
+
+    if (sandbox && sessionId) {
       await markActivity(sessionId);
       this.logger.debug(
         { sessionId, sandboxId: sandbox.sandboxId },

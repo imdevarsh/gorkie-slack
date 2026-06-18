@@ -17,6 +17,8 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 ## Verification
 - Verify all old Gorkie skills/tools with one live or harnessed smoke path.
 - Verify sandbox deletion recovery: delete or destroy a stored sandbox, send a follow-up in the same Slack thread, confirm v2 creates a fresh sandbox, re-seeds the mirrored Pi session file, and preserves conversation memory.
+- Fix Slack truncation without turn-version guards: long streamed model responses can still hit Slack `msg_too_long` if the primary streamed message grows beyond Slack's limit. The fix should cap the first Slack message before the platform limit, preserve the final text for the model/session, and post overflow as follow-up messages without adding stale-turn/token logic.
+- Fix Harness unfinished-turn recovery after sandbox loss: if an E2B sandbox is deleted or expires while Pi has an unfinished turn in `resumeState.continueFrom`, the next Slack turn can fail before a fresh sandbox is useful. The fix should strip/resolve stale `continueFrom` at session open/persist boundaries, recreate the sandbox from the DB mirror when the remote sandbox is missing, and avoid deleting or pausing unrelated replacement sandboxes.
 - Verify attachment seeding after a fresh sandbox resume.
 - Verify Slack App Home: open, edit instructions, load preset, save preset, clear instructions.
 - Verify Slack root mention vs reply-only mention vs subscribed thread behavior.
