@@ -4,9 +4,13 @@ import logger from '@/lib/logger';
 import { clamp } from '@/lib/utils/text';
 import { renderToolCall, renderToolError, renderToolResult } from './tasks';
 
-export async function* renderStream(
-  stream: AsyncIterable<TextStreamPart<ToolSet>>
-): AsyncGenerator<string | StreamChunk> {
+export async function* renderStream({
+  onTextDelta,
+  stream,
+}: {
+  onTextDelta?: (text: string) => PromiseLike<void> | void;
+  stream: AsyncIterable<TextStreamPart<ToolSet>>;
+}): AsyncGenerator<string | StreamChunk> {
   const toolInputs = new Map<string, unknown>();
   const reasoning = new Map<string, string>();
   const visibleTaskIds = new Set<string>();
@@ -15,7 +19,7 @@ export async function* renderStream(
     switch (part.type) {
       case 'text-delta': {
         if (part.text) {
-          yield part.text;
+          await onTextDelta?.(part.text);
         }
         break;
       }

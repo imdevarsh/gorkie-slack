@@ -107,6 +107,7 @@
         "@e2b/code-interpreter": "^2.4.2",
         "@repo/db": "workspace:*",
         "@repo/logging": "workspace:*",
+        "dotenv": "catalog:",
         "e2b": "catalog:",
       },
       "devDependencies": {

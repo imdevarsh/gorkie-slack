@@ -1,85 +1,65 @@
 <div align="center">
   <img alt="Gorkie banner" src="./.github/banner.png" />
-  <h1>Gorkie (for Slack)</h1>
+  <h1>Gorkie for Slack</h1>
 </div>
 
-## Table of Contents
+Gorkie is a Slack AI agent. This repo is the v2 rewrite: Chat SDK owns Slack runtime behavior, AI SDK Harness/Pi owns the coding agent brain, and E2B provides the persistent per-thread sandbox.
 
-1. [Introduction](#introduction)
-2. [Tech Stack](#tech-stack)
-3. [Getting Started](#getting-started)
-4. [Project Structure](#project-structure)
-5. [License](#license)
+## Stack
 
-## Introduction
+- Bun and TypeScript
+- `vercel/chat` with `@chat-adapter/slack` in Socket Mode
+- AI SDK 7 `HarnessAgent` with `@ai-sdk/harness-pi`
+- E2B sandbox sessions
+- PostgreSQL with Drizzle
+- Turborepo and Ultracite
 
-An AI assistant (called Gorkie) designed to help Slack users. Based on [Gork for Slack](https://github.com/techwithanirudh/gork-slack).
+## Local Setup
 
-Gorkie responds to mentions, DMs, and thread replies with AI-generated responses, including web search, code sandboxes, image generation, scheduled tasks, and Slack-aware tools.
-
-## Tech Stack
-
-- [Vercel AI SDK][ai-sdk]
-- [Slack Bolt SDK][slack-bolt]
-- [Exa][exa]
-- [E2B][e2b]
-- [PostgreSQL][postgres] + [Drizzle ORM][drizzle]
-- [Redis][redis]
-- [Bun][bun]
-- [Turborepo][turbo]
-- [Biome][biome]
-
-## Getting Started
-
-Create a new [Slack App](https://api.slack.com/apps) using the [provided manifest](slack-manifest.json). You will also need [Git][git], [Bun][bun], and a [PostgreSQL][postgres] database.
+Create a Slack app from [slack-manifest.json](slack-manifest.json), then install dependencies and fill the bot env file:
 
 ```bash
-# Clone this repository
-git clone https://github.com/imdevarsh/gorkie-slack.git
-
-# Install dependencies
 bun install
-
-# Copy and fill in your environment variables
 cp apps/bot/.env.example apps/bot/.env
-cp apps/server/.env.example apps/server/.env
-
-# Push the database schema
-bun run db:push
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for the full local setup, including the proxy tunnel required for E2B sandboxes.
+Push the schema and start the bot:
+
+```bash
+bun run db:push
+bun run dev:bot
+```
+
+Socket Mode is the expected local path, so Slack does not need a public HTTP URL for the bot.
+
+## Checks
+
+```bash
+bun run typecheck
+bun run check
+bun run check:spelling
+```
 
 ## Project Structure
 
-```
+```text
 apps/
-  bot/        Slack bot (entry: src/index.ts)
-  server/     Nitro proxy for AI provider keys
+  bot/        Chat SDK Slack runtime, Slack features, bot-owned tools
 packages/
-  ai/         AI providers, model config, prompts
-  db/         Drizzle schema, PostgreSQL client, queries
-  kv/         Redis env and client factory
+  ai/         Harness/Pi agent core, prompts, provider attempts, session files
+  db/         Drizzle schema, queries, database config
   logging/    Pino logger factory
-  utils/      Shared framework-agnostic helpers
-  validators/ Shared Zod schemas
-tooling/      Shared TypeScript, cspell, GitHub Action config
+  sandbox/    E2B sandbox provider and template builder
+  utils/      Shared platform-neutral helpers
+tooling/      Shared TypeScript, cspell, and GitHub config
 ```
 
-The bot does not start or import the proxy server. It creates short-lived DB-backed tokens and passes `SERVER_BASE_URL` plus the scoped token into the sandbox. Provider keys stay in `apps/server`.
+`apps/server`, MCP OAuth, and recurring scheduled-task storage are deferred rewrite work. The core Slack thread agent runs from `apps/bot` directly with Bun.
+
+## More
+
+Read [AGENTS.md](AGENTS.md), [REWRITE_PLAN.md](REWRITE_PLAN.md), and [REWRITE_TODO.md](REWRITE_TODO.md) before changing architecture or rewrite priorities.
 
 ## License
 
-This project is under the MIT license. See [LICENSE](LICENSE) for details.
-
-[git]: https://git-scm.com/
-[bun]: https://bun.sh/
-[slack-bolt]: https://docs.slack.dev/tools/bolt-js/
-[ai-sdk]: https://ai-sdk.dev/
-[exa]: https://exa.ai/
-[e2b]: https://e2b.dev/
-[postgres]: https://www.postgresql.org/
-[drizzle]: https://orm.drizzle.team/
-[redis]: https://redis.io/
-[turbo]: https://turbo.build/
-[biome]: https://biomejs.dev/
+MIT. See [LICENSE](LICENSE).

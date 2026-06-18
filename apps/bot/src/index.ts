@@ -4,54 +4,19 @@ import { slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 import { shutdownLangfuse } from '@/lib/observability/langfuse';
 
-declare global {
-  var gorkieRuntime:
-    | {
-        cleanup?: (reason: string) => Promise<void>;
-        shutdownHandlers?: {
-          SIGINT?: () => void;
-          SIGTERM?: () => void;
-        };
-        shuttingDown?: boolean;
-      }
-    | undefined;
-}
+let shuttingDown = false;
 
-globalThis.gorkieRuntime ??= {};
-
-await globalThis.gorkieRuntime.cleanup?.('reload').catch((error: unknown) => {
-  logger.error({ err: error }, '[bot] reload cleanup failed');
-});
-
-let cleanedUp = false;
-
-async function cleanup(reason: string): Promise<void> {
-  if (cleanedUp) {
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) {
     return;
   }
-  cleanedUp = true;
+  shuttingDown = true;
   stopAllTurns();
-  if (reason === 'reload') {
-    logger.info('[bot] reloading');
-  } else {
-    logger.info({ signal: reason }, '[bot] shutting down');
-  }
+  logger.info({ signal }, '[bot] shutting down');
   await bot.shutdown().catch((error: unknown) => {
     logger.error({ err: error }, '[bot] error during shutdown');
   });
   await shutdownLangfuse();
-}
-
-globalThis.gorkieRuntime.cleanup = cleanup;
-globalThis.gorkieRuntime.shuttingDown = false;
-
-async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
-  if (globalThis.gorkieRuntime?.shuttingDown) {
-    return;
-  }
-  globalThis.gorkieRuntime ??= {};
-  globalThis.gorkieRuntime.shuttingDown = true;
-  await cleanup(signal);
   process.exit(0);
 }
 
@@ -70,22 +35,11 @@ try {
   process.exit(1);
 }
 
-registerShutdown('SIGINT');
-registerShutdown('SIGTERM');
-
-function registerShutdown(signal: 'SIGINT' | 'SIGTERM'): void {
-  const previous = globalThis.gorkieRuntime?.shutdownHandlers?.[signal];
-  if (previous) {
-    process.removeListener(signal, previous);
-  }
-  const handler = () => {
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => {
     shutdown(signal).catch((error: unknown) => {
       logger.error({ err: error }, '[bot] shutdown failed');
       process.exit(1);
     });
-  };
-  globalThis.gorkieRuntime ??= {};
-  globalThis.gorkieRuntime.shutdownHandlers ??= {};
-  globalThis.gorkieRuntime.shutdownHandlers[signal] = handler;
-  process.once(signal, handler);
+  });
 }

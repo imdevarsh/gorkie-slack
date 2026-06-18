@@ -11,7 +11,7 @@ import { E2BSandboxProvider } from '@repo/sandbox';
 import { type Message, StreamingPlan, type Thread } from 'chat';
 import { env } from '@/env';
 import { deleteTurnControls, postTurnControls } from '@/lib/agent/controls';
-import { createOverflowReply } from '@/lib/agent/overflow';
+import { createLineReply } from '@/lib/agent/line-reply';
 import {
   type ActiveTurn,
   setPromptControl,
@@ -96,7 +96,7 @@ async function executeTurn(
   let controls: Awaited<ReturnType<typeof postTurnControls>> = null;
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
-  let overflowReply = createOverflowReply({ threadId });
+  let lineReply = createLineReply({ threadId });
 
   const parkSession = async ({ pause }: { pause: boolean }): Promise<void> => {
     if (!session) {
@@ -126,7 +126,7 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
-    await overflowReply.post({ thread });
+    await lineReply.flush({ thread });
     await deleteTurnControls({ controls });
     await parkSession({ pause: true });
     logger.info(
@@ -201,7 +201,7 @@ async function executeTurn(
           }),
         });
         session = await openSession({ agent, threadId });
-        overflowReply = createOverflowReply({ threadId });
+        lineReply = createLineReply({ threadId });
         const result = await agent.stream({
           abortSignal: controller.signal,
           prompt: promptWithAttachments({
@@ -211,7 +211,11 @@ async function executeTurn(
           session,
         });
         for await (const chunk of renderStream({
-          onOverflowText: overflowReply.append,
+          onTextDelta: async (text) => {
+            hasStreamed = true;
+            controls ??= await postTurnControls({ thread });
+            await lineReply.append({ text, thread });
+          },
           stream: result.fullStream,
         })) {
           hasStreamed = true;

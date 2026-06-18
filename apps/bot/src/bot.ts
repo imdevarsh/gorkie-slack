@@ -1,3 +1,4 @@
+import type { Message } from 'chat';
 import { runTurn, stopTurn } from '@/lib/agent';
 import { bot } from '@/lib/chat';
 import '@/slack/features/assistant';
@@ -6,11 +7,7 @@ import '@/slack/features/customizations';
 export { bot } from '@/lib/chat';
 
 bot.onNewMention(async (thread, message) => {
-  if (
-    message.author.isBot === true ||
-    message.author.isMe ||
-    message.text.trimStart().startsWith('##')
-  ) {
+  if (shouldIgnore(message)) {
     return;
   }
   // Chat SDK Slack thread ids end with the root message id.
@@ -22,11 +19,7 @@ bot.onNewMention(async (thread, message) => {
 });
 
 bot.onDirectMessage(async (thread, message) => {
-  if (
-    message.author.isBot === true ||
-    message.author.isMe ||
-    message.text.trimStart().startsWith('##')
-  ) {
+  if (shouldIgnore(message)) {
     return;
   }
   await thread.subscribe();
@@ -41,12 +34,7 @@ bot.onSubscribedMessage(async (thread, message) => {
     'respondOnThreadMessages' in state &&
     state.respondOnThreadMessages === true;
 
-  if (
-    message.author.isBot === true ||
-    message.author.isMe ||
-    message.text.trimStart().startsWith('##') ||
-    !(shouldRespondToThread || message.isMention)
-  ) {
+  if (shouldIgnore(message) || !(shouldRespondToThread || message.isMention)) {
     return;
   }
   await runTurn({ message, thread });
@@ -64,3 +52,30 @@ bot.onAction('gorkie_stop_turn', async (event) => {
       .catch(() => undefined);
   }
 });
+
+function shouldIgnore(message: Message): boolean {
+  if (message.author.isBot === true || message.author.isMe) {
+    return true;
+  }
+  const raw = message.raw;
+  const text =
+    raw &&
+    typeof raw === 'object' &&
+    'text' in raw &&
+    typeof raw.text === 'string'
+      ? raw.text
+      : message.text;
+
+  for (const line of text.split('\n')) {
+    // Slack leaves mention tokens in raw text, so strip leading pings before checking the ignore marker.
+    if (
+      line
+        .replace(/^\s*(?:<@[A-Z0-9][A-Z0-9._-]*(?:\|[^>]+)?>\s*)+/, '')
+        .trimStart()
+        .startsWith('##')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}

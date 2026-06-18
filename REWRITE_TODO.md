@@ -59,3 +59,6 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] `ai-retry` support at the Harness/Pi boundary so custom retry logic can be deleted.
 - [ ] Native Langfuse / OTel support deep enough for Harness/Pi model/tool/session internals.
 - [ ] Official AI SDK E2B provider support with the resume/session-file hooks Gorkie needs.
+
+- [ ] Our old implementation had configured PI REtry, basically even if one time model was down it'd retry in pi 3-4 times. Add that
+- [ ] Another thing

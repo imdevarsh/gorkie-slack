@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "scripts": {
     "clean": "git clean -xdf .turbo dist node_modules",
-    "dev": "bun run --hot src/index.ts",
+    "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "typecheck": "tsc --noEmit"
   },

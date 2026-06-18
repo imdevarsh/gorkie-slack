@@ -1,7 +1,17 @@
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createLogger } from '@repo/logging';
+import dotenv from 'dotenv';
 import { defaultBuildLogger, Template } from 'e2b';
 import { sandboxConfig } from '../config';
+
+dotenv.config({
+  path: resolve(
+    fileURLToPath(new URL('../../../../apps/bot/.env', import.meta.url))
+  ),
+  quiet: true,
+});
 
 const logger = await createLogger({ fileLogging: false });
 
@@ -86,6 +96,8 @@ async function main(): Promise<void> {
       .runCmd([
         'npx --yes skills add vercel-labs/agent-browser --skill agent-browser --yes',
         'npx --yes skills add https://github.com/agentmail-to/agentmail-skills --skill agentmail --yes',
+        'test -f /home/user/.agents/skills/agent-browser/SKILL.md',
+        'test -f /home/user/.agents/skills/agentmail/SKILL.md',
       ]),
     template,
     {

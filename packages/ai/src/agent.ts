@@ -8,6 +8,7 @@ import { HarnessAgent } from '@ai-sdk/harness/agent';
 import { createPi } from '@ai-sdk/harness-pi';
 import type { ToolSet } from 'ai';
 import { syncSession } from './files/session';
+import { syncTemplateSkills } from './files/skills';
 import { writeSystemPrompt } from './files/system';
 import type { SandboxContext } from './types';
 import type { PiAttempt } from './types/providers';
@@ -44,6 +45,7 @@ export function createAgent({
     tools,
     onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
       await onSandboxReady?.({ session, sessionWorkDir });
+      await syncTemplateSkills({ abortSignal, session, sessionWorkDir });
       await writeSystemPrompt({ sessionId, systemPrompt });
       await syncSession({ abortSignal, session, sessionId, sessionWorkDir });
     },
