@@ -1,0 +1,33 @@
+{
+  "name": "docs",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "dev": "waku dev",
+    "build": "waku build",
+    "start": "waku start",
+    "typecheck": "bun run types:check",
+    "types:check": "fumadocs-mdx && tsc --noEmit"
+  },
+  "dependencies": {
+    "fumadocs-core": "^16.10.2",
+    "fumadocs-mdx": "^15.0.12",
+    "fumadocs-twoslash": "^3.2.0",
+    "fumadocs-ui": "^16.10.2",
+    "fumapress": "0.6.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-server-dom-webpack": "^19.2.7",
+    "waku": "1.0.0-beta.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3"
+  }
+}

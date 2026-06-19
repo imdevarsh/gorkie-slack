@@ -12,6 +12,11 @@
 
 ## How to use this plan
 
+**First principle: pi runs on the bot host machine.** The e2b sandbox is a remote Linux
+workspace for filesystem and shell operations. Model keys, future BYOK secrets, MCP credentials,
+Slack tools, prompt assembly, and the HarnessAgent loop live on the host, not inside the sandbox.
+Keep this mental model in every design and refactor.
+
 **This plan is a map, not the full spec.** It captures the decisions, architecture, and build
 order — the *details* live in the actual docs and source (see §13). When something is unclear,
 **read the docs/source rather than guessing, and ask as many questions as you need.**

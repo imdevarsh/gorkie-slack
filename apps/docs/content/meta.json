@@ -1,0 +1,14 @@
+{
+  "title": "Gorkie v2",
+  "pages": [
+    "index",
+    "architecture",
+    "slack-runtime",
+    "agent-runtime",
+    "sandbox-sessions",
+    "streaming-tools",
+    "data-model",
+    "development",
+    "open-work"
+  ]
+}

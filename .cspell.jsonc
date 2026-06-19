@@ -7,13 +7,18 @@
     "BYOK",
     "creds",
     "dedup",
+    "fumadocs",
+    "Fumadocs",
     "janky",
     "kimi",
+    "llms",
     "mattpocock",
     "MCPO",
     "moonshotai",
     "reclutter",
-    "resumability"
+    "resumability",
+    "takumi",
+    "waku"
   ],
   "useGitignore": true
 }

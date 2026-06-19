@@ -1,0 +1,100 @@
+---
+title: Development
+description: Commands, local runtime, template builds, checks, and reference repos.
+---
+
+# Development
+
+Use Bun directly. The bot runs TypeScript without bundling.
+
+## Commands
+
+From the repo root:
+
+```sh
+bun install
+bun dev
+bun run typecheck
+bun run check
+bun run check:spelling
+bun run build:template
+```
+
+The bot dev command uses watch mode, not hot module replacement. That avoids duplicate Slack socket processes and repeated shutdown handlers.
+
+## Docs App
+
+The docs live in `apps/docs/content`.
+
+Useful commands:
+
+```sh
+bun --filter=docs run dev
+bun --filter=docs run types:check
+bun --filter=docs run build
+```
+
+This app is intentionally lightweight. The docs are source material for humans; the app framework can be swapped later.
+
+## E2B Template
+
+The E2B template installs the actual runtime tools available inside the sandbox:
+
+- Debian packages like `ripgrep`, `fd`, `imagemagick`, `ffmpeg`, `jq`, `zip`;
+- Node 24;
+- Python packages;
+- `agent-browser`;
+- browser dependencies;
+- upstream Agent Skills.
+
+Build it with:
+
+```sh
+bun run build:template
+```
+
+Secrets stay in `.env`. Do not commit API keys.
+
+## Upstream References
+
+The implementation should be checked against upstream source when the behavior is not obvious:
+
+- Chat SDK: `https://github.com/vercel/chat`
+- AI SDK / Harness / Pi adapter: `https://github.com/vercel/ai`
+
+The useful upstream files are:
+
+| Topic | Upstream source |
+| --- | --- |
+| Chat routing and subscriptions | `packages/chat/src/chat.ts`, `packages/chat/src/types.ts` |
+| Streaming plan | `packages/chat/src/streaming-plan.ts`, `packages/chat/src/thread.ts` |
+| Chat AI tools | `packages/chat/src/ai/**` |
+| HarnessAgent session startup | `packages/harness/src/agent/harness-agent.ts` |
+| Harness settings | `packages/harness/src/agent/harness-agent-settings.ts` |
+| Harness start options | `packages/harness/src/v1/harness-v1-session.ts` |
+| Pi adapter | `packages/harness-pi/src/pi-harness.ts` |
+| Pi session mirror/VFS | `packages/harness-pi/src/pi-session.ts`, `pi-workspace-mirror.ts`, `pi-workspace-vfs.ts` |
+
+## Rewrite Reference
+
+Old Gorkie remains a read-only reference at:
+
+```text
+/workspaces/worktrees/gorkie-slack/reference
+```
+
+Read it to understand old behavior. Re-derive cleanly in v2.
+
+## Checks Before A Commit
+
+Before committing:
+
+```sh
+git status --short
+git diff --stat
+bun run typecheck
+bun run check
+bun run check:spelling
+```
+
+Do not commit or push unless explicitly asked.

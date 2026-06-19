@@ -3,6 +3,10 @@
 A helpful AI agent for Slack (later other platforms). Ground-up **rewrite (v2)** in progress.
 
 ## Read first
+- **Core mental model:** Pi runs on the bot host machine. E2B is the remote Linux workspace
+  for filesystem and shell operations. Model keys, future BYOK secrets, MCP credentials, Slack
+  tools, prompt assembly, and the HarnessAgent loop live on the host, not inside the sandbox.
+- **`apps/docs/content`** — human-readable v2 docs. Keep them updated when architecture changes.
 - **`REWRITE_PLAN.md`** — architecture, core mechanics (sessions/`resumeState`), build phases,
   and the full code-quality rules. Follow it.
 - The previous implementation is read-only at `/workspaces/worktrees/gorkie-slack/reference`
@@ -19,7 +23,7 @@ A helpful AI agent for Slack (later other platforms). Ground-up **rewrite (v2)**
   `coding-best-practices`, `ultracite`, `neon-postgres`. They carry current patterns.
 
 ## Stack
-Bun · TypeScript · AI SDK 7 `HarnessAgent`+`pi` (brain, on host) · e2b (disposable sandbox) ·
+Bun · TypeScript · AI SDK 7 `HarnessAgent`+`pi` (brain, on host) · e2b (persistent sandbox workspace) ·
 `vercel/chat`+`@chat-adapter/slack` (Slack, socket mode) · Drizzle/Postgres · turborepo.
 
 ## Commands
@@ -31,8 +35,8 @@ bun run db:push  # push-only, no migration files
 The skeleton may not typecheck until Phase 0–1 land — expected.
 
 ## Structure (target)
-`apps/bot` (vercel/chat runtime) · `packages/{config, agent, sandbox` (to build)`, db,
-validators, utils, logging}` · `tooling/{cspell, github, typescript}`.
+`apps/bot` (vercel/chat runtime) · `apps/docs` (human architecture docs) ·
+`packages/{ai,sandbox,db,validators,utils,logging}` · `tooling/{cspell, github, typescript}`.
 MCP + `apps/server` are **Part 2** (deferred until the core thread agent works).
 
 ## Coding rules (full detail + examples in `REWRITE_PLAN.md` §12)
@@ -43,7 +47,7 @@ MCP + `apps/server` are **Part 2** (deferred until the core thread agent works).
 - **No `as const`** on discriminants — annotate with the SDK type.
 - **No type casts** to silence TS — parse/validate (zod) at boundaries.
 - **No what-comments, no JSDoc** — comment only a non-obvious *why*.
-- **Tuneables → `packages/config`**, never hardcoded.
+- **Tuneables → the owning app/package config**, never scattered call-site literals.
 - **Feature-enclosed** — group by owning feature; no re-export-only files.
 - **Direct names**; delete dead wrappers instead of renaming.
 - Run `bun fix` (Ultracite/Biome) before committing; `/coding-best-practices` when auditing.

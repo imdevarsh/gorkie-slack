@@ -1,0 +1,129 @@
+---
+title: Sandbox And Sessions
+description: E2B, Pi host mirrors, resume state, session files, and skills.
+---
+
+# Sandbox And Sessions
+
+The sandbox is a persistent Linux workspace for one Slack conversation. It is not where the Pi brain runs.
+
+Pi runs on the bot machine. The sandbox gives Pi remote filesystem and shell access.
+
+## Runtime Layout
+
+```mermaid
+flowchart TB
+  subgraph Host["bot host machine"]
+    Pi["Pi Node library"]
+    HostWorkspace["tmp host workspace mirror"]
+    HostAgent["tmp host agent dir\nSYSTEM.md, auth, model registry"]
+    HostSessions["tmp host sessions"]
+  end
+
+  subgraph E2B["E2B sandbox"]
+    Workdir["/home/user/pi-<thread>"]
+    Skills["/home/user/.agents/skills"]
+    SessionFiles["/home/user/pi-<thread>/.pi-sessions"]
+  end
+
+  Pi --> HostWorkspace
+  Pi --> HostAgent
+  Pi --> HostSessions
+  HostWorkspace <-->|mirror| Workdir
+  Pi -->|remote ops| Workdir
+  Pi -->|read/write/bash| E2B
+  Skills --> Pi
+  SessionFiles --> HostSessions
+```
+
+The upstream Pi adapter confirms this: `createPi` is an in-process Node adapter with no bridge. It snapshots sandbox state into a host mirror, mounts the sandbox path through a VFS, and maps Pi's file operations back to sandbox operations.
+
+## E2B Provider
+
+`packages/sandbox/src/provider.ts` implements `HarnessV1SandboxProvider`.
+
+It can:
+
+- create a new E2B sandbox from `gorkie-sandbox:3.0`;
+- resume a stored sandbox by id;
+- detect missing/stale sandboxes and create a fresh one;
+- pause a sandbox after a completed turn;
+- update `sandbox_sessions` rows with active/paused runtime state.
+
+`packages/sandbox/src/session.ts` adapts E2B to the AI SDK sandbox interface:
+
+- `readTextFile`, `readBinaryFile`;
+- `writeTextFile`, `writeBinaryFile`;
+- `run`;
+- `spawn`;
+- `restricted()`;
+- network infra methods from the full session.
+
+## Session Persistence
+
+There are two different things:
+
+| Thing | Stored where | Meaning |
+| --- | --- | --- |
+| `resumeState` | Postgres text | Pointer that tells Harness/Pi which session file to reopen. |
+| Pi session file | Sandbox plus Postgres mirror | Actual transcript and tool history. |
+
+`packages/ai/src/sessions.ts` opens and persists sessions.
+
+Open:
+
+1. Load `sandbox_sessions.resumeState`.
+2. Strip stale `continueFrom` from old unfinished turns.
+3. Call `agent.createSession({ sessionId, resumeFrom })`.
+
+Persist:
+
+1. Call `session.detach()`.
+2. Strip `continueFrom` before storing normal resume state.
+3. Find the Pi session file name.
+4. Read session file bytes from the sandbox if available.
+5. Store the new `resumeState` and optional session-file mirror in Postgres.
+
+```mermaid
+sequenceDiagram
+  participant Bot
+  participant Harness
+  participant Sandbox
+  participant DB
+
+  Bot->>DB: get resumeState + mirrored session file
+  Bot->>Sandbox: create or resume E2B
+  Bot->>Sandbox: seed mirrored .pi-sessions file if needed
+  Bot->>Harness: createSession(resumeFrom)
+  Harness->>Sandbox: run Pi tools against workspace
+  Bot->>Harness: detach()
+  Harness->>Sandbox: persist session file
+  Bot->>Sandbox: read session file bytes
+  Bot->>DB: update resumeState + mirror
+  Bot->>Sandbox: pause
+```
+
+## Skills
+
+The E2B template installs real upstream Agent Skills:
+
+- `agent-browser`
+- `agentmail`
+
+The template build verifies that their `SKILL.md` files exist under `/home/user/.agents/skills`.
+
+At runtime, `packages/ai/src/files/skills.ts` reads those installed skill folders and passes them into Harness `skills`. This matters because the Pi adapter gives first-class treatment to Harness-provided skills: it materializes them under sandbox `$HOME/.agents/skills` and injects them into the Pi resource loader.
+
+The template remains the source of truth. The bot does not vendor these skill files.
+
+## Template Build
+
+`packages/sandbox/src/scripts/build-template.ts` builds the E2B template. It installs base tools, Node 24, Python packages, `agent-browser`, browser dependencies, and Agent Skills.
+
+Root command:
+
+```sh
+bun run build:template
+```
+
+The script loads `apps/bot/.env` through `dotenv` so `E2B_API_KEY` does not need to be tracked in code.

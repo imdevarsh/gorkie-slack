@@ -1,0 +1,63 @@
+---
+title: Open Work
+description: Current cleanup, reliability, and product work.
+---
+
+# Open Work
+
+This page is the narrative version of `REWRITE_TODO.md`. Keep the checklist there authoritative.
+
+## P0 Cleanup
+
+- Keep simplifying `apps/bot/src/lib/agent/index.ts`; it still does too much turn orchestration.
+- Keep the stop button separate until Chat SDK exposes an active-stream control hook.
+- Verify long Slack responses no longer hit `msg_too_long`.
+- Keep reducing one-use constants and helper clutter.
+- Simplify skill loading now that Harness skill injection is the reliable path.
+
+## Slack Context
+
+Gorkie does not yet preload bounded Slack context like Claude.
+
+Target behavior:
+
+- thread mentions preload the latest 50 thread messages;
+- channel mentions preload the latest 20 channel messages;
+- forwarded thread behavior can have a larger cap later;
+- the prompt must say exactly what was loaded and what was not loaded;
+- reader tools stay available for older or broader context.
+
+Privacy work must happen first for DM/private-channel reads. The bot can read DMs it has token access to, which is both useful and dangerous.
+
+## Tool Parity
+
+Old-Gorkie compatibility comes before simplification.
+
+Still important:
+
+- recurring scheduled tasks;
+- all old native tools or explicit v2 replacements;
+- per-tool task renderers for success and error states;
+- clear write-tool approval expectations.
+
+## Reliability
+
+Needs live or harnessed verification:
+
+- stale E2B sandbox recovery;
+- fresh sandbox seeded from mirrored Pi session file;
+- attachment seeding after resume;
+- Slack App Home flows;
+- root mention vs thread reply routing;
+- Langfuse/OTel depth for Harness/Pi internals.
+
+## Upstream Bets
+
+Delete bridge code as upstream improves:
+
+- native Harness steering;
+- native skill loading that does not need our template skill bridge;
+- cleaner Pi provider/model selection;
+- Harness/Pi retry support;
+- official E2B provider with resume hooks;
+- deeper observability.

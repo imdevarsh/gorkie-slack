@@ -18,6 +18,7 @@
       "!node_modules",
       "!**/dist",
       "!**/public",
+      "!**/.source",
       "!.agents",
       "!.github/skills",
       "!.vercel",

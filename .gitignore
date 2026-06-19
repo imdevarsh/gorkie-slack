@@ -2,12 +2,14 @@
 node_modules
 .pnp
 .pnp.js
+apps/*/bun.lock
 
 # Build outputs
 dist
 build
 out
 .output
+.source
 *.tsbuildinfo
 
 # Environment variables
