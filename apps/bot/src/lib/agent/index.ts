@@ -127,7 +127,6 @@ async function executeTurn(
       );
     }
     await lineReply.flush({ thread });
-    logger.info({ threadId }, '[agent] response sent');
     await deleteTurnControls({ controls });
     await parkSession({ pause: true });
     logger.info(

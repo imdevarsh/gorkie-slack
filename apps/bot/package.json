@@ -13,7 +13,6 @@
     "@chat-adapter/slack": "^4.30.0",
     "@chat-adapter/state-pg": "^4.30.0",
     "@langfuse/otel": "^5.4.1",
-    "@langfuse/tracing": "^5.4.1",
     "@opentelemetry/sdk-trace-node": "^2.8.0",
     "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
@@ -25,7 +24,6 @@
     "chat": "^4.30.0",
     "dotenv": "catalog:",
     "exa-js": "^2.13.0",
-    "p-queue": "^6.6.2",
     "zod": "catalog:"
   },
   "devDependencies": {

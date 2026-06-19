@@ -1,18 +1,16 @@
-export interface ToolTaskRenderInput {
+interface ToolTaskRenderInput {
   input: unknown;
   output?: unknown;
   toolName: string;
 }
 
-export interface ToolTaskRenderResult {
+interface ToolTaskRenderResult {
   details?: string;
   output?: string;
   title?: string;
 }
 
-export type ToolTaskRenderer = (
-  input: ToolTaskRenderInput
-) => ToolTaskRenderResult;
+type ToolTaskRenderer = (input: ToolTaskRenderInput) => ToolTaskRenderResult;
 
 export interface DefaultToolTaskRenderer {
   error: ToolTaskRenderer;

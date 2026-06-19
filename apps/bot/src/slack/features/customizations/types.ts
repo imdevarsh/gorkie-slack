@@ -3,11 +3,11 @@ import type {
   createSlackPlainText,
 } from '@chat-adapter/slack/format';
 
-export type SlackText = ReturnType<
+type SlackText = ReturnType<
   typeof createSlackMrkdwn | typeof createSlackPlainText
 >;
 
-export interface SlackButtonElement {
+interface SlackButtonElement {
   action_id?: string;
   confirm?: SlackConfirm;
   style?: 'danger' | 'primary';
@@ -25,7 +25,7 @@ export interface SlackTextInputElement {
   type: 'plain_text_input';
 }
 
-export interface SlackConfirm {
+interface SlackConfirm {
   confirm: ReturnType<typeof createSlackPlainText>;
   deny: ReturnType<typeof createSlackPlainText>;
   text: ReturnType<typeof createSlackMrkdwn>;

@@ -1,31 +1,49 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [".agents/skills/**", ".claude/skills/**"],
+  "ignoreDependencies": [
+    "@biomejs/biome",
+    "@cspell/dict-bash",
+    "@cspell/dict-npm",
+    "@cspell/dict-redis",
+    "@repo/cspell-config",
+    "cspell"
+  ],
   "tags": ["-lintignore"],
   "workspaces": {
-    ".": {},
+    ".": {
+      "entry": ["taze.config.ts", "turbo/generators/config.ts"]
+    },
+    "apps/docs": {
+      "entry": [
+        "press.config.tsx",
+        "source.config.ts",
+        "src/app.css",
+        "src/mdx.tsx",
+        "waku.config.ts"
+      ],
+      "project": ["**/*.{ts,tsx}"]
+    },
     "apps/bot": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/ai": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/db": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/logging": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/sandbox": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/utils": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "tooling/cspell": {
+      "project": ["**/*.ts"]
     }
   }
 }

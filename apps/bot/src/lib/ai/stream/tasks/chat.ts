@@ -104,11 +104,3 @@ export const reaction: ToolTaskRendererEntry = {
   },
   title: 'Adding reaction',
 };
-
-export const fetchThread: ToolTaskRendererEntry = {
-  response: ({ output }) => ({
-    output: `Thread in ${textField(output, 'channelName') ?? textField(output, 'channelId') ?? 'channel'}.`,
-    title: 'Read thread',
-  }),
-  title: 'Reading thread',
-};
