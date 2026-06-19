@@ -7,7 +7,7 @@ import {
   type SandboxContext,
   systemPrompt,
 } from '@repo/ai';
-import { E2BSandboxProvider } from '@repo/sandbox';
+import { E2BSandboxProvider, loadSkills } from '@repo/sandbox';
 import { type Message, StreamingPlan, type Thread } from 'chat';
 import { env } from '@/env';
 import { deleteTurnControls, postTurnControls } from '@/lib/agent/controls';
@@ -170,6 +170,7 @@ async function executeTurn(
     thread: Thread;
   }) {
     const hints = await requestHints({ thread, message });
+    const skills = await loadSkills();
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
     let hasStreamed = false;
     const attemptHistory: AttemptFailure[] = [];
@@ -192,6 +193,7 @@ async function executeTurn(
           },
           sandbox,
           sessionId: threadId,
+          skills,
           systemPrompt: systemPrompt(hints),
           tools: buildTools({
             bot,

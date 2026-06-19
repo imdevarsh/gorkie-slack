@@ -112,20 +112,18 @@ sequenceDiagram
 
 ## Skills
 
-The E2B template installs real upstream Agent Skills:
+Gorkie's runtime skills are **vendored on the host** under `packages/sandbox/skills/`:
 
 - `agent-browser`
 - `agentmail`
 
-The template build verifies that their `SKILL.md` files exist under `/home/user/.agents/skills`.
+`loadSkills()` (`packages/sandbox/src/skills.ts`) reads those folders once and the bot passes them into Harness `skills`. The Pi adapter materializes Harness-provided skills into the sandbox itself — it writes each `SKILL.md` (and its files) under `$HOME/.agents/skills/<name>/` and registers them with the Pi resource loader.
 
-At runtime, `packages/ai/src/files/skills.ts` reads those installed skill folders and passes them into Harness `skills`. This matters because the Pi adapter gives first-class treatment to Harness-provided skills: it materializes them under sandbox `$HOME/.agents/skills` and injects them into the Pi resource loader.
-
-The template remains the source of truth. The bot does not vendor these skill files.
+Because Pi writes the skills into the sandbox, the host never reads them back out of E2B, and the template no longer installs `SKILL.md` files. The template still installs the **executables** the skills drive (the `agent-browser` CLI and the `agentmail` Python package).
 
 ## Template Build
 
-`packages/sandbox/src/scripts/build-template.ts` builds the E2B template. It installs base tools, Node 24, Python packages, `agent-browser`, browser dependencies, and Agent Skills.
+`packages/sandbox/src/scripts/build-template.ts` builds the E2B template. It installs base tools, Node 24, Python packages, the `agent-browser` CLI, and browser dependencies. Skill `SKILL.md` files are not installed here — Pi materializes the host-vendored skills into the sandbox at session start.
 
 Root command:
 

@@ -3,7 +3,6 @@ import {
   remarkMdxMermaid,
 } from 'fumadocs-core/mdx-plugins';
 import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
-import { transformerTwoslash } from 'fumadocs-twoslash';
 import { metaSchema, pageSchema } from 'fumapress/adapters/mdx/schema';
 
 export const docs = defineDocs({
@@ -28,10 +27,7 @@ export default defineConfig({
         dark: 'github-dark',
         light: 'github-light',
       },
-      transformers: [
-        ...(rehypeCodeDefaultOptions.transformers ?? []),
-        transformerTwoslash(),
-      ],
+      transformers: rehypeCodeDefaultOptions.transformers,
     },
     remarkPlugins: [remarkMdxMermaid],
   },

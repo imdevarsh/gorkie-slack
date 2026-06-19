@@ -54,7 +54,7 @@ bot.onAction('gorkie_stop_turn', async (event) => {
 });
 
 function shouldIgnore(message: Message): boolean {
-  if (message.author.isBot === true || message.author.isMe) {
+  if (isBotMessage(message) || message.author.isMe) {
     return true;
   }
   const raw = message.raw;
@@ -78,4 +78,24 @@ function shouldIgnore(message: Message): boolean {
     }
   }
   return false;
+}
+
+// `author.isBot` isn't populated for every Slack bot/app message, so also treat
+// a raw event carrying bot_id / app_id / the bot_message subtype as a bot — Gorkie
+// must never reply to another bot (or an app posting on its behalf).
+function isBotMessage(message: Message): boolean {
+  if (message.author.isBot === true) {
+    return true;
+  }
+  const raw = message.raw;
+  if (!(raw && typeof raw === 'object')) {
+    return false;
+  }
+  if ('bot_id' in raw && typeof raw.bot_id === 'string' && raw.bot_id) {
+    return true;
+  }
+  if ('app_id' in raw && typeof raw.app_id === 'string' && raw.app_id) {
+    return true;
+  }
+  return 'subtype' in raw && raw.subtype === 'bot_message';
 }

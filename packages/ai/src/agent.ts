@@ -3,12 +3,12 @@ import type {
   HarnessV1PromptControl,
   HarnessV1SandboxProvider,
   HarnessV1Session,
+  HarnessV1Skill,
 } from '@ai-sdk/harness';
 import { HarnessAgent } from '@ai-sdk/harness/agent';
 import { createPi } from '@ai-sdk/harness-pi';
 import type { ToolSet } from 'ai';
 import { syncSession } from './files/session';
-import { loadTemplateSkills } from './files/skills';
 import { writeSystemPrompt } from './files/system';
 import type { SandboxContext } from './types';
 import type { PiAttempt } from './types/providers';
@@ -19,6 +19,7 @@ export function createAgent({
   onSandboxReady,
   sandbox,
   sessionId,
+  skills,
   systemPrompt,
   tools,
 }: {
@@ -27,6 +28,7 @@ export function createAgent({
   onSandboxReady?: (input: SandboxContext) => PromiseLike<void> | void;
   sandbox: HarnessV1SandboxProvider;
   sessionId: string;
+  skills: HarnessV1Skill[];
   systemPrompt: string;
   tools: ToolSet;
 }) {
@@ -42,6 +44,7 @@ export function createAgent({
     id: 'gorkie',
     permissionMode: 'allow-all',
     sandbox,
+    skills,
     tools,
     onSandboxSession: async ({ abortSignal, session, sessionWorkDir }) => {
       await onSandboxReady?.({ session, sessionWorkDir });
@@ -64,23 +67,7 @@ function capturePromptControl<TBuiltinTools extends ToolSet>({
   return {
     ...harness,
     doStart: async (options) => {
-      const configuredSkills = options.skills ?? [];
-      const templateSkills = await loadTemplateSkills({
-        abortSignal: options.abortSignal,
-        session: options.sandboxSession.restricted(),
-      });
-      const session = await harness.doStart({
-        ...options,
-        skills: [
-          ...configuredSkills,
-          ...templateSkills.filter(
-            (skill) =>
-              !configuredSkills.some(
-                (configuredSkill) => configuredSkill.name === skill.name
-              )
-          ),
-        ],
-      });
+      const session = await harness.doStart(options);
       const capture = (control: HarnessV1PromptControl) => {
         onPromptControl(control);
         Promise.resolve(control.done)

@@ -92,13 +92,7 @@ async function main(): Promise<void> {
         'chown -R user:user /home/user',
       ])
       .setUser('user')
-      .setWorkdir('/home/user')
-      .runCmd([
-        'npx --yes skills add vercel-labs/agent-browser --skill agent-browser --yes',
-        'npx --yes skills add https://github.com/agentmail-to/agentmail-skills --skill agentmail --yes',
-        'test -f /home/user/.agents/skills/agent-browser/SKILL.md',
-        'test -f /home/user/.agents/skills/agentmail/SKILL.md',
-      ]),
+      .setWorkdir('/home/user'),
     template,
     {
       apiKey,
