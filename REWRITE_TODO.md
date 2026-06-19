@@ -6,32 +6,34 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 
 - [ ] Decide whether `apps/bot/src/lib/ai/stream/index.ts` should keep its three stream-state collections or move to a small state object. Do not refactor unless it clearly reduces clutter.
 - [ ] Verify the active-turn stop button still works after the agent folder split. Current placement stays separate from task rows because Chat SDK `StreamingPlan.endWith` appends controls after streaming completes and does not replace an active-stream control.
-- [ ] Live verify long Slack responses split into follow-up messages without `msg_too_long`.
+- [ ] Live verify markdown-heavy long Slack responses split into follow-up messages without `msg_too_long`, broken tables, broken code fences, stranded list items, or dangling intro lines.
 - [ ] Investigate why E2B template-installed skills are not visible to Pi. Check where `npx skills add` writes files, what `$HOME` is during build and runtime, and which `.agents/skills` roots the Pi adapter actually exposes through its resource loader.
+- [ ] Revisit `continueFrom` before MCP/tool-approval work. Current steering/retry behavior intentionally strips `continueFrom` and starts a fresh prompt from persisted session history; MCP approvals may need true suspended-turn continuation via `doContinueTurn`.
+- [ ] Fix Slack search expectations. `searchSlack` currently uses Slack `assistant.search.context`; zero results are not an API error and do not mean the whole channel was searched. Add clearer model-facing wording, logging, or a separate channel/thread history path.
+- [ ] Build the E2E/CUA smoke runner described in `TESTING.md`, starting API-first with Slack Web API assertions and using browser automation only for UI behavior.
 
 ## P1 - Bounded Slack Context And History
 
 - [ ] Add a bounded Slack context prelude before each Pi prompt so Gorkie starts with the local Slack situation instead of needing to discover basic context from inside the sandbox.
 - [ ] Thread mention behavior: when mentioned in a Slack thread, fetch the latest thread messages before prompting Pi. Target the Claude-like practical bound of the last 50 thread messages, sorted chronologically.
 - [ ] Channel mention behavior: when mentioned in a channel root message, fetch recent top-level channel messages before prompting Pi. Target the Claude-like practical bound of the last 20 channel messages, sorted chronologically, excluding irrelevant bot/self noise.
-- [ ] Use Chat SDK APIs first: `thread.adapter.fetchMessages(thread.id, { limit })` for thread context, `thread.channel.messages` or adapter `fetchChannelMessages` for channel context, and `thread.messages` / `thread.allMessages` only when pagination behavior is explicitly desired.
+- [ ] Use Chat SDK APIs first: adapter `fetchMessages` for thread replies and adapter `fetchChannelMessages` for channel context. Use Chat SDK state helpers only when pagination semantics are explicitly desired.
 - [ ] Convert fetched Slack messages with `toAiMessages` from `chat/ai` when feeding model-message shaped context is useful. Prefer `includeNames: true` for multi-user thread context so Pi can distinguish speakers.
-- [ ] Keep `createChatTools` reader tools available (`fetchMessages`, `fetchChannelMessages`, `fetchThread`, `listThreads`, `getChannelInfo`, `getUser`) even after preloading context. The preload gives Pi the immediate scene; tools let Pi fetch more when the user asks about older or broader context.
-- [ ] Add Slack reader-tool privacy gates before broad history work. Gorkie can read DMs it has token access to, which is useful for current DM conversations but dangerous if tools let one user fetch or search another user's private DM context. Scope DM reads to the current DM/thread, block or require explicit approval for cross-DM reads, and make the model-facing tool descriptions say private conversations are not general workspace memory.
+- [ ] Keep the model-facing history surface small: `listThreads` for public channel thread discovery and `readConversationHistory` for public channel/thread reads. Add another tool only if the model cannot complete a real workflow cleanly.
+- [ ] Tighten Slack reader-tool privacy gates during broad history work. Gorkie can read DMs it has token access to, which is useful for current DM conversations but dangerous if tools let one user fetch or search another user's private DM context. Scope DM reads to the current DM/thread, block or require explicit approval for cross-DM reads, and make model-facing tool descriptions say private conversations are not general workspace memory.
 - [ ] Do not store a parallel full Slack transcript as the brain. Pi/Harness history remains the durable conversation memory; Slack context preload is bounded retrieval for the current turn.
 - [ ] Make prompt text explicit: tell Pi which context was preloaded, the bounds used, and that anything outside those bounds requires calling Slack/Chat tools rather than pretending it saw the whole workspace.
 - [ ] Bound by message count first, then add a token/character budget if real Slack threads produce oversized prompts. Trim oldest messages first, preserving the triggering message and direct parent/root.
 - [ ] Include attachments only through Chat SDK supported paths. `toAiMessages` can include images and text-like files when `fetchData()` exists; log skipped unsupported attachments without failing the turn.
 - [ ] Respect permissions and private-channel access. If Slack history fetch fails, continue with a short context note saying history was unavailable and let Pi use tools if needed.
 - [ ] Add tests or harnessed smoke coverage for: thread mention with 50-message cap, channel mention with 20-message cap, DM follow-up, failed history fetch, and attachment-skipping behavior.
-- [ ] Live verify in Slack that Gorkie can answer a thread-context question without first calling `fetchMessages`, and can still call `fetchMessages` for older context.
+- [ ] Live verify in Slack that Gorkie can answer a thread-context question from the preload, and can still call `readConversationHistory` for older or broader context.
 
 ## P1 - Tool UX
 
 - [ ] Ensure every restored old-Gorkie tool has success and error task rendering.
-- [ ] Finish renderers for Chat SDK internal tools: `sendDirectMessage`, `postMessage`, `postChannelMessage`, `fetchMessages`, `fetchChannelMessages`, `listThreads`, `getChannelInfo`, `getUser`, `addReaction`, `removeReaction`.
-- [ ] Add renderers for Chat SDK tools not currently surfaced in the checklist if they remain enabled by the `messenger` preset.
-- [ ] Verify Slack task overflow stays bounded with the visible task cap plus one overflow task.
+- [ ] Finish success and error renderers for currently exposed Chat SDK tools: `sendDirectMessage`, `postMessage`, `postChannelMessage`, `listThreads`, `readConversationHistory`, `getChannelInfo`, `getUser`, and `addReaction`.
+- [ ] Add renderers when new tools are exposed; do not keep renderer TODOs for disabled tools.
 
 ## P2 - Old Gorkie Tool Parity
 
@@ -59,6 +61,4 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] `ai-retry` support at the Harness/Pi boundary so custom retry logic can be deleted.
 - [ ] Native Langfuse / OTel support deep enough for Harness/Pi model/tool/session internals.
 - [ ] Official AI SDK E2B provider support with the resume/session-file hooks Gorkie needs.
-
-- [ ] Our old implementation had configured PI REtry, basically even if one time model was down it'd retry in pi 3-4 times. Add that
-- [ ] Another thing, the splitting of messages affects rendering like tables, etc. We need to make sure that the splitting of messages does not affect the rendering of tables, code blocks, and other structured content. This may require additional logic to detect and preserve formatting across message splits.
+- [ ] Add Pi-level retry parity from the old implementation so transient provider failures can retry within Pi before Gorkie's outer attempt fallback runs.

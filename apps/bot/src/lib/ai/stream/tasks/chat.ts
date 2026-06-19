@@ -25,10 +25,15 @@ export const fetchMessages: ToolTaskRendererEntry = {
   request: ({ input }) => ({
     details: textField(input, 'threadId') ?? textField(input, 'channelId'),
   }),
-  response: ({ output }) => {
+  response: ({ input, output }) => {
     const count = arrayLength(output, 'messages') ?? 0;
+    const target =
+      textField(input, 'threadId') ?? textField(input, 'channelId');
     return {
-      output: `Read ${plural(count, 'message')}.`,
+      output:
+        count === 0 && target
+          ? `Read 0 messages from ${target}.`
+          : `Read ${plural(count, 'message')}.`,
       title: 'Read messages',
     };
   },

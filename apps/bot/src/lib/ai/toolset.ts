@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { uploadFileToThread } from '@/lib/slack/thread';
 import { generateImageTool } from './tools/generate-image';
+import { listThreadsTool } from './tools/list-threads';
 import { mermaidTool } from './tools/mermaid';
+import { readConversationHistoryTool } from './tools/read-conversation-history';
 import { scheduleReminderTool } from './tools/schedule-reminder';
 import { searchSlack } from './tools/search-slack';
 import { searchWeb } from './tools/search-web';
@@ -25,45 +27,28 @@ export function buildTools({
   message: Message;
   thread: Thread;
 }): ToolSet {
-  const { startTyping: _startTyping, ...chatTools } = createChatTools({
+  const chatTools = createChatTools({
     chat: bot,
     preset: 'messenger',
     requireApproval: false,
   });
 
   const {
-    fetchChannelMessages,
-    fetchMessages,
-    fetchThread,
+    addReaction,
     getChannelInfo,
-    getThreadParticipants,
-    listThreads,
-    ...rest
+    getUser,
+    postChannelMessage,
+    postMessage,
+    sendDirectMessage,
   } = chatTools;
 
   return {
-    ...rest,
-    ...(fetchChannelMessages && {
-      fetchChannelMessages: guardConversationRead({
-        bot,
-        thread,
-        tool: fetchChannelMessages,
-      }),
-    }),
-    ...(fetchMessages && {
-      fetchMessages: guardConversationRead({
-        bot,
-        thread,
-        tool: fetchMessages,
-      }),
-    }),
-    ...(fetchThread && {
-      fetchThread: guardConversationRead({
-        bot,
-        thread,
-        tool: fetchThread,
-      }),
-    }),
+    ...(addReaction && { addReaction }),
+    ...(getUser && { getUser }),
+    ...(postChannelMessage && { postChannelMessage }),
+    ...(postMessage && { postMessage }),
+    listThreads: listThreadsTool({ bot }),
+    readConversationHistory: readConversationHistoryTool({ bot }),
     ...(getChannelInfo && {
       getChannelInfo: guardConversationRead({
         bot,
@@ -71,20 +56,7 @@ export function buildTools({
         tool: getChannelInfo,
       }),
     }),
-    ...(getThreadParticipants && {
-      getThreadParticipants: guardConversationRead({
-        bot,
-        thread,
-        tool: getThreadParticipants,
-      }),
-    }),
-    ...(listThreads && {
-      listThreads: guardConversationRead({
-        bot,
-        thread,
-        tool: listThreads,
-      }),
-    }),
+    ...(sendDirectMessage && { sendDirectMessage }),
     mermaid: mermaidTool({ thread }),
     scheduleReminder: scheduleReminderTool({ message }),
     searchSlack: searchSlack({ message }),
@@ -166,6 +138,11 @@ function guardConversationRead<TOOL extends Tool>({
           z.object({ channelId: z.string() }),
         ])
         .parse(input);
+      if ('threadId' in parsed && parsed.threadId.split(':').length < 3) {
+        throw new Error(
+          `${parsed.threadId} is a channel id, not a thread id. Use readConversationHistory with channelId instead.`
+        );
+      }
       const channel: Channel =
         'threadId' in parsed
           ? bot.thread(parsed.threadId).channel

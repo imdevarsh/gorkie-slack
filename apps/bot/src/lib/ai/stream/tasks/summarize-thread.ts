@@ -9,6 +9,13 @@ export const summarizeThread: ToolTaskRendererEntry = {
     return { details: detail };
   },
   response: ({ output }) => {
+    const error = textField(output, 'error');
+    if (error) {
+      return {
+        output: `Error: ${error}`,
+        title: 'Summary failed',
+      };
+    }
     const count = numberField(output, 'messageCount');
     return {
       output:

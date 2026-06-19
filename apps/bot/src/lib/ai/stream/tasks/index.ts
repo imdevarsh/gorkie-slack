@@ -1,7 +1,6 @@
 import { clamp } from '@/lib/utils/text';
 import {
   fetchMessages,
-  fetchThread,
   getChannelInfo,
   getUser,
   listThreads,
@@ -24,9 +23,6 @@ const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   bash: command,
   compaction: { title: 'Compacting context' },
   edit: { ...file, title: 'Editing file' },
-  fetchChannelMessages: { ...fetchMessages, title: 'Reading channel' },
-  fetchMessages,
-  fetchThread,
   fileChange: { title: 'Updating file' },
   generateImage,
   getChannelInfo,
@@ -38,8 +34,8 @@ const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   mermaid,
   postChannelMessage: { ...message, title: 'Posting to channel' },
   postMessage: message,
+  readConversationHistory: { ...fetchMessages, title: 'Reading history' },
   read: file,
-  removeReaction: { ...reaction, title: 'Removing reaction' },
   scheduleReminder,
   searchSlack,
   searchWeb,
