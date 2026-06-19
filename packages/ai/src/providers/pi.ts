@@ -45,3 +45,7 @@ export const chatAttempts: PiAttempt[] = [
       ]
     : []),
 ];
+
+if (chatAttempts.length === 0) {
+  throw new Error('No Pi model attempts configured.');
+}

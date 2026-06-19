@@ -4,59 +4,93 @@ description: Commands, local runtime, template builds, checks, and reference rep
 ---
 
 
-Use Bun directly. The bot runs TypeScript without bundling.
+Gorkie runs as one local app: `apps/bot`. It uses Bun directly and runs TypeScript without bundling.
 
-## Commands
+Slack connects through Chat SDK with the Slack adapter in **Socket Mode**, so local development needs no public tunnel or webhook URL. Each active Slack thread gets an E2B sandbox, and the agent brain runs in the bot process.
 
-From the repo root:
+## Prerequisites
+
+- Bun
+- PostgreSQL
+- A Slack app created from `slack-manifest.json`
+- An E2B API key
+- Provider keys for the configured Pi attempts
+- An Exa API key for web search
+
+## Environment
+
+Create the bot env file:
+
+```sh
+cp apps/bot/.env.example apps/bot/.env
+```
+
+Fill in Slack, database, provider, E2B, Exa, and optional Langfuse values. `SLACK_SOCKET_MODE=true` is the normal local setting. Secrets stay in `.env`; do not commit API keys.
+
+## Running Locally
+
+Install dependencies, push the database schema, then start the bot:
 
 ```sh
 bun install
-bun dev
-bun run typecheck
-bun run check
-bun run check:spelling
-bun run build:template
+bun run db:push
+bun run dev:bot
 ```
 
-The bot dev command uses watch mode, not hot module replacement. That avoids duplicate Slack socket processes and repeated shutdown handlers.
+`bun run dev:bot` runs the bot only (`turbo run dev --filter=bot`). `bun dev` runs every workspace dev task through turbo, which also brings up the docs app.
+
+Dev mode uses process-restart watch, not Bun hot reload, because Slack Socket Mode owns a persistent WebSocket that must shut down cleanly between reloads. This avoids duplicate socket processes and repeated shutdown handlers. Do not add bot bundling or `tsdown` unless a real deployment target needs it.
+
+### Database commands
+
+```sh
+bun run db:push      # apply schema to the database
+bun run db:generate  # generate migrations
+bun run db:studio    # open Drizzle Studio
+```
 
 ## Docs App
 
-The docs live in `apps/docs/content`.
-
-Useful commands:
+The docs live in `apps/docs/content` as MDX. Run them with turbo filters:
 
 ```sh
 bun --filter=docs run dev
-bun --filter=docs run types:check
 bun --filter=docs run build
 ```
 
-This app is intentionally lightweight. The docs are source material for humans; the app framework can be swapped later.
+The docs are the source material for humans. The app framework is intentionally lightweight and can be swapped later.
 
 ## E2B Template
 
-The E2B template installs the actual runtime tools available inside the sandbox:
+The E2B template defines the runtime tools available inside every sandbox:
 
-- Debian packages like `ripgrep`, `fd`, `imagemagick`, `ffmpeg`, `jq`, `zip`;
+- Debian packages: `ripgrep`, `fd` (from `fd-find`), `imagemagick`, `ffmpeg`, `jq`, `zip`, `unzip`, and more;
 - Node 24;
-- Python packages;
-- `agent-browser`;
-- browser dependencies;
-- upstream Agent Skills.
+- Python packages (`pillow`, `matplotlib`, `numpy`, `pandas`, `requests`, `agentmail`);
+- `agent-browser` plus its browser dependencies;
+- upstream Agent Skills (`agent-browser`, `agentmail`).
 
-Build it with:
+Build it when the sandbox package or its CLI dependencies change:
 
 ```sh
 bun run build:template
 ```
 
-Secrets stay in `.env`. Do not commit API keys.
+The build script loads `apps/bot/.env` through `dotenv`, so `E2B_API_KEY` does not need to be tracked in code. If Pi does not discover template-installed skills, investigate the adapter's skill discovery roots before adding app-owned skill copies.
+
+## Checks
+
+```sh
+bun run typecheck
+bun run check
+bun run check:spelling
+```
+
+`bun run fix` formats and applies safe lint fixes (Ultracite/Biome). Run it before preparing a commit.
 
 ## Upstream References
 
-The implementation should be checked against upstream source when the behavior is not obvious:
+Check behavior against upstream source when it is not obvious:
 
 - Chat SDK: `https://github.com/vercel/chat`
 - AI SDK / Harness / Pi adapter: `https://github.com/vercel/ai`
@@ -74,19 +108,11 @@ The useful upstream files are:
 | Pi adapter | `packages/harness-pi/src/pi-harness.ts` |
 | Pi session mirror/VFS | `packages/harness-pi/src/pi-session.ts`, `pi-workspace-mirror.ts`, `pi-workspace-vfs.ts` |
 
-## Rewrite Reference
+## Deployment Notes
 
-Old Gorkie remains a read-only reference at:
-
-```text
-/workspaces/worktrees/gorkie-slack/reference
-```
-
-Read it to understand old behavior. Re-derive cleanly in v2.
+`apps/bot` is a long-lived process and should run on a persistent host. Configure the same variables as `apps/bot/.env.example` in the host environment and keep Socket Mode enabled unless the Slack runtime is explicitly moved to HTTP events.
 
 ## Checks Before A Commit
-
-Before committing:
 
 ```sh
 git status --short

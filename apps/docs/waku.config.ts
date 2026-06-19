@@ -10,9 +10,7 @@ export default defineConfig({
       dedupe: ['react', 'react-dom'],
     },
     server: {
-      allowedHosts: [
-        '.coder.techwithanirudh.com',
-      ],
+      allowedHosts: ['.coder.techwithanirudh.com'],
     },
   },
 });

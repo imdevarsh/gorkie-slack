@@ -1,53 +1,62 @@
 # Gorkie
 
-A helpful AI agent for Slack (later other platforms). Ground-up **rewrite (v2)** in progress.
+A helpful AI agent for Slack (later other platforms).
 
-## Read first
-- **Core mental model:** Pi runs on the bot host machine. E2B is the remote Linux workspace
-  for filesystem and shell operations. Model keys, future BYOK secrets, MCP credentials, Slack
-  tools, prompt assembly, and the HarnessAgent loop live on the host, not inside the sandbox.
-- **`apps/docs/content`** — human-readable v2 docs. Keep them updated when architecture changes.
-- **`REWRITE_PLAN.md`** — architecture, core mechanics (sessions/`resumeState`), build phases,
-  and the full code-quality rules. Follow it.
-- The previous implementation is read-only at `/workspaces/worktrees/gorkie-slack/reference`
-  (commit `d7ce686`). Understand *how* a hard piece was solved, then **re-derive cleanly** —
-  never copy/paste old logic into the new framework. No old data needs preserving.
+## Core mental model
+
+Each Slack thread runs an AI SDK 7 `HarnessAgent` driving the `pi` coding agent.
+**The HarnessAgent/Pi brain runs on the bot host machine, not in the sandbox.** Model
+keys, BYOK secrets (future), MCP credentials, prompt assembly, Slack tools, and the agent
+loop all live on the host. Each thread gets its own persistent **E2B sandbox** (remote
+Linux) used only for filesystem and shell — Pi's `bash`/`read`/`write`/`edit` execute
+there, but Pi itself never runs inside it.
 
 ## When you don't know how something works
-- **Read the source — don't guess.** The harness/pi, AI SDK 7, and `vercel/chat` are
-  canary/under-documented. Clone and inspect, e.g.
-  `git clone --depth 1 https://github.com/vercel/ai /tmp/ai`,
-  `git clone --depth 1 https://github.com/vercel/chat /tmp/chat`,
-  `https://github.com/earendil-works/pi`.
+
+- **Read the source — don't guess.** `harness`/`pi`, AI SDK 7, and `vercel/chat` are
+  canary/under-documented. Clone and inspect:
+  - `git clone --depth 1 https://github.com/vercel/ai /tmp/ai`
+  - `git clone --depth 1 https://github.com/vercel/chat /tmp/chat`
+  - `https://github.com/earendil-works/pi`
 - **Use the skills** when a task touches their area: `ai-sdk`, `chat-sdk`, `slack-agent`,
   `coding-best-practices`, `ultracite`, `neon-postgres`. They carry current patterns.
+- **Human architecture docs** live in `apps/docs/content` (overview, slack-runtime,
+  agent-runtime, sandbox-sessions, data-model). Read them to find where behavior lives.
+- **Design + roadmap:** `REWRITE_PLAN.md` (architecture, core mechanics, build plan, full
+  coding rules) and `REWRITE_TODO.md`.
 
 ## Stack
-Bun · TypeScript · AI SDK 7 `HarnessAgent`+`pi` (brain, on host) · e2b (persistent sandbox workspace) ·
-`vercel/chat`+`@chat-adapter/slack` (Slack, socket mode) · Drizzle/Postgres · turborepo.
+
+Bun · TypeScript · AI SDK 7 `HarnessAgent`+`pi` (brain, on host) · e2b (persistent sandbox
+workspace) · `vercel/chat`+`@chat-adapter/slack` (Slack, Socket Mode) · Drizzle/Postgres ·
+turborepo.
+
+## Structure
+
+- `apps/bot` — `vercel/chat` Slack runtime, Slack features, host-owned tools
+- `apps/docs` — human-readable architecture docs
+- `packages/{ai,sandbox,db,logging,utils}` — agent core, E2B provider, schema, logger, helpers
+- `tooling/{cspell,github,typescript}` — shared config
 
 ## Commands
+
 ```bash
-bun install     bun dev        bun typecheck
-bun check       bun fix        bun run check:spelling
+bun install      bun dev        bun typecheck
+bun check        bun fix
 bun run db:push  # push-only, no migration files
 ```
-The skeleton may not typecheck until Phase 0–1 land — expected.
-
-## Structure (target)
-`apps/bot` (vercel/chat runtime) · `apps/docs` (human architecture docs) ·
-`packages/{ai,sandbox,db,validators,utils,logging}` · `tooling/{cspell, github, typescript}`.
-MCP + `apps/server` are **Part 2** (deferred until the core thread agent works).
 
 ## Coding rules (full detail + examples in `REWRITE_PLAN.md` §12)
+
 - **Inline over extract** — no one-shot helpers.
 - **Avoid constants unless absolutely needed** — inline one-use literals and values.
 - **Dict params** — >1 arg → single options object.
-- **Small functions** — respect complexity/param limits; early returns over nesting.
+- **Small functions** — early returns over nesting; respect complexity/param limits.
 - **No `as const`** on discriminants — annotate with the SDK type.
 - **No type casts** to silence TS — parse/validate (zod) at boundaries.
 - **No what-comments, no JSDoc** — comment only a non-obvious *why*.
-- **Tuneables → the owning app/package config**, never scattered call-site literals.
-- **Feature-enclosed** — group by owning feature; no re-export-only files.
-- **Direct names**; delete dead wrappers instead of renaming.
-- Run `bun fix` (Ultracite/Biome) before committing; `/coding-best-practices` when auditing.
+- **Tuneables → owning app/package config**, never scattered call-site literals.
+- **Feature-enclosed** — Slack features under `apps/bot/src/slack/features/<name>/`.
+- **Direct names** — delete dead wrappers instead of renaming.
+
+Run `bun fix` (Ultracite/Biome) before committing; use `/coding-best-practices` when auditing.

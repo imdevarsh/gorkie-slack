@@ -1,6 +1,6 @@
 # Development
 
-Gorkie v2 currently runs as one local app: `apps/bot`.
+Gorkie runs as one local app: `apps/bot`.
 
 The bot uses Chat SDK with the Slack adapter in Socket Mode, so local development does not need a public tunnel. AI work runs through AI SDK Harness/Pi and each active Slack thread gets an E2B sandbox.
 
@@ -21,8 +21,6 @@ cp apps/bot/.env.example apps/bot/.env
 ```
 
 Fill in Slack, database, provider, E2B, Exa, and optional Langfuse values. `SLACK_SOCKET_MODE=true` is the normal local setting.
-
-`apps/server` is intentionally absent in the core rewrite. Do not add server/proxy env vars back unless the MCP OAuth phase reintroduces that app.
 
 ## Running Locally
 

@@ -4,13 +4,13 @@ description: How Slack events become agent turns.
 ---
 
 
-Slack enters Gorkie through Chat SDK socket mode.
+Every Slack event enters Gorkie through Chat SDK in Socket Mode. This page covers how those events are routed into agent turns; what happens inside a turn lives in [Agent Runtime](./agent-runtime).
 
 `apps/bot/src/lib/chat.ts` creates:
 
-- a Slack adapter with `SLACK_APP_TOKEN` and `SLACK_BOT_TOKEN`;
-- a Postgres Chat SDK state adapter;
-- a `Chat` instance named `gorkie`;
+- a Slack adapter (`createSlackAdapter`) in `socket` mode, authenticated with `SLACK_APP_TOKEN` and `SLACK_BOT_TOKEN`;
+- a Postgres Chat SDK state adapter (`createPostgresState`) for subscriptions, locks, and dedupe;
+- a `Chat` instance with `userName: 'gorkie'` and `concurrency: 'concurrent'`;
 - a logger bridge that prefixes Chat SDK logs with `[chat]`.
 
 ## Routing
@@ -19,10 +19,10 @@ Slack enters Gorkie through Chat SDK socket mode.
 
 | Handler | Meaning in Gorkie |
 | --- | --- |
-| `onNewMention` | A user mentioned Gorkie in an unsubscribed Slack thread or root message. |
-| `onDirectMessage` | A user DM'd Gorkie. |
-| `onSubscribedMessage` | A message arrived in a thread Gorkie subscribed to. |
-| `onAction('gorkie_stop_turn')` | A user clicked the active-turn stop button. |
+| `onNewMention` | A user mentioned Gorkie. If the mention is a thread root, Gorkie also opts the thread in and subscribes to it. |
+| `onDirectMessage` | A user DM'd Gorkie. The DM thread is subscribed and a turn runs. |
+| `onSubscribedMessage` | A message arrived in a thread Gorkie is subscribed to. |
+| `onAction('gorkie_stop_turn')` | A user clicked the stop button on an active turn. |
 
 ```mermaid
 flowchart TD
@@ -45,28 +45,34 @@ flowchart TD
 
 ## Ignore Rule
 
-The ignore marker is `##`.
+Gorkie skips any message where **any line** starts with the ignore marker `##`. This lets people leave side notes in a thread Gorkie is watching without triggering a response.
 
-The Slack raw text can start with mention tokens, so the router strips leading `<@USER>` tokens on each line before checking `##`. That means these are ignored:
+Slack leaves mention tokens in the raw text, so the router strips leading `<@USER>` pings from the start of each line before checking for `##`. These messages are ignored:
 
 ```text
 ## do not answer
 @gorkie ## do not answer
-@gorkie normal first line
-## ignore because one line asked for ignore
+first line is fine
+## but this later line asks to ignore
 ```
 
-Bot/self messages are always ignored.
+This message is **not** ignored, because no line begins with `##` after stripping the ping:
+
+```text
+@gorkie normal request
+```
+
+Messages from bots or from Gorkie itself are always ignored.
 
 ## Thread State
 
-Gorkie only answers ordinary follow-up messages in threads it opted into. The thread state flag is:
+Gorkie only answers ordinary follow-up messages in threads it has opted into. The opt-in is a single Chat SDK thread-state flag:
 
 ```ts
 { respondOnThreadMessages: true }
 ```
 
-Root mentions set the flag and subscribe the thread. This keeps Gorkie from joining random Slack threads forever after one incidental mention.
+When a mention is the root of a thread, `onNewMention` sets this flag and subscribes the thread, so subsequent replies flow through `onSubscribedMessage` and are answered automatically. A mention deeper inside an existing thread runs a one-off turn without opting the whole thread in. In a subscribed thread, `onSubscribedMessage` answers a follow-up only if `respondOnThreadMessages` is set **or** the message explicitly mentions Gorkie. This keeps Gorkie from latching onto a busy thread forever after a single incidental mention.
 
 ## DMs
 

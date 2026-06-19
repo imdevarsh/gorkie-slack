@@ -61,4 +61,4 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] Official AI SDK E2B provider support with the resume/session-file hooks Gorkie needs.
 
 - [ ] Our old implementation had configured PI REtry, basically even if one time model was down it'd retry in pi 3-4 times. Add that
-- [ ] Another thing
+- [ ] Another thing, the splitting of messages affects rendering like tables, etc. We need to make sure that the splitting of messages does not affect the rendering of tables, code blocks, and other structured content. This may require additional logic to detect and preserve formatting across message splits.

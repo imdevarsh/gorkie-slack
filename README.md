@@ -3,7 +3,7 @@
   <h1>Gorkie for Slack</h1>
 </div>
 
-Gorkie is a Slack AI agent. This repo is the v2 rewrite: Chat SDK owns Slack runtime behavior, AI SDK Harness/Pi owns the coding agent brain, and E2B provides the persistent per-thread sandbox.
+Gorkie is a Slack AI agent. Chat SDK owns Slack runtime behavior, AI SDK Harness/Pi owns the coding agent brain (on the host), and E2B provides the persistent per-thread sandbox.
 
 ## Stack
 
@@ -54,11 +54,11 @@ packages/
 tooling/      Shared TypeScript, cspell, and GitHub config
 ```
 
-`apps/server`, MCP OAuth, and recurring scheduled-task storage are deferred rewrite work. The core Slack thread agent runs from `apps/bot` directly with Bun.
+The Slack thread agent runs from `apps/bot` directly with Bun.
 
 ## More
 
-Read [AGENTS.md](AGENTS.md), [REWRITE_PLAN.md](REWRITE_PLAN.md), and [REWRITE_TODO.md](REWRITE_TODO.md) before changing architecture or rewrite priorities.
+Read [AGENTS.md](AGENTS.md) for the agent guide, and [REWRITE_PLAN.md](REWRITE_PLAN.md) / [REWRITE_TODO.md](REWRITE_TODO.md) for design and roadmap before changing architecture.
 
 ## License
 

@@ -1,12 +1,13 @@
 import { createRelativeLink } from 'fumadocs-ui/mdx';
 import { defineConfig } from 'fumapress';
 import { fumadocsMdx } from 'fumapress/adapters/mdx';
-import { createNotebookLayoutPage } from 'fumapress/layouts/notebook';
+import { createDocsLayoutPage } from 'fumapress/layouts/docs';
 import { flexsearchPlugin } from 'fumapress/plugins/flexsearch';
 import { llmsPlugin } from 'fumapress/plugins/llms.txt';
-import { takumiPlugin } from 'fumapress/plugins/takumi';
 import { docs } from './.source/server';
 import { getMDXComponents } from './src/mdx';
+
+const DocsLayoutPage = createDocsLayoutPage();
 
 export default defineConfig({
   content: docs.toFumadocsSource(),
@@ -14,18 +15,30 @@ export default defineConfig({
     baseUrl: process.env.DOCS_BASE_URL ?? 'http://localhost:3000',
     name: 'Gorkie',
   },
+  meta: {
+    root() {
+      return (
+        <>
+          <link href='/gorkie.png' rel='icon' type='image/png' />
+          <link href='/gorkie.png' rel='apple-touch-icon' />
+        </>
+      );
+    },
+  },
 })
-  .plugins(flexsearchPlugin(), llmsPlugin(), takumiPlugin())
+  .plugins(flexsearchPlugin(), llmsPlugin())
   .layouts({
-    page: createNotebookLayoutPage({
-      render() {
-        return {
-          pageProps: {
-            full: true,
-          },
-        };
-      },
-    }),
+    page(props) {
+      // fumapress always renders `<title>{page.data.title}</title>`. We render
+      // our own "<page> | Gorkie" title first so React hoists it to <head>
+      // ahead of the default; browsers honor the first <title> in tree order.
+      return (
+        <>
+          <title>{`${props.page.data.title} | Gorkie`}</title>
+          <DocsLayoutPage {...props} />
+        </>
+      );
+    },
     defaultProps() {
       return {
         nav: {
@@ -41,6 +54,9 @@ export default defineConfig({
               Gorkie
             </span>
           ),
+        },
+        sidebar: {
+          collapsible: false,
         },
       };
     },

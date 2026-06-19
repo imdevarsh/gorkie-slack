@@ -41,11 +41,20 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"]
     },
+    "docs#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".source/**"]
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]
+    },
+    "docs#typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": [".source/**"]
     },
     "dev": {
       "cache": false,

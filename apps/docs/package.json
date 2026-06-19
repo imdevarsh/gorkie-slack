@@ -4,11 +4,11 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
+    "clean": "git clean -xdf .turbo .source dist node_modules",
     "dev": "waku dev",
     "build": "waku build",
     "start": "waku start",
-    "typecheck": "bun run types:check",
-    "types:check": "fumadocs-mdx && tsc --noEmit"
+    "typecheck": "fumadocs-mdx && tsc --noEmit"
   },
   "dependencies": {
     "beautiful-mermaid": "catalog:",

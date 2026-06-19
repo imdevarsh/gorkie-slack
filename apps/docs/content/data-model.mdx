@@ -71,4 +71,4 @@ Do not confuse Chat SDK state with Pi memory. Chat SDK gets events to the handle
 
 ## What Not To Store Here
 
-Do not add a parallel full Slack transcript just to make the model remember. The planned bounded Slack context preload should fetch recent messages each turn and tell Pi the limits. Pi's own history remains the durable conversation memory.
+Do not add a parallel full Slack transcript just to make the model remember. The bounded Slack context preload on the [roadmap](./open-work) fetches recent messages each turn and tells Pi the limits; it is per-turn retrieval, not durable storage. Pi's own session history remains the durable conversation memory.
