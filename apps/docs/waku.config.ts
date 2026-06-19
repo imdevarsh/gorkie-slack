@@ -6,9 +6,12 @@ import { defineConfig } from 'waku/config';
 export default defineConfig({
   vite: {
     plugins: [press(), mdx(), tailwindcss()],
+    resolve: {
+      dedupe: ['react', 'react-dom'],
+    },
     server: {
       allowedHosts: [
-        '3000--main--gorkie-slack--techwithanirudh.coder.techwithanirudh.com',
+        '.coder.techwithanirudh.com',
       ],
     },
   },

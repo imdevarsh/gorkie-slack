@@ -3,7 +3,6 @@ title: Architecture
 description: The main components, request flow, and ownership boundaries.
 ---
 
-# Architecture
 
 Gorkie v2 is a Slack runtime around an AI SDK HarnessAgent. The Slack side is deliberately app-owned. The agent core is platform-neutral. The sandbox provider is a package because HarnessAgent speaks a provider interface, not Slack.
 

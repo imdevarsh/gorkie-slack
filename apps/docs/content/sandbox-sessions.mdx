@@ -3,7 +3,6 @@ title: Sandbox And Sessions
 description: E2B, Pi host mirrors, resume state, session files, and skills.
 ---
 
-# Sandbox And Sessions
 
 The sandbox is a persistent Linux workspace for one Slack conversation. It is not where the Pi brain runs.
 
@@ -70,19 +69,27 @@ There are two different things:
 
 `packages/ai/src/sessions.ts` opens and persists sessions.
 
-Open:
+<Steps>
+  <Step>
+    Load `sandbox_sessions.resumeState`.
+  </Step>
 
-1. Load `sandbox_sessions.resumeState`.
-2. Strip stale `continueFrom` from old unfinished turns.
-3. Call `agent.createSession({ sessionId, resumeFrom })`.
+  <Step>
+    Strip stale `continueFrom` from old unfinished turns.
+  </Step>
 
-Persist:
+  <Step>
+    Call `agent.createSession({ sessionId, resumeFrom })`.
+  </Step>
 
-1. Call `session.detach()`.
-2. Strip `continueFrom` before storing normal resume state.
-3. Find the Pi session file name.
-4. Read session file bytes from the sandbox if available.
-5. Store the new `resumeState` and optional session-file mirror in Postgres.
+  <Step>
+    On completion, call `session.detach()` and strip `continueFrom` before storing normal resume state.
+  </Step>
+
+  <Step>
+    Find the Pi session file, read it from the sandbox when available, and mirror it in Postgres.
+  </Step>
+</Steps>
 
 ```mermaid
 sequenceDiagram

@@ -3,13 +3,12 @@ title: Overview
 description: The shortest useful explanation of how Gorkie v2 works.
 ---
 
-# Gorkie v2
 
 Gorkie is a Slack bot wrapped around a coding agent.
 
-The most important thing to know:
-
-**Pi runs on the bot machine. The sandbox is remote file and command execution.**
+<Callout type="info" title="Core mental model">
+  Pi runs on the bot machine. The sandbox is remote file and command execution.
+</Callout>
 
 That one sentence explains most of the architecture. The agent brain, model auth, tool orchestration, history, and prompt loading happen in the bot process. The E2B sandbox gives that host process a Linux workspace where Pi can read files, write files, run commands, and keep per-thread state.
 
@@ -27,14 +26,16 @@ Use these docs when you want to answer "where does this behavior live?" before c
 
 ## Read This First
 
-- [Architecture](./architecture) explains the big pieces and request flow.
-- [Slack Runtime](./slack-runtime) explains Chat SDK, routing, subscriptions, and DMs.
-- [Agent Runtime](./agent-runtime) explains HarnessAgent, Pi, prompts, tools, attempts, and steering.
-- [Sandbox And Sessions](./sandbox-sessions) explains E2B, host mirrors, session files, resume, and skills.
-- [Streaming And Tools](./streaming-tools) explains Slack output, task rows, line chunking, and host tools.
-- [Data Model](./data-model) explains Postgres tables and what each one owns.
-- [Development](./development) explains commands, local runtime, template builds, and checks.
-- [Open Work](./open-work) lists the current architectural debt and the next cleanup passes.
+<Cards>
+  <Card href="./architecture" title="Architecture" description="Main components, request flow, and ownership boundaries." />
+  <Card href="./slack-runtime" title="Slack Runtime" description="Chat SDK, routing, subscriptions, thread state, and DMs." />
+  <Card href="./agent-runtime" title="Agent Runtime" description="HarnessAgent, Pi, prompts, tools, attempts, and steering." />
+  <Card href="./sandbox-sessions" title="Sandbox And Sessions" description="E2B, host mirrors, session files, resume, and skills." />
+  <Card href="./streaming-tools" title="Streaming And Tools" description="Slack output, task rows, line chunking, and host tools." />
+  <Card href="./data-model" title="Data Model" description="Postgres tables and what each one owns." />
+  <Card href="./development" title="Development" description="Commands, template builds, checks, and reference repos." />
+  <Card href="./open-work" title="Open Work" description="Architectural debt and the next cleanup passes." />
+</Cards>
 
 ## Source Map
 

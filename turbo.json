@@ -5,6 +5,7 @@
     "AGENTMAIL_API_KEY",
     "AUTO_ADD_CHANNEL",
     "DATABASE_URL",
+    "DOCS_BASE_URL",
     "E2B_API_KEY",
     "EXA_API_KEY",
     "HACKCLUB_API_KEY",
