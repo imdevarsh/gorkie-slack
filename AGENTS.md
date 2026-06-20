@@ -1,69 +1,75 @@
 # Gorkie
 
-A helpful AI agent for Slack (later other platforms).
+Gorkie is an AI assistant for Slack. The codebase is a Bun/TypeScript monorepo using Chat SDK, AI SDK Harness/Pi, E2B, Drizzle/Postgres, Turborepo, and Ultracite.
 
-## Core mental model
+## Mental Model
 
-Each Slack thread runs an AI SDK 7 `HarnessAgent` driving the `pi` coding agent.
-**The HarnessAgent/Pi brain runs on the bot host machine, not in the sandbox.** Model
-keys, BYOK secrets (future), MCP credentials, prompt assembly, Slack tools, and the agent
-loop all live on the host. Each thread gets its own persistent **E2B sandbox** (remote
-Linux) used only for filesystem and shell — Pi's `bash`/`read`/`write`/`edit` execute
-there, but Pi itself never runs inside it.
+Each Slack conversation runs an AI SDK 7 `HarnessAgent` driving the `pi` coding agent.
 
-## When you don't know how something works
+The HarnessAgent/Pi brain runs on the bot host machine, not in the sandbox. Model keys, BYOK secrets, future MCP credentials, prompt assembly, Slack tools, and the agent loop all live on the host.
 
-- **Read the source — don't guess.** `harness`/`pi`, AI SDK 7, and `vercel/chat` are
-  canary/under-documented. Clone and inspect:
-  - `git clone --depth 1 https://github.com/vercel/ai /tmp/ai`
-  - `git clone --depth 1 https://github.com/vercel/chat /tmp/chat`
-  - `https://github.com/earendil-works/pi`
-- **Use the skills** when a task touches their area: `ai-sdk`, `chat-sdk`, `slack-agent`,
-  `coding-best-practices`, `ultracite`, `neon-postgres`. They carry current patterns.
-- **Architecture docs** live in `docs/` as Markdown with Fumadocs-compatible
-  components for humans and agents.
-- **Design + roadmap:** `REWRITE_PLAN.md` (architecture, core mechanics, build plan, full
-  coding rules) and `REWRITE_TODO.md`.
+Each conversation gets its own persistent E2B sandbox. The sandbox is remote Linux for filesystem and shell work: Pi's `bash`, `read`, `write`, and `edit` tools execute there, but Pi itself never runs inside it.
 
-## Stack
+## When Unsure
 
-Bun · TypeScript · AI SDK 7 `HarnessAgent`+`pi` (brain, on host) · e2b (persistent sandbox
-workspace) · `vercel/chat`+`@chat-adapter/slack` (Slack, Socket Mode) · Drizzle/Postgres ·
-turborepo.
+- Read source before guessing. Harness/Pi, AI SDK 7, and Chat SDK are canary or under-documented.
+- Use the relevant skills when a task touches their area: `ai-sdk`, `chat-sdk`, `ultracite`, `neon-postgres`.
+- Clone and inspect upstream source when local docs are not enough:
+  - AI SDK/Harness/Pi: `https://github.com/vercel/ai`
+  - Chat SDK: `https://github.com/vercel/chat`
+  - Pi internals when needed: `https://github.com/earendil-works/pi`
+- Docs and architecture: start in `docs/index.md`.
+- Cleanup tracker: `REWRITE_TODO.md`.
+- Long-form build plan and coding examples: `REWRITE_PLAN.md`.
 
-## Structure
+## Where Things Belong
 
-- `apps/bot` — `vercel/chat` Slack runtime, Slack features, host-owned tools
-- `docs/` — human/agent-readable architecture docs
-- `packages/{ai,sandbox,db,logging,utils}` — agent core, E2B provider, schema, logger, helpers
-- `tooling/{cspell,github,typescript}` — shared config
+- `apps/bot`: chat runtime, Slack routing, Slack features, stop controls, line replies, task rendering, and bot-owned host tools.
+- `packages/ai`: platform-neutral agent construction, Pi attempts, prompts, request hint types, and session persistence.
+- `packages/sandbox`: E2B sandbox provider, sandbox session adapter, template builder, and vendored skills.
+- `packages/db`: Drizzle schema, Postgres client, and app-owned queries.
+- `docs`: Markdown architecture docs for humans and agents.
 
-## Hard boundaries
+## Boundaries
 
-- Do not put Slack-only behavior in `packages/ai`.
-- Do not put model keys, Slack tokens, or future MCP secrets in the sandbox.
-- Do not make Slack transcript storage the agent memory. Harness/Pi session history is the durable agent history.
-- Do not add a new abstraction unless it removes real complexity.
+- Never: put Slack-only behavior in `packages/ai`.
+- Never: put model keys, Slack tokens, or future MCP secrets in the sandbox.
+- Never: make Slack transcript storage the agent memory. Harness/Pi session history is the durable agent history.
+- Never: add one-use constants, wrappers, helpers, or re-export-only files.
+- Never: commit secrets or tracked throwaway scripts.
+- Ask first: dependency changes, broad schema changes, destructive git operations, or anything that changes deployment shape.
+- Prefer: feature-owned files and direct names over compatibility wrappers.
 
-## Commands
+## Coding Rules
 
-```bash
-bun install      bun dev        bun typecheck
-bun check        bun fix
-bun run db:push  # push-only, no migration files
-```
+Full detail and examples live in `REWRITE_PLAN.md`.
 
-## Coding rules (full detail + examples in `REWRITE_PLAN.md` §12)
+- Inline over extract: no one-shot helpers.
+- Avoid constants unless absolutely needed: inline one-use literals and values.
+- Dict params: functions with more than one parameter take a single options object.
+- Small functions: prefer early returns over nesting; respect complexity and parameter limits.
+- No `as const` on discriminants: annotate with the SDK type.
+- No type casts to silence TypeScript: parse or validate with Zod at boundaries.
+- No what-comments, no JSDoc: comment only a non-obvious why.
+- Tuneables belong in the owning app/package config, never scattered call-site literals.
+- Feature-enclosed: Slack features live under `apps/bot/src/slack/features/<name>/`.
+- Direct names: delete dead wrappers instead of renaming them.
 
-- **Inline over extract** — no one-shot helpers.
-- **Avoid constants unless absolutely needed** — inline one-use literals and values.
-- **Dict params** — >1 arg → single options object.
-- **Small functions** — early returns over nesting; respect complexity/param limits.
-- **No `as const`** on discriminants — annotate with the SDK type.
-- **No type casts** to silence TS — parse/validate (zod) at boundaries.
-- **No what-comments, no JSDoc** — comment only a non-obvious *why*.
-- **Tuneables → owning app/package config**, never scattered call-site literals.
-- **Feature-enclosed** — Slack features under `apps/bot/src/slack/features/<name>/`.
-- **Direct names** — delete dead wrappers instead of renaming.
+## Validation
 
-Run `bun fix` (Ultracite/Biome) before committing; use `/coding-best-practices` when auditing.
+Before handoff after code changes:
+
+1. `bun run typecheck`
+2. `bun run check`
+3. `bun run check:spelling`
+4. `bun run check:knip`
+
+For docs-only changes, `bun run check` and `bun run check:spelling` are usually enough.
+
+For cleanup, dependency, package export, or file-move work, run `bun run check:knip`.
+
+Before committing:
+
+1. `git status --short`
+2. `git diff --stat`
+3. Run the relevant checks above.

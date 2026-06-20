@@ -5,7 +5,7 @@ description: The shortest useful explanation of how Gorkie works.
 
 Gorkie is an AI assistant for Slack. It can answer normally, use Slack context, search the web, run code, create files, generate images, and upload results back into the conversation.
 
-> **Core model:** Pi runs on the bot machine. E2B is the remote Linux workspace where file and shell operations happen.
+> **Mental Model:** Pi runs on the bot machine. E2B is the remote Linux workspace where file and shell operations happen.
 
 Each Slack conversation gets its own agent session and sandbox workspace. The agent loop, model configuration, prompts, Slack tools, and session recovery live in the bot process. The sandbox gives that process a safe place to run commands and keep working files.
 

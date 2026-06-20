@@ -31,13 +31,14 @@ Fill `apps/bot/.env` with Slack, database, provider, E2B, Exa, and optional Lang
 bun run typecheck
 bun run check
 bun run check:spelling
+bun run check:knip
 ```
 
-`bun run fix` applies safe Ultracite/Biome fixes.
+`bun run fix` applies safe Ultracite/Biome fixes. `bun run check:knip` catches unused files, exports, and dependencies after cleanup work.
 
 ## Docs Preview
 
-The docs live in `docs/` as Markdown with Fumadocs-compatible frontmatter and components.
+The docs live in `docs/` as Markdown with Fumadocs-compatible frontmatter.
 
 ```sh
 bun run docs:preview

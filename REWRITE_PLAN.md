@@ -456,6 +456,29 @@ logReply(ctxId, author, result, reason);
 logReply({ ctxId, author, result, reason });
 ```
 
+### Small functions
+Prefer short functions with early returns over nested control flow. Do not grow functions past lint complexity or parameter limits; split only when the extracted piece has real ownership, is reused, or removes meaningful complexity.
+
+```ts
+// bad - nested and harder to scan
+function shouldAnswer(message: Message) {
+  if (!message.author.isBot) {
+    if (!message.text.startsWith('##')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// good - direct guard clauses
+function shouldAnswer(message: Message) {
+  if (message.author.isBot) {
+    return false;
+  }
+  return !message.text.startsWith('##');
+}
+```
+
 ### No `as const` on type discriminants
 When building objects that need a literal type for a discriminant field (e.g. `type: 'text'`), prefer assigning the whole expression to an SDK-typed variable or returning through a typed function. Do not use `as const` on the property.
 
