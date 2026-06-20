@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 // Pi only fully replaces its base prompt from host SYSTEM.md. `instructions`
-// only augments it, and HackClub rejects Pi's default prompt.
+// only augments it, and HackClub rejects Pi's default prompt. This mirrors the
+// harness's private tmp layout: <tmp>/ai-sdk-harness/pi/<session>/agent/SYSTEM.md.
 // TODO: replace this path reconstruction if Harness exposes the host agent dir.
 export async function writeSystemPrompt({
   sessionId,

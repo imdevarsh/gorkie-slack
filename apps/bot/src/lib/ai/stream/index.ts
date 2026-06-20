@@ -4,6 +4,9 @@ import logger from '@/lib/logger';
 import { clamp } from '@/lib/utils/text';
 import { renderToolCall, renderToolError, renderToolResult } from './tasks';
 
+const MAX_VISIBLE_TASKS = 45;
+const REASONING_OUTPUT_MAX_LENGTH = 2800;
+
 export async function* renderStream({
   onTextDelta,
   stream,
@@ -41,7 +44,7 @@ export async function* renderStream({
         const text = reasoning.get(part.id)?.trim();
         yield {
           id: `reasoning-${part.id}`,
-          output: text ? clamp(text, 2800) : undefined,
+          output: text ? clamp(text, REASONING_OUTPUT_MAX_LENGTH) : undefined,
           status: 'complete',
           title: 'Thinking',
           type: 'task_update',
@@ -154,7 +157,7 @@ function showTask({
   if (visibleTaskIds.has(id)) {
     return true;
   }
-  if (visibleTaskIds.size < 45) {
+  if (visibleTaskIds.size < MAX_VISIBLE_TASKS) {
     visibleTaskIds.add(id);
     return true;
   }

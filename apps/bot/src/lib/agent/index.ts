@@ -96,7 +96,7 @@ async function executeTurn(
   let controls: Awaited<ReturnType<typeof postTurnControls>> = null;
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
-  let lineReply = createLineReply({ threadId });
+  let lineReply: ReturnType<typeof createLineReply> | undefined;
 
   const parkSession = async ({ pause }: { pause: boolean }): Promise<void> => {
     if (!session) {
@@ -126,7 +126,7 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
-    await lineReply.flush({ thread });
+    await lineReply?.flush({ thread });
     await deleteTurnControls({ controls });
     await parkSession({ pause: true });
     logger.info(
@@ -216,7 +216,7 @@ async function executeTurn(
           onTextDelta: async (text) => {
             hasStreamed = true;
             controls ??= await postTurnControls({ thread });
-            await lineReply.append({ text, thread });
+            await lineReply?.append({ text, thread });
           },
           stream: result.fullStream,
         })) {
@@ -253,6 +253,9 @@ async function executeTurn(
           }
           throw error;
         }
+        const isSameModelRetry =
+          retryAttempt.provider === currentAttempt.provider &&
+          retryAttempt.model === currentAttempt.model;
         logger.warn(
           {
             attempt: attemptLog(currentAttempt),
@@ -260,17 +263,13 @@ async function executeTurn(
             nextAttempt: attemptLog(retryAttempt),
             threadId,
           },
-          retryAttempt.provider === currentAttempt.provider &&
-            retryAttempt.model === currentAttempt.model
+          isSameModelRetry
             ? '[agent] attempt failed, retrying same model'
             : '[agent] attempt failed, falling back'
         );
         await session?.detach().catch(() => undefined);
         session = undefined;
-        if (
-          retryAttempt.provider === currentAttempt.provider &&
-          retryAttempt.model === currentAttempt.model
-        ) {
+        if (isSameModelRetry) {
           const delayMs = attemptDelayMs({
             attempt: currentAttempt,
             failures: attemptHistory,

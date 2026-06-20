@@ -2,8 +2,7 @@ import { provider } from '@repo/ai';
 import { generateText, tool } from 'ai';
 import type { Chat } from 'chat';
 import { z } from 'zod';
-import { env } from '@/env';
-import logger from '@/lib/logger';
+import { assertReadableChannel, joinChannel } from './utils';
 
 export function summarizeThreadTool({
   bot,
@@ -30,19 +29,8 @@ export function summarizeThreadTool({
       const targetThreadId = input.threadId ?? threadId;
       const [platform, channelId] = targetThreadId.split(':');
       if (platform === 'slack' && channelId) {
-        await fetch('https://slack.com/api/conversations.join', {
-          body: JSON.stringify({ channel: channelId }),
-          headers: {
-            Authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          method: 'POST',
-        }).catch((error: unknown) => {
-          logger.debug(
-            { err: error, threadId: targetThreadId },
-            '[summarizeThread] best-effort channel join failed'
-          );
-        });
+        assertReadableChannel(`slack:${channelId}`);
+        await joinChannel(channelId);
       }
       const result = await bot
         .thread(targetThreadId)

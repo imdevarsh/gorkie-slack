@@ -1,8 +1,18 @@
-import type { HarnessAgentSession } from '@ai-sdk/harness/agent';
+import type {
+  HarnessAgentResumeSessionState,
+  HarnessAgentSession,
+} from '@ai-sdk/harness/agent';
 import { getByThread, updateResumeState } from '@repo/db/queries';
 import type { Agent } from './agent';
 import { getSessionFile, sessionFileNameOf } from './files/session';
 import type { SandboxContext } from './types';
+
+function stripContinueFrom<T extends { continueFrom?: unknown }>(
+  state: T
+): Omit<T, 'continueFrom'> {
+  const { continueFrom: _continueFrom, ...rest } = state;
+  return rest;
+}
 
 export async function openSession({
   agent,
@@ -12,12 +22,11 @@ export async function openSession({
   threadId: string;
 }): Promise<HarnessAgentSession> {
   const existing = await getByThread(threadId);
-  let resumeFrom = existing?.resumeState
-    ? JSON.parse(existing.resumeState)
-    : undefined;
-  if (resumeFrom && 'continueFrom' in resumeFrom) {
-    const { continueFrom: _continueFrom, ...cleanedResumeFrom } = resumeFrom;
-    resumeFrom = cleanedResumeFrom;
+  const stored: HarnessAgentResumeSessionState | undefined =
+    existing?.resumeState ? JSON.parse(existing.resumeState) : undefined;
+  let resumeFrom = stored;
+  if (stored?.continueFrom !== undefined) {
+    resumeFrom = stripContinueFrom(stored);
     await updateResumeState({
       resumeState: JSON.stringify(resumeFrom),
       threadId,
@@ -38,12 +47,7 @@ export async function persistSession({
   threadId: string;
 }): Promise<void> {
   // Pi writes its transcript during detach; mirror it before the sandbox pauses.
-  const detachedResumeState = await session.detach();
-  const resumeState =
-    'continueFrom' in detachedResumeState
-      ? (({ continueFrom: _continueFrom, ...cleanedResumeState }) =>
-          cleanedResumeState)(detachedResumeState)
-      : detachedResumeState;
+  const resumeState = stripContinueFrom(await session.detach());
   const serialized = JSON.stringify(resumeState);
 
   const file = sessionFileNameOf(resumeState);

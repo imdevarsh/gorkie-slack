@@ -1,6 +1,5 @@
 import type { RequestHints } from '@repo/ai';
 import { getUserCustomization } from '@repo/db/queries';
-import { getTime } from '@repo/utils/time';
 import type { Message, Thread } from 'chat';
 import { resolveChannelName, resolveServerName } from '@/lib/slack/names';
 import { getThread } from '@/lib/slack/thread';
@@ -28,6 +27,6 @@ export async function requestHints({
     messageId: message.id,
     server,
     threadId: thread.id,
-    time: getTime(),
+    time: new Date().toISOString(),
   };
 }

@@ -4,7 +4,7 @@ import { Sandbox } from '@e2b/code-interpreter';
 import {
   getByThread,
   markActivity,
-  updateResumeState,
+  markPaused,
   updateRuntime,
   upsert,
 } from '@repo/db/queries';
@@ -137,11 +137,7 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
     }
     try {
       await Sandbox.pause(existing.sandboxId, { apiKey: this.apiKey });
-      await updateResumeState({
-        resumeState: existing.resumeState,
-        status: 'paused',
-        threadId,
-      });
+      await markPaused(threadId);
     } catch (error) {
       this.logger.warn(
         { err: error, threadId },
@@ -188,7 +184,6 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
       sessionId,
       status: 'active',
     });
-    await markActivity(sessionId);
 
     return new E2BNetworkSandboxSession(sandbox);
   };

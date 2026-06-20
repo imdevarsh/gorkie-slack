@@ -11,7 +11,7 @@ function metaFrom(args: unknown[]): Record<string, unknown> {
 
 export function toChatLogger(pino: PinoLogger): ChatLogger {
   return {
-    child: (prefix: string) => toChatLogger(pino.child({ component: prefix })),
+    child: (prefix: string) => toChatLogger(pino.child({ ctxId: prefix })),
     debug: (message, ...args) =>
       pino.debug(metaFrom(args), `[chat] ${message}`),
     error: (message, ...args) =>

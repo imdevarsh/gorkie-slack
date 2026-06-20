@@ -1,10 +1,21 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../index';
+import { db } from '../client';
 import {
   type NewSandboxSession,
   type SandboxSession,
+  type SandboxStatus,
   sandboxSessions,
 } from '../schema';
+
+function statusTimestamps(status?: SandboxStatus) {
+  if (status === 'paused') {
+    return { pausedAt: new Date() };
+  }
+  if (status === 'active') {
+    return { resumedAt: new Date() };
+  }
+  return {};
+}
 
 export async function getByThread(
   threadId: string
@@ -32,7 +43,6 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
         pausedAt: session.pausedAt ?? null,
         resumedAt: session.resumedAt ?? null,
         destroyedAt: session.destroyedAt ?? null,
-        updatedAt: new Date(),
       },
     });
 }
@@ -44,13 +54,20 @@ export async function markActivity(threadId: string): Promise<void> {
     .where(eq(sandboxSessions.threadId, threadId));
 }
 
+export async function markPaused(threadId: string): Promise<void> {
+  await db
+    .update(sandboxSessions)
+    .set({ status: 'paused', pausedAt: new Date() })
+    .where(eq(sandboxSessions.threadId, threadId));
+}
+
 export async function updateRuntime(
   threadId: string,
   runtime: {
     resumeState?: string | null;
     sandboxId: string;
     sessionId: string;
-    status?: string;
+    status?: SandboxStatus;
   }
 ): Promise<void> {
   await db
@@ -62,8 +79,7 @@ export async function updateRuntime(
         ? {}
         : { resumeState: runtime.resumeState }),
       ...(runtime.status ? { status: runtime.status } : {}),
-      ...(runtime.status === 'active' && { resumedAt: new Date() }),
-      updatedAt: new Date(),
+      ...statusTimestamps(runtime.status),
     })
     .where(eq(sandboxSessions.threadId, threadId));
 }
@@ -76,7 +92,7 @@ export async function updateResumeState({
 }: {
   resumeState: string | null;
   session?: { data: string; file: string };
-  status?: string;
+  status?: SandboxStatus;
   threadId: string;
 }): Promise<void> {
   await db
@@ -85,9 +101,7 @@ export async function updateResumeState({
       resumeState,
       ...(session === undefined ? {} : { session }),
       ...(status ? { status } : {}),
-      ...(status === 'paused' && { pausedAt: new Date() }),
-      ...(status === 'active' && { resumedAt: new Date() }),
-      updatedAt: new Date(),
+      ...statusTimestamps(status),
     })
     .where(eq(sandboxSessions.threadId, threadId));
 }

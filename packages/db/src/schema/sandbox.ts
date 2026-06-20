@@ -1,4 +1,20 @@
-import { index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  index,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
+
+export const sandboxStatus = pgEnum('sandbox_status', [
+  'creating',
+  'active',
+  'paused',
+  'destroyed',
+]);
+
+export type SandboxStatus = (typeof sandboxStatus.enumValues)[number];
 
 export const sandboxSessions = pgTable(
   'sandbox_sessions',
@@ -9,7 +25,7 @@ export const sandboxSessions = pgTable(
     resumeState: text('resume_state'),
     // Pi transcript mirror for sandbox recreation.
     session: jsonb('session').$type<{ data: string; file: string }>(),
-    status: text('status').notNull().default('creating'),
+    status: sandboxStatus('status').notNull().default('creating'),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),
     destroyedAt: timestamp('destroyed_at', { withTimezone: true }),

@@ -20,8 +20,7 @@
     "OPT_IN_CHANNEL",
     "SLACK_APP_TOKEN",
     "SLACK_BOT_TOKEN",
-    "SLACK_SIGNING_SECRET",
-    "SLACK_SOCKET_MODE"
+    "SLACK_SIGNING_SECRET"
   ],
   "globalPassThroughEnv": [
     "CI",
@@ -45,9 +44,6 @@
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", ".source/**"]
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]

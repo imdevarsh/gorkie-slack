@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../index';
+import { db } from '../client';
 import { type UserCustomization, userCustomizations } from '../schema';
 
 export async function getUserCustomization(

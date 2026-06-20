@@ -4,6 +4,7 @@ import logger from '@/lib/logger';
 
 export interface ActiveTurn {
   controller: AbortController;
+  flushing?: boolean;
   pendingMessages: Array<{ message: Message; thread: Thread }>;
   submitUserMessage?: (text: string) => PromiseLike<void>;
 }
@@ -16,15 +17,7 @@ export async function steerActiveTurn({
   input: { message: Message; thread: Thread };
 }): Promise<void> {
   activeTurn.pendingMessages.push(input);
-  await flushSteering({ activeTurn, threadId: input.thread.id }).catch(
-    (error: unknown) => {
-      logger.warn(
-        { err: error, threadId: input.thread.id },
-        '[agent] native steering failed, restarting turn'
-      );
-      activeTurn.controller.abort();
-    }
-  );
+  await flushSteering({ activeTurn, threadId: input.thread.id });
 }
 
 export function setPromptControl({
@@ -49,13 +42,7 @@ export function setPromptControl({
     return;
   }
 
-  flushSteering({ activeTurn, threadId }).catch((error: unknown) => {
-    logger.warn(
-      { err: error, threadId },
-      '[agent] native steering failed, restarting turn'
-    );
-    activeTurn.controller.abort();
-  });
+  flushSteering({ activeTurn, threadId }).catch(() => undefined);
 }
 
 async function flushSteering({
@@ -65,17 +52,26 @@ async function flushSteering({
   activeTurn: ActiveTurn;
   threadId: string;
 }): Promise<void> {
-  if (!activeTurn.submitUserMessage) {
+  if (activeTurn.flushing) {
     return;
   }
 
-  while (activeTurn.pendingMessages.length > 0) {
-    const input = activeTurn.pendingMessages[0];
-    if (!input) {
-      return;
+  activeTurn.flushing = true;
+  try {
+    while (activeTurn.submitUserMessage && activeTurn.pendingMessages[0]) {
+      const submit = activeTurn.submitUserMessage;
+      const input = activeTurn.pendingMessages[0];
+      await submit(input.message.text);
+      activeTurn.pendingMessages.shift();
+      logger.info({ threadId }, '[agent] turn steered');
     }
-    await activeTurn.submitUserMessage(input.message.text);
-    activeTurn.pendingMessages.shift();
-    logger.info({ threadId }, '[agent] turn steered');
+  } catch (error) {
+    logger.warn(
+      { err: error, threadId },
+      '[agent] native steering failed, restarting turn'
+    );
+    activeTurn.controller.abort();
+  } finally {
+    activeTurn.flushing = false;
   }
 }

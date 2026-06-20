@@ -1,43 +1,57 @@
-const RETRYABLE_STATUSES = new Set([402, 408, 409, 429, 500, 502, 503, 504]);
-const SAME_PROVIDER_RETRYABLE_STATUSES = new Set([
-  408, 409, 429, 500, 502, 503, 504,
-]);
+import { APICallError } from 'ai';
 
-const RETRYABLE_PATTERN =
-  /\b(402|408|409|429|500|502|503|504)\b|gateway|timeout|rate.?limit|max_tokens|insufficient credits|requires more credits|out of .*credits|resource_exhausted|econnreset|etimedout|unavailable/i;
-const FALLBACK_ONLY_PATTERN =
+// 402 / out-of-credits: the same provider will keep failing, so only a fallback
+// to a different provider helps.
+const CREDIT_EXHAUSTED =
   /\b402\b|insufficient credits|requires more credits|out of .*credits/i;
+// Transient signals, for errors a provider surfaced as a plain Error rather than
+// an APICallError (the AI SDK classifies those itself via `isRetryable`).
+const TRANSIENT =
+  /\b(408|409|429|50[0-4])\b|gateway|timeout|rate.?limit|resource_exhausted|econnreset|etimedout|unavailable/i;
+const MAX_CAUSE_DEPTH = 5;
 
-function statusOf(error: unknown): number | undefined {
-  if (error && typeof error === 'object') {
-    const record = error as Record<string, unknown>;
-    const status = record.statusCode ?? record.status;
-    if (typeof status === 'number') {
-      return status;
+// The harness wraps provider failures in a HarnessError, so the real error (with
+// its statusCode / isRetryable) lives down the `cause` chain. Walk to it.
+function rootError(error: unknown): unknown {
+  let current = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
+    if (APICallError.isInstance(current)) {
+      return current;
+    }
+    if (current instanceof Error && current.cause !== undefined) {
+      current = current.cause;
+    } else {
+      return current;
     }
   }
-  return;
+  return current;
 }
 
-function messageOf(error: unknown): string {
+function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function isRetryable(error: unknown): boolean {
-  const status = statusOf(error);
-  if (status !== undefined) {
-    return RETRYABLE_STATUSES.has(status);
+function isFallbackOnly(error: unknown): boolean {
+  const root = rootError(error);
+  if (APICallError.isInstance(root) && root.statusCode === 402) {
+    return true;
   }
-  return RETRYABLE_PATTERN.test(messageOf(error));
+  return CREDIT_EXHAUSTED.test(reason(root));
 }
 
+// Transient errors the same provider may recover from on a retry.
 export function isSameProviderRetryable(error: unknown): boolean {
-  const status = statusOf(error);
-  if (status !== undefined) {
-    return SAME_PROVIDER_RETRYABLE_STATUSES.has(status);
+  if (isFallbackOnly(error)) {
+    return false;
   }
-  const message = messageOf(error);
-  return (
-    RETRYABLE_PATTERN.test(message) && !FALLBACK_ONLY_PATTERN.test(message)
-  );
+  const root = rootError(error);
+  if (APICallError.isInstance(root)) {
+    return root.isRetryable;
+  }
+  return TRANSIENT.test(reason(root));
+}
+
+// Any error worth another attempt — on the same provider or a fallback provider.
+export function isRetryable(error: unknown): boolean {
+  return isSameProviderRetryable(error) || isFallbackOnly(error);
 }

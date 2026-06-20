@@ -1,9 +1,9 @@
 import { tool } from 'ai';
-import type { Chat } from 'chat';
 import { z } from 'zod';
 import { slack } from '@/lib/chat';
+import { assertReadableChannel, joinChannel } from './utils';
 
-export function listThreadsTool({ bot }: { bot: Chat }) {
+export function listThreadsTool() {
   return tool({
     description:
       'List recent public Slack channel threads so you can pick a thread id before reading it.',
@@ -34,50 +34,44 @@ export function listThreadsTool({ bot }: { bot: Chat }) {
       }
 
       const chatChannelId = `slack:${slackChannelId}`;
-      const metadata = await bot.channel(chatChannelId).fetchMetadata();
-      if (metadata.isDM || metadata.channelVisibility !== 'workspace') {
-        throw new Error(
-          'Reading DMs, private channels, or external conversations is not allowed.'
-        );
-      }
+      assertReadableChannel(chatChannelId);
 
-      await slack.webClient
-        .apiCall('conversations.join', { channel: slackChannelId })
-        .catch(() => undefined);
+      await joinChannel(slackChannelId);
 
       const result = await slack.listThreads(chatChannelId, { cursor, limit });
 
       return {
         channelId: chatChannelId,
         nextCursor: result.nextCursor,
-        threads: result.threads.map((thread) => ({
-          id: thread.id,
-          lastReplyAt: thread.lastReplyAt?.toISOString(),
-          replyCount: thread.replyCount,
-          rootMessage: {
-            id: thread.rootMessage.id,
-            threadId: thread.rootMessage.threadId,
-            text: thread.rootMessage.text,
-            author: {
-              userId: thread.rootMessage.author.userId,
-              userName: thread.rootMessage.author.userName,
-              fullName: thread.rootMessage.author.fullName,
-              isBot: thread.rootMessage.author.isBot,
-              isMe: thread.rootMessage.author.isMe,
-            },
-            dateSent: thread.rootMessage.metadata.dateSent?.toISOString(),
-            edited: thread.rootMessage.metadata.edited,
-            isMention: thread.rootMessage.isMention,
-            attachments: (thread.rootMessage.attachments ?? []).map(
-              (attachment) => ({
+        threads: result.threads.map((thread) => {
+          const message = thread.rootMessage;
+          return {
+            id: thread.id,
+            lastReplyAt: thread.lastReplyAt?.toISOString(),
+            replyCount: thread.replyCount,
+            rootMessage: {
+              id: message.id,
+              threadId: message.threadId,
+              text: message.text,
+              author: {
+                userId: message.author.userId,
+                userName: message.author.userName,
+                fullName: message.author.fullName,
+                isBot: message.author.isBot,
+                isMe: message.author.isMe,
+              },
+              dateSent: message.metadata.dateSent?.toISOString(),
+              edited: message.metadata.edited,
+              isMention: message.isMention,
+              attachments: (message.attachments ?? []).map((attachment) => ({
                 type: attachment.type,
                 name: attachment.name,
                 mimeType: attachment.mimeType,
                 url: attachment.url,
-              })
-            ),
-          },
-        })),
+              })),
+            },
+          };
+        }),
       };
     },
   });

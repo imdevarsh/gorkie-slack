@@ -5,12 +5,10 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 ## P0 - Cleanup Before Slack History
 
 - [ ] Decide whether `apps/bot/src/lib/ai/stream/index.ts` should keep its three stream-state collections or move to a small state object. Do not refactor unless it clearly reduces clutter.
-- [ ] Verify the active-turn stop button still works after the agent folder split. Current placement stays separate from task rows because Chat SDK `StreamingPlan.endWith` appends controls after streaming completes and does not replace an active-stream control.
 - [ ] Live verify markdown-heavy long Slack responses split into follow-up messages without `msg_too_long`, broken tables, broken code fences, stranded list items, or dangling intro lines.
 - [ ] Investigate why E2B template-installed skills are not visible to Pi. Check where `npx skills add` writes files, what `$HOME` is during build and runtime, and which `.agents/skills` roots the Pi adapter actually exposes through its resource loader.
 - [ ] Revisit `continueFrom` before MCP/tool-approval work. Current steering/retry behavior intentionally strips `continueFrom` and starts a fresh prompt from persisted session history; MCP approvals may need true suspended-turn continuation via `doContinueTurn`.
 - [ ] Fix Slack search expectations. `searchSlack` currently uses Slack `assistant.search.context`; zero results are not an API error and do not mean the whole channel was searched. Add clearer model-facing wording, logging, or a separate channel/thread history path.
-- [ ] Build the E2E/CUA smoke runner described in `TESTING.md`, starting API-first with Slack Web API assertions and using browser automation only for UI behavior.
 
 ## P1 - Bounded Slack Context And History
 

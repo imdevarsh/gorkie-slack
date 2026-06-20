@@ -6,7 +6,6 @@
     ".": "./src/index.ts",
     "./error": "./src/error.ts",
     "./text": "./src/text.ts",
-    "./time": "./src/time.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {

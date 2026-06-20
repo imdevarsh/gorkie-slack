@@ -1,9 +1,9 @@
 import { tool } from 'ai';
-import type { Chat, Message } from 'chat';
 import { z } from 'zod';
 import { slack } from '@/lib/chat';
+import { assertReadableChannel, joinChannel } from './utils';
 
-export function readConversationHistoryTool({ bot }: { bot: Chat }) {
+export function readConversationHistoryTool() {
   return tool({
     description:
       'Read message history from a public Slack channel or thread using a channel ID and optional thread timestamp.',
@@ -54,16 +54,9 @@ export function readConversationHistoryTool({ bot }: { bot: Chat }) {
       }
 
       const chatChannelId = `slack:${slackChannelId}`;
-      const metadata = await bot.channel(chatChannelId).fetchMetadata();
-      if (metadata.isDM || metadata.channelVisibility !== 'workspace') {
-        throw new Error(
-          'Reading DMs, private channels, or external conversations is not allowed.'
-        );
-      }
+      assertReadableChannel(chatChannelId);
 
-      await slack.webClient
-        .apiCall('conversations.join', { channel: slackChannelId })
-        .catch(() => undefined);
+      await joinChannel(slackChannelId);
 
       const result = resolvedThreadTs
         ? await slack.fetchMessages(
@@ -80,7 +73,7 @@ export function readConversationHistoryTool({ bot }: { bot: Chat }) {
 
       return {
         channelId: chatChannelId,
-        messages: result.messages.map((message: Message) => ({
+        messages: result.messages.map((message) => ({
           id: message.id,
           threadId: message.threadId,
           text: message.text,
