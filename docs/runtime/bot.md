@@ -1,6 +1,6 @@
 ---
-title: Slack Runtime
-description: How Slack events become Gorkie turns.
+title: Bot Runtime
+description: How chat events become Gorkie turns.
 ---
 
 Slack events enter through Chat SDK's Slack adapter in Socket Mode. The adapter normalizes Slack events into `Thread` and `Message` objects; `apps/bot` decides whether to answer and starts the agent turn.
@@ -16,7 +16,7 @@ Slack events enter through Chat SDK's Slack adapter in Socket Mode. The adapter 
 
 ```mermaid
 flowchart TD
-  Event["Slack event"] --> Ignore{"ignore?"}
+  Event["chat event"] --> Ignore{"ignore?"}
   Ignore -->|yes| End["return"]
   Ignore -->|no| Route{"event kind"}
   Route --> Mention["mention"]
@@ -52,7 +52,7 @@ DMs are direct intent. Gorkie subscribes to the DM thread and answers.
   Reader tools must stay scoped. A user should not be able to use Gorkie to read another user's private DM or private-channel context.
 </Callout>
 
-## Slack-Specific APIs
+## Slack APIs
 
 Chat SDK handles the normal platform shape. Gorkie uses raw Slack APIs for Slack-only behavior:
 

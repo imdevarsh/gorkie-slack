@@ -25,7 +25,7 @@ flowchart LR
 
 <Cards>
   <Card href="./architecture" title="Architecture" description="System boundaries, request flow, and package ownership." />
-  <Card href="./runtime/slack" title="Slack Runtime" description="How Slack events become Gorkie turns." />
+  <Card href="./runtime/bot" title="Bot Runtime" description="How chat events become Gorkie turns." />
   <Card href="./runtime/agent" title="Agent Runtime" description="How HarnessAgent and Pi run a turn." />
   <Card href="./runtime/sandbox" title="Sandbox And Sessions" description="E2B lifecycle, session files, recovery, and skills." />
   <Card href="./runtime/streaming" title="Streaming" description="Assistant text, task rows, stop controls, and Slack limits." />
@@ -38,7 +38,7 @@ flowchart LR
 
 ## Main Flow
 
-1. Slack sends a message event through the Chat SDK Slack adapter.
+1. A chat adapter sends a message event through Chat SDK.
 2. `apps/bot` decides whether Gorkie should answer.
 3. The bot creates or resumes the thread's E2B sandbox.
 4. `packages/ai` builds a HarnessAgent with Pi, prompts, tools, skills, and resume state.

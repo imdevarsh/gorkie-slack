@@ -73,3 +73,7 @@ Defined in `packages/db/src/schema/customizations.ts`.
 | `prompt` | `text not null` | Saved App Home custom instructions. |
 | `created_at` | `timestamp with time zone not null default now()` | Row creation timestamp. |
 | `updated_at` | `timestamp with time zone not null default now()` | Auto-updated row timestamp. |
+
+## Chat SDK Tables
+
+Chat SDK stores its own Slack adapter state in the same Postgres database: subscriptions, locks, dedupe, and thread state. Gorkie uses that state through Chat SDK APIs instead of defining those tables in `packages/db`.
