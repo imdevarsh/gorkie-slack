@@ -5,9 +5,7 @@ description: The shortest useful explanation of how Gorkie works.
 
 Gorkie is an AI assistant for Slack. It can answer normally, use Slack context, search the web, run code, create files, generate images, and upload results back into the conversation.
 
-<Callout type="info" title="Core model">
-  Pi runs on the bot machine. E2B is the remote Linux workspace where file and shell operations happen.
-</Callout>
+> **Core model:** Pi runs on the bot machine. E2B is the remote Linux workspace where file and shell operations happen.
 
 Each Slack conversation gets its own agent session and sandbox workspace. The agent loop, model configuration, prompts, Slack tools, and session recovery live in the bot process. The sandbox gives that process a safe place to run commands and keep working files.
 
@@ -23,18 +21,16 @@ flowchart LR
 
 ## Start Here
 
-<Cards>
-  <Card href="./architecture" title="Architecture" description="System boundaries, request flow, and package ownership." />
-  <Card href="./runtime/bot" title="Bot Runtime" description="How chat events become Gorkie turns." />
-  <Card href="./runtime/agent" title="Agent Runtime" description="How HarnessAgent and Pi run a turn." />
-  <Card href="./runtime/sandbox" title="Sandbox And Sessions" description="E2B lifecycle, session files, recovery, and skills." />
-  <Card href="./runtime/streaming" title="Streaming" description="Assistant text, task rows, stop controls, and Slack limits." />
-  <Card href="./runtime/controls" title="Turn Controls" description="Interruption, stop, shutdown, and session parking." />
-  <Card href="./reference/tools" title="Tools" description="The model-facing tool surface and safety boundaries." />
-  <Card href="./reference/prompts" title="Prompts" description="How the system prompt is assembled." />
-  <Card href="./reference/data-model" title="Data Model" description="What Postgres stores and why." />
-  <Card href="./todo" title="TODO" description="Remaining reliability, context, tool, and upstream work." />
-</Cards>
+- [Architecture](./architecture): System boundaries, request flow, and package ownership.
+- [Bot Runtime](./runtime/bot): How chat events become Gorkie turns.
+- [Agent Runtime](./runtime/agent): How HarnessAgent and Pi run a turn.
+- [Sandbox And Sessions](./runtime/sandbox): E2B lifecycle, session files, recovery, and skills.
+- [Streaming](./runtime/streaming): Assistant text, task rows, stop controls, and Slack limits.
+- [Turn Controls](./runtime/controls): Interruption, stop, shutdown, and session parking.
+- [Tools](./reference/tools): The model-facing tool surface and safety boundaries.
+- [Prompts](./reference/prompts): How the system prompt is assembled.
+- [Data Model](./reference/data-model): What Postgres stores and why.
+- [TODO](./todo): Remaining reliability, context, tool, and upstream work.
 
 ## Main Flow
 

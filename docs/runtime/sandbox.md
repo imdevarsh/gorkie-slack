@@ -44,27 +44,11 @@ There are two related pieces of state:
 | `resumeState` | Harness/Pi pointer used to reopen a session. |
 | Pi session file | Actual transcript and tool history, mirrored into Postgres for recovery. |
 
-<Steps>
-  <Step>
-    Load the stored resume state and session-file mirror.
-  </Step>
-
-  <Step>
-    Create or resume the E2B sandbox.
-  </Step>
-
-  <Step>
-    Re-seed the mirrored Pi session file when the sandbox needs it.
-  </Step>
-
-  <Step>
-    Open the Harness session.
-  </Step>
-
-  <Step>
-    Detach, mirror the updated session file, store resume state, and pause the sandbox.
-  </Step>
-</Steps>
+1. Load the stored resume state and session-file mirror.
+2. Create or resume the E2B sandbox.
+3. Re-seed the mirrored Pi session file when the sandbox needs it.
+4. Open the Harness session.
+5. Detach, mirror the updated session file, store resume state, and pause the sandbox.
 
 ## Skills
 

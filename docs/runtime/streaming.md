@@ -8,9 +8,7 @@ Gorkie renders a turn through two Slack output paths:
 - assistant text is posted as normal Slack replies through `createLineReply`;
 - reasoning and tool activity are rendered as task rows through Chat SDK `StreamingPlan`.
 
-<Callout type="warn" title="Slack message limits">
-  Long native Slack stream buffers can fail with `msg_too_long`. Gorkie keeps assistant text outside the native stream buffer so long answers can be split into multiple Slack messages.
-</Callout>
+> **Slack message limits:** Long native Slack stream buffers can fail with `msg_too_long`. Gorkie keeps assistant text outside the native stream buffer so long answers can be split into multiple Slack messages.
 
 ## Text Replies
 

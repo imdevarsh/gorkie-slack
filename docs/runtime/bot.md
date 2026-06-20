@@ -48,9 +48,7 @@ A mention inside an existing thread is treated as a one-off request unless the t
 
 DMs are direct intent. Gorkie subscribes to the DM thread and answers.
 
-<Callout type="warn" title="Private context">
-  Reader tools must stay scoped. A user should not be able to use Gorkie to read another user's private DM or private-channel context.
-</Callout>
+> **Private context:** Reader tools must stay scoped. A user should not be able to use Gorkie to read another user's private DM or private-channel context.
 
 ## Slack APIs
 
