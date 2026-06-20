@@ -16,7 +16,6 @@ export function assertReadableChannel(chatChannelId: string): void {
   }
 }
 
-// Best-effort join so the bot can read a public channel it is not yet in.
 export function joinChannel(slackChannelId: string): Promise<unknown> {
   return slack.webClient
     .apiCall('conversations.join', { channel: slackChannelId })

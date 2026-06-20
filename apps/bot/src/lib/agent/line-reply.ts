@@ -2,7 +2,7 @@ import { StreamingMarkdownRenderer, type Thread } from 'chat';
 import logger from '@/lib/logger';
 
 // Slack rejects oversized messages (`msg_blocks_too_long`), so streamed prose is
-// posted in pieces. We cut on blank-line boundaries — tables, lists and
+// posted in pieces. We cut on blank-line boundaries; tables, lists and
 // paragraphs never contain a blank line, so they stay intact; only fenced code
 // can, which `openFence` guards. Each piece is healed through the SDK's
 // `StreamingMarkdownRenderer` so a forced mid-paragraph cut still closes any
@@ -115,15 +115,12 @@ function hardCut(text: string): number {
   return line >= floor ? line + 1 : text.length;
 }
 
-// Faithful for complete markdown (tables stay tables); closes incomplete inline
-// markers (`**`, `` ` ``, `[`) left by a forced cut.
 function heal(markdown: string): string {
   const renderer = new StreamingMarkdownRenderer();
   renderer.push(markdown);
   return renderer.finish().trim();
 }
 
-// Returns the language of the trailing unclosed code fence, or null if balanced.
 function openFence(text: string): string | null {
   let open: string | null = null;
   for (const line of text.split('\n')) {

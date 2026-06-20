@@ -39,8 +39,7 @@ function isFallbackOnly(error: unknown): boolean {
   return CREDIT_EXHAUSTED.test(reason(root));
 }
 
-// Transient errors the same provider may recover from on a retry.
-export function isSameProviderRetryable(error: unknown): boolean {
+function isTransient(error: unknown): boolean {
   if (isFallbackOnly(error)) {
     return false;
   }
@@ -51,7 +50,6 @@ export function isSameProviderRetryable(error: unknown): boolean {
   return TRANSIENT.test(reason(root));
 }
 
-// Any error worth another attempt — on the same provider or a fallback provider.
 export function isRetryable(error: unknown): boolean {
-  return isSameProviderRetryable(error) || isFallbackOnly(error);
+  return isTransient(error) || isFallbackOnly(error);
 }

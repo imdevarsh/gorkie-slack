@@ -17,39 +17,42 @@ export async function seedAttachments({
   message: Message;
   sandboxContext: SandboxContext;
 }): Promise<SeededAttachment[]> {
-  const seeded: SeededAttachment[] = [];
-  for (const [index, attachment] of message.attachments.entries()) {
-    const data = attachment.fetchData
-      ? await attachment.fetchData()
-      : attachment.data;
-    if (!data) {
-      continue;
-    }
+  const seeded = await Promise.all(
+    message.attachments.map(
+      async (attachment, index): Promise<SeededAttachment | null> => {
+        const data = attachment.fetchData
+          ? await attachment.fetchData()
+          : attachment.data;
+        if (!data) {
+          return null;
+        }
 
-    const fallback = `attachment-${index + 1}`;
-    const filename =
-      sanitizeFilename(nodePath.basename(attachment.name || fallback)) ||
-      fallback;
-    const messageDir = sanitizeFilename(message.id) || 'message';
-    const path = nodePath.join(
-      sandboxContext.sessionWorkDir,
-      'attachments',
-      messageDir,
-      filename
-    );
-    const bytes =
-      data instanceof Blob
-        ? new Uint8Array(await data.arrayBuffer())
-        : new Uint8Array(data);
-    await sandboxContext.session.writeBinaryFile({ content: bytes, path });
-    seeded.push({
-      mimeType: attachment.mimeType,
-      name: filename,
-      path,
-      type: attachment.type,
-    });
-  }
-  return seeded;
+        const fallback = `attachment-${index + 1}`;
+        const filename =
+          sanitizeFilename(nodePath.basename(attachment.name || fallback)) ||
+          fallback;
+        const messageDir = sanitizeFilename(message.id) || 'message';
+        const path = nodePath.join(
+          sandboxContext.sessionWorkDir,
+          'attachments',
+          messageDir,
+          filename
+        );
+        const bytes =
+          data instanceof Blob
+            ? new Uint8Array(await data.arrayBuffer())
+            : new Uint8Array(data);
+        await sandboxContext.session.writeBinaryFile({ content: bytes, path });
+        return {
+          mimeType: attachment.mimeType,
+          name: filename,
+          path,
+          type: attachment.type,
+        };
+      }
+    )
+  );
+  return seeded.filter((entry): entry is SeededAttachment => entry !== null);
 }
 
 export function promptWithAttachments({

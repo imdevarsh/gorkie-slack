@@ -14,15 +14,12 @@ import { deleteTurnControls, postTurnControls } from '@/lib/agent/controls';
 import { createLineReply } from '@/lib/agent/line-reply';
 import {
   type ActiveTurn,
-  setPromptControl,
-  steerActiveTurn,
+  abortReasonOf,
+  interruptTurn,
+  TurnAbort,
 } from '@/lib/agent/steering';
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
-import {
-  type AttemptFailure,
-  attemptDelayMs,
-  nextAttempt,
-} from '@/lib/ai/attempts';
+import { type AttemptFailure, nextAttempt } from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
 import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
@@ -51,16 +48,15 @@ export function runTurn(input: {
     });
   }
 
-  return steerActiveTurn({ activeTurn, input }).then(async () => {
-    await slack
-      .postEphemeral(
-        input.thread.id,
-        input.message.author.userId,
-        'Got it! Steering conversation.'
-      )
-      .then(() => undefined)
-      .catch(() => undefined);
-  });
+  interruptTurn({ activeTurn, input });
+  return slack
+    .postEphemeral(
+      input.thread.id,
+      input.message.author.userId,
+      'Got it! Wrapping up and switching to your new message.'
+    )
+    .then(() => undefined)
+    .catch(() => undefined);
 }
 
 export function stopTurn({ threadId }: { threadId: string }): boolean {
@@ -68,13 +64,13 @@ export function stopTurn({ threadId }: { threadId: string }): boolean {
   if (!activeTurn) {
     return false;
   }
-  activeTurn.controller.abort();
+  activeTurn.controller.abort(new TurnAbort('stop'));
   return true;
 }
 
 export function stopAllTurns(): void {
   for (const activeTurn of activeTurns.values()) {
-    activeTurn.controller.abort();
+    activeTurn.controller.abort(new TurnAbort('shutdown'));
   }
 }
 
@@ -134,10 +130,14 @@ async function executeTurn(
       '[agent] turn complete'
     );
   } catch (error) {
-    if (controller.signal.aborted) {
-      logger.info({ threadId }, '[agent] turn interrupted');
+    const reason = abortReasonOf(controller.signal);
+    if (reason) {
+      logger.info({ reason, threadId }, '[agent] turn interrupted');
       await deleteTurnControls({ controls });
-      await parkSession({ pause: false });
+      // An interrupt restarts immediately, so leave the sandbox warm; stop and
+      // shutdown end the turn, so pause it. The transcript is persisted either
+      // way, so the follow-up resumes with full context.
+      await parkSession({ pause: reason !== 'interrupt' });
     } else {
       logger.error(
         { attempt: attemptLog(activeAttempt), err: error, threadId },
@@ -148,15 +148,20 @@ async function executeTurn(
       await thread.post(agentErrorMessage(error));
     }
   } finally {
-    const fallbackInput = activeTurn.pendingMessages.at(-1);
     if (activeTurns.get(threadId) === activeTurn) {
       activeTurns.delete(threadId);
     }
-    if (fallbackInput) {
-      runTurn(fallbackInput).catch((error: unknown) => {
+    // Only an interrupt replays a queued message; a rapid burst keeps the latest
+    // (later messages supersede the earlier ones within the same wind-down).
+    const resume =
+      abortReasonOf(controller.signal) === 'interrupt'
+        ? activeTurn.pendingMessages.at(-1)
+        : undefined;
+    if (resume) {
+      runTurn(resume).catch((error: unknown) => {
         logger.error(
           { err: error, threadId },
-          '[agent] failed to run fallback steered turn'
+          '[agent] failed to run interrupted follow-up turn'
         );
       });
     }
@@ -181,9 +186,6 @@ async function executeTurn(
         activeAttempt = currentAttempt;
         const agent = createAgent({
           attempt: currentAttempt,
-          onPromptControl: (control) => {
-            setPromptControl({ activeTurn, control, threadId });
-          },
           onSandboxReady: async (context) => {
             sandboxContext = context;
             attachments = await seedAttachments({
@@ -253,9 +255,8 @@ async function executeTurn(
           }
           throw error;
         }
-        const isSameModelRetry =
-          retryAttempt.provider === currentAttempt.provider &&
-          retryAttempt.model === currentAttempt.model;
+        // Pi already retries the same provider internally (3x, exponential
+        // backoff), so we only ever fall back to the next provider here.
         logger.warn(
           {
             attempt: attemptLog(currentAttempt),
@@ -263,19 +264,10 @@ async function executeTurn(
             nextAttempt: attemptLog(retryAttempt),
             threadId,
           },
-          isSameModelRetry
-            ? '[agent] attempt failed, retrying same model'
-            : '[agent] attempt failed, falling back'
+          '[agent] attempt failed, falling back'
         );
         await session?.detach().catch(() => undefined);
         session = undefined;
-        if (isSameModelRetry) {
-          const delayMs = attemptDelayMs({
-            attempt: currentAttempt,
-            failures: attemptHistory,
-          });
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
         attempt = retryAttempt;
       }
     }

@@ -1,5 +1,6 @@
 import type { Message } from 'chat';
 import { runTurn, stopTurn } from '@/lib/agent';
+import { isUserAllowed } from '@/lib/allowed-users';
 import { bot } from '@/lib/chat';
 import '@/slack/features/assistant';
 import '@/slack/features/customizations';
@@ -57,6 +58,9 @@ function shouldIgnore(message: Message): boolean {
   if (isBotMessage(message) || message.author.isMe) {
     return true;
   }
+  if (!isUserAllowed(message.author.userId)) {
+    return true;
+  }
   const raw = message.raw;
   const text =
     raw &&
@@ -81,7 +85,7 @@ function shouldIgnore(message: Message): boolean {
 }
 
 // `author.isBot` isn't populated for every Slack bot/app message, so also treat
-// a raw event carrying bot_id / app_id / the bot_message subtype as a bot — Gorkie
+// a raw event carrying bot_id / app_id / the bot_message subtype as a bot; Gorkie
 // must never reply to another bot (or an app posting on its behalf).
 function isBotMessage(message: Message): boolean {
   if (message.author.isBot === true) {

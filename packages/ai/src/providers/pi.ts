@@ -12,7 +12,6 @@ export const chatAttempts: PiAttempt[] = [
   //   },
   //   model: 'google/gemini-3-flash-preview',
   //   provider: 'hackclub',
-  //   retries: 2,
   // },
   // ...(env.OPENROUTER_API_KEY
   //   ? [
@@ -25,22 +24,18 @@ export const chatAttempts: PiAttempt[] = [
   //         },
   //         model: 'google/gemini-3-flash-preview',
   //         provider: 'openrouter',
-  //         retries: 2,
   //       },
   //     ]
   //   : []),
   ...(env.INFERENCE_API_KEY
     ? [
         {
-          backoffFactor: 2,
           customEnv: {
             OPENROUTER_API_KEY: env.INFERENCE_API_KEY,
             OPENROUTER_BASE_URL: 'https://openrouter.ai/api/v1',
           },
-          delayMs: 250,
           model: 'moonshotai/kimi-k2.6',
           provider: 'inference',
-          retries: 2,
         },
       ]
     : []),
