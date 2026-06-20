@@ -41,7 +41,7 @@ bot.onSubscribedMessage(async (thread, message) => {
   await runTurn({ message, thread });
 });
 
-bot.onAction('gorkie_stop_turn', async (event) => {
+bot.onAction('stop_turn', async (event) => {
   const threadId = event.value ?? event.threadId;
   const stopped = stopTurn({ threadId });
 

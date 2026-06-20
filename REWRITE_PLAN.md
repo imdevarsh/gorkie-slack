@@ -438,11 +438,11 @@ Do not introduce named constants for one-use values, obvious literals, or values
 
 ```ts
 // bad - the name adds no domain value
-const STOP_TURN_ACTION = 'gorkie_stop_turn';
+const STOP_TURN_ACTION = 'stop_turn';
 bot.onAction(STOP_TURN_ACTION, handler);
 
 // good - keep the local one-use value visible
-bot.onAction('gorkie_stop_turn', handler);
+bot.onAction('stop_turn', handler);
 ```
 
 ### Dict params

@@ -20,50 +20,12 @@ That split keeps secrets on the host and keeps execution isolated:
 - a missing or stale sandbox can be recreated without changing Slack routing.
 
 ```mermaid
-flowchart TB
-  subgraph Slack["Slack workspace"]
-    Message["Mention, DM, assistant thread, or subscribed reply"]
-    Action["Stop button and App Home actions"]
-  end
-
-  subgraph Bot["apps/bot"]
-    Chat["Chat SDK instance"]
-    Router["Slack routing"]
-    Turn["turn runner"]
-    Stream["Slack output"]
-    HostTools["host tools"]
-  end
-
-  subgraph Agent["packages/ai"]
-    Harness["HarnessAgent"]
-    Pi["Pi adapter"]
-    Prompt["system prompt"]
-    Session["session open/persist"]
-  end
-
-  subgraph Sandbox["packages/sandbox + E2B"]
-    Provider["E2B provider"]
-    Workspace["Linux workspace"]
-    Skills["materialized skills"]
-  end
-
-  subgraph Data["packages/db"]
-    ChatState["Chat SDK state"]
-    SandboxRows["sandbox_sessions"]
-    Customizations["user customizations"]
-  end
-
-  Message --> Chat --> Router --> Turn
-  Action --> Router
-  Turn --> Harness --> Pi
-  Prompt --> Harness
-  Session --> SandboxRows
-  Pi --> Provider --> Workspace
-  Harness --> HostTools
-  Turn --> Stream --> Slack
-  Chat --> ChatState
-  Router --> Customizations
-  Skills --> Pi
+flowchart LR
+  Slack["Slack"] --> Bot["apps/bot\nChat SDK runtime"]
+  Bot --> Agent["packages/ai\nHarnessAgent + Pi"]
+  Agent --> Sandbox["packages/sandbox\nE2B workspace"]
+  Bot --> DB["packages/db\nstate + recovery"]
+  Agent --> DB
 ```
 
 ## Turn Flow
@@ -117,10 +79,3 @@ sequenceDiagram
 | Session persistence | `packages/ai/src/sessions.ts`, `packages/ai/src/files/**` |
 | E2B provider | `packages/sandbox/src/**` |
 | Database schema and queries | `packages/db/src/**` |
-
-## Hard Boundaries
-
-- Do not put Slack-only behavior in `packages/ai`.
-- Do not put model keys, Slack tokens, or future MCP secrets in the sandbox.
-- Do not make Slack transcript storage the agent memory. Harness/Pi session history is the durable agent history.
-- Do not add a new abstraction unless it removes real complexity.

@@ -12,7 +12,7 @@ Slack events enter through Chat SDK's Slack adapter in Socket Mode. The adapter 
 | `onNewMention` | A user mentioned Gorkie. |
 | `onDirectMessage` | A user sent Gorkie a DM. |
 | `onSubscribedMessage` | A message arrived in a thread Gorkie follows. |
-| `onAction('gorkie_stop_turn')` | A user clicked the active-turn stop button. |
+| `onAction('stop_turn')` | A user clicked the active-turn stop button. |
 
 ```mermaid
 flowchart TD
@@ -32,7 +32,7 @@ flowchart TD
   Allowed -->|no| End
 ```
 
-## Ignore Marker
+## Ignore
 
 Any message with a line that starts with `##` is ignored. Leading Slack mention tokens are stripped before this check, so `@gorkie ## ignore this` is ignored too.
 

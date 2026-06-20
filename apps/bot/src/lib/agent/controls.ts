@@ -24,7 +24,7 @@ export async function postTurnControls({
       {
         elements: [
           {
-            action_id: 'gorkie_stop_turn',
+            action_id: 'stop_turn',
             style: 'danger',
             text: { text: 'Stop', type: 'plain_text' },
             type: 'button',

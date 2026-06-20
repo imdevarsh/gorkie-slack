@@ -29,9 +29,11 @@ flowchart LR
   <Card href="./runtime/agent" title="Agent Runtime" description="How HarnessAgent and Pi run a turn." />
   <Card href="./runtime/sandbox" title="Sandbox And Sessions" description="E2B lifecycle, session files, recovery, and skills." />
   <Card href="./runtime/streaming" title="Streaming" description="Assistant text, task rows, stop controls, and Slack limits." />
+  <Card href="./runtime/controls" title="Turn Controls" description="Interruption, stop, shutdown, and session parking." />
   <Card href="./reference/tools" title="Tools" description="The model-facing tool surface and safety boundaries." />
   <Card href="./reference/prompts" title="Prompts" description="How the system prompt is assembled." />
   <Card href="./reference/data-model" title="Data Model" description="What Postgres stores and why." />
+  <Card href="./todo" title="TODO" description="Remaining reliability, context, tool, and upstream work." />
 </Cards>
 
 ## Main Flow

@@ -38,6 +38,13 @@ turborepo.
 - `packages/{ai,sandbox,db,logging,utils}` — agent core, E2B provider, schema, logger, helpers
 - `tooling/{cspell,github,typescript}` — shared config
 
+## Hard boundaries
+
+- Do not put Slack-only behavior in `packages/ai`.
+- Do not put model keys, Slack tokens, or future MCP secrets in the sandbox.
+- Do not make Slack transcript storage the agent memory. Harness/Pi session history is the durable agent history.
+- Do not add a new abstraction unless it removes real complexity.
+
 ## Commands
 
 ```bash

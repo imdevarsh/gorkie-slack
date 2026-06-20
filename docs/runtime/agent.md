@@ -43,19 +43,4 @@ flowchart LR
 
 The turn runner uses the first configured attempt. If an attempt fails before anything is streamed, it can fall back to the next attempt. Once text or task UI has reached Slack, the runner does not silently switch models, because that would create two partial answers for one user message.
 
-## Interruption
-
-A new user message during an active turn interrupts the running turn, persists the session, keeps the sandbox warm, and starts a fresh turn from the newest queued message.
-
-That behavior is intentionally simple:
-
-- `interruptTurn` aborts the active controller with reason `interrupt`;
-- the turn saves session state in `finally`;
-- only the latest queued follow-up is replayed;
-- stop and shutdown abort without replaying a follow-up.
-
-## Stop Button
-
-The stop button is a Slack control message posted while a response is active. It aborts the active turn with reason `stop`, removes the control message, persists the session, and pauses the sandbox.
-
-The control is separate from the streamed task list because Chat SDK stream controls are appended after streaming completes; users need the stop button while the turn is still running.
+Turn interruption, stop, and shutdown behavior is covered in [Turn Controls](./controls).

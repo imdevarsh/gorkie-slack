@@ -3,30 +3,9 @@ title: Data Model
 description: What Postgres stores and why.
 ---
 
-Gorkie stores runtime state in Postgres. It does not store a second full agent transcript.
+Gorkie stores app-owned runtime state in `packages/db`. Chat SDK also stores adapter state through `@chat-adapter/state-pg`; those tables are owned by the adapter package and are not defined in this repo.
 
-## Main State
-
-| State | Owner | Purpose |
-| --- | --- | --- |
-| Chat SDK state | `@chat-adapter/state-pg` | Subscriptions, locks, dedupe, adapter state. |
-| `sandbox_sessions` | `packages/db` | E2B id, Harness session id, resume state, and Pi session mirror. |
-| `user_customizations` | `packages/db` | App Home custom instructions per Slack user. |
-
-## `sandbox_sessions`
-
-`sandbox_sessions` connects a Slack thread to its sandbox and Harness/Pi session.
-
-| Column | Meaning |
-| --- | --- |
-| `thread_id` | Chat SDK thread id and Harness session id. |
-| `sandbox_id` | E2B sandbox id. |
-| `session_id` | Harness session id. |
-| `resume_state` | JSON string returned by Harness detach. |
-| `session` | JSON mirror of Pi's session file. |
-| `status` | Runtime lifecycle state. |
-| `paused_at`, `resumed_at`, `destroyed_at` | Sandbox lifecycle timestamps. |
-| `created_at`, `updated_at` | Row timestamps. |
+## App-Owned Tables
 
 ```mermaid
 erDiagram
@@ -36,7 +15,7 @@ erDiagram
     text session_id
     text resume_state
     jsonb session
-    text status
+    sandbox_status status
     timestamp paused_at
     timestamp resumed_at
     timestamp destroyed_at
@@ -52,8 +31,45 @@ erDiagram
   }
 ```
 
-## Transcript Ownership
+## `sandbox_sessions`
 
-Harness/Pi session history is the agent transcript. Postgres stores a resume pointer and a mirrored session file so a thread can recover after restarts or sandbox replacement.
+Defined in `packages/db/src/schema/sandbox.ts`.
 
-Slack history is fetched when needed. It is not copied wholesale into a separate long-term memory table.
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `thread_id` | `text` primary key | Chat SDK thread id and Harness session id. |
+| `sandbox_id` | `text not null` | E2B sandbox id. |
+| `session_id` | `text not null` | Harness session id. |
+| `resume_state` | `text` | JSON string returned by Harness detach. |
+| `session` | `jsonb` | Pi transcript mirror: `{ file, data }`. |
+| `status` | `sandbox_status not null default 'creating'` | Sandbox lifecycle state. |
+| `paused_at` | `timestamp with time zone` | Last pause timestamp. |
+| `resumed_at` | `timestamp with time zone` | Last resume timestamp. |
+| `destroyed_at` | `timestamp with time zone` | Future destroy timestamp. |
+| `created_at` | `timestamp with time zone not null default now()` | Row creation timestamp. |
+| `updated_at` | `timestamp with time zone not null default now()` | Auto-updated row timestamp. |
+
+Indexes:
+
+| Index | Columns |
+| --- | --- |
+| `sandbox_sessions_status_idx` | `status` |
+| `sandbox_sessions_paused_idx` | `paused_at` |
+| `sandbox_sessions_updated_idx` | `updated_at` |
+
+Enum:
+
+| Enum | Values |
+| --- | --- |
+| `sandbox_status` | `creating`, `active`, `paused`, `destroyed` |
+
+## `user_customizations`
+
+Defined in `packages/db/src/schema/customizations.ts`.
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `user_id` | `text` primary key | Slack user id. |
+| `prompt` | `text not null` | Saved App Home custom instructions. |
+| `created_at` | `timestamp with time zone not null default now()` | Row creation timestamp. |
+| `updated_at` | `timestamp with time zone not null default now()` | Auto-updated row timestamp. |
