@@ -20,8 +20,8 @@ there, but Pi itself never runs inside it.
   - `https://github.com/earendil-works/pi`
 - **Use the skills** when a task touches their area: `ai-sdk`, `chat-sdk`, `slack-agent`,
   `coding-best-practices`, `ultracite`, `neon-postgres`. They carry current patterns.
-- **Human architecture docs** live in `apps/docs/content` (overview, slack-runtime,
-  agent-runtime, sandbox-sessions, data-model). Read them to find where behavior lives.
+- **Architecture docs** live in `docs/` as plain Markdown for humans and agents. Read
+  them to find where behavior lives.
 - **Design + roadmap:** `REWRITE_PLAN.md` (architecture, core mechanics, build plan, full
   coding rules) and `REWRITE_TODO.md`.
 
@@ -34,7 +34,7 @@ turborepo.
 ## Structure
 
 - `apps/bot` — `vercel/chat` Slack runtime, Slack features, host-owned tools
-- `apps/docs` — human-readable architecture docs
+- `docs/` — human/agent-readable architecture docs
 - `packages/{ai,sandbox,db,logging,utils}` — agent core, E2B provider, schema, logger, helpers
 - `tooling/{cspell,github,typescript}` — shared config
 

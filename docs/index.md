@@ -3,12 +3,10 @@ title: Overview
 description: The shortest useful explanation of how Gorkie works.
 ---
 
-
 Gorkie is a Slack bot wrapped around a coding agent. Every Slack thread it joins gets its own agent and its own Linux workspace, so a conversation can write code, run commands, and remember what it did across days.
 
-<Callout type="info" title="Core mental model">
-  Pi runs on the bot machine. The sandbox is remote file and command execution.
-</Callout>
+> [!NOTE]
+> Core mental model: Pi runs on the bot machine. The sandbox is remote file and command execution.
 
 That one sentence explains most of the architecture. The agent brain, model auth, tool orchestration, conversation history, and prompt loading all happen inside the bot process. The E2B sandbox gives that host process a remote Linux workspace where Pi can read files, write files, run commands, and keep per-thread state. Model keys and secrets never leave the host; the sandbox only ever sees the filesystem and shell side of the work.
 
@@ -31,16 +29,14 @@ Use these docs when you want to answer "where does this behavior live?" before c
 
 ## Read This First
 
-<Cards>
-  <Card href="./architecture" title="Architecture" description="Main components, request flow, and ownership boundaries." />
-  <Card href="./slack-runtime" title="Slack Runtime" description="Chat SDK, routing, subscriptions, thread state, and DMs." />
-  <Card href="./agent-runtime" title="Agent Runtime" description="HarnessAgent, Pi, prompts, tools, attempts, and steering." />
-  <Card href="./sandbox-sessions" title="Sandbox And Sessions" description="E2B, host mirrors, session files, resume, and skills." />
-  <Card href="./streaming-tools" title="Streaming And Tools" description="Slack output, task rows, line chunking, and host tools." />
-  <Card href="./data-model" title="Data Model" description="Postgres tables and what each one owns." />
-  <Card href="./development" title="Development" description="Commands, template builds, checks, and reference repos." />
-  <Card href="./open-work" title="Open Work" description="Architectural debt and the next cleanup passes." />
-</Cards>
+- [Architecture](./architecture): Main components, request flow, and ownership boundaries.
+- [Slack Runtime](./slack-runtime): Chat SDK, routing, subscriptions, thread state, and DMs.
+- [Agent Runtime](./agent-runtime): HarnessAgent, Pi, prompts, tools, attempts, and steering.
+- [Sandbox And Sessions](./sandbox-sessions): E2B, host mirrors, session files, resume, and skills.
+- [Streaming And Tools](./streaming-tools): Slack output, task rows, line chunking, and host tools.
+- [Data Model](./data-model): Postgres tables and what each one owns.
+- [Development](./development): Commands, template builds, checks, and reference repos.
+- [Open Work](./open-work): Architectural debt and the next cleanup passes.
 
 ## Source Map
 

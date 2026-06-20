@@ -3,7 +3,6 @@ title: Streaming And Tools
 description: How Gorkie renders assistant text, reasoning, task rows, and host tools.
 ---
 
-
 Gorkie uses two Slack output paths during a turn:
 
 1. `StreamingPlan` for task rows and reasoning status.
@@ -11,9 +10,8 @@ Gorkie uses two Slack output paths during a turn:
 
 This avoids Slack `msg_too_long` failures from one huge native stream message.
 
-<Callout type="warn" title="Why text is outside StreamingPlan">
-  Chat SDK's Slack stream ultimately writes to Slack's native stream buffer. In live tests, long assistant output and large fetched-message text could still fail with `msg_too_long`. Gorkie keeps tasks in `StreamingPlan`, but assistant text goes through `createLineReply` so it can be posted as several normal Slack messages at paragraph or sentence boundaries.
-</Callout>
+> [!WARNING]
+> Why text is outside StreamingPlan: Chat SDK's Slack stream ultimately writes to Slack's native stream buffer. In live tests, long assistant output and large fetched-message text could still fail with `msg_too_long`. Gorkie keeps tasks in `StreamingPlan`, but assistant text goes through `createLineReply` so it can be posted as several normal Slack messages at paragraph or sentence boundaries.
 
 ## Stream Events
 

@@ -99,7 +99,7 @@ tracing are bridge code, not permanent product architecture. Prefer upstream sup
 
 ## 3a. Repo layout & cleanup
 
-**Done (bare-bones gutting):** deleted `apps/server`, `packages/kv`, `plans/`, `docs/`,
+**Done (bare-bones gutting):** deleted `apps/server`, `packages/kv`, `plans/`, the old `docs/`,
 `comments.md`, **all of `apps/bot/src`**, **`packages/ai`**, the `ai-retry` patch, and
 `apps/bot/.env.example`. Removed `server`/`build:sandbox` scripts, `nitro`/`srvx`/`ai-retry`
 from the catalog, and the `patchedDependencies` block. `apps/bot` is now a stub

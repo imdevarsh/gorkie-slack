@@ -3,7 +3,6 @@ title: Agent Runtime
 description: HarnessAgent, Pi, prompts, attempts, tools, and steering.
 ---
 
-
 This page covers the agent itself: how it is built, what it can do, and how a turn behaves while it runs. The two anchor files are `apps/bot/src/lib/agent/index.ts` (the turn runner) and `packages/ai/src/agent.ts` (the agent builder).
 
 The central rule:

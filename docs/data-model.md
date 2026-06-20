@@ -3,7 +3,6 @@ title: Data Model
 description: What Postgres stores and what it deliberately does not store.
 ---
 
-
 Gorkie uses Postgres for three kinds of state:
 
 - Chat SDK adapter state;

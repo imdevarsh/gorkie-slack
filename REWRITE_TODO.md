@@ -9,6 +9,7 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] Investigate why E2B template-installed skills are not visible to Pi. Check where `npx skills add` writes files, what `$HOME` is during build and runtime, and which `.agents/skills` roots the Pi adapter actually exposes through its resource loader.
 - [ ] Revisit `continueFrom` before MCP/tool-approval work. Current steering/retry behavior intentionally strips `continueFrom` and starts a fresh prompt from persisted session history; MCP approvals may need true suspended-turn continuation via `doContinueTurn`.
 - [ ] Fix Slack search expectations. `searchSlack` currently uses Slack `assistant.search.context`; zero results are not an API error and do not mean the whole channel was searched. Add clearer model-facing wording, logging, or a separate channel/thread history path.
+- [ ] Re-apply or discard stashed thermo cleanup follow-ups from stash commit `b3da0360c12bb8d1c28fd9849c18fbb747845698`. Captured files: `apps/bot/src/lib/agent/index.ts`, `apps/bot/src/lib/agent/line-reply.ts`, `apps/bot/src/lib/ai/hints.ts`, `apps/bot/src/slack/features/assistant/index.ts`, `packages/ai/src/prompts/context.ts`, and `packages/ai/src/prompts/hints.ts`.
 
 ## P1 - Bounded Slack Context And History
 

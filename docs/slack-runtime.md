@@ -3,7 +3,6 @@ title: Slack Runtime
 description: How Slack events become agent turns.
 ---
 
-
 Every Slack event enters Gorkie through Chat SDK in Socket Mode. This page covers how those events are routed into agent turns; what happens inside a turn lives in [Agent Runtime](./agent-runtime).
 
 `apps/bot/src/lib/chat.ts` creates:
@@ -78,9 +77,8 @@ When a mention is the root of a thread, `onNewMention` sets this flag and subscr
 
 DMs are direct intent. The bot subscribes to the DM thread and runs a turn.
 
-<Callout type="warn" title="DM read access is powerful">
-  Gorkie can read DMs the bot token can access. Reader tools must stay scoped so one user cannot use the agent to sniff another user's private DM context.
-</Callout>
+> [!WARNING]
+> DM read access is powerful: Gorkie can read DMs the bot token can access. Reader tools must stay scoped so one user cannot use the agent to sniff another user's private DM context.
 
 ## Slack Escape Hatches
 

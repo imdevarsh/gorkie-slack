@@ -3,7 +3,6 @@ title: Development
 description: Commands, local runtime, template builds, checks, and reference repos.
 ---
 
-
 Gorkie runs as one local app: `apps/bot`. It uses Bun directly and runs TypeScript without bundling.
 
 Slack connects through Chat SDK with the Slack adapter in **Socket Mode**, so local development needs no public tunnel or webhook URL. Each active Slack thread gets an E2B sandbox, and the agent brain runs in the bot process.
@@ -37,7 +36,7 @@ bun run db:push
 bun run dev:bot
 ```
 
-`bun run dev:bot` runs the bot only (`turbo run dev --filter=bot`). `bun dev` runs every workspace dev task through turbo, which also brings up the docs app.
+`bun run dev:bot` runs the bot only (`turbo run dev --filter=bot`). `bun dev` runs every workspace dev task through turbo.
 
 Dev mode uses process-restart watch, not Bun hot reload, because Slack Socket Mode owns a persistent WebSocket that must shut down cleanly between reloads. This avoids duplicate socket processes and repeated shutdown handlers. Do not add bot bundling or `tsdown` unless a real deployment target needs it.
 
@@ -49,16 +48,13 @@ bun run db:generate  # generate migrations
 bun run db:studio    # open Drizzle Studio
 ```
 
-## Docs App
+## Docs
 
-The docs live in `apps/docs/content` as MDX. Run them with turbo filters:
+The docs live in `docs/` as plain Markdown so agents can read them without a site build. GitHub renders the Mermaid blocks directly. For a local rendered preview, use Fumadocs Preview on demand:
 
 ```sh
-bun --filter=docs run dev
-bun --filter=docs run build
+bun run docs:preview
 ```
-
-The docs are the source material for humans. The app framework is intentionally lightweight and can be swapped later.
 
 ## E2B Template
 
@@ -68,7 +64,7 @@ The E2B template defines the runtime tools available inside every sandbox:
 - Node 24;
 - Python packages (`pillow`, `matplotlib`, `numpy`, `pandas`, `requests`, `agentmail`);
 - `agent-browser` plus its browser dependencies;
-- upstream Agent Skills (`agent-browser`, `agentmail`).
+- runtime packages used by host-vendored skills (`agent-browser`, `agentmail`).
 
 Build it when the sandbox package or its CLI dependencies change:
 
@@ -76,7 +72,7 @@ Build it when the sandbox package or its CLI dependencies change:
 bun run build:template
 ```
 
-The build script loads `apps/bot/.env` through `dotenv`, so `E2B_API_KEY` does not need to be tracked in code. If Pi does not discover template-installed skills, investigate the adapter's skill discovery roots before adding app-owned skill copies.
+The build script loads `apps/bot/.env` through `dotenv`, so `E2B_API_KEY` does not need to be tracked in code. Skill instructions are vendored in `packages/sandbox/skills/` and passed through Harness; the template only installs the runtime packages those skills need.
 
 ## Checks
 

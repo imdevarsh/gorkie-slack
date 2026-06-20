@@ -3,7 +3,6 @@ title: Open Work
 description: Known gaps, planned features, and the next cleanup passes.
 ---
 
-
 This page is the forward roadmap: known gaps, reliability work that still needs verification, and features that are planned but not yet built. It is a snapshot of where the system is heading, not a description of how it works today.
 
 ## Cleanup
