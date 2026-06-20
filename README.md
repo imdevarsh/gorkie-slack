@@ -129,7 +129,7 @@ bun run build:template
 
 Manual Slack smoke testing is documented in [TESTING.md](TESTING.md).
 
-Architecture notes live in [docs/](docs/). Preview them with:
+Architecture notes live in [docs/](docs/). They are Markdown files with Fumadocs-compatible frontmatter/components and can be previewed with:
 
 ```bash
 bun run docs:preview

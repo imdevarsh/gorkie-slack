@@ -20,8 +20,8 @@ there, but Pi itself never runs inside it.
   - `https://github.com/earendil-works/pi`
 - **Use the skills** when a task touches their area: `ai-sdk`, `chat-sdk`, `slack-agent`,
   `coding-best-practices`, `ultracite`, `neon-postgres`. They carry current patterns.
-- **Architecture docs** live in `docs/` as plain Markdown for humans and agents. Read
-  them to find where behavior lives.
+- **Architecture docs** live in `docs/` as Markdown with Fumadocs-compatible
+  components for humans and agents.
 - **Design + roadmap:** `REWRITE_PLAN.md` (architecture, core mechanics, build plan, full
   coding rules) and `REWRITE_TODO.md`.
 

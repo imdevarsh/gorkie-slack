@@ -1,77 +1,70 @@
 ---
 title: Architecture
-description: The main components, request flow, and ownership boundaries.
+description: System boundaries, request flow, and package ownership.
 ---
 
-Gorkie is a Slack runtime built around an AI SDK `HarnessAgent`. The three layers have deliberately different scopes: the Slack side is app-owned, the agent core is platform-neutral, and the sandbox provider is its own package because `HarnessAgent` talks to a sandbox through a provider interface, not through Slack.
+Gorkie has three major runtime pieces: Slack, the agent, and the sandbox.
 
-## The Mental Model
+Slack is the interface. The agent is the brain. The sandbox is the workspace.
 
-**Pi runs on the bot machine.**
+## Mental Model
 
-Pi is not installed inside E2B as the main process. The bot process starts the Pi adapter in Node, and the Pi adapter makes sandbox filesystem and command operations look local through a host mirror, a path mapper, and a remote-operations layer. From Pi's point of view it is editing local files; under the hood those operations are forwarded to the remote sandbox.
+Pi is created by the bot process through AI SDK Harness. It is not a daemon inside E2B. When Pi reads a file, writes a file, edits code, or runs a shell command, the Harness/Pi adapter forwards that operation to the sandbox session.
 
-That separation is the load-bearing design choice. It is why:
+That split keeps secrets on the host and keeps execution isolated:
 
-- model keys stay in the bot process and never touch the sandbox;
-- per-user keys (BYOK) and MCP secrets can be added later without leaking into the sandbox;
-- the sandbox can be paused, recreated, or mirrored without changing Slack routing;
-- host tools (Slack, web search, image generation) can talk to Slack directly while Pi still sees their results in its tool loop.
+- model provider keys stay in the bot process;
+- Slack tokens stay in the bot process;
+- host tools can call Slack, Exa, image generation, and file upload APIs directly;
+- E2B only handles filesystem and command execution;
+- a missing or stale sandbox can be recreated without changing Slack routing.
 
 ```mermaid
 flowchart TB
   subgraph Slack["Slack workspace"]
-    Mention["@gorkie / DM / subscribed reply"]
-    Button["Stop button / App Home actions"]
+    Message["Mention, DM, assistant thread, or subscribed reply"]
+    Action["Stop button and App Home actions"]
   end
 
   subgraph Bot["apps/bot"]
-    Chat["Chat SDK Chat instance"]
-    Router["bot.ts routing"]
-    Turn["lib/agent turn runner"]
-    Stream["stream renderer + line replies"]
-    Tools["host tools"]
+    Chat["Chat SDK instance"]
+    Router["Slack routing"]
+    Turn["turn runner"]
+    Stream["Slack output"]
+    HostTools["host tools"]
   end
 
-  subgraph Core["packages/ai"]
+  subgraph Agent["packages/ai"]
     Harness["HarnessAgent"]
-    Pi["createPi adapter\nruns in host process"]
-    Prompts["system prompts"]
-    Resume["resume open/persist"]
+    Pi["Pi adapter"]
+    Prompt["system prompt"]
+    Session["session open/persist"]
   end
 
   subgraph Sandbox["packages/sandbox + E2B"]
-    Provider["E2BSandboxProvider"]
-    Linux["/home/user workspace"]
+    Provider["E2B provider"]
+    Workspace["Linux workspace"]
+    Skills["materialized skills"]
   end
 
   subgraph Data["packages/db"]
     ChatState["Chat SDK state"]
     SandboxRows["sandbox_sessions"]
-    Custom["user_customizations"]
+    Customizations["user customizations"]
   end
 
-  Mention --> Chat --> Router --> Turn
-  Button --> Router
+  Message --> Chat --> Router --> Turn
+  Action --> Router
   Turn --> Harness --> Pi
-  Turn --> Stream --> Chat
-  Tools --> Slack
-  Pi --> Provider --> Linux
-  Resume --> SandboxRows
+  Prompt --> Harness
+  Session --> SandboxRows
+  Pi --> Provider --> Workspace
+  Harness --> HostTools
+  Turn --> Stream --> Slack
   Chat --> ChatState
-  Prompts --> Harness
-  Router --> Custom
+  Router --> Customizations
+  Skills --> Pi
 ```
-
-## Package Ownership
-
-`apps/bot` owns runtime behavior that only makes sense for Slack or for this process: event routing, Slack adapter setup, stop controls, line replies, Chat SDK tool selection, the bot-owned host tools, App Home, and logging. It also runs the per-turn orchestration loop in `lib/agent`.
-
-`packages/ai` owns platform-neutral agent setup: creating the `HarnessAgent`, creating Pi, loading and assembling prompts, selecting model attempts, opening and persisting sessions, and turning request hints into system-prompt text. It contains nothing Slack-specific.
-
-`packages/sandbox` owns the E2B implementation of the Harness sandbox provider. `E2BSandboxProvider` implements `HarnessV1SandboxProvider`, and `E2BNetworkSandboxSession` adapts E2B to the AI SDK `Experimental_SandboxSession` interface. The package manages sandbox lifecycle (create, resume, pause) and hides the E2B APIs from everything above it.
-
-`packages/db` owns the Drizzle schema and queries. It does not know about Slack UI.
 
 ## Turn Flow
 
@@ -81,52 +74,53 @@ sequenceDiagram
   participant Chat as Chat SDK
   participant Bot as apps/bot
   participant Agent as HarnessAgent/Pi
-  participant E2B as E2B sandbox
+  participant E2B as E2B
   participant DB as Postgres
 
   Slack->>Chat: message event
-  Chat->>Bot: Thread + Message
-  Bot->>Bot: shouldIgnore + routing
-  Bot->>DB: load thread state and resume state
-  Bot->>E2B: create/resume sandbox
+  Chat->>Bot: normalized Thread and Message
+  Bot->>Bot: route and ignore checks
+  Bot->>DB: load state and resume data
+  Bot->>E2B: create or resume sandbox
   Bot->>Agent: create session
-  Agent->>E2B: read/write/bash through sandbox session
-  Agent->>Bot: text deltas, reasoning, tool calls
-  Bot->>Slack: line replies + task rows
+  Agent->>E2B: run file and shell tools
+  Agent->>Bot: text, reasoning, tool events
+  Bot->>Slack: replies and task rows
   Bot->>Agent: detach session
-  Bot->>DB: persist resume pointer + session file mirror
+  Bot->>DB: store resume state and session mirror
   Bot->>E2B: pause sandbox
 ```
 
-## Why HarnessAgent
+## Package Ownership
 
-`HarnessAgent` gives Gorkie one contract for coding-agent runtimes:
+`apps/bot` owns Slack runtime behavior: adapter setup, routing, App Home, stop controls, line replies, Chat SDK tool selection, bot-owned tools, and turn orchestration.
 
-- one session per Slack thread;
-- native built-in tools like `bash`, `read`, `write`, `edit`, `grep`, `glob`, and `ls`;
-- host-defined AI SDK tools for Slack, web search, images, reminders, and uploads;
-- a unified stream of events for text, reasoning, tool calls, tool results, errors, and compaction;
-- resume/continue lifecycle state, so a thread survives restarts;
-- permission and approval surfaces.
+`packages/ai` owns platform-neutral agent setup: HarnessAgent creation, Pi creation, prompts, model attempts, and session persistence.
 
-The agent loop, history, and compaction are the hard parts of running a coding agent, and the harness owns all of them. That keeps Gorkie's own code focused on wiring Slack to the agent rather than reimplementing the loop.
+`packages/sandbox` owns the E2B Harness sandbox provider, E2B session adapter, template build, and vendored skill loading.
 
-## Why Chat SDK
+`packages/db` owns the Drizzle schema, Postgres client, and queries.
 
-Chat SDK gives Gorkie a normalized Slack surface:
+## Code Map
 
-- `Chat` owns adapters, dedupe, locking, subscriptions, and state.
-- `Thread` and `Message` normalize Slack events into a platform-neutral shape.
-- `onNewMention`, `onDirectMessage`, and `onSubscribedMessage` cover the main routing paths.
-- `createChatTools` exposes Slack reader/writer tools to the agent.
-- `StreamingPlan` lets Gorkie stream task rows separately from plain assistant text.
-
-When a Slack-specific capability is needed, Gorkie reaches past Chat SDK to the raw Slack APIs: native assistant status, App Home, the stop-button control message, file uploads, scheduled reminder messages, and assistant search. These escape hatches all stay in `apps/bot`.
+| Area | Files |
+| --- | --- |
+| Slack event routing | `apps/bot/src/bot.ts` |
+| Chat SDK setup | `apps/bot/src/lib/chat.ts` |
+| Turn orchestration | `apps/bot/src/lib/agent/index.ts` |
+| Turn interruption and stop controls | `apps/bot/src/lib/agent/steering.ts`, `apps/bot/src/lib/agent/controls.ts` |
+| Slack reply chunking | `apps/bot/src/lib/agent/line-reply.ts` |
+| Stream and task rendering | `apps/bot/src/lib/ai/stream/**` |
+| Host tools | `apps/bot/src/lib/ai/tools/**`, `apps/bot/src/lib/ai/toolset.ts` |
+| Agent construction | `packages/ai/src/agent.ts` |
+| Prompts and request hints | `packages/ai/src/prompts/**`, `apps/bot/src/lib/ai/hints.ts` |
+| Session persistence | `packages/ai/src/sessions.ts`, `packages/ai/src/files/**` |
+| E2B provider | `packages/sandbox/src/**` |
+| Database schema and queries | `packages/db/src/**` |
 
 ## Hard Boundaries
 
-- Do not put Slack-only tools in `packages/ai`.
-- Do not put model keys or MCP secrets in the sandbox.
-- Do not make the sandbox the source of truth for Slack routing.
-- Do not make Chat SDK transcript storage the agent brain. Pi/Harness session history is the brain.
-- Do not add abstractions unless they remove real complexity.
+- Do not put Slack-only behavior in `packages/ai`.
+- Do not put model keys, Slack tokens, or future MCP secrets in the sandbox.
+- Do not make Slack transcript storage the agent memory. Harness/Pi session history is the durable agent history.
+- Do not add a new abstraction unless it removes real complexity.

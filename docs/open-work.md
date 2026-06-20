@@ -1,58 +1,49 @@
 ---
 title: Open Work
-description: Known gaps, planned features, and the next cleanup passes.
+description: Known gaps, planned features, and cleanup targets.
 ---
 
-This page is the forward roadmap: known gaps, reliability work that still needs verification, and features that are planned but not yet built. It is a snapshot of where the system is heading, not a description of how it works today.
+This page tracks work that is important but not part of the current stable architecture.
 
-## Cleanup
+## Response Reliability
 
-- Keep `apps/bot/src/lib/agent/index.ts` lean; it still carries most of the turn orchestration.
-- Keep the stop button separate until Chat SDK exposes an active-stream control hook. `StreamingPlan.endWith` only appends controls after streaming completes.
-- Confirm long Slack responses reliably split into follow-up messages without `msg_too_long`.
-- Keep reducing one-use constants and helper clutter.
-- Keep skill loading simple now that Harness skill injection is the reliable path.
+- Verify long Slack responses with code blocks, tables, lists, and paragraphs.
+- Keep task rows bounded so tool-heavy turns do not hit Slack limits.
+- Keep assistant text chunking reliable before making it smaller.
+- Revisit stop-button placement only if Chat SDK exposes an active-stream control surface.
 
-## Bounded Slack Context
+## Slack Context
 
-Gorkie does not yet preload bounded Slack context before each turn. Today the prompt tells Pi to fetch Slack history with reader tools when earlier context matters.
+Gorkie should start a turn with bounded local Slack context instead of making the model discover obvious nearby context from scratch.
 
 Target behavior:
 
-- thread mentions preload the latest 50 thread messages, sorted chronologically;
-- channel mentions preload the latest 20 channel messages, sorted chronologically, excluding bot/self noise;
-- forwarded-thread behavior can use a larger cap later;
-- the prompt states exactly what was preloaded, the bounds used, and that anything outside those bounds requires a tool call;
-- reader tools stay available for older or broader context.
+- thread mentions preload the latest 50 thread messages;
+- channel mentions preload the latest 20 recent channel messages;
+- preloaded context is clearly labeled with its bounds;
+- anything outside those bounds requires a Slack read/search tool;
+- private conversations stay scoped to the current private conversation unless explicit approval exists.
 
-Bound by message count first, then add a token/character budget if real threads produce oversized prompts. Trim oldest messages first, always preserving the triggering message and its direct parent/root. Pi/Harness history remains the durable conversation memory; this preload is bounded per-turn retrieval, not a parallel transcript store.
-
-Privacy work must land first for DM and private-channel reads. The bot can read DMs its token can access, which is both useful and dangerous: scope DM reads to the current DM/thread, gate cross-DM reads behind explicit approval, and make tool descriptions state that private conversations are not general workspace memory.
+Slack context preload is per-turn retrieval. It is not a second durable memory system.
 
 ## Tool Coverage
 
-- Give every host and Chat SDK tool explicit success and error task renderers (still missing for several Chat SDK tools such as `sendDirectMessage`, `fetchMessages`, `addReaction`).
-- Add recurring scheduled-task tools: `scheduleTask`, `listScheduledTasks`, `cancelScheduledTask`.
-- Decide write-tool approval expectations. The `messenger` preset allows cross-thread/channel posts and DMs; that power needs clear approval semantics.
-- Improve scheduled reminders so the reminder references what the user asked and which thread it came from.
+- Every exposed tool should have a clear success and error task renderer.
+- Recurring scheduled task parity still needs `scheduleTask`, `listScheduledTasks`, and `cancelScheduledTask`.
+- Write tools need product-level approval rules before broader usage.
+- Scheduled reminders should include enough source context to be useful later.
 
-## Reliability
+## Recovery
 
-Needs live or harnessed verification:
+- Verify stale E2B sandbox replacement with session-file reseeding.
+- Verify attachment seeding after sandbox replacement.
+- Verify App Home customization flows.
+- Verify root mention, thread mention, subscribed reply, and DM routing.
+- Improve Langfuse/OpenTelemetry coverage for model, tool, and session internals.
 
-- stale or destroyed E2B sandbox recovery, including re-seeding the mirrored Pi session file into a fresh sandbox;
-- attachment seeding after a fresh sandbox resume;
-- Slack App Home flows: open, edit instructions, load/save presets, clear;
-- root mention vs reply-only mention vs subscribed-thread routing;
-- Langfuse/OTel depth for Harness/Pi model, tool, and session internals (AI SDK spans are not yet flowing to Langfuse).
+## Upstream Watchlist
 
-## Upstream Bets
-
-Some bridge code exists only because upstream does not cover it yet. Delete it as upstream improves:
-
-- native Harness steering that exposes queued user messages / `submitUserMessage` cleanly;
-- native skill loading that does not need the template skill bridge;
-- Pi provider/model selection that is not ENV-prefix and model-id-order dependent;
-- retry support at the Harness/Pi boundary so custom retry logic can be removed;
-- an official AI SDK E2B provider with the resume/session-file hooks Gorkie needs;
-- deeper native observability.
+- Pi provider/model selection should become less environment-prefix dependent.
+- Harness/Pi retry support could replace custom fallback logic.
+- An official AI SDK E2B provider may eventually replace local provider glue.
+- Native observability could reduce local tracing setup.
