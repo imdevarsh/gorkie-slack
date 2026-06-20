@@ -34,11 +34,27 @@ export function plural(
 
 export function errorOutput(output: unknown): string | undefined {
   if (output instanceof Error) {
-    return `Error: ${output.message}`;
+    return `**Error**: ${output.message}`;
   }
   if (typeof output === 'string') {
-    return `Error: ${output}`;
+    return `**Error**: ${output.replace(/^Error:\s*/, '')}`;
   }
   const message = textField(output, 'message') ?? textField(output, 'error');
-  return message ? `Error: ${message}` : 'Error: tool failed';
+  if (!message) {
+    return '**Error**: tool failed';
+  }
+  return `**Error**: ${message.replace(/^Error:\s*/, '')}`;
+}
+
+export function resultErrorOutput(output: unknown): string | undefined {
+  if (
+    output === null ||
+    typeof output !== 'object' ||
+    !('error' in output) ||
+    typeof output.error !== 'string' ||
+    output.error.length === 0
+  ) {
+    return;
+  }
+  return errorOutput(output);
 }

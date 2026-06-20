@@ -1,4 +1,5 @@
 import { clamp } from '@/lib/utils/text';
+import { resultErrorOutput } from './helpers';
 import { defaultTool, toolRenderers } from './renderers';
 
 type RenderPhase = 'request' | 'response' | 'error';
@@ -21,7 +22,14 @@ function renderToolPhase(
   if (phase === 'request') {
     return { details: clamp(rendered.details, 180), title };
   }
-  return { output: clamp(rendered.output), title };
+  return {
+    output: clamp(
+      phase === 'response'
+        ? (resultErrorOutput(output) ?? rendered.output)
+        : rendered.output
+    ),
+    title,
+  };
 }
 
 export function renderToolCall(args: { input: unknown; toolName: string }) {
