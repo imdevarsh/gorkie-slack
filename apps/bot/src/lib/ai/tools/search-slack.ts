@@ -5,17 +5,71 @@ import { slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 
 const actionTokenSchema = z.looseObject({
+  action_token: z.string().min(1).optional(),
   assistant_thread: z
     .object({ action_token: z.string().min(1).optional() })
     .optional(),
 });
 
+const contextMessageSchema = z
+  .looseObject({
+    text: z.string().optional(),
+    ts: z.string().optional(),
+    user_id: z.string().optional(),
+  })
+  .transform((message) => ({
+    text: message.text ?? '',
+    ts: message.ts,
+    userId: message.user_id,
+  }));
+
 const slackSearchResponseSchema = z.looseObject({
   error: z.string().optional(),
   ok: z.boolean(),
+  response_metadata: z
+    .looseObject({ next_cursor: z.string().optional() })
+    .optional(),
   results: z
-    .object({
-      messages: z.array(z.unknown()).optional(),
+    .looseObject({
+      messages: z
+        .array(
+          z
+            .looseObject({
+              author_name: z.string().optional(),
+              author_user_id: z.string().optional(),
+              channel_id: z.string().optional(),
+              channel_name: z.string().optional(),
+              content: z.string().optional(),
+              context_messages: z
+                .looseObject({
+                  after: z.array(contextMessageSchema).optional(),
+                  before: z.array(contextMessageSchema).optional(),
+                })
+                .optional(),
+              is_author_bot: z.boolean().optional(),
+              message_ts: z.string().optional(),
+              permalink: z.string().optional(),
+              team_id: z.string().optional(),
+            })
+            .transform((message) => ({
+              authorName: message.author_name,
+              authorUserId: message.author_user_id,
+              channelId: message.channel_id,
+              channelName: message.channel_name,
+              content: message.content ?? '',
+              context: message.context_messages
+                ? {
+                    after: message.context_messages.after ?? [],
+                    before: message.context_messages.before ?? [],
+                  }
+                : undefined,
+              isAuthorBot: message.is_author_bot,
+              messageTs: message.message_ts,
+              permalink: message.permalink,
+              teamId: message.team_id,
+            }))
+        )
+        .optional(),
     })
     .optional(),
 });
@@ -23,8 +77,13 @@ const slackSearchResponseSchema = z.looseObject({
 export function searchSlack({ message }: { message: Message }) {
   return tool({
     description:
-      'Search the Slack workspace for messages, files, or discussions. Use it for past conversations, decisions, files, links, or context outside the current thread.',
+      'Search Slack messages for past conversations, decisions, links, or context outside the current thread.',
     inputSchema: z.object({
+      cursor: z
+        .string()
+        .min(1)
+        .optional()
+        .describe('Cursor from a previous Slack search result page.'),
       query: z
         .string()
         .min(1)
@@ -33,10 +92,11 @@ export function searchSlack({ message }: { message: Message }) {
           'Specific Slack search query with keywords, people, channels, or dates.'
         ),
     }),
-    execute: async ({ query }) => {
+    execute: async ({ cursor, query }) => {
       const parsedRaw = actionTokenSchema.safeParse(message.raw);
       const actionToken = parsedRaw.success
-        ? parsedRaw.data.assistant_thread?.action_token
+        ? (parsedRaw.data.action_token ??
+          parsedRaw.data.assistant_thread?.action_token)
         : undefined;
 
       if (!actionToken) {
@@ -52,10 +112,16 @@ export function searchSlack({ message }: { message: Message }) {
       const parsedResponse = slackSearchResponseSchema.parse(
         await slack.webClient.apiCall('assistant.search.context', {
           action_token: actionToken,
+          content_types: ['messages'],
+          cursor,
+          include_context_messages: true,
+          limit: 10,
           query,
         })
       );
       const messages = parsedResponse.results?.messages ?? [];
+      const nextCursor =
+        parsedResponse.response_metadata?.next_cursor || undefined;
 
       if (!parsedResponse.ok) {
         const error = parsedResponse.error ?? 'unknown';
@@ -70,9 +136,10 @@ export function searchSlack({ message }: { message: Message }) {
       logger.debug({ count: messages.length, query }, '[searchSlack] complete');
       return {
         messages,
+        nextCursor,
         resultCount: messages.length,
         success: true,
-        summary: `Slack search found ${messages.length} result${messages.length === 1 ? '' : 's'} for "${query}".`,
+        summary: `Slack search found ${messages.length} message${messages.length === 1 ? '' : 's'} for "${query}".`,
       };
     },
   });
