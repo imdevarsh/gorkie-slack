@@ -4,8 +4,9 @@ import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 
 // Opt-in allowlist: when OPT_IN_CHANNEL is set, only members of that channel may
-// use Gorkie; people opt in by joining it. The set is kept in memory and synced
-// from the channel. No OPT_IN_CHANNEL means the bot is open to everyone.
+// use Gorkie. The channel gates terms-of-service acceptance, users read the terms
+// posted there and opt in by joining, which is what grants access. The set is kept
+// in memory and synced from the channel. No OPT_IN_CHANNEL means open to everyone.
 const allowedUsers = new Set<string>();
 
 export function isUserAllowed(userId: string): boolean {

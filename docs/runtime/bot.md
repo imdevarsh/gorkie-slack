@@ -38,6 +38,12 @@ Any message with a line that starts with `##` is ignored. Leading Slack mention 
 
 Messages from bots and messages from Gorkie itself are ignored.
 
+## Access Control
+
+When `OPT_IN_CHANNEL` is set, only members of that channel may use Gorkie. The channel is how users accept the terms of service: the terms are posted there, and joining the channel is the opt-in that grants access. With `OPT_IN_CHANNEL` unset, Gorkie is open to everyone.
+
+The member list is cached in memory at startup and extended live as users join. Slack has no member-left event, so a user who leaves keeps access until the next restart — an acceptable over-permission for an opt-in gate.
+
 ## Thread Opt-In
 
 A root mention opts the thread into follow-up responses. Gorkie stores that state on the Chat SDK thread and subscribes to future replies.
@@ -52,11 +58,10 @@ DMs are direct intent. Gorkie subscribes to the DM thread and answers.
 
 ## Slack APIs
 
-Chat SDK handles the normal platform shape. Gorkie uses raw Slack APIs for Slack-only behavior:
+Chat SDK handles the normal platform shape, including cards, modals, file uploads, and scheduled messages. Gorkie still uses raw Slack APIs for Slack-only behavior the SDK does not model:
 
-- native assistant thinking status;
-- App Home customizations;
-- stop button blocks;
-- file uploads;
-- scheduled reminder messages;
-- assistant search.
+- native assistant thinking status and suggested prompts;
+- App Home customizations (views publish/open/update);
+- assistant search;
+- channel and workspace name lookups;
+- the opt-in channel member list.

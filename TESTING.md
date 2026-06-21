@@ -43,6 +43,7 @@ Record the Slack thread ID when a manual test proves or disproves something. Del
 
 - [ ] Ping: mention Gorkie and confirm it replies in the expected thread.
 - [ ] Ignore: send a `##` message and confirm Gorkie does not respond.
+- [ ] Opt-in gate (only when `OPT_IN_CHANNEL` is set): a member of the opt-in channel gets a reply, a non-member is silently ignored, and a user who joins the channel mid-session is allowed on their next message.
 - [ ] Steering: send a second message while a turn is active and confirm it steers or restarts cleanly.
 - [ ] Stop: click the stop control and confirm the active turn aborts.
 - [ ] Long response: force markdown-heavy output and confirm no `msg_too_long`.
@@ -57,6 +58,20 @@ Record the Slack thread ID when a manual test proves or disproves something. Del
 - [ ] Sandbox recovery: destroy or invalidate a stored sandbox, send a follow-up, and confirm a fresh sandbox is created.
 - [ ] File upload: create a sandbox artifact and confirm `uploadFile` uploads it to Slack.
 - [ ] App Home: open, edit custom instructions, save, reload, and clear.
+
+## Access Control (opt-in gate)
+
+The opt-in channel is the terms-of-service gate: users accept the terms by joining the channel, which grants access. This only applies when `OPT_IN_CHANNEL` is set. With it unset, the bot is open to everyone and `isUserAllowed` always returns true, so skip this section.
+
+Set `OPT_IN_CHANNEL` to a test channel's ID and restart the bot. The allowlist is cached in memory at startup from that channel's members, then extended live via `member_joined_channel`. There is no member-left event, so leavers stay allowed until the next restart.
+
+Steps:
+
+1. As a member of the opt-in channel, mention Gorkie in another channel or DM and confirm it replies.
+2. As a non-member, mention Gorkie and confirm it stays silent (watch logs: the message is dropped in `shouldIgnore`, no `[agent]` turn starts).
+3. With the bot running, have the non-member join the opt-in channel, then send a new message and confirm they are now allowed without a restart.
+
+Watch logs for `[allowlist] opt-in cache built` at startup with a plausible member count.
 
 ## Example Prompts
 
