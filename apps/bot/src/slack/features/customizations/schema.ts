@@ -16,6 +16,11 @@ const slackInputValuesSchema = z.record(
   )
 );
 
+export const openedViewSchema = z.object({
+  hash: z.string(),
+  id: z.string(),
+});
+
 export const slackActionViewSchema = z.object({
   view: z.object({
     hash: z.string(),

@@ -1,4 +1,8 @@
 import { callSlackApi, openSlackView } from '@chat-adapter/slack/api';
+import {
+  createSlackMrkdwn,
+  createSlackPlainText,
+} from '@chat-adapter/slack/format';
 import { personas } from '@repo/ai';
 import {
   clearUserCustomization,
@@ -10,6 +14,7 @@ import { env } from '@/env';
 import { bot } from '@/lib/chat';
 import logger from '@/lib/logger';
 import {
+  openedViewSchema,
   PROMPT_INPUT,
   parseModalState,
   promptFromViewValues,
@@ -36,6 +41,33 @@ bot.onAction('home_edit_prompt', async (event) => {
     return;
   }
 
+  const opened = await openSlackView({
+    token: env.SLACK_BOT_TOKEN,
+    triggerId: event.triggerId,
+    view: {
+      blocks: [
+        {
+          text: createSlackMrkdwn('Loading custom instructions...'),
+          type: 'section',
+        },
+      ],
+      callback_id: 'home_save_prompt',
+      close: createSlackPlainText('Cancel'),
+      title: createSlackPlainText('Custom Instructions'),
+      type: 'modal',
+    },
+  }).catch((error: unknown) => {
+    logger.warn(
+      { ...toLogError(error), userId: event.user.userId },
+      'Failed to open custom instructions modal'
+    );
+    return null;
+  });
+  const view = openedViewSchema.safeParse(opened?.view);
+  if (!view.success) {
+    return;
+  }
+
   const customization = await getUserCustomization(event.user.userId).catch(
     (error: unknown) => {
       logger.warn(
@@ -46,14 +78,18 @@ bot.onAction('home_edit_prompt', async (event) => {
     }
   );
 
-  await openSlackView({
-    token: env.SLACK_BOT_TOKEN,
-    triggerId: event.triggerId,
-    view: buildPromptModal({ prompt: customization?.prompt ?? null }),
-  }).catch((error: unknown) => {
+  await callSlackApi(
+    'views.update',
+    {
+      hash: view.data.hash,
+      view: buildPromptModal({ prompt: customization?.prompt ?? null }),
+      view_id: view.data.id,
+    },
+    { token: env.SLACK_BOT_TOKEN }
+  ).catch((error: unknown) => {
     logger.warn(
       { ...toLogError(error), userId: event.user.userId },
-      'Failed to open custom instructions modal'
+      'Failed to load custom instructions modal'
     );
   });
 });
