@@ -34,11 +34,6 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] Finish success and error renderers for currently exposed Chat SDK tools: `sendDirectMessage`, `postMessage`, `postChannelMessage`, `listThreads`, `readConversationHistory`, `getChannelInfo`, `getUser`, and `addReaction`.
 - [ ] Add renderers when new tools are exposed; do not keep renderer TODOs for disabled tools.
 
-## P2 - Old Gorkie Tool Parity
-
-- [ ] Implement recurring scheduled task parity: `scheduleTask`, `listScheduledTasks`, `cancelScheduledTask`.
-- [ ] Verify all old Gorkie skills/tools with one live or harnessed smoke path.
-
 ## P2 - Reliability Verification
 
 - [ ] Verify sandbox deletion recovery: delete or destroy a stored sandbox, send a follow-up in the same Slack thread, confirm v2 creates a fresh sandbox, re-seeds the mirrored Pi session file, and preserves conversation memory.
@@ -61,3 +56,5 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] Native Langfuse / OTel support deep enough for Harness/Pi model/tool/session internals.
 - [ ] Official AI SDK E2B provider support with the resume/session-file hooks Gorkie needs.
 - [ ] Add Pi-level retry parity from the old implementation so transient provider failures can retry within Pi before Gorkie's outer attempt fallback runs.
+
+- [ ] Rewrite and cleanup line-reply, since it has a BUNCH of code, which can just be achieved from asking the ai to do \n\n for every response, like tables, etc. and not to exceed 3k
