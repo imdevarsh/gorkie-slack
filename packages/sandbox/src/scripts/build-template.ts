@@ -88,7 +88,6 @@ async function main(): Promise<void> {
         'python3 -m pip install --no-cache-dir --break-system-packages --no-user pillow matplotlib numpy pandas requests agentmail',
         'npm install -g agent-browser',
         'bash -lc "yes | agent-browser install --with-deps"',
-        'mkdir -p /home/user/attachments /home/user/output',
         'chown -R user:user /home/user',
       ])
       .setUser('user')

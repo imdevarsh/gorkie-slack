@@ -193,6 +193,10 @@ async function executeTurn(
           attempt: currentAttempt,
           onSandboxReady: async (context) => {
             sandboxContext = context;
+            await context.session.writeBinaryFile({
+              content: new Uint8Array(),
+              path: `${context.sessionWorkDir}/output/.keep`,
+            });
             attachments = await seedAttachments({
               message,
               sandboxContext: context,

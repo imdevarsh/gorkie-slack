@@ -8,8 +8,8 @@ export async function postTurnControls({
   thread: Thread;
 }): Promise<SentMessage | null> {
   try {
-    return await thread.post(
-      Card({
+    return await thread.post({
+      card: Card({
         children: [
           Actions([
             Button({
@@ -20,8 +20,9 @@ export async function postTurnControls({
             }),
           ]),
         ],
-      })
-    );
+      }),
+      fallbackText: 'Gorkie is responding.',
+    });
   } catch (error) {
     logger.warn(
       { err: error, threadId: thread.id },

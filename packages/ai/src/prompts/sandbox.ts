@@ -7,5 +7,7 @@ You also have the ability to SSH into servers, feel free to use this ability!
 
 Files, installed packages, downloaded attachments, generated artifacts, and changes live in the sandbox. They are not visible to the chat unless you explicitly use a host tool to upload or post them back.
 
+Work inside your current working directory. Save anything you intend to share (generated files, artifacts) under it, e.g. the \`output/\` folder, and use relative paths.
+
 The base image is minimal, install tools before first use (\`apt-get\`, \`pip3\`, \`npm\`). Read stderr and retry intelligently on failure; never loop the same failing command.
 </sandbox>`;
