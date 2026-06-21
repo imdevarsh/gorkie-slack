@@ -6,10 +6,7 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 
 - [ ] Decide whether `apps/bot/src/lib/ai/stream/index.ts` should keep its three stream-state collections or move to a small state object. Do not refactor unless it clearly reduces clutter.
 - [ ] Live verify markdown-heavy long Slack responses split into follow-up messages without `msg_too_long`, broken tables, broken code fences, stranded list items, or dangling intro lines.
-- [ ] Investigate why E2B template-installed skills are not visible to Pi. Check where `npx skills add` writes files, what `$HOME` is during build and runtime, and which `.agents/skills` roots the Pi adapter actually exposes through its resource loader.
-- [ ] Revisit `continueFrom` before MCP/tool-approval work. Current steering/retry behavior intentionally strips `continueFrom` and starts a fresh prompt from persisted session history; MCP approvals may need true suspended-turn continuation via `doContinueTurn`.
-- [ ] Fix Slack search expectations. `searchSlack` currently uses Slack `assistant.search.context`; zero results are not an API error and do not mean the whole channel was searched. Add clearer model-facing wording, logging, or a separate channel/thread history path.
-- [ ] Re-apply or discard stashed thermo cleanup follow-ups from stash commit `b3da0360c12bb8d1c28fd9849c18fbb747845698`. Captured files: `apps/bot/src/lib/agent/index.ts`, `apps/bot/src/lib/agent/line-reply.ts`, `apps/bot/src/lib/ai/hints.ts`, `apps/bot/src/slack/features/assistant/index.ts`, `packages/ai/src/prompts/context.ts`, and `packages/ai/src/prompts/hints.ts`.
+- [ ] Add-assistant sidebar features, like context on the assistant sidebar for channel id, etc. `b3da0360c12bb8d1c28fd9849c18fbb747845698`. 
 
 ## P1 - Bounded Slack Context And History
 
@@ -20,19 +17,12 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] Convert fetched Slack messages with `toAiMessages` from `chat/ai` when feeding model-message shaped context is useful. Prefer `includeNames: true` for multi-user thread context so Pi can distinguish speakers.
 - [ ] Keep the model-facing history surface small: `listThreads` for public channel thread discovery and `readConversationHistory` for public channel/thread reads. Add another tool only if the model cannot complete a real workflow cleanly.
 - [ ] Tighten Slack reader-tool privacy gates during broad history work. Gorkie can read DMs it has token access to, which is useful for current DM conversations but dangerous if tools let one user fetch or search another user's private DM context. Scope DM reads to the current DM/thread, block or require explicit approval for cross-DM reads, and make model-facing tool descriptions say private conversations are not general workspace memory.
-- [ ] Do not store a parallel full Slack transcript as the brain. Pi/Harness history remains the durable conversation memory; Slack context preload is bounded retrieval for the current turn.
 - [ ] Make prompt text explicit: tell Pi which context was preloaded, the bounds used, and that anything outside those bounds requires calling Slack/Chat tools rather than pretending it saw the whole workspace.
 - [ ] Bound by message count first, then add a token/character budget if real Slack threads produce oversized prompts. Trim oldest messages first, preserving the triggering message and direct parent/root.
 - [ ] Include attachments only through Chat SDK supported paths. `toAiMessages` can include images and text-like files when `fetchData()` exists; log skipped unsupported attachments without failing the turn.
 - [ ] Respect permissions and private-channel access. If Slack history fetch fails, continue with a short context note saying history was unavailable and let Pi use tools if needed.
 - [ ] Add tests or harnessed smoke coverage for: thread mention with 50-message cap, channel mention with 20-message cap, DM follow-up, failed history fetch, and attachment-skipping behavior.
 - [ ] Live verify in Slack that Gorkie can answer a thread-context question from the preload, and can still call `readConversationHistory` for older or broader context.
-
-## P1 - Tool UX
-
-- [ ] Ensure every restored old-Gorkie tool has success and error task rendering.
-- [ ] Finish success and error renderers for currently exposed Chat SDK tools: `sendDirectMessage`, `postMessage`, `postChannelMessage`, `listThreads`, `readConversationHistory`, `getChannelInfo`, `getUser`, and `addReaction`.
-- [ ] Add renderers when new tools are exposed; do not keep renderer TODOs for disabled tools.
 
 ## P2 - Reliability Verification
 
@@ -44,8 +34,8 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 
 ## P3 - Tool Scope Decisions
 
-- [ ] Decide whether to keep Chat SDK tools in the `messenger` preset or restrict/approve write tools. `messenger` allows cross-thread/channel posts and DMs, which helps old-Gorkie parity but needs clear approval expectations.
 - [ ] Improve scheduled reminders, to say here's your reminder for xyz you asked in this thread, xyz
+- [ ] Rewrite and cleanup line-reply, since it has a BUNCH of code, which can just be achieved from asking the ai to do \n\n for every response, like tables, etc. and not to exceed 3k
 
 ## Upstream AI SDK / Harness Expectations
 
@@ -57,4 +47,3 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] Official AI SDK E2B provider support with the resume/session-file hooks Gorkie needs.
 - [ ] Add Pi-level retry parity from the old implementation so transient provider failures can retry within Pi before Gorkie's outer attempt fallback runs.
 
-- [ ] Rewrite and cleanup line-reply, since it has a BUNCH of code, which can just be achieved from asking the ai to do \n\n for every response, like tables, etc. and not to exceed 3k
