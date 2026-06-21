@@ -10,14 +10,13 @@ import { env } from '@/env';
 import { bot } from '@/lib/chat';
 import logger from '@/lib/logger';
 import {
-  openedViewSchema,
   PROMPT_INPUT,
   parseModalState,
   promptFromViewValues,
   slackActionViewSchema,
 } from './schema';
 import { publishHome } from './service';
-import { buildLoadingModal, buildPresetModal, buildPromptModal } from './views';
+import { buildPresetModal, buildPromptModal } from './views';
 
 bot.onAppHomeOpened(async (event) => {
   await publishHome({ userId: event.userId }).catch((error: unknown) => {
@@ -37,27 +36,6 @@ bot.onAction('home_edit_prompt', async (event) => {
     return;
   }
 
-  const opened = await openSlackView({
-    token: env.SLACK_BOT_TOKEN,
-    triggerId: event.triggerId,
-    view: buildLoadingModal(),
-  }).catch((error: unknown) => {
-    logger.warn(
-      { ...toLogError(error), userId: event.user.userId },
-      'Failed to open custom instructions modal'
-    );
-    return null;
-  });
-
-  const openedView = openedViewSchema.safeParse(opened?.view);
-  if (!(opened && openedView.success)) {
-    logger.warn(
-      { userId: event.user.userId },
-      'Custom instructions modal opened without a view ID'
-    );
-    return;
-  }
-
   const customization = await getUserCustomization(event.user.userId).catch(
     (error: unknown) => {
       logger.warn(
@@ -68,18 +46,14 @@ bot.onAction('home_edit_prompt', async (event) => {
     }
   );
 
-  await callSlackApi(
-    'views.update',
-    {
-      hash: openedView.data.hash,
-      view: buildPromptModal({ prompt: customization?.prompt ?? null }),
-      view_id: openedView.data.id,
-    },
-    { token: env.SLACK_BOT_TOKEN }
-  ).catch((error: unknown) => {
+  await openSlackView({
+    token: env.SLACK_BOT_TOKEN,
+    triggerId: event.triggerId,
+    view: buildPromptModal({ prompt: customization?.prompt ?? null }),
+  }).catch((error: unknown) => {
     logger.warn(
       { ...toLogError(error), userId: event.user.userId },
-      'Failed to update custom instructions modal'
+      'Failed to open custom instructions modal'
     );
   });
 });

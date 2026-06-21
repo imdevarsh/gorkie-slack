@@ -14,24 +14,16 @@ const slackInputValuesSchema = z.record(
   z.string(),
   z.record(
     z.string(),
-    z.object({ value: z.string().nullable().optional() }).passthrough()
+    z.looseObject({ value: z.string().nullable().optional() })
   )
 );
-
-export const openedViewSchema = z.object({
-  hash: z.string(),
-  id: z.string(),
-});
 
 export const slackActionViewSchema = z.object({
   view: z.object({
     hash: z.string(),
     id: z.string(),
     private_metadata: z.string().optional(),
-    state: z
-      .object({ values: z.unknown().optional() })
-      .passthrough()
-      .optional(),
+    state: z.looseObject({ values: z.unknown().optional() }).optional(),
   }),
 });
 

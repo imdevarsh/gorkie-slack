@@ -12,9 +12,6 @@ import type { Logger } from '@repo/logging/logger';
 import { sandboxConfig } from './config';
 import { E2BNetworkSandboxSession, isMissingSandboxError } from './session';
 
-const PROVIDER_ID = 'e2b';
-const SPECIFICATION_VERSION = 'harness-sandbox-v1';
-
 export interface E2BSandboxProviderOptions {
   apiKey: string;
   logger: Logger;
@@ -37,8 +34,8 @@ function connectE2BSandbox(
 }
 
 export class E2BSandboxProvider implements HarnessV1SandboxProvider {
-  readonly providerId = PROVIDER_ID;
-  readonly specificationVersion = SPECIFICATION_VERSION;
+  readonly providerId = 'e2b';
+  readonly specificationVersion = 'harness-sandbox-v1';
 
   private readonly apiKey: string;
   private readonly template: string;

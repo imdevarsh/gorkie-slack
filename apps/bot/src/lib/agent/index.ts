@@ -27,7 +27,6 @@ import { runQueuedTurn } from '@/lib/ai/turn-queue';
 import { bot, slack } from '@/lib/chat';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
-import { setThinking } from '@/lib/slack/thread';
 
 const activeTurns = new Map<string, ActiveTurn>();
 
@@ -85,7 +84,7 @@ async function executeTurn(
     pendingMessages: [],
   };
   activeTurns.set(threadId, activeTurn);
-  await setThinking(thread);
+  await thread.startTyping('is thinking');
 
   let session: Awaited<ReturnType<typeof openSession>> | undefined;
   let activeAttempt: PiAttempt | undefined;

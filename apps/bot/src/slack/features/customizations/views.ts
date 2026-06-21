@@ -76,21 +76,6 @@ export function buildHomeView({
   return { blocks, type: 'home' };
 }
 
-export function buildLoadingModal(): SlackModalView {
-  return {
-    blocks: [
-      {
-        text: createSlackMrkdwn('Loading custom instructions...'),
-        type: 'section',
-      },
-    ],
-    callback_id: 'home_save_prompt',
-    close: createSlackPlainText('Cancel'),
-    title: createSlackPlainText('Custom Instructions'),
-    type: 'modal',
-  };
-}
-
 export function buildPromptModal({
   prompt,
   showPresets = false,

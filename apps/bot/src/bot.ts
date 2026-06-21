@@ -1,7 +1,9 @@
+import { toLogError } from '@repo/utils/error';
 import type { Message } from 'chat';
 import { runTurn, stopTurn } from '@/lib/agent';
 import { isUserAllowed } from '@/lib/allowed-users';
 import { bot } from '@/lib/chat';
+import logger from '@/lib/logger';
 import '@/slack/features/assistant';
 import '@/slack/features/customizations';
 
@@ -50,7 +52,16 @@ bot.onAction('stop_turn', async (event) => {
       ?.postEphemeral(event.user, 'No active response to stop.', {
         fallbackToDM: false,
       })
-      .catch(() => undefined);
+      .catch((error: unknown) => {
+        logger.warn(
+          {
+            ...toLogError(error),
+            threadId,
+            userId: event.user.userId,
+          },
+          'Failed to post stop feedback'
+        );
+      });
   }
 });
 

@@ -2,6 +2,8 @@ import { clamp } from '@/lib/utils/text';
 import { resultErrorOutput } from './helpers';
 import { defaultTool, toolRenderers } from './renderers';
 
+const REQUEST_DETAILS_MAX_LENGTH = 180;
+
 type RenderPhase = 'request' | 'response' | 'error';
 
 function renderToolPhase(
@@ -20,7 +22,10 @@ function renderToolPhase(
   const rendered = renderer({ input, output, toolName });
   const title = rendered.title ?? entry?.title ?? toolName;
   if (phase === 'request') {
-    return { details: clamp(rendered.details, 180), title };
+    return {
+      details: clamp(rendered.details, REQUEST_DETAILS_MAX_LENGTH),
+      title,
+    };
   }
   return {
     output: clamp(

@@ -4,25 +4,21 @@ import { z } from 'zod';
 import { slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 
-const actionTokenSchema = z
-  .object({
-    assistant_thread: z
-      .object({ action_token: z.string().min(1).optional() })
-      .optional(),
-  })
-  .passthrough();
+const actionTokenSchema = z.looseObject({
+  assistant_thread: z
+    .object({ action_token: z.string().min(1).optional() })
+    .optional(),
+});
 
-const slackSearchResponseSchema = z
-  .object({
-    error: z.string().optional(),
-    ok: z.boolean(),
-    results: z
-      .object({
-        messages: z.array(z.unknown()).optional(),
-      })
-      .optional(),
-  })
-  .passthrough();
+const slackSearchResponseSchema = z.looseObject({
+  error: z.string().optional(),
+  ok: z.boolean(),
+  results: z
+    .object({
+      messages: z.array(z.unknown()).optional(),
+    })
+    .optional(),
+});
 
 export function searchSlack({ message }: { message: Message }) {
   return tool({

@@ -1,4 +1,5 @@
 import { postSlackMessage } from '@chat-adapter/slack/api';
+import { toLogError } from '@repo/utils/error';
 import { env } from '@/env';
 import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
@@ -33,7 +34,16 @@ bot.onAssistantThreadStarted(async (event) => {
 bot.onAssistantContextChanged(async (event) => {
   await slack
     .setAssistantStatus(event.channelId, event.threadTs, 'Updating context...')
-    .catch(() => undefined);
+    .catch((error: unknown) => {
+      logger.warn(
+        {
+          ...toLogError(error),
+          channelId: event.channelId,
+          threadTs: event.threadTs,
+        },
+        'Failed to update assistant status'
+      );
+    });
 
   await slack
     .setSuggestedPrompts(event.channelId, event.threadTs, [
@@ -72,5 +82,10 @@ bot.onMemberJoinedChannel(async (event) => {
     channel: event.channelId,
     text: "Hello! I'm now available in this channel. Mention me to get started.",
     token: env.SLACK_BOT_TOKEN,
-  }).catch(() => undefined);
+  }).catch((error: unknown) => {
+    logger.warn(
+      { ...toLogError(error), channelId: event.channelId },
+      'Failed to post channel join greeting'
+    );
+  });
 });
