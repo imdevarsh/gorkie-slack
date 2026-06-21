@@ -249,7 +249,6 @@ async function executeTurn(
         attemptHistory.push({ attempt: currentAttempt, error });
         const retryAttempt = nextAttempt({
           attempts: chatAttempts,
-          error,
           failures: attemptHistory,
         });
         if (controller.signal.aborted || hasStreamed || !retryAttempt) {

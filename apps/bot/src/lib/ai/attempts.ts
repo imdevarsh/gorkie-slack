@@ -1,4 +1,4 @@
-import { isRetryable, type PiAttempt } from '@repo/ai';
+import type { PiAttempt } from '@repo/ai';
 
 export interface AttemptFailure {
   attempt: PiAttempt;
@@ -7,16 +7,11 @@ export interface AttemptFailure {
 
 export function nextAttempt({
   attempts,
-  error,
   failures,
 }: {
   attempts: PiAttempt[];
-  error: unknown;
   failures: AttemptFailure[];
 }): PiAttempt | undefined {
-  if (!isRetryable(error)) {
-    return;
-  }
   return attempts.find(
     (attempt) =>
       !failures.some(

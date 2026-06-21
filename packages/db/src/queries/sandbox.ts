@@ -43,8 +43,6 @@ export async function upsert(session: NewSandboxSession): Promise<void> {
         pausedAt: session.pausedAt ?? null,
         resumedAt: session.resumedAt ?? null,
         destroyedAt: session.destroyedAt ?? null,
-        // Drizzle's `$onUpdate` does not fire for `onConflictDoUpdate`, so bump
-        // `updated_at` manually on the conflict path.
         updatedAt: new Date(),
       },
     });

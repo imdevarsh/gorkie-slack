@@ -9,9 +9,8 @@ This is the documentation view of the active cleanup list. `REWRITE_TODO.md` rem
 
 - [ ] Decide whether `apps/bot/src/lib/ai/stream/index.ts` should keep its three stream-state collections or move to a small state object.
 - [ ] Live verify markdown-heavy long Slack responses split without `msg_too_long`, broken tables, broken code fences, stranded list items, or dangling intro lines.
-- [ ] Revisit `continueFrom` before MCP/tool-approval work.
 - [ ] Fix Slack search expectations around Slack assistant search tokens and zero-result behavior.
-- [ ] Re-apply or discard stashed thermo cleanup follow-ups from stash commit `b3da0360c12bb8d1c28fd9849c18fbb747845698`.
+- [ ] Bring assistant context like present channel in for Assistants Panel by slack [commit: `b3da0360c12bb8d1c28fd9849c18fbb747845698`].
 
 ## P1 Bounded Slack Context
 
@@ -26,12 +25,6 @@ This is the documentation view of the active cleanup list. `REWRITE_TODO.md` rem
 - [ ] Include attachments only through supported Chat SDK paths.
 - [ ] Add smoke coverage for bounded context behavior.
 
-## P1 Tool UX
-
-- [ ] Ensure every restored old-Gorkie tool has success and error task rendering.
-- [ ] Finish renderers for `sendDirectMessage`, `postMessage`, `postChannelMessage`, `listThreads`, `readConversationHistory`, `getChannelInfo`, `getUser`, and `addReaction`.
-- [ ] Add renderers when new tools are exposed.
-
 ## P2 Tool Parity
 
 - [ ] Implement recurring scheduled task tools: `scheduleTask`, `listScheduledTasks`, `cancelScheduledTask`.
@@ -44,10 +37,10 @@ This is the documentation view of the active cleanup list. `REWRITE_TODO.md` rem
 - [ ] Verify App Home customization flows.
 - [ ] Verify root mention, reply-only mention, subscribed thread, and DM routing.
 - [ ] Verify Langfuse receives useful Harness/Pi spans.
-
+= [ ] Another problem is to properly detect errors in pi-agent, it doesn't detect properly
+- [ ] Also, another problem the switching mdoel in sandbox doesnt wokr well [ i mean if sandbox alr has a model selected ]
 ## P3 Product Decisions
 
-- [ ] Decide whether to keep Chat SDK `messenger` preset write tools or restrict/approve them.
 - [ ] Improve scheduled reminder copy with source context.
 
 ## Upstream Watchlist
