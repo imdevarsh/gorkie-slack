@@ -1,6 +1,4 @@
-import { postSlackMessage } from '@chat-adapter/slack/api';
 import { toLogError } from '@repo/utils/error';
-import { env } from '@/env';
 import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 
@@ -78,14 +76,15 @@ bot.onMemberJoinedChannel(async (event) => {
     return;
   }
 
-  await postSlackMessage({
-    channel: event.channelId,
-    text: "Hello! I'm now available in this channel. Mention me to get started.",
-    token: env.SLACK_BOT_TOKEN,
-  }).catch((error: unknown) => {
-    logger.warn(
-      { ...toLogError(error), channelId: event.channelId },
-      'Failed to post channel join greeting'
-    );
-  });
+  await bot
+    .channel(event.channelId)
+    .post(
+      "Hello! I'm now available in this channel. Mention me to get started."
+    )
+    .catch((error: unknown) => {
+      logger.warn(
+        { ...toLogError(error), channelId: event.channelId },
+        'Failed to post channel join greeting'
+      );
+    });
 });

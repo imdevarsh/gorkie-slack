@@ -5,4 +5,4 @@ export const sandboxConfig = {
   workdir: '/home/user',
   timeoutMs: 10 * MINUTE_MS,
   executionTimeoutMs: 20 * MINUTE_MS,
-} as const;
+};

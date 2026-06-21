@@ -18,10 +18,13 @@ export interface E2BSandboxProviderOptions {
   template?: string;
 }
 
-function connectE2BSandbox(
-  sandboxId: string,
-  apiKey: string
-): Promise<Sandbox | null> {
+function connectE2BSandbox({
+  apiKey,
+  sandboxId,
+}: {
+  apiKey: string;
+  sandboxId: string;
+}): Promise<Sandbox | null> {
   return Sandbox.connect(sandboxId, {
     apiKey,
     timeoutMs: sandboxConfig.timeoutMs,
@@ -52,16 +55,14 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
   ): Promise<Sandbox> => {
     const sandbox = await Sandbox.betaCreate(this.template, {
       apiKey: this.apiKey,
-      autoPause: true,
-      allowInternetAccess: true,
+      lifecycle: { onTimeout: 'pause' },
       timeoutMs: sandboxConfig.timeoutMs,
       metadata: {
         app: 'gorkie',
         ...(sessionId ? { threadId: sessionId } : {}),
       },
     });
-    await sandbox.setTimeout(sandboxConfig.timeoutMs);
-    await sandbox.files.makeDir(sandboxConfig.workdir).catch(() => undefined);
+    await sandbox.files.makeDir(sandboxConfig.workdir);
     return sandbox;
   };
 
@@ -82,12 +83,17 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
 
     const existing = sessionId ? await getByThread(sessionId) : null;
     let sandbox = existing
-      ? await connectE2BSandbox(existing.sandboxId, this.apiKey)
+      ? await connectE2BSandbox({
+          apiKey: this.apiKey,
+          sandboxId: existing.sandboxId,
+        })
       : null;
     if (sandbox && sessionId) {
       await sandbox
         .setTimeout(sandboxConfig.timeoutMs)
-        .then(() => sandbox?.files.makeDir(sandboxConfig.workdir))
+        .then(async () => {
+          await sandbox?.files.makeDir(sandboxConfig.workdir);
+        })
         .catch((error: unknown) => {
           if (isMissingSandboxError(error)) {
             sandbox = null;
@@ -157,7 +163,10 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
       throw new Error(`[sandbox] missing e2b sandbox for ${sessionId}`);
     }
 
-    let sandbox = await connectE2BSandbox(existing.sandboxId, this.apiKey);
+    let sandbox = await connectE2BSandbox({
+      apiKey: this.apiKey,
+      sandboxId: existing.sandboxId,
+    });
     if (sandbox) {
       await sandbox.setTimeout(sandboxConfig.timeoutMs);
       this.logger.debug(

@@ -1,6 +1,4 @@
-import { uploadSlackFiles } from '@chat-adapter/slack/api';
 import type { Thread } from 'chat';
-import { env } from '@/env';
 
 export interface SlackThread {
   channel: string;
@@ -13,26 +11,4 @@ export function getThread(thread: Thread): SlackThread | undefined {
     return;
   }
   return { channel, threadTs };
-}
-
-export async function uploadFileToThread({
-  file,
-  filename,
-  thread,
-  title,
-}: {
-  file: Buffer;
-  filename: string;
-  thread: Thread;
-  title: string;
-}): Promise<void> {
-  const slackThread = getThread(thread);
-  if (!slackThread) {
-    throw new Error('Cannot upload file outside a Slack thread.');
-  }
-  await uploadSlackFiles([{ data: file, filename, title }], {
-    channelId: slackThread.channel,
-    threadTs: slackThread.threadTs,
-    token: env.SLACK_BOT_TOKEN,
-  });
 }

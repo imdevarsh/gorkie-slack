@@ -2,7 +2,7 @@ import { errorMessage } from '@repo/utils/error';
 import { tool } from 'ai';
 import type { Message } from 'chat';
 import { z } from 'zod';
-import { slack } from '@/lib/chat';
+import { bot } from '@/lib/chat';
 
 export function scheduleReminderTool({ message }: { message: Message }) {
   return tool({
@@ -22,16 +22,12 @@ export function scheduleReminderTool({ message }: { message: Message }) {
         .describe('Seconds from now to send the reminder.'),
     }),
     execute: async ({ text, seconds }) => {
-      const postAt = Math.floor(Date.now() / 1000) + seconds;
+      const postAt = new Date(Date.now() + seconds * 1000);
       try {
-        await slack.webClient.apiCall('chat.scheduleMessage', {
-          channel: message.author.userId,
-          post_at: postAt,
-          text,
-        });
+        const dm = await bot.openDM(message.author);
+        await dm.schedule({ markdown: text }, { postAt });
         return {
-          postAt,
-          scheduledFor: new Date(postAt * 1000).toISOString(),
+          scheduledFor: postAt.toISOString(),
           success: true,
           userId: message.author.userId,
         };

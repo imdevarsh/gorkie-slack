@@ -18,7 +18,7 @@ export async function postTurnControls({
     return await thread.post(
       Card({
         children: [
-          CardText('Gorkie is responding…'),
+          CardText('Gorkie is responding...'),
           Actions([
             Button({
               id: 'stop_turn',

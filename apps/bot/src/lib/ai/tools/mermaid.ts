@@ -3,7 +3,6 @@ import { errorMessage } from '@repo/utils/error';
 import { tool } from 'ai';
 import type { Thread } from 'chat';
 import { z } from 'zod';
-import { uploadFileToThread } from '@/lib/slack/thread';
 
 export function mermaidTool({ thread }: { thread: Thread }) {
   return tool({
@@ -38,11 +37,14 @@ export function mermaidTool({ thread }: { thread: Thread }) {
             `Mermaid image generation failed: ${response.status}`
           );
         }
-        await uploadFileToThread({
-          file: Buffer.from(await response.arrayBuffer()),
-          filename: 'diagram.png',
-          thread,
-          title: title ?? 'Mermaid Diagram',
+        await thread.post({
+          files: [
+            {
+              data: Buffer.from(await response.arrayBuffer()),
+              filename: 'diagram.png',
+            },
+          ],
+          markdown: title ?? 'Mermaid Diagram',
         });
         return { success: true, title: title ?? 'Mermaid Diagram' };
       } catch (error) {
