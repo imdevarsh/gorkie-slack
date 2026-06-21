@@ -16,14 +16,14 @@ export const chatAttempts: PiAttempt[] = [
       },
     ]
     : []),
-  // {
-  //   customEnv: {
-  //     OPENROUTER_API_KEY: env.HACKCLUB_API_KEY,
-  //     OPENROUTER_BASE_URL: 'https://ai.hackclub.com/proxy/v1',
-  //   },
-  //   model: 'google/gemini-3-flash-preview',
-  //   provider: 'hackclub',
-  // },
+  {
+    customEnv: {
+      OPENROUTER_API_KEY: env.HACKCLUB_API_KEY,
+      OPENROUTER_BASE_URL: 'https://ai.hackclub.com/proxy/v1',
+    },
+    model: 'google/gemini-3-flash-preview',
+    provider: 'hackclub',
+  },
   // ...(env.OPENROUTER_API_KEY
   //   ? [
   //       {
