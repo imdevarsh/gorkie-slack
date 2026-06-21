@@ -36,6 +36,7 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 
 - [ ] Improve scheduled reminders, to say here's your reminder for xyz you asked in this thread, xyz
 - [ ] Rewrite and cleanup line-reply, since it has a BUNCH of code, which can just be achieved from asking the ai to do \n\n for every response, like tables, etc. and not to exceed 3k
+- [ ] Refactor error message rendering 
 
 ## Upstream AI SDK / Harness Expectations
 
