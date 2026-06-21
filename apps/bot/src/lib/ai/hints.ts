@@ -2,7 +2,6 @@ import type { RequestHints } from '@repo/ai';
 import { getUserCustomization } from '@repo/db/queries';
 import type { Message, Thread } from 'chat';
 import { resolveChannelName, resolveServerName } from '@/lib/slack/names';
-import { getThread } from '@/lib/slack/thread';
 
 export async function requestHints({
   message,
@@ -11,8 +10,7 @@ export async function requestHints({
   message: Message;
   thread: Thread;
 }): Promise<RequestHints> {
-  const slackThread = getThread(thread);
-  const channelId = slackThread?.channel ?? thread.channelId;
+  const channelId = thread.id.split(':')[1] ?? thread.channelId;
   const [channel, server, customization] = await Promise.all([
     resolveChannelName(channelId),
     resolveServerName(),
