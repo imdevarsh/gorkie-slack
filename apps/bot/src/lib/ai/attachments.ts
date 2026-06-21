@@ -75,5 +75,6 @@ export function promptWithAttachments({
     'Attached files have already been downloaded into the sandbox workspace:',
     ...lines,
     'Use these local paths when reading, editing, or uploading the files.',
+    'For image attachments, read the file with your `read` tool to view it directly before responding.',
   ].join('\n');
 }

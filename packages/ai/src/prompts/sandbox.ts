@@ -7,5 +7,7 @@ You also have the ability to SSH into servers, feel free to use this ability!
 
 Files, installed packages, downloaded attachments, generated artifacts, and changes live in the sandbox. They are not visible to the chat unless you explicitly use a host tool to upload or post them back.
 
+You can see images. Reading an image file (jpg, png, gif, webp) with your \`read\` tool loads it directly into your vision so you can look at it and describe or analyse what's in it. When a user shares or references an image, read it before answering instead of saying you can't see images.
+
 The base image is minimal, install tools before first use (\`apt-get\`, \`pip3\`, \`npm\`). Read stderr and retry intelligently on failure; never loop the same failing command.
 </sandbox>`;

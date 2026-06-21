@@ -1,0 +1,27 @@
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1890,7 +1890,22 @@
+           });
+           if (denied) return denied;
+           const buf = await input.remoteOps.readBuffer(params.file_path);
+-          return asPiToolResult(buf.toString("utf8"));
++          const __piImageMime = (() => {
++            const b = buf;
++            if (b.length >= 8 && b[0] === 137 && b[1] === 80 && b[2] === 78 && b[3] === 71) return "image/png";
++            if (b.length >= 3 && b[0] === 255 && b[1] === 216 && b[2] === 255) return "image/jpeg";
++            if (b.length >= 6 && b[0] === 71 && b[1] === 73 && b[2] === 70) return "image/gif";
++            if (b.length >= 12 && b[0] === 82 && b[1] === 73 && b[2] === 70 && b[3] === 70 && b[8] === 87 && b[9] === 69 && b[10] === 66 && b[11] === 80) return "image/webp";
++            return void 0;
++          })();
++          if (__piImageMime) {
++            const __piImageData = buf.toString("base64");
++            if (__piImageData.length > 4.5 * 1024 * 1024) {
++              return asPiToolResult(`Read image file [${__piImageMime}]\n[Image omitted: exceeds the inline image size limit. Resize it below ~4MB before reading.]`);
++            }
++            return { content: [{ type: "text", text: `Read image file [${__piImageMime}]` }, { type: "image", data: __piImageData, mimeType: __piImageMime }], details: void 0 };
++          }
++          return asPiToolResult(buf.toString("utf8"));
+         }
+       });
+     case "write":
