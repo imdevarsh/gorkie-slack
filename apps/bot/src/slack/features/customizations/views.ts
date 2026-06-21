@@ -21,7 +21,7 @@ export function buildHomeView({
   prompt: string | null;
 }): SlackHomeView {
   const displayedPrompt = prompt
-      ? escapeSlackText(
+    ? escapeSlackText(
         prompt.length > maxHomePromptLength
           ? `${prompt.slice(0, maxHomePromptLength)}...`
           : prompt

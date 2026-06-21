@@ -14,6 +14,7 @@ import { E2BNetworkSandboxSession, isMissingSandboxError } from './session';
 
 export interface E2BSandboxProviderOptions {
   apiKey: string;
+  env?: Record<string, string>;
   logger: Logger;
   template?: string;
 }
@@ -41,11 +42,13 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
   readonly specificationVersion = 'harness-sandbox-v1';
 
   private readonly apiKey: string;
+  private readonly env: Record<string, string>;
   private readonly template: string;
   private readonly logger: Logger;
 
   constructor(options: E2BSandboxProviderOptions) {
     this.apiKey = options.apiKey;
+    this.env = options.env ?? {};
     this.template = options.template ?? sandboxConfig.template;
     this.logger = options.logger;
   }
@@ -57,6 +60,7 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
   }): Promise<Sandbox> => {
     const sandbox = await Sandbox.create(this.template, {
       apiKey: this.apiKey,
+      envs: this.env,
       lifecycle: { onTimeout: 'pause' },
       timeoutMs: sandboxConfig.timeoutMs,
       metadata: {
@@ -111,11 +115,14 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
         { sessionId, sandboxId: sandbox.sandboxId },
         '[sandbox] reused e2b sandbox'
       );
-      return new E2BNetworkSandboxSession(sandbox);
+      return new E2BNetworkSandboxSession({ env: this.env, sandbox });
     }
 
     const nextSandbox = await this.spawnSandbox({ sessionId });
-    const session = new E2BNetworkSandboxSession(nextSandbox);
+    const session = new E2BNetworkSandboxSession({
+      env: this.env,
+      sandbox: nextSandbox,
+    });
     await onFirstCreate?.(session.restricted(), { abortSignal });
 
     if (sessionId) {
@@ -193,6 +200,6 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
       status: 'active',
     });
 
-    return new E2BNetworkSandboxSession(sandbox);
+    return new E2BNetworkSandboxSession({ env: this.env, sandbox });
   };
 }

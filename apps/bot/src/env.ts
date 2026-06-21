@@ -20,6 +20,7 @@ export const env = createEnv({
     AUTO_ADD_CHANNEL: z.string().optional(),
 
     E2B_API_KEY: z.string().min(1),
+    AGENTMAIL_API_KEY: z.string().min(1).optional(),
 
     LANGFUSE_BASEURL: z.url().optional(),
     LANGFUSE_PUBLIC_KEY: z.string().min(1).optional(),

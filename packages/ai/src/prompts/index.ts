@@ -8,17 +8,17 @@ import { sandboxPrompt } from './sandbox';
 export type { RequestHints } from './hints';
 
 export function systemPrompt({
+  appPrompt,
   hints,
-  hostPrompt,
 }: {
+  appPrompt?: string;
   hints: RequestHints;
-  hostPrompt?: string;
 }): string {
   return [
     corePrompt,
     personalityPrompt,
     sandboxPrompt,
-    hostPrompt,
+    appPrompt,
     contextPrompt(hints),
     customizationPrompt(hints),
   ]

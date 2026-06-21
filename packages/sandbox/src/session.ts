@@ -54,9 +54,17 @@ async function waitForBackgroundCommand({
 }
 
 class E2BSandboxSession implements Experimental_SandboxSession {
+  protected readonly env: Record<string, string>;
   protected readonly sandbox: Sandbox;
 
-  constructor(sandbox: Sandbox) {
+  constructor({
+    env = {},
+    sandbox,
+  }: {
+    env?: Record<string, string>;
+    sandbox: Sandbox;
+  }) {
+    this.env = env;
     this.sandbox = sandbox;
   }
 
@@ -207,7 +215,7 @@ class E2BSandboxSession implements Experimental_SandboxSession {
     try {
       const result = await this.sandbox.commands.run(command, {
         cwd: workingDirectory,
-        envs: env,
+        envs: { ...this.env, ...env },
         signal: abortSignal,
         timeoutMs: config.executionTimeoutMs,
       });
@@ -247,7 +255,7 @@ class E2BSandboxSession implements Experimental_SandboxSession {
     const handle = await this.sandbox.commands.run(command, {
       background: true,
       cwd: workingDirectory,
-      envs: env,
+      envs: { ...this.env, ...env },
       onStderr: stderr.write,
       onStdout: stdout.write,
       signal: abortSignal,
@@ -297,13 +305,19 @@ export class E2BNetworkSandboxSession
   readonly id: string;
   readonly ports: readonly number[] = [];
 
-  constructor(sandbox: Sandbox) {
-    super(sandbox);
+  constructor({
+    env,
+    sandbox,
+  }: {
+    env?: Record<string, string>;
+    sandbox: Sandbox;
+  }) {
+    super({ env, sandbox });
     this.id = sandbox.sandboxId;
   }
 
   restricted(): Experimental_SandboxSession {
-    return new E2BSandboxSession(this.sandbox);
+    return new E2BSandboxSession({ env: this.env, sandbox: this.sandbox });
   }
 
   getPortUrl = ({

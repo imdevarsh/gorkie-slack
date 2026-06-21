@@ -33,6 +33,11 @@ const activeTurns = new Map<string, ActiveTurn>();
 
 const sandbox = new E2BSandboxProvider({
   apiKey: env.E2B_API_KEY,
+  env: {
+    ...(env.AGENTMAIL_API_KEY
+      ? { AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY }
+      : {}),
+  },
   logger,
 });
 
@@ -197,8 +202,8 @@ async function executeTurn(
           sessionId: threadId,
           skills,
           systemPrompt: systemPrompt({
+            appPrompt: slackPrompt({ hints }),
             hints,
-            hostPrompt: slackPrompt({ hints }),
           }),
           tools: buildTools({
             bot,
