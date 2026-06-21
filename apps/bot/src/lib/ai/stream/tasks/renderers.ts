@@ -292,6 +292,15 @@ const uploadFile: ToolTaskRendererEntry = {
   },
 };
 
+const getFile: ToolTaskRendererEntry = {
+  title: 'Downloading file',
+  request: ({ input }) => ({ details: textField(input, 'file') }),
+  response: ({ output }) => ({
+    output: `Downloaded ${textField(output, 'filename') ?? 'file'}.`,
+    title: 'Downloaded file',
+  }),
+};
+
 export const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   addReaction: reaction,
   bash: command,
@@ -300,6 +309,7 @@ export const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   fileChange: { title: 'Updating file' },
   generateImage,
   getChannelInfo,
+  getFile,
   getUser,
   glob: { ...search, title: 'Finding files' },
   grep: search,

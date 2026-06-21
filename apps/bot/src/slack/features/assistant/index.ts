@@ -79,7 +79,7 @@ bot.onMemberJoinedChannel(async (event) => {
   await bot
     .channel(event.channelId)
     .post(
-      "Hello! I'm now available in this channel. Mention me to get started."
+      "hey! i'm hanging out in this channel now! just @ me whenever you need something :)"
     )
     .catch((error: unknown) => {
       logger.warn(

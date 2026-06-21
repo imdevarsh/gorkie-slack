@@ -5,6 +5,7 @@ import type { Chat, Message, Thread } from 'chat';
 import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
 import { generateImageTool } from './tools/generate-image';
+import { getFileTool } from './tools/get-file';
 import { listThreadsTool } from './tools/list-threads';
 import { mermaidTool } from './tools/mermaid';
 import { readConversationHistoryTool } from './tools/read-conversation-history';
@@ -46,6 +47,7 @@ export function buildTools({
     ...(getUser && { getUser }),
     ...(postChannelMessage && { postChannelMessage }),
     ...(postMessage && { postMessage }),
+    getFile: getFileTool({ getSandboxContext }),
     listThreads: listThreadsTool(),
     readConversationHistory: readConversationHistoryTool(),
     ...(getChannelInfo && { getChannelInfo }),

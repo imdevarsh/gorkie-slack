@@ -8,6 +8,7 @@ import {
   systemPrompt,
 } from '@repo/ai';
 import { E2BSandboxProvider, loadSkills } from '@repo/sandbox';
+import { errorMessage } from '@repo/utils/error';
 import { type Message, StreamingPlan, type Thread } from 'chat';
 import { env } from '@/env';
 import { deleteTurnControls, postTurnControls } from '@/lib/agent/controls';
@@ -252,26 +253,12 @@ async function executeTurn(
           failures: attemptHistory,
         });
         if (controller.signal.aborted || hasStreamed || !retryAttempt) {
-          if (!(controller.signal.aborted || hasStreamed)) {
-            logger.warn(
-              {
-                attempts: chatAttempts.map(attemptLog),
-                failures: attemptHistory.map((failure) =>
-                  attemptLog(failure.attempt)
-                ),
-                threadId,
-              },
-              '[agent] attempt failed, no fallback attempt available'
-            );
-          }
           throw error;
         }
-        // Pi already retries the same provider internally (3x, exponential
-        // backoff), so we only ever fall back to the next provider here.
         logger.warn(
           {
             attempt: attemptLog(currentAttempt),
-            err: error,
+            err: errorMessage(error),
             nextAttempt: attemptLog(retryAttempt),
             threadId,
           },
