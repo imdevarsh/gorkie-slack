@@ -4,7 +4,7 @@ import type { Logger as ChatLogger } from 'chat';
 function metaFrom(args: unknown[]): Record<string, unknown> {
   const [first] = args;
   if (args.length === 1 && typeof first === 'object' && first !== null) {
-    return first as Record<string, unknown>;
+    return Object.fromEntries(Object.entries(first));
   }
   return args.length > 0 ? { args } : {};
 }

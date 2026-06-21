@@ -23,9 +23,7 @@ export const defaultTool: DefaultToolTaskRenderer = {
   },
   response: ({ output }) => ({
     output:
-      typeof output === 'string'
-        ? output
-        : (textField(output, 'text') ?? textField(output, 'error')),
+      textField(output, 'text') ?? textField(output, 'error') ?? 'Completed.',
   }),
   error: ({ output }) => ({
     output: errorOutput(output),

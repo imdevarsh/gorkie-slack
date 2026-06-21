@@ -4,14 +4,17 @@ import { defaultTool, toolRenderers } from './renderers';
 
 type RenderPhase = 'request' | 'response' | 'error';
 
-function renderToolPhase(
-  phase: RenderPhase,
-  {
-    input,
-    output,
-    toolName,
-  }: { input: unknown; output?: unknown; toolName: string }
-) {
+export function renderToolTask({
+  input,
+  output,
+  phase,
+  toolName,
+}: {
+  input: unknown;
+  output?: unknown;
+  phase: RenderPhase;
+  toolName: string;
+}) {
   const entry = toolRenderers[toolName];
   const renderer =
     phase === 'error'
@@ -33,24 +36,4 @@ function renderToolPhase(
     ),
     title,
   };
-}
-
-export function renderToolCall(args: { input: unknown; toolName: string }) {
-  return renderToolPhase('request', args);
-}
-
-export function renderToolResult(args: {
-  input: unknown;
-  output: unknown;
-  toolName: string;
-}) {
-  return renderToolPhase('response', args);
-}
-
-export function renderToolError(args: {
-  input: unknown;
-  output: unknown;
-  toolName: string;
-}) {
-  return renderToolPhase('error', args);
 }

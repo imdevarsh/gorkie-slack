@@ -4,11 +4,7 @@ import {
   escapeSlackText,
 } from '@chat-adapter/slack/format';
 import { personas } from '@repo/ai';
-import {
-  MAX_HOME_PROMPT_LENGTH,
-  MAX_PROMPT_LENGTH,
-  PROMPT_INPUT,
-} from './schema';
+import { PROMPT_INPUT } from './schema';
 import type {
   SlackBlock,
   SlackHomeView,
@@ -16,15 +12,18 @@ import type {
   SlackTextInputElement,
 } from './types';
 
+const maxHomePromptLength = 900;
+const maxPromptLength = 3000;
+
 export function buildHomeView({
   prompt,
 }: {
   prompt: string | null;
 }): SlackHomeView {
   const displayedPrompt = prompt
-    ? escapeSlackText(
-        prompt.length > MAX_HOME_PROMPT_LENGTH
-          ? `${prompt.slice(0, MAX_HOME_PROMPT_LENGTH)}...`
+      ? escapeSlackText(
+        prompt.length > maxHomePromptLength
+          ? `${prompt.slice(0, maxHomePromptLength)}...`
           : prompt
       )
     : '_No custom instructions set._';
@@ -85,7 +84,7 @@ export function buildPromptModal({
 }): SlackModalView {
   const input: SlackTextInputElement = {
     action_id: PROMPT_INPUT,
-    max_length: MAX_PROMPT_LENGTH,
+    max_length: maxPromptLength,
     multiline: true,
     placeholder: createSlackPlainText(
       'e.g. Keep responses concise. Prefer TypeScript. Call me Alex.'
@@ -166,7 +165,7 @@ export function buildPresetModal({
         element: {
           action_id: PROMPT_INPUT,
           initial_value: prompt,
-          max_length: MAX_PROMPT_LENGTH,
+          max_length: maxPromptLength,
           multiline: true,
           type: 'plain_text_input',
         },

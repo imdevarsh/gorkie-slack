@@ -1,12 +1,5 @@
 import { toLogError } from '@repo/utils/error';
-import {
-  Actions,
-  Button,
-  Card,
-  CardText,
-  type SentMessage,
-  type Thread,
-} from 'chat';
+import { Actions, Button, Card, type SentMessage, type Thread } from 'chat';
 import logger from '@/lib/logger';
 
 export async function postTurnControls({
@@ -18,7 +11,6 @@ export async function postTurnControls({
     return await thread.post(
       Card({
         children: [
-          CardText('Gorkie is responding...'),
           Actions([
             Button({
               id: 'stop_turn',

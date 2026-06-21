@@ -1,8 +1,6 @@
 import { z } from 'zod';
 
 export const PROMPT_INPUT = 'prompt';
-export const MAX_PROMPT_LENGTH = 3000;
-export const MAX_HOME_PROMPT_LENGTH = 900;
 
 const modalStateSchema = z
   .object({

@@ -73,6 +73,7 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "cspell": "catalog:",
+    "fumadocs-preview": "^0.1.4",
     "knip": "^6.16.0",
     "lefthook": "catalog:",
     "taze": "^19.13.0",

@@ -7,6 +7,13 @@ import type { Agent } from './agent';
 import { getSessionFile, sessionFileNameOf } from './files/session';
 import type { SandboxContext } from './types';
 
+function resumeState(
+  state: HarnessAgentResumeSessionState
+): HarnessAgentResumeSessionState {
+  const { continueFrom: _continueFrom, ...resumeState } = state;
+  return resumeState;
+}
+
 export async function openSession({
   agent,
   threadId,
@@ -17,10 +24,15 @@ export async function openSession({
   const existing = await getByThread(threadId);
   const stored: HarnessAgentResumeSessionState | undefined =
     existing?.resumeState ? JSON.parse(existing.resumeState) : undefined;
+  const resumeFrom = stored ? resumeState(stored) : undefined;
+  if (stored?.continueFrom !== undefined) {
+    await updateResumeState({
+      resumeState: JSON.stringify(resumeFrom),
+      threadId,
+    });
+  }
   return await agent.createSession(
-    stored
-      ? { resumeFrom: stored, sessionId: threadId }
-      : { sessionId: threadId }
+    resumeFrom ? { resumeFrom, sessionId: threadId } : { sessionId: threadId }
   );
 }
 
@@ -33,11 +45,10 @@ export async function persistSession({
   snapshotSource?: SandboxContext;
   threadId: string;
 }): Promise<void> {
-  // Pi writes its transcript during detach; mirror it before the sandbox pauses.
-  const resumeState = await session.detach();
-  const serialized = JSON.stringify(resumeState);
+  const state = resumeState(await session.detach());
+  const serialized = JSON.stringify(state);
 
-  const file = sessionFileNameOf(resumeState);
+  const file = sessionFileNameOf(state);
   const snapshot =
     file && snapshotSource
       ? await getSessionFile({ file, source: snapshotSource })

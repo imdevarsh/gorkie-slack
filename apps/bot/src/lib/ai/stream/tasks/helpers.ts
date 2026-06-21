@@ -1,6 +1,6 @@
 export function field(input: unknown, key: string): unknown {
   return input && typeof input === 'object' && key in input
-    ? (input as Record<string, unknown>)[key]
+    ? Reflect.get(input, key)
     : undefined;
 }
 

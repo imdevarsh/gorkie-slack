@@ -1,11 +1,10 @@
-import nodePath from 'node:path/posix';
 import type { HarnessV1NetworkSandboxSession } from '@ai-sdk/harness';
 import type {
   Experimental_SandboxProcess,
   Experimental_SandboxSession,
 } from '@ai-sdk/provider-utils';
 import { CommandExitError, type Sandbox } from '@e2b/code-interpreter';
-import { sandboxConfig } from './config';
+import { sandboxConfig as config } from './config';
 import { collectStream, streamFromBytes, streamFromText } from './stream';
 
 export function isMissingSandboxError(error: unknown): boolean {
@@ -17,19 +16,8 @@ export function isMissingSandboxError(error: unknown): boolean {
   );
 }
 
-function toRequestOptions(abortSignal?: AbortSignal) {
-  return abortSignal ? { signal: abortSignal } : {};
-}
-
-function abortReason(abortSignal?: AbortSignal): unknown {
-  return abortSignal?.reason ?? new DOMException('Aborted', 'AbortError');
-}
-
 function commandTimeoutMs(): number {
-  return Math.max(
-    sandboxConfig.timeoutMs,
-    sandboxConfig.executionTimeoutMs + 60_000
-  );
+  return Math.max(config.timeoutMs, config.executionTimeoutMs + 60_000);
 }
 
 async function waitForBackgroundCommand({
@@ -46,13 +34,13 @@ async function waitForBackgroundCommand({
   try {
     const result = await handle.wait();
     if (abortSignal?.aborted) {
-      throw abortReason(abortSignal);
+      throw abortSignal?.reason ?? new DOMException('Aborted', 'AbortError');
     }
     return { exitCode: result.exitCode };
   } catch (error) {
     if (error instanceof CommandExitError) {
       if (abortSignal?.aborted) {
-        throw abortReason(abortSignal);
+        throw abortSignal?.reason ?? new DOMException('Aborted', 'AbortError');
       }
       return { exitCode: error.exitCode };
     }
@@ -72,14 +60,14 @@ class E2BSandboxSession implements Experimental_SandboxSession {
     this.sandbox = sandbox;
   }
 
-  protected extendTimeout(timeoutMs = sandboxConfig.timeoutMs): Promise<void> {
+  protected extendTimeout(timeoutMs = config.timeoutMs): Promise<void> {
     return this.sandbox.setTimeout(timeoutMs);
   }
 
   get description(): string {
     return [
       `E2B sandbox ${this.sandbox.sandboxId}.`,
-      `Default working directory: ${sandboxConfig.workdir}.`,
+      `Default working directory: ${config.workdir}.`,
     ].join('\n');
   }
 
@@ -104,7 +92,10 @@ class E2BSandboxSession implements Experimental_SandboxSession {
     abortSignal?.throwIfAborted();
 
     return this.sandbox.files
-      .read(path, { format: 'bytes', ...toRequestOptions(abortSignal) })
+      .read(path, {
+        format: 'bytes',
+        ...(abortSignal ? { signal: abortSignal } : {}),
+      })
       .catch((error: unknown) => {
         if (isMissingSandboxError(error)) {
           return null;
@@ -170,15 +161,10 @@ class E2BSandboxSession implements Experimental_SandboxSession {
   }): Promise<void> {
     abortSignal?.throwIfAborted();
 
-    const directory = nodePath.dirname(path);
-    if (directory && directory !== '.' && directory !== '/') {
-      await this.sandbox.files.makeDir(directory).catch(() => undefined);
-    }
-
     await this.sandbox.files.write(
       path,
       new Blob([content]),
-      toRequestOptions(abortSignal)
+      abortSignal ? { signal: abortSignal } : {}
     );
   }
 
@@ -223,7 +209,7 @@ class E2BSandboxSession implements Experimental_SandboxSession {
         cwd: workingDirectory,
         envs: env,
         signal: abortSignal,
-        timeoutMs: sandboxConfig.executionTimeoutMs,
+        timeoutMs: config.executionTimeoutMs,
       });
       return {
         exitCode: result.exitCode,
@@ -268,9 +254,17 @@ class E2BSandboxSession implements Experimental_SandboxSession {
       timeoutMs: 0,
     });
     const abort = () => {
-      handle.kill().catch(() => undefined);
-      stdout.close();
-      stderr.close();
+      handle
+        .kill()
+        .catch((error: unknown) => {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          stderr.write(`Failed to kill sandbox process: ${message}\n`);
+        })
+        .finally(() => {
+          stdout.close();
+          stderr.close();
+        });
     };
     abortSignal?.addEventListener('abort', abort, { once: true });
 
@@ -299,7 +293,7 @@ export class E2BNetworkSandboxSession
   extends E2BSandboxSession
   implements HarnessV1NetworkSandboxSession
 {
-  readonly defaultWorkingDirectory = sandboxConfig.workdir;
+  readonly defaultWorkingDirectory = config.workdir;
   readonly id: string;
   readonly ports: readonly number[] = [];
 
@@ -323,7 +317,7 @@ export class E2BNetworkSandboxSession
     return Promise.resolve(`${urlProtocol}://${this.sandbox.getHost(port)}`);
   };
 
-  stop = (): Promise<void> => this.sandbox.betaPause().then(() => undefined);
+  stop = (): Promise<void> => this.sandbox.pause().then(() => undefined);
 
   destroy = (): Promise<void> => this.sandbox.kill().then(() => undefined);
 }

@@ -21,6 +21,7 @@ import {
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
 import { type AttemptFailure, nextAttempt } from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
+import { slackPrompt } from '@/lib/ai/prompt';
 import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
@@ -106,7 +107,7 @@ async function executeTurn(
       await ending.destroy().catch(() => undefined);
     });
     if (pause) {
-      await sandbox.pauseSession(threadId);
+      await sandbox.pauseSession({ threadId });
     }
   };
 
@@ -195,7 +196,10 @@ async function executeTurn(
           sandbox,
           sessionId: threadId,
           skills,
-          systemPrompt: systemPrompt(hints),
+          systemPrompt: systemPrompt({
+            hints,
+            hostPrompt: slackPrompt({ hints }),
+          }),
           tools: buildTools({
             bot,
             getSandboxContext: () => sandboxContext,

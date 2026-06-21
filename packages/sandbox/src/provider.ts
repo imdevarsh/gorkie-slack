@@ -50,10 +50,12 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
     this.logger = options.logger;
   }
 
-  private readonly spawnSandbox = async (
-    sessionId?: string
-  ): Promise<Sandbox> => {
-    const sandbox = await Sandbox.betaCreate(this.template, {
+  private readonly spawnSandbox = async ({
+    sessionId,
+  }: {
+    sessionId?: string;
+  }): Promise<Sandbox> => {
+    const sandbox = await Sandbox.create(this.template, {
       apiKey: this.apiKey,
       lifecycle: { onTimeout: 'pause' },
       timeoutMs: sandboxConfig.timeoutMs,
@@ -112,7 +114,7 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
       return new E2BNetworkSandboxSession(sandbox);
     }
 
-    const nextSandbox = await this.spawnSandbox(sessionId);
+    const nextSandbox = await this.spawnSandbox({ sessionId });
     const session = new E2BNetworkSandboxSession(nextSandbox);
     await onFirstCreate?.(session.restricted(), { abortSignal });
 
@@ -133,7 +135,7 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
     return session;
   };
 
-  pauseSession = async (threadId: string): Promise<void> => {
+  pauseSession = async ({ threadId }: { threadId: string }): Promise<void> => {
     const existing = await getByThread(threadId);
     if (!existing) {
       return;
@@ -174,7 +176,7 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
         '[sandbox] resumed e2b sandbox'
       );
     } else {
-      sandbox = await this.spawnSandbox(sessionId);
+      sandbox = await this.spawnSandbox({ sessionId });
       this.logger.info(
         {
           previous: existing.sandboxId,
