@@ -56,12 +56,7 @@ export function runTurn(input: {
 
   interruptTurn({ activeTurn, input });
   return slack
-    .postEphemeral(
-      input.thread.id,
-      input.message.author.userId,
-      'Got it! Wrapping up and switching to your new message.'
-    )
-    .then(() => undefined)
+    .addReaction(input.thread.id, input.message.id, 'white_check_mark')
     .catch(() => undefined);
 }
 

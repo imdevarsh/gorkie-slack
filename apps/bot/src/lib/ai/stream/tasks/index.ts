@@ -1,8 +1,58 @@
 import { clamp } from '@/lib/utils/text';
-import { resultErrorOutput } from './helpers';
-import { defaultTool, toolRenderers } from './renderers';
+import {
+  fetchMessages,
+  getChannelInfo,
+  getUser,
+  listThreads,
+  message,
+  reaction,
+} from './chat';
+import { defaultTool } from './default';
+import { generateImage } from './generate-image';
+import { getFile } from './get-file';
+import { resultErrorOutput, textField } from './helpers';
+import { mermaid } from './mermaid';
+import { command, file, search } from './pi';
+import { scheduleReminder } from './schedule-reminder';
+import { searchSlack } from './search-slack';
+import { searchWeb } from './search-web';
+import { summarizeThread } from './summarize-thread';
+import type { ToolTaskRendererEntry } from './types';
+import { uploadFile } from './upload-file';
 
 type RenderPhase = 'request' | 'response' | 'error';
+
+const toolRenderers: Record<string, ToolTaskRendererEntry> = {
+  addReaction: reaction,
+  bash: command,
+  compaction: { title: 'Compacting context' },
+  edit: { ...file, title: 'Editing file' },
+  fileChange: { title: 'Updating file' },
+  generateImage,
+  getChannelInfo,
+  getFile,
+  getUser,
+  glob: { ...search, title: 'Finding files' },
+  grep: search,
+  listThreads,
+  ls: { title: 'Listing files' },
+  mermaid,
+  postChannelMessage: { ...message, title: 'Posting to channel' },
+  postMessage: message,
+  readConversationHistory: { ...fetchMessages, title: 'Reading history' },
+  read: file,
+  scheduleReminder,
+  searchSlack,
+  searchWeb,
+  sendDirectMessage: { ...message, title: 'Sending DM' },
+  skip: {
+    title: 'Skipping',
+    request: ({ input }) => ({ details: textField(input, 'reason') }),
+  },
+  summarizeThread,
+  uploadFile,
+  write: { ...file, title: 'Writing file' },
+};
 
 export function renderToolTask({
   input,
