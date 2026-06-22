@@ -21,7 +21,6 @@ import {
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
 import { type AttemptFailure, nextAttempt } from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
-import { normalizeMentions } from '@/lib/ai/message';
 import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
@@ -185,7 +184,9 @@ async function executeTurn(
     thread: Thread;
   }) {
     const skills = await loadSkills();
-    const messageText = `${message.author.fullName} (${message.author.userId}): ${await normalizeMentions(message.text)}`;
+    // Mirrors the chat SDK's toAiMessages({ includeNames: true }) format.
+    // author.userName holds the Slack display name (author.fullName is the real name).
+    const messageText = `[${message.author.userName}]: ${message.text}`;
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
     let hasStreamed = false;
     const attemptHistory: AttemptFailure[] = [];
