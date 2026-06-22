@@ -102,6 +102,9 @@ function isBotMessage(message: Message): boolean {
   if (message.author.isBot === true) {
     return true;
   }
+  if (message.author.userId === 'USLACKBOT') {
+    return true;
+  }
   const raw = message.raw;
   if (!(raw && typeof raw === 'object')) {
     return false;
