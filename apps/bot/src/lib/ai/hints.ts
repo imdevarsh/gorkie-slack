@@ -1,7 +1,7 @@
 import type { RequestHints } from '@repo/ai';
 import { getUserCustomization } from '@repo/db/queries';
 import type { Message, Thread } from 'chat';
-import { toRawChannelId } from '@/lib/slack/ids';
+import { slack } from '@/lib/chat';
 import { resolveChannelName, resolveWorkspaceName } from '@/lib/slack/names';
 
 export async function requestHints({
@@ -11,9 +11,10 @@ export async function requestHints({
   message: Message;
   thread: Thread;
 }): Promise<RequestHints> {
-  const channelId = toRawChannelId(thread.id);
+  const channelId = slack.channelIdFromThreadId(thread.id);
+  const { channel: rawChannelId } = slack.decodeThreadId(thread.id);
   const [channel, workspace, customization] = await Promise.all([
-    resolveChannelName(channelId),
+    resolveChannelName(rawChannelId),
     resolveWorkspaceName(),
     getUserCustomization(message.author.userId).catch(() => null),
   ]);

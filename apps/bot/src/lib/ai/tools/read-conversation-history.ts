@@ -1,11 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { slack } from '@/lib/chat';
-import {
-  parseSlackThreadId,
-  toChatChannelId,
-  toRawChannelId,
-} from '@/lib/slack/ids';
+import { toChatSlackChannelId } from '@/lib/slack/ids';
 import { assertPublicChannel, joinChannel } from './utils';
 
 export function readConversationHistoryTool() {
@@ -40,35 +36,35 @@ export function readConversationHistoryTool() {
         .describe('Slack pagination cursor from a previous response.'),
     }),
     execute: async ({ channelId, cursor, limit, threadId, threadTs }) => {
-      const parsedThread = threadId ? parseSlackThreadId(threadId) : undefined;
-      const resolvedChannelId = channelId ?? parsedThread?.channelId;
-      const resolvedThreadTs = threadTs ?? parsedThread?.threadTs;
+      const decodedThread = threadId
+        ? slack.decodeThreadId(threadId)
+        : undefined;
+      const resolvedChannelId =
+        channelId ??
+        (threadId ? slack.channelIdFromThreadId(threadId) : undefined);
+      const resolvedThreadTs = threadTs ?? decodedThread?.threadTs;
       if (!resolvedChannelId) {
         throw new Error(
           'readConversationHistory needs channelId, or a full threadId like slack:C123456:1781599802.270109.'
         );
       }
 
-      const slackChannelId = toRawChannelId(resolvedChannelId);
-      if (!slackChannelId) {
+      const chatChannelId = toChatSlackChannelId(resolvedChannelId);
+      if (!chatChannelId) {
         throw new Error(
           `${resolvedChannelId} is not a Slack channel id. Use a value like C123456 or slack:C123456.`
         );
       }
 
-      const chatChannelId = toChatChannelId(slackChannelId);
       await assertPublicChannel(chatChannelId);
 
-      await joinChannel(slackChannelId);
+      await joinChannel(chatChannelId);
 
       const result = resolvedThreadTs
-        ? await slack.fetchMessages(
-            `slack:${slackChannelId}:${resolvedThreadTs}`,
-            {
-              cursor,
-              limit,
-            }
-          )
+        ? await slack.fetchMessages(`${chatChannelId}:${resolvedThreadTs}`, {
+            cursor,
+            limit,
+          })
         : await slack.fetchChannelMessages(chatChannelId, {
             cursor,
             limit,

@@ -1,8 +1,6 @@
 import { bot, slack } from '@/lib/chat';
+import { toRawSlackChannelId } from '@/lib/slack/ids';
 
-// Guards against reading DMs, private channels, or external conversations.
-// fetchMetadata is an authoritative platform lookup, so visibility is accurate
-// even for channels the adapter hasn't cached yet (unlike getChannelVisibility).
 export async function assertPublicChannel(
   chatChannelId: string
 ): Promise<void> {
@@ -14,10 +12,10 @@ export async function assertPublicChannel(
   }
 }
 
-export async function joinChannel(slackChannelId: string): Promise<unknown> {
+export async function joinChannel(channelId: string): Promise<unknown> {
   try {
     return await slack.webClient.apiCall('conversations.join', {
-      channel: slackChannelId,
+      channel: toRawSlackChannelId(channelId),
     });
   } catch {
     return;
