@@ -11,6 +11,7 @@ import { defaultTool } from './default';
 import { generateImage } from './generate-image';
 import { getFile } from './get-file';
 import { resultErrorOutput, textField } from './helpers';
+import { leaveThread } from './leave-thread';
 import { mermaid } from './mermaid';
 import { command, file, search } from './pi';
 import { scheduleReminder } from './schedule-reminder';
@@ -34,6 +35,7 @@ const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   getUser,
   glob: { ...search, title: 'Finding files' },
   grep: search,
+  leaveThread,
   listThreads,
   ls: { title: 'Listing files' },
   mermaid,
