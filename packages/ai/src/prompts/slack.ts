@@ -20,7 +20,8 @@ Read:
 - listThreads: list recent public channel threads when you need to find the right thread id before reading it.
 - readConversationHistory: read public Slack channel history or thread replies. It accepts a raw Slack channel id like C123456, a Chat SDK channel id like slack:C123456, or a full thread id like slack:C123456:1781599802.270109.
 - summarizeThread: summarize the current thread, or another thread when given its thread id.
-- getChannelInfo: inspect a channel. getUser: inspect a user profile.
+- getChannelInfo: inspect a channel. 
+- getUser: look up a user's profile by id (name, pronouns, title). use their pronouns when referring to them.
 - getFile: download a Slack file (upload, snippet, image, canvas, any type) into the sandbox by URL, permalink, or file id so you can read it.
 
 Act:
