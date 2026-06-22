@@ -1,8 +1,8 @@
-import { toLogError } from '@repo/utils/error';
 import { env } from '@/env';
 import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 import { toRawChannelId } from '@/lib/slack/ids';
+import { toLogError } from '@/lib/utils/error';
 
 // Opt-in allowlist: when OPT_IN_CHANNEL is set, only members of that channel may
 // use Gorkie. The channel gates terms-of-service acceptance, users read the terms

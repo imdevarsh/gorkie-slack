@@ -1,9 +1,9 @@
-import { toLogError } from '@repo/utils/error';
 import type { Message } from 'chat';
 import { runTurn, stopTurn } from '@/lib/agent';
 import { isUserAllowed } from '@/lib/allowed-users';
 import { bot } from '@/lib/chat';
 import logger from '@/lib/logger';
+import { toLogError } from '@/lib/utils/error';
 import '@/features/assistant';
 import '@/features/customizations';
 

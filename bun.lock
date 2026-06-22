@@ -36,7 +36,6 @@
         "@repo/db": "workspace:*",
         "@repo/logging": "workspace:*",
         "@repo/sandbox": "workspace:*",
-        "@repo/utils": "workspace:*",
         "@t3-oss/env-core": "catalog:",
         "ai": "catalog:",
         "chat": "^4.30.0",
@@ -108,17 +107,6 @@
         "@repo/logging": "workspace:*",
         "dotenv": "catalog:",
         "e2b": "catalog:",
-      },
-      "devDependencies": {
-        "@repo/tsconfig": "workspace:*",
-        "@types/bun": "catalog:",
-        "typescript": "catalog:",
-      },
-    },
-    "packages/utils": {
-      "name": "@repo/utils",
-      "dependencies": {
-        "strip-ansi": "^7.2.0",
       },
       "devDependencies": {
         "@repo/tsconfig": "workspace:*",
@@ -757,8 +745,6 @@
     "@repo/sandbox": ["@repo/sandbox@workspace:packages/sandbox"],
 
     "@repo/tsconfig": ["@repo/tsconfig@workspace:tooling/typescript"],
-
-    "@repo/utils": ["@repo/utils@workspace:packages/utils"],
 
     "@silvia-odwyer/photon-node": ["@silvia-odwyer/photon-node@0.3.4", "", {}, "sha512-bnly4BKB3KDTFxrUIcgCLbaeVVS8lrAkri1pEzskpmxu9MdfGQTy8b8EgcD83ywD3RPMsIulY8xJH5Awa+t9fA=="],
 

@@ -8,7 +8,6 @@ import {
   systemPrompt,
 } from '@repo/ai';
 import { E2BSandboxProvider, loadSkills } from '@repo/sandbox';
-import { errorMessage } from '@repo/utils/error';
 import { type Message, StreamingPlan, type Thread } from 'chat';
 import { env } from '@/env';
 import { deleteControls, postControls } from '@/lib/agent/controls';
@@ -29,6 +28,7 @@ import { runQueuedTurn } from '@/lib/ai/turn-queue';
 import { bot, slack } from '@/lib/chat';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
+import { errorMessage } from '@/lib/utils/error';
 
 const activeTurns = new Map<string, ActiveTurn>();
 
@@ -234,7 +234,7 @@ async function executeTurn(
             controls ??= await postControls({ thread });
             await lineReply?.append({ text, thread });
           },
-          stream: result.fullStream,
+          stream: result.stream,
         })) {
           hasStreamed = true;
           yield chunk;

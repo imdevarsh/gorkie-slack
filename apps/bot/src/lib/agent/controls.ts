@@ -1,6 +1,6 @@
-import { toLogError } from '@repo/utils/error';
 import { Actions, Button, Card, type SentMessage, type Thread } from 'chat';
 import logger from '@/lib/logger';
+import { toLogError } from '@/lib/utils/error';
 
 export async function postControls({
   thread,

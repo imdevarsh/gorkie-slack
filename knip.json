@@ -29,9 +29,6 @@
     "packages/sandbox": {
       "project": ["src/**/*.ts"]
     },
-    "packages/utils": {
-      "project": ["src/**/*.ts"]
-    },
     "tooling/cspell": {
       "project": ["**/*.ts"]
     }

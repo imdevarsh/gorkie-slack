@@ -9,10 +9,10 @@ import {
   getUserCustomization,
   setUserCustomization,
 } from '@repo/db/queries';
-import { toLogError } from '@repo/utils/error';
 import { env } from '@/env';
 import { bot } from '@/lib/chat';
 import logger from '@/lib/logger';
+import { toLogError } from '@/lib/utils/error';
 import {
   openedViewSchema,
   PROMPT_INPUT,

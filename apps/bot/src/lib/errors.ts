@@ -1,4 +1,4 @@
-import { errorMessage } from '@repo/utils/error';
+import { errorMessage } from '@/lib/utils/error';
 
 const CREDIT_ERROR_PATTERN =
   /\b(credit|credits|quota|daily limit|requires more credits)\b/i;

@@ -1,6 +1,6 @@
-import { toLogError } from '@repo/utils/error';
 import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
+import { toLogError } from '@/lib/utils/error';
 
 bot.onAssistantThreadStarted(async (event) => {
   await slack

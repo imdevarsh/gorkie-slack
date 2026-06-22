@@ -18,7 +18,6 @@
     "@repo/db": "workspace:*",
     "@repo/logging": "workspace:*",
     "@repo/sandbox": "workspace:*",
-    "@repo/utils": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "ai": "catalog:",
     "chat": "^4.30.0",

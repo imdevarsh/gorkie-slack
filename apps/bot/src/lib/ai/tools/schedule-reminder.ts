@@ -1,8 +1,8 @@
-import { errorMessage } from '@repo/utils/error';
 import { tool } from 'ai';
 import type { Message } from 'chat';
 import { z } from 'zod';
 import { bot } from '@/lib/chat';
+import { errorMessage } from '@/lib/utils/error';
 
 export function scheduleReminderTool({ message }: { message: Message }) {
   return tool({
