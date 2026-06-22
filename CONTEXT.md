@@ -17,16 +17,24 @@ The shared memory of an Agent Thread, built from visible conversation context an
 _Avoid_: Chat history, transcript when discussing the durable shared memory boundary.
 
 **Private User Context**:
-User-scoped information that may shape a turn for the Acting User but is not automatically shared with other participants in the Agent Thread. This includes custom instructions, future BYOK credentials, and future MCP-connected data.
+User-scoped information that may shape a turn for the Acting User but is not automatically shared with other participants in the Agent Thread. This includes Custom Instructions, BYOK credentials, and any future private connected-tool data.
 _Avoid_: Personalization, user settings when discussing privacy boundaries.
+
+**BYOK Credential**:
+An Acting User's private model-provider credential used to run their Agent Turn. The credential itself is Private User Context; the assistant response produced with it is normal Agent Thread Memory when visible in the thread.
+_Avoid_: Private tool result, MCP credential when discussing model-provider keys.
 
 **Custom Instructions**:
 Acting User preferences that may shape an Agent Turn's style, priorities, and working approach. The raw instruction text is Private User Context; in shared Agent Threads, its use should be disclosed and must not override another user's authority or privacy.
 _Avoid_: System prompt, personalization when discussing user-authored preferences.
 
 **Private Tool Result**:
-A tool result produced from Private User Context. It may inform the Acting User's current turn, but it must not become shared Agent Thread Memory unless it is intentionally made visible to the thread participants.
+A tool result produced from private connected-tool data. It may inform the Acting User's current turn, but it must not become shared Agent Thread Memory unless it is intentionally made visible to the thread participants.
 _Avoid_: Tool output, MCP result when discussing privacy boundaries.
+
+**Shared Memory Redaction**:
+The removal of Private User Context and Private Tool Results before they become Agent Thread Memory. Redaction preserves shared continuity without exposing one Acting User's private context to another.
+_Avoid_: Private memory, filtering when discussing the shared memory privacy boundary.
 
 **Agent Turn**:
 One execution of Gorkie triggered by an Acting User message within an Agent Thread. It may stream a response, call tools, update Agent Thread Memory, and then end, stop, or be interrupted.

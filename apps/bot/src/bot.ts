@@ -4,8 +4,8 @@ import { runTurn, stopTurn } from '@/lib/agent';
 import { isUserAllowed } from '@/lib/allowed-users';
 import { bot } from '@/lib/chat';
 import logger from '@/lib/logger';
-import '@/slack/features/assistant';
-import '@/slack/features/customizations';
+import '@/features/assistant';
+import '@/features/customizations';
 
 export { bot } from '@/lib/chat';
 

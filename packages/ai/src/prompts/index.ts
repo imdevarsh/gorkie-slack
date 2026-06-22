@@ -4,21 +4,16 @@ import { customizationPrompt } from './customization';
 import type { RequestHints } from './hints';
 import { personalityPrompt } from './personality';
 import { sandboxPrompt } from './sandbox';
+import { slackPrompt } from './slack';
 
 export type { RequestHints } from './hints';
 
-export function systemPrompt({
-  appPrompt,
-  hints,
-}: {
-  appPrompt?: string;
-  hints: RequestHints;
-}): string {
+export function systemPrompt({ hints }: { hints: RequestHints }): string {
   return [
     corePrompt,
     personalityPrompt,
     sandboxPrompt,
-    appPrompt,
+    slackPrompt,
     contextPrompt(hints),
     customizationPrompt(hints),
   ]

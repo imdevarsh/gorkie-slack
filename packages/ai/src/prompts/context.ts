@@ -2,6 +2,9 @@ import type { RequestHints } from './hints';
 
 export function contextPrompt(hints: RequestHints): string {
   const lines = [`The current date and time is ${hints.time}.`];
+  if (hints.workspace) {
+    lines.push(`The current Slack workspace is ${hints.workspace}.`);
+  }
   if (hints.channel?.name) {
     lines.push(`The current channel name is ${hints.channel.name}.`);
   }

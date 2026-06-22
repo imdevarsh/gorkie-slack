@@ -2,6 +2,7 @@ import { toLogError } from '@repo/utils/error';
 import { env } from '@/env';
 import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
+import { toRawChannelId } from '@/lib/slack/ids';
 
 // Opt-in allowlist: when OPT_IN_CHANNEL is set, only members of that channel may
 // use Gorkie. The channel gates terms-of-service acceptance, users read the terms
@@ -22,12 +23,9 @@ export async function buildAllowlist(): Promise<void> {
     return;
   }
 
-  // The Slack adapter has no member-left event, so leavers stay cached until the
-  // next restart, an acceptable over-permission for an opt-in gate.
+  // No member-left event exists, so leavers stay cached until restart.
   bot.onMemberJoinedChannel((event) => {
-    // event.channelId is the chat-encoded id (`slack:C123:`), so compare on the
-    // raw Slack channel id, not the encoded string.
-    if (event.channelId.split(':')[1] === channel) {
+    if (toRawChannelId(event.channelId) === channel) {
       allowedUsers.add(event.userId);
     }
   });

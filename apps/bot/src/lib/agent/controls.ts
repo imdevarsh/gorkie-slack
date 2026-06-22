@@ -2,7 +2,7 @@ import { toLogError } from '@repo/utils/error';
 import { Actions, Button, Card, type SentMessage, type Thread } from 'chat';
 import logger from '@/lib/logger';
 
-export async function postTurnControls({
+export async function postControls({
   thread,
 }: {
   thread: Thread;
@@ -32,7 +32,7 @@ export async function postTurnControls({
   }
 }
 
-export async function deleteTurnControls({
+export async function deleteControls({
   controls,
 }: {
   controls: SentMessage | null;

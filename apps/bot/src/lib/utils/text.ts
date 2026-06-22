@@ -1,9 +1,3 @@
-export function clamp(value: string, max?: number): string;
-export function clamp(value: undefined, max?: number): undefined;
-export function clamp(
-  value: string | undefined,
-  max?: number
-): string | undefined;
 export function clamp(
   value: string | undefined,
   max = 280

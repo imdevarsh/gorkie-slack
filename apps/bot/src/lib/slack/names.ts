@@ -1,7 +1,28 @@
 import { slack } from '@/lib/chat';
 
 const channelNames = new Map<string, string>();
+const userNames = new Map<string, string>();
 let serverName: string | undefined;
+
+export async function resolveUserName(
+  userId: string
+): Promise<string | undefined> {
+  const cached = userNames.get(userId);
+  if (cached) {
+    return cached;
+  }
+  try {
+    const info = await slack.webClient.users.info({ user: userId });
+    const profile = info.user?.profile;
+    const name = profile?.display_name || profile?.real_name || info.user?.name;
+    if (name) {
+      userNames.set(userId, name);
+    }
+    return name;
+  } catch {
+    return;
+  }
+}
 
 export async function resolveChannelName(
   channelId: string
@@ -24,7 +45,7 @@ export async function resolveChannelName(
   }
 }
 
-export async function resolveServerName(): Promise<string | undefined> {
+export async function resolveWorkspaceName(): Promise<string | undefined> {
   if (serverName) {
     return serverName;
   }

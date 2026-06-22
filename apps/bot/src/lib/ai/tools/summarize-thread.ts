@@ -2,7 +2,8 @@ import { provider } from '@repo/ai';
 import { generateText, tool } from 'ai';
 import type { Chat } from 'chat';
 import { z } from 'zod';
-import { assertReadableChannel, joinChannel } from './utils';
+import { toChatChannelId, toRawChannelId } from '@/lib/slack/ids';
+import { assertPublicChannel, joinChannel } from './utils';
 
 export function summarizeThreadTool({
   bot,
@@ -27,9 +28,9 @@ export function summarizeThreadTool({
     }),
     execute: async (input) => {
       const targetThreadId = input.threadId ?? threadId;
-      const [platform, channelId] = targetThreadId.split(':');
-      if (platform === 'slack' && channelId) {
-        assertReadableChannel(`slack:${channelId}`);
+      if (targetThreadId.startsWith('slack:')) {
+        const channelId = toRawChannelId(targetThreadId);
+        await assertPublicChannel(toChatChannelId(channelId));
         await joinChannel(channelId);
       }
       const result = await bot

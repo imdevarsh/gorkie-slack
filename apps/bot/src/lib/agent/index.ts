@@ -11,7 +11,7 @@ import { E2BSandboxProvider, loadSkills } from '@repo/sandbox';
 import { errorMessage } from '@repo/utils/error';
 import { type Message, StreamingPlan, type Thread } from 'chat';
 import { env } from '@/env';
-import { deleteTurnControls, postTurnControls } from '@/lib/agent/controls';
+import { deleteControls, postControls } from '@/lib/agent/controls';
 import { createLineReply } from '@/lib/agent/line-reply';
 import {
   type ActiveTurn,
@@ -22,7 +22,7 @@ import {
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
 import { type AttemptFailure, nextAttempt } from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
-import { slackPrompt } from '@/lib/ai/prompt';
+import { normalizeMentions } from '@/lib/ai/message';
 import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
@@ -87,10 +87,11 @@ async function executeTurn(
   };
   activeTurns.set(threadId, activeTurn);
   await thread.startTyping('is thinking');
+  const hints = await requestHints({ thread, message });
 
   let session: Awaited<ReturnType<typeof openSession>> | undefined;
   let activeAttempt: PiAttempt | undefined;
-  let controls: Awaited<ReturnType<typeof postTurnControls>> = null;
+  let controls: Awaited<ReturnType<typeof postControls>> = null;
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
   let lineReply: ReturnType<typeof createLineReply> | undefined;
@@ -124,7 +125,15 @@ async function executeTurn(
       );
     }
     await lineReply?.flush({ thread });
-    await deleteTurnControls({ controls });
+    if (hints.customization?.prompt && !slack.isDM(thread.id)) {
+      await thread
+        .post({
+          markdown:
+            "_Gorkie's responses are shaped by this user's personal instructions._",
+        })
+        .catch(() => undefined);
+    }
+    await deleteControls({ controls });
     await parkSession({ pause: true });
     logger.info(
       { ...completion, attempt: attemptLog(activeAttempt), threadId },
@@ -134,7 +143,7 @@ async function executeTurn(
     const reason = abortReasonOf(controller.signal);
     if (reason) {
       logger.info({ reason, threadId }, '[agent] turn interrupted');
-      await deleteTurnControls({ controls });
+      await deleteControls({ controls });
       // An interrupt restarts immediately, so leave the sandbox warm; stop and
       // shutdown end the turn, so pause it. The transcript is persisted either
       // way, so the follow-up resumes with full context.
@@ -145,7 +154,7 @@ async function executeTurn(
         '[agent] turn failed'
       );
       await parkSession({ pause: true });
-      await deleteTurnControls({ controls });
+      await deleteControls({ controls });
       await thread.post(agentErrorMessage(error));
     }
   } finally {
@@ -175,8 +184,8 @@ async function executeTurn(
     message: Message;
     thread: Thread;
   }) {
-    const hints = await requestHints({ thread, message });
     const skills = await loadSkills();
+    const messageText = `${message.author.fullName} (${message.author.userId}): ${await normalizeMentions(message.text)}`;
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
     let hasStreamed = false;
     const attemptHistory: AttemptFailure[] = [];
@@ -201,10 +210,7 @@ async function executeTurn(
           sandbox,
           sessionId: threadId,
           skills,
-          systemPrompt: systemPrompt({
-            appPrompt: slackPrompt({ hints }),
-            hints,
-          }),
+          systemPrompt: systemPrompt({ hints }),
           tools: buildTools({
             bot,
             getSandboxContext: () => sandboxContext,
@@ -218,21 +224,21 @@ async function executeTurn(
           abortSignal: controller.signal,
           prompt: promptWithAttachments({
             attachments,
-            text: message.text,
+            text: messageText,
           }),
           session,
         });
         for await (const chunk of renderStream({
           onTextDelta: async (text) => {
             hasStreamed = true;
-            controls ??= await postTurnControls({ thread });
+            controls ??= await postControls({ thread });
             await lineReply?.append({ text, thread });
           },
           stream: result.fullStream,
         })) {
           hasStreamed = true;
           yield chunk;
-          controls ??= await postTurnControls({ thread });
+          controls ??= await postControls({ thread });
         }
 
         const [text, finishReason] = await Promise.all([

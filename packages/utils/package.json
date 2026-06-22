@@ -5,15 +5,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./error": "./src/error.ts",
-    "./text": "./src/text.ts",
     "./*": "./src/*.ts"
   },
   "scripts": {
     "clean": "git clean -xdf .turbo dist node_modules",
     "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "strip-ansi": "^7.2.0"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",

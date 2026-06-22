@@ -1,23 +1,25 @@
-import { slack } from '@/lib/chat';
+import { bot, slack } from '@/lib/chat';
 
-// Guards against reading DMs, private channels, or external conversations, using
-// the Slack adapter's synchronous prefix checks (no I/O). `getChannelVisibility`
-// only reports `external` once the adapter has cached the channel, so an uncached
-// Slack Connect channel reads as `workspace`; the DM and private-channel checks
-// are always reliable.
-export function assertReadableChannel(chatChannelId: string): void {
-  if (
-    slack.isDM(chatChannelId) ||
-    slack.getChannelVisibility(chatChannelId) !== 'workspace'
-  ) {
+// Guards against reading DMs, private channels, or external conversations.
+// fetchMetadata is an authoritative platform lookup, so visibility is accurate
+// even for channels the adapter hasn't cached yet (unlike getChannelVisibility).
+export async function assertPublicChannel(
+  chatChannelId: string
+): Promise<void> {
+  const metadata = await bot.channel(chatChannelId).fetchMetadata();
+  if (metadata.isDM || metadata.channelVisibility !== 'workspace') {
     throw new Error(
       'Reading DMs, private channels, or external conversations is not allowed.'
     );
   }
 }
 
-export function joinChannel(slackChannelId: string): Promise<unknown> {
-  return slack.webClient
-    .apiCall('conversations.join', { channel: slackChannelId })
-    .catch(() => undefined);
+export async function joinChannel(slackChannelId: string): Promise<unknown> {
+  try {
+    return await slack.webClient.apiCall('conversations.join', {
+      channel: slackChannelId,
+    });
+  } catch {
+    return;
+  }
 }

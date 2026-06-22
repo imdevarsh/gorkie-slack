@@ -5,7 +5,7 @@ export interface RequestHints {
   };
   customization?: { prompt: string } | null;
   messageId?: string;
-  server?: string;
   threadId: string;
   time: string;
+  workspace?: string;
 }
