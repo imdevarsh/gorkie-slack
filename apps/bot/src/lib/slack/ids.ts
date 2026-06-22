@@ -8,3 +8,19 @@ export function toRawChannelId(id: string): string {
 export function toChatChannelId(channelId: string): string {
   return channelId.startsWith('slack:') ? channelId : `slack:${channelId}`;
 }
+
+export function parseSlackThreadId(threadId: string):
+  | {
+      channelId: string;
+      threadTs?: string;
+    }
+  | undefined {
+  const parts = threadId.split(':');
+  if (parts[0] !== 'slack' || !parts[1]) {
+    return;
+  }
+  return {
+    channelId: `slack:${parts[1]}`,
+    threadTs: parts[2],
+  };
+}

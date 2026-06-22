@@ -54,11 +54,14 @@ export const listThreads: ToolTaskRendererEntry = {
 export const getUser: ToolTaskRendererEntry = {
   response: ({ input, output }) => {
     const name =
-      textField(output, 'fullName') ??
       textField(output, 'userName') ??
+      textField(output, 'fullName') ??
       textField(input, 'userId');
+    const pronouns = textField(output, 'pronouns');
     return {
-      output: name ? `Found ${name}.` : 'User not found.',
+      output: name
+        ? `Found ${name}${pronouns ? ` (${pronouns})` : ''}.`
+        : 'User not found.',
       title: 'Looked up user',
     };
   },

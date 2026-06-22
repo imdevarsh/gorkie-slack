@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { slack } from '@/lib/chat';
-import { toRawChannelId } from '@/lib/slack/ids';
+import { toChatSlackChannelId } from '@/lib/slack/ids';
 import { assertPublicChannel, joinChannel } from './utils';
 
 export function listThreadsTool() {
@@ -25,17 +25,16 @@ export function listThreadsTool() {
         .describe('Maximum thread roots to return.'),
     }),
     execute: async ({ channelId, cursor, limit }) => {
-      const slackChannelId = toRawChannelId(channelId);
-      if (!slackChannelId) {
+      const chatChannelId = toChatSlackChannelId(channelId);
+      if (!chatChannelId) {
         throw new Error(
           `${channelId} is not a Slack channel id. Use a value like C123456 or slack:C123456.`
         );
       }
 
-      const chatChannelId = `slack:${slackChannelId}`;
       await assertPublicChannel(chatChannelId);
 
-      await joinChannel(slackChannelId);
+      await joinChannel(chatChannelId);
 
       const result = await slack.listThreads(chatChannelId, { cursor, limit });
 

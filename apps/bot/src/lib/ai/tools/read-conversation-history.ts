@@ -1,7 +1,11 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { slack } from '@/lib/chat';
-import { toRawChannelId } from '@/lib/slack/ids';
+import {
+  parseSlackThreadId,
+  toChatChannelId,
+  toRawChannelId,
+} from '@/lib/slack/ids';
 import { assertPublicChannel, joinChannel } from './utils';
 
 export function readConversationHistoryTool() {
@@ -36,9 +40,9 @@ export function readConversationHistoryTool() {
         .describe('Slack pagination cursor from a previous response.'),
     }),
     execute: async ({ channelId, cursor, limit, threadId, threadTs }) => {
-      const threadParts = threadId?.split(':');
-      const resolvedChannelId = channelId ?? threadParts?.slice(0, 2).join(':');
-      const resolvedThreadTs = threadTs ?? threadParts?.[2];
+      const parsedThread = threadId ? parseSlackThreadId(threadId) : undefined;
+      const resolvedChannelId = channelId ?? parsedThread?.channelId;
+      const resolvedThreadTs = threadTs ?? parsedThread?.threadTs;
       if (!resolvedChannelId) {
         throw new Error(
           'readConversationHistory needs channelId, or a full threadId like slack:C123456:1781599802.270109.'
@@ -52,7 +56,7 @@ export function readConversationHistoryTool() {
         );
       }
 
-      const chatChannelId = `slack:${slackChannelId}`;
+      const chatChannelId = toChatChannelId(slackChannelId);
       await assertPublicChannel(chatChannelId);
 
       await joinChannel(slackChannelId);

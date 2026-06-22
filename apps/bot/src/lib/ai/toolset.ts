@@ -6,6 +6,7 @@ import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
 import { generateImageTool } from './tools/generate-image';
 import { getFileTool } from './tools/get-file';
+import { getUserTool } from './tools/get-user';
 import { leaveThreadTool } from './tools/leave-thread';
 import { listThreadsTool } from './tools/list-threads';
 import { mermaidTool } from './tools/mermaid';
@@ -37,7 +38,6 @@ export function buildTools({
   const {
     addReaction,
     getChannelInfo,
-    getUser,
     postChannelMessage,
     postMessage,
     sendDirectMessage,
@@ -45,7 +45,7 @@ export function buildTools({
 
   return {
     ...(addReaction && { addReaction }),
-    ...(getUser && { getUser }),
+    getUser: getUserTool(),
     ...(postChannelMessage && { postChannelMessage }),
     ...(postMessage && { postMessage }),
     getFile: getFileTool({ getSandboxContext }),

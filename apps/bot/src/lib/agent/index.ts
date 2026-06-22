@@ -12,6 +12,7 @@ import { type Message, StreamingPlan, type Thread } from 'chat';
 import { env } from '@/env';
 import { deleteControls, postControls } from '@/lib/agent/controls';
 import { createLineReply } from '@/lib/agent/line-reply';
+import { buildAgentPromptText } from '@/lib/agent/prompt';
 import {
   type ActiveTurn,
   abortReasonOf,
@@ -184,9 +185,7 @@ async function executeTurn(
     thread: Thread;
   }) {
     const skills = await loadSkills();
-    // Mirrors the chat SDK's toAiMessages({ includeNames: true }) format.
-    // author.userName holds the Slack display name (author.fullName is the real name).
-    const messageText = `[${message.author.userName}]: ${message.text}`;
+    const messageText = await buildAgentPromptText(message);
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
     let hasStreamed = false;
     const attemptHistory: AttemptFailure[] = [];
