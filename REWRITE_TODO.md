@@ -146,3 +146,5 @@ When this bug occurs it's impossible to stop gorkie
 
 ✻ Brewed for 48s
 - [ ] For some reason gorkie can read threads in private channels fix it
+- [ ] Skip tool doesn't work: it only logs and returns `{ skipped: true }`, so nothing suppresses the reply. When the model narrates while skipping (e.g. "(Not addressed to me — skipping.)") that text still streams and posts. Need to actually suppress/discard the streamed output (or delete the posted line) when skip is called, and/or prompt the model to emit no text at all when it skips.
+- [ ] Test out leaving thread: verify the `leaveThread` tool actually works end-to-end — ask gorkie to leave, confirm it stops auto-responding to that thread, and confirm it can still be @-mentioned back in.
