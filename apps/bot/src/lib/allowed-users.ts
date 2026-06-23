@@ -1,20 +1,53 @@
 import { env } from '@/env';
 import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
-import { toRawChannelId } from '@/lib/slack/ids';
+import { toRawSlackChannelId } from '@/lib/slack/ids';
 import { toLogError } from '@/lib/utils/error';
 
 // Opt-in allowlist: when OPT_IN_CHANNEL is set, only members of that channel may
 // use Gorkie. The channel gates terms-of-service acceptance, users read the terms
-// posted there and opt in by joining, which is what grants access. The set is kept
-// in memory and synced from the channel. No OPT_IN_CHANNEL means open to everyone.
-const allowedUsers = new Set<string>();
+// posted there and opt in by joining, which is what grants access.
 
-export function isUserAllowed(userId: string): boolean {
+function allowlistKey(channel: string): string {
+  return `slack:allowed-users:${channel}`;
+}
+
+export async function isUserAllowed(userId: string): Promise<boolean> {
   if (!env.OPT_IN_CHANNEL) {
     return true;
   }
-  return allowedUsers.has(userId);
+  try {
+    const allowedUsers = await bot
+      .getState()
+      .get<string[]>(allowlistKey(env.OPT_IN_CHANNEL));
+    return allowedUsers?.includes(userId) ?? false;
+  } catch (error) {
+    logger.warn(
+      { ...toLogError(error), userId },
+      '[allowlist] failed to read opt-in cache'
+    );
+    return false;
+  }
+}
+
+export async function addAllowedUser(userId: string): Promise<void> {
+  const channel = env.OPT_IN_CHANNEL;
+  if (!channel) {
+    return;
+  }
+  const state = bot.getState();
+  try {
+    const allowedUsers = new Set(
+      (await state.get<string[]>(allowlistKey(channel))) ?? []
+    );
+    allowedUsers.add(userId);
+    await state.set(allowlistKey(channel), [...allowedUsers]);
+  } catch (error) {
+    logger.warn(
+      { ...toLogError(error), channel, userId },
+      '[allowlist] failed to add user to opt-in cache'
+    );
+  }
 }
 
 export async function buildAllowlist(): Promise<void> {
@@ -22,15 +55,17 @@ export async function buildAllowlist(): Promise<void> {
   if (!channel) {
     return;
   }
+  const state = bot.getState();
 
   // No member-left event exists, so leavers stay cached until restart.
-  bot.onMemberJoinedChannel((event) => {
-    if (toRawChannelId(event.channelId) === channel) {
-      allowedUsers.add(event.userId);
+  bot.onMemberJoinedChannel(async (event) => {
+    if (toRawSlackChannelId(event.channelId) === channel) {
+      await addAllowedUser(event.userId);
     }
   });
 
   try {
+    const allowedUsers = new Set<string>();
     let cursor: string | undefined;
     do {
       const response = await slack.webClient.conversations.members({
@@ -43,6 +78,7 @@ export async function buildAllowlist(): Promise<void> {
       }
       cursor = response.response_metadata?.next_cursor || undefined;
     } while (cursor);
+    await state.set(allowlistKey(channel), [...allowedUsers]);
     logger.info({ count: allowedUsers.size }, '[allowlist] opt-in cache built');
   } catch (error) {
     logger.error(

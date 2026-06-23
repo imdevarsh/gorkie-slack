@@ -1,9 +1,16 @@
 import { bot, slack } from '@/lib/chat';
 import { toRawSlackChannelId } from '@/lib/slack/ids';
 
-export async function assertPublicChannel(
-  chatChannelId: string
+export async function assertReadableChannel(
+  chatChannelId: string,
+  options?: { currentThreadId?: string }
 ): Promise<void> {
+  const currentChannelId = options?.currentThreadId
+    ? slack.channelIdFromThreadId(options.currentThreadId)
+    : undefined;
+  if (currentChannelId && chatChannelId === currentChannelId) {
+    return;
+  }
   const metadata = await bot.channel(chatChannelId).fetchMetadata();
   if (metadata.isDM || metadata.channelVisibility !== 'workspace') {
     throw new Error(

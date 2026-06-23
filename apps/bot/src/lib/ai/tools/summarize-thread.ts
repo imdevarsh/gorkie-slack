@@ -3,7 +3,7 @@ import { generateText, tool } from 'ai';
 import type { Chat } from 'chat';
 import { z } from 'zod';
 import { slack } from '@/lib/chat';
-import { assertPublicChannel, joinChannel } from './utils';
+import { assertReadableChannel, joinChannel } from './utils';
 
 export function summarizeThreadTool({
   bot,
@@ -30,7 +30,7 @@ export function summarizeThreadTool({
       const targetThreadId = input.threadId ?? threadId;
       if (targetThreadId.startsWith('slack:')) {
         const channelId = slack.channelIdFromThreadId(targetThreadId);
-        await assertPublicChannel(channelId);
+        await assertReadableChannel(channelId, { currentThreadId: threadId });
         await joinChannel(channelId);
       }
       const result = await bot

@@ -1,3 +1,4 @@
+import { slackMrkdwnToMarkdown } from '@chat-adapter/slack/format';
 import type { Message } from 'chat';
 import { bot } from '@/lib/chat';
 
@@ -5,14 +6,23 @@ const slackUserMentionPattern = /<@([A-Z0-9_]+)(?:\|([^<>]+))?>/g;
 
 export async function buildAgentPromptText(message: Message): Promise<string> {
   const raw = message.raw;
-  const text =
+  const rawText =
     raw &&
     typeof raw === 'object' &&
     'text' in raw &&
     typeof raw.text === 'string'
       ? raw.text
-      : message.text;
-  const mentions = [...text.matchAll(slackUserMentionPattern)];
+      : undefined;
+  const prefix = `[${message.author.userName}: ${message.author.userId}]`;
+  if (!rawText) {
+    return `${prefix}: ${message.text}`;
+  }
+
+  const mentions = [...rawText.matchAll(slackUserMentionPattern)];
+  if (mentions.length === 0) {
+    return `${prefix}: ${slackMrkdwnToMarkdown(rawText)}`;
+  }
+
   const mentionNames = new Map<string, string>();
   const mentionLookups: Promise<void>[] = [];
 
@@ -34,12 +44,13 @@ export async function buildAgentPromptText(message: Message): Promise<string> {
   }
 
   await Promise.all(mentionLookups);
-  const promptText = mentions.length
-    ? text.replace(slackUserMentionPattern, (token, userId: string) => {
-        const name = mentionNames.get(userId);
-        return name ? `@${name} [${userId}]` : token;
-      })
-    : message.text;
+  const annotatedText = rawText.replace(
+    slackUserMentionPattern,
+    (token, userId: string) => {
+      const name = mentionNames.get(userId);
+      return name ? `@${name} [${userId}]` : token;
+    }
+  );
 
-  return `[${message.author.userName}: ${message.author.userId}]: ${promptText}`;
+  return `${prefix}: ${slackMrkdwnToMarkdown(annotatedText)}`;
 }

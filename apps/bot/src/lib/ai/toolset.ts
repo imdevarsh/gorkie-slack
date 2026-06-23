@@ -50,8 +50,10 @@ export function buildTools({
     ...(postMessage && { postMessage }),
     getFile: getFileTool({ getSandboxContext }),
     leaveThread: leaveThreadTool({ thread }),
-    listThreads: listThreadsTool(),
-    readConversationHistory: readConversationHistoryTool(),
+    listThreads: listThreadsTool({ currentThreadId: thread.id }),
+    readConversationHistory: readConversationHistoryTool({
+      currentThreadId: thread.id,
+    }),
     ...(getChannelInfo && { getChannelInfo }),
     ...(sendDirectMessage && { sendDirectMessage }),
     mermaid: mermaidTool({ thread }),

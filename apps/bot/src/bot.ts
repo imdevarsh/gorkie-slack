@@ -1,8 +1,13 @@
-import type { Message } from 'chat';
-import { runTurn, stopTurn } from '@/lib/agent';
+import type { Message, Thread } from 'chat';
+import { compactTurn, runTurn, stopTurn } from '@/lib/agent';
 import { isUserAllowed } from '@/lib/allowed-users';
 import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
+import {
+  acceptOptIn,
+  OPT_IN_ACCEPT_ACTION,
+  offerOptIn,
+} from '@/lib/onboarding';
 import { toLogError } from '@/lib/utils/error';
 import '@/features/assistant';
 import '@/features/customizations';
@@ -10,22 +15,30 @@ import '@/features/customizations';
 export { bot } from '@/lib/chat';
 
 bot.onNewMention(async (thread, message) => {
-  if (await shouldIgnore(message)) {
+  if (shouldIgnore(message)) {
+    return;
+  }
+  if (!(await isUserAllowed(message.author.userId))) {
+    await offerOptIn(thread, message.author);
     return;
   }
   if (slack.decodeThreadId(message.threadId).threadTs === message.id) {
     await thread.setState({ respondOnThreadMessages: true });
     await thread.subscribe();
   }
-  await runTurn({ message, thread });
+  await runCommandOrTurn(thread, message);
 });
 
 bot.onDirectMessage(async (thread, message) => {
-  if (await shouldIgnore(message)) {
+  if (shouldIgnore(message)) {
+    return;
+  }
+  if (!(await isUserAllowed(message.author.userId))) {
+    await offerOptIn(thread, message.author);
     return;
   }
   await thread.subscribe();
-  await runTurn({ message, thread });
+  await runCommandOrTurn(thread, message);
 });
 
 bot.onSubscribedMessage(async (thread, message) => {
@@ -37,13 +50,16 @@ bot.onSubscribedMessage(async (thread, message) => {
     state.respondOnThreadMessages === true;
 
   if (
-    (await shouldIgnore(message)) ||
-    !(shouldRespondToThread || message.isMention)
+    shouldIgnore(message) ||
+    !(shouldRespondToThread || message.isMention) ||
+    !(await isUserAllowed(message.author.userId))
   ) {
     return;
   }
-  await runTurn({ message, thread });
+  await runCommandOrTurn(thread, message);
 });
+
+bot.onAction(OPT_IN_ACCEPT_ACTION, acceptOptIn);
 
 bot.onAction('stop_turn', async (event) => {
   const threadId = event.value ?? event.threadId;
@@ -67,7 +83,45 @@ bot.onAction('stop_turn', async (event) => {
   }
 });
 
-async function shouldIgnore(message: Message): Promise<boolean> {
+// Leading `<@U...>` mentions Slack puts before the actual message body.
+const LEADING_MENTIONS = /^\s*(?:<@[A-Z0-9][A-Z0-9._-]*(?:\|[^>]+)?>\s*)+/;
+const COMPACT_COMMAND = /^!compact\b(.*)$/is;
+
+function rawText(message: Message): string {
+  const raw = message.raw;
+  return raw &&
+    typeof raw === 'object' &&
+    'text' in raw &&
+    typeof raw.text === 'string'
+    ? raw.text
+    : message.text;
+}
+
+// A `!compact` command addressed to Gorkie returns its (possibly empty) custom
+// summary instructions; anything else returns null.
+function compactInstructions(message: Message): string | null {
+  const body = rawText(message).replace(LEADING_MENTIONS, '').trim();
+  const match = body.match(COMPACT_COMMAND);
+  return match ? (match[1] ?? '').trim() : null;
+}
+
+async function runCommandOrTurn(
+  thread: Thread,
+  message: Message
+): Promise<void> {
+  const instructions = compactInstructions(message);
+  if (instructions !== null) {
+    await compactTurn({
+      instructions: instructions || undefined,
+      message,
+      thread,
+    });
+    return;
+  }
+  await runTurn({ message, thread });
+}
+
+function shouldIgnore(message: Message): boolean {
   if (
     message.author.isBot === true ||
     message.author.userId === 'USLACKBOT' ||
@@ -75,25 +129,9 @@ async function shouldIgnore(message: Message): Promise<boolean> {
   ) {
     return true;
   }
-  if (!(await isUserAllowed(message.author.userId))) {
-    return true;
-  }
-  const raw = message.raw;
-  const text =
-    raw &&
-    typeof raw === 'object' &&
-    'text' in raw &&
-    typeof raw.text === 'string'
-      ? raw.text
-      : message.text;
 
-  for (const line of text.split('\n')) {
-    if (
-      line
-        .replace(/^\s*(?:<@[A-Z0-9][A-Z0-9._-]*(?:\|[^>]+)?>\s*)+/, '')
-        .trimStart()
-        .startsWith('##')
-    ) {
+  for (const line of rawText(message).split('\n')) {
+    if (line.replace(LEADING_MENTIONS, '').trimStart().startsWith('##')) {
       return true;
     }
   }

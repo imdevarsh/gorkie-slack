@@ -1,61 +1,71 @@
 import { bot, slack } from '@/lib/chat';
 
+interface ProfileField {
+  label: string;
+  value: string;
+}
+
 export interface UserProfile {
   displayName?: string;
+  fields?: ProfileField[];
   pronouns?: string;
   realName?: string;
+  status?: string;
   title?: string;
 }
 
 export async function resolveUserProfile(
   userId: string
 ): Promise<UserProfile | undefined> {
-  const [user, cachedProfile] = await Promise.all([
+  const key = `slack:user-profile:${userId}`;
+  const [user, cached] = await Promise.all([
     bot.getUser(userId),
-    bot
-      .getState()
-      .get<{ pronouns?: string; title?: string }>(
-        `slack:user-profile:${userId}`
-      ),
+    bot.getState().get<UserProfile>(key),
   ]);
-  if (user && cachedProfile) {
-    return {
-      displayName: user.userName,
-      pronouns: cachedProfile.pronouns,
-      realName: user.fullName,
-      title: cachedProfile.title,
-    };
-  }
-  try {
-    const info = await slack.webClient.users.info({ user: userId });
-    const profile = info.user?.profile;
-    if (!(profile || user)) {
-      return;
-    }
-    const profileCache = {
-      pronouns: profile?.pronouns || undefined,
-      title: profile?.title || undefined,
-    };
-    await bot
-      .getState()
-      .set(`slack:user-profile:${userId}`, profileCache, 86_400_000)
-      .catch(() => undefined);
-    const resolved: UserProfile = {
-      displayName:
-        user?.userName || profile?.display_name || info.user?.name || undefined,
-      pronouns: profileCache.pronouns,
-      realName: user?.fullName || profile?.real_name || undefined,
-      title: profileCache.title,
-    };
-    return resolved;
-  } catch {
-    if (user) {
-      return {
-        displayName: user.userName,
-        realName: user.fullName,
+
+  let profile = cached;
+  if (!profile) {
+    try {
+      const { profile: raw } = await slack.webClient.users.profile.get({
+        include_labels: true,
+        user: userId,
+      });
+      if (!(raw || user)) {
+        return;
+      }
+      const fields = (raw?.fields ?? {}) as Record<
+        string,
+        { label?: string; value?: string }
+      >;
+      profile = {
+        displayName: raw?.display_name || undefined,
+        fields: Object.values(fields).flatMap((field) =>
+          field.value && field.label
+            ? [{ label: field.label, value: field.value }]
+            : []
+        ),
+        pronouns: raw?.pronouns || undefined,
+        realName: raw?.real_name || undefined,
+        status: raw?.status_text || undefined,
+        title: raw?.title || undefined,
       };
+      await bot
+        .getState()
+        .set(key, profile, 86_400_000)
+        .catch(() => undefined);
+    } catch {
+      if (!user) {
+        return;
+      }
+      profile = {};
     }
   }
+
+  return {
+    ...profile,
+    displayName: user?.userName ?? profile.displayName,
+    realName: user?.fullName ?? profile.realName,
+  };
 }
 
 export async function resolveChannelName(

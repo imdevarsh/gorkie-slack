@@ -17,7 +17,6 @@ export const env = createEnv({
     SLACK_APP_TOKEN: z.string().optional(),
     PORT: z.coerce.number().default(3000),
     OPT_IN_CHANNEL: z.string().optional(),
-    AUTO_ADD_CHANNEL: z.string().optional(),
 
     E2B_API_KEY: z.string().min(1),
     AGENTMAIL_API_KEY: z.string().min(1).optional(),

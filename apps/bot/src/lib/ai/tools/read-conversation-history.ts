@@ -2,12 +2,16 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { slack } from '@/lib/chat';
 import { toChatSlackChannelId } from '@/lib/slack/ids';
-import { assertPublicChannel, joinChannel } from './utils';
+import { assertReadableChannel, joinChannel } from './utils';
 
-export function readConversationHistoryTool() {
+export function readConversationHistoryTool({
+  currentThreadId,
+}: {
+  currentThreadId: string;
+}) {
   return tool({
     description:
-      'Read message history from a public Slack channel or thread using a channel ID and optional thread timestamp.',
+      'Read message history from a Slack channel or thread using a channel ID and optional thread timestamp. The current conversation is always readable (even a private channel or DM); other channels must be public.',
     inputSchema: z.object({
       channelId: z
         .string()
@@ -56,7 +60,7 @@ export function readConversationHistoryTool() {
         );
       }
 
-      await assertPublicChannel(chatChannelId);
+      await assertReadableChannel(chatChannelId, { currentThreadId });
 
       await joinChannel(chatChannelId);
 

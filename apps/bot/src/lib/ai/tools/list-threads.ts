@@ -2,12 +2,16 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { slack } from '@/lib/chat';
 import { toChatSlackChannelId } from '@/lib/slack/ids';
-import { assertPublicChannel, joinChannel } from './utils';
+import { assertReadableChannel, joinChannel } from './utils';
 
-export function listThreadsTool() {
+export function listThreadsTool({
+  currentThreadId,
+}: {
+  currentThreadId: string;
+}) {
   return tool({
     description:
-      'List recent public Slack channel threads so you can pick a thread id before reading it.',
+      'List recent Slack channel threads so you can pick a thread id before reading it. The current channel always works (even if private); other channels must be public.',
     inputSchema: z.object({
       channelId: z
         .string()
@@ -32,7 +36,7 @@ export function listThreadsTool() {
         );
       }
 
-      await assertPublicChannel(chatChannelId);
+      await assertReadableChannel(chatChannelId, { currentThreadId });
 
       await joinChannel(chatChannelId);
 
