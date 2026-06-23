@@ -10,7 +10,7 @@ export const chatAttempts: PiAttempt[] = [
       OPENROUTER_BASE_URL: 'https://ai.hackclub.com/proxy/v1',
     },
     // either minimax/minimax-m3 or moonshotai/kimi-k2.7-code are good...
-    model: 'minimax/minimax-m3',
+    model: 'google/gemini-3-flash-preview',
     provider: 'hackclub',
   },
   ...(env.OPENROUTER_API_KEY
@@ -22,7 +22,7 @@ export const chatAttempts: PiAttempt[] = [
             ? { OPENROUTER_BASE_URL: env.OPENROUTER_BASE_URL }
             : {}),
         },
-        model: 'minimax/minimax-m3',
+        model: 'google/gemini-3-flash-preview',
         provider: 'openrouter',
       },
     ]
