@@ -81,7 +81,8 @@ export function renderToolTask({
     output: clamp(
       phase === 'response'
         ? (resultErrorOutput(output) ?? rendered.output)
-        : rendered.output
+        : rendered.output,
+      96
     ),
     title,
   };
