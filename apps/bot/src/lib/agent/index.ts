@@ -26,7 +26,7 @@ import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
 import { bot, slack } from '@/lib/chat';
-import { agentErrorMessage } from '@/lib/errors';
+import { type AgentErrorStage, agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
 import { errorMessage } from '@/lib/utils/error';
 
@@ -140,7 +140,7 @@ async function executeCompact({
   } catch (error) {
     logger.error({ err: error, threadId }, '[agent] compaction failed');
     await session?.detach().catch(() => undefined);
-    await thread.post(agentErrorMessage(error)).catch(() => undefined);
+    await thread.post(agentErrorMessage({ error })).catch(() => undefined);
   }
 }
 
@@ -164,6 +164,7 @@ async function executeTurn(
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
   let lineReply: ReturnType<typeof createLineReply> | undefined;
+  let errorStage: AgentErrorStage = 'before_output';
 
   const parkSession = async ({ pause }: { pause: boolean }): Promise<void> => {
     if (!session) {
@@ -222,9 +223,10 @@ async function executeTurn(
         { attempt: attemptLog(activeAttempt), err: error, threadId },
         '[agent] turn failed'
       );
+      await lineReply?.flush({ thread });
       await parkSession({ pause: true });
       await deleteControls({ controls });
-      await thread.post(agentErrorMessage(error));
+      await thread.post(agentErrorMessage({ error, stage: errorStage }));
     }
   } finally {
     if (activeTurns.get(threadId) === activeTurn) {
@@ -300,12 +302,16 @@ async function executeTurn(
         for await (const chunk of renderStream({
           onTextDelta: async (text) => {
             hasStreamed = true;
+            errorStage = 'after_text';
             controls ??= await postControls({ thread });
             await lineReply?.append({ text, thread });
           },
           stream: result.stream,
         })) {
           hasStreamed = true;
+          if (errorStage === 'before_output') {
+            errorStage = 'after_progress';
+          }
           yield chunk;
           controls ??= await postControls({ thread });
         }

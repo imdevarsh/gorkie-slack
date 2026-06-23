@@ -103,6 +103,11 @@ export async function* renderStream({
           break;
         }
         yield {
+          details: renderToolTask({
+            input,
+            phase: 'request',
+            toolName: part.toolName,
+          }).details,
           id: part.toolCallId,
           output: rendered.output,
           status: 'complete',
@@ -133,6 +138,11 @@ export async function* renderStream({
           break;
         }
         yield {
+          details: renderToolTask({
+            input,
+            phase: 'request',
+            toolName: part.toolName,
+          }).details,
           id: part.toolCallId,
           output: rendered.output,
           status: 'error',

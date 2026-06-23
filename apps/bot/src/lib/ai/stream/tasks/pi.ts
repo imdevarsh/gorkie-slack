@@ -3,9 +3,13 @@ import type { ToolTaskRendererEntry } from './types';
 
 export const command: ToolTaskRendererEntry = {
   title: 'Running command',
-  request: ({ input }) => ({
-    details: textField(input, 'command'),
-  }),
+  request: ({ input }) => {
+    const commandText = textField(input, 'command');
+    if (!commandText) {
+      return {};
+    }
+    return { details: commandText.replace(/\s+/g, ' ') };
+  },
 };
 
 export const file: ToolTaskRendererEntry = {

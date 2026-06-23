@@ -73,7 +73,7 @@ export function renderToolTask({
   const title = rendered.title ?? entry?.title ?? toolName;
   if (phase === 'request') {
     return {
-      details: clamp(rendered.details, 180),
+      details: clamp(rendered.details, 96),
       title,
     };
   }
