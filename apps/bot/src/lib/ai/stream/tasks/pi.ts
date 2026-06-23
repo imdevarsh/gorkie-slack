@@ -8,7 +8,13 @@ export const command: ToolTaskRendererEntry = {
     if (!commandText) {
       return {};
     }
-    return { details: commandText.replace(/\s+/g, ' ') };
+    const detail = commandText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'))
+      .slice(0, 3)
+      .join(' ; ');
+    return { details: detail || commandText.split('\n')[0] };
   },
 };
 
