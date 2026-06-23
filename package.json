@@ -37,6 +37,9 @@
       "zod": "^4.1.13"
     }
   },
+  "overrides": {
+    "@earendil-works/pi-coding-agent": "0.79.10"
+  },
   "type": "module",
   "scripts": {
     "clean": "git clean -xdf node_modules",

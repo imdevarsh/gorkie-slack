@@ -24,9 +24,18 @@ export const file: ToolTaskRendererEntry = {
     const detail = textField(input, 'path') ?? textField(input, 'file_path');
     return { details: detail };
   },
-  response: ({ input }) => ({
-    output: textField(input, 'path') ?? textField(input, 'file_path'),
-  }),
+  response: ({ toolName }) => {
+    if (toolName === 'edit') {
+      return { output: 'Edited file.' };
+    }
+    if (toolName === 'fileChange') {
+      return { output: 'Updated file.' };
+    }
+    if (toolName === 'write') {
+      return { output: 'Wrote file.' };
+    }
+    return { output: 'Read file.' };
+  },
 };
 
 export const search: ToolTaskRendererEntry = {

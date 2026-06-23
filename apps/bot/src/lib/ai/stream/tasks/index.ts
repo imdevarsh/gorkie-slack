@@ -29,7 +29,7 @@ const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   bash: command,
   compaction: { title: 'Compacting context' },
   edit: { ...file, title: 'Editing file' },
-  fileChange: { title: 'Updating file' },
+  fileChange: { ...file, title: 'File updated' },
   generateImage,
   getChannelInfo,
   getFile,
