@@ -47,10 +47,6 @@ const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   searchSlack,
   searchWeb,
   sendDirectMessage: { ...message, title: 'Sending DM' },
-  skip: {
-    title: 'Skipping',
-    request: ({ input }) => ({ details: textField(input, 'reason') }),
-  },
   summarizeThread,
   uploadFile,
   write: { ...file, title: 'Writing file' },

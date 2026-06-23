@@ -14,7 +14,6 @@ import { readConversationHistoryTool } from './tools/read-conversation-history';
 import { scheduleReminderTool } from './tools/schedule-reminder';
 import { searchSlack } from './tools/search-slack';
 import { searchWeb } from './tools/search-web';
-import { skipTool } from './tools/skip';
 import { summarizeThreadTool } from './tools/summarize-thread';
 import { uploadFileTool } from './tools/upload-file';
 
@@ -58,7 +57,6 @@ export function buildTools({
     ...(sendDirectMessage && { sendDirectMessage }),
     mermaid: mermaidTool({ thread }),
     scheduleReminder: scheduleReminderTool({ message }),
-    skip: skipTool({ threadId: thread.id }),
     searchSlack: searchSlack({ message }),
     searchWeb: searchWeb({ apiKey: env.EXA_API_KEY }),
     summarizeThread: summarizeThreadTool({ bot, threadId: thread.id }),
