@@ -11,6 +11,11 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 ## P1 - Bounded Slack Context And History
 
 - [ ] Add a bounded Slack context prelude before each Pi prompt so Gorkie starts with the local Slack situation instead of needing to discover basic context from inside the sandbox.
+- [ ] Add per-user Slack search using the Acting User's user token, not a shared bot/admin token, so Slack filters public channels, private channels, DMs, group DMs, users, and files to exactly what that user can access.
+- [ ] Store Slack user-token authorization separately from bot credentials. Token lookup must be keyed by Acting User, and tool calls must fail closed if the requesting user has not authorized the needed user scopes.
+- [ ] Add user-token search tools for Slack content/files/users with explicit result provenance: every prompt/tool result should say the results came from the Acting User's Slack-visible scope, not from global bot memory.
+- [ ] Keep user-token search privacy scoped. Do not persist raw private-channel/DM search results into shared agent memory, global caches, or another user's thread context; only summarize into the current turn when the Slack surface is safe for the participants.
+- [ ] Add guardrails for shared-channel use: if a user searches their private DMs/private channels from a public or multi-user thread, require a private draft/confirmation step before posting any sensitive result back into the shared thread.
 - [ ] Thread mention behavior: when mentioned in a Slack thread, fetch the latest thread messages before prompting Pi. Target the Claude-like practical bound of the last 50 thread messages, sorted chronologically.
 - [ ] Channel mention behavior: when mentioned in a channel root message, fetch recent top-level channel messages before prompting Pi. Target the Claude-like practical bound of the last 20 channel messages, sorted chronologically, excluding irrelevant bot/self noise.
 - [ ] Use Chat SDK APIs first: adapter `fetchMessages` for thread replies and adapter `fetchChannelMessages` for channel context. Use Chat SDK state helpers only when pagination semantics are explicitly desired.
@@ -34,9 +39,32 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 
 ## P3 - Tool Scope Decisions
 
+- [ ] Add a draft-first DM tool flow: Gorkie can prepare a DM or group-DM message for the Acting User, show recipient/body/context, and require explicit approval before any send.
+- [ ] Support user-token DM actions only behind per-user authorization: start DMs/group DMs and send messages on behalf of the Acting User when scopes allow it, but never silently fall back to a shared user token.
+- [ ] Add edit/cancel/send states for drafted DMs and group DMs. The user should be able to revise generated copy before sending, cancel it without side effects, or send after a clear confirmation.
+- [ ] Keep bot-DM and user-DM semantics separate in tool names, prompts, task rows, and logs. `sendDirectMessage` as the bot is not the same as drafting or sending as a user.
+- [ ] Add task renderers for DM draft lifecycle: drafting, awaiting approval, edited, sent, canceled, and failed. Avoid dumping raw message bodies into logs/task summaries when the destination is private.
 - [ ] Improve scheduled reminders, to say here's your reminder for xyz you asked in this thread, xyz
 - [ ] Rewrite and cleanup line-reply, since it has a BUNCH of code, which can just be achieved from asking the ai to do \n\n for every response, like tables, etc. and not to exceed 3k
 - [ ] Refactor error message rendering 
+
+## P4 - BYOK Proper
+
+- [x] Add `BYOK_ENCRYPTION_KEY` to bot env validation and deployment docs; require enough entropy for AES-256-GCM key derivation.
+- [ ] Add tests for the bot-owned versioned secret encryption helper: round-trip, tamper failure, wrong-key failure, malformed ciphertext, and no plaintext in thrown errors.
+- [x] Add `user_model_credentials` Drizzle schema and queries keyed by `(user_id, provider)`; store encrypted key, base URL metadata, provider slug, selected model id, key preview, validation status, validation message, last-used timestamp, and audit timestamps.
+- [x] Keep raw BYOK secrets out of `packages/db` query logs and return types unless a bot-owned decrypting service explicitly asks for the encrypted payload.
+- [x] Define a single exported provider discriminant union and provider adapter map in `packages/ai` for Pi attempts: OpenRouter-compatible, opencode-go, and any direct provider added later.
+- [x] Replace static `chatAttempts` call sites with per-Acting-User attempt resolution: BYOK attempts first, service attempts only when no BYOK exists or explicit service fallback is enabled.
+- [x] Update `executeTurn`, `executeCompact`, `nextAttempt`, and attempt logging so provider/model selection is per turn and logs never include raw env or key material.
+- [x] Refactor `summarizeThread` to receive a per-turn language model when the BYOK provider can produce one.
+- [ ] Make `generateImage` policy explicit in code/UI: service image provider only unless an image-capable BYOK provider is configured.
+- [x] Add App Home Model Keys UI: add/rotate/delete credential, provider input, model id input, optional base URL, status display, and masked key preview only.
+- [x] Ensure Slack modal `private_metadata`, view state re-renders, prompt hints, Pi session files, E2B env, task renderers, and logs never contain raw API keys.
+- [ ] Validate credentials on save or first use, store safe validation status, and surface invalid-key/auth/quota errors to only the Acting User where Slack allows.
+- [x] Decide service fallback UX: default off for BYOK failures, with an explicit opt-in if users may spend the shared service key after their key fails.
+- [ ] Add tests for provider-to-`customEnv` mapping, BYOK-first fallback order, service fallback disabled, invalid-key handling, App Home modal parsing, and ownership checks.
+- [ ] Live smoke: save a key, run a Slack turn, run compaction, rotate the key, delete the key, trigger an invalid-key turn, and verify two users in one thread use separate credentials without leaking provider/key details.
 
 ## Upstream AI SDK / Harness Expectations
 
@@ -146,5 +174,4 @@ When this bug occurs it's impossible to stop gorkie
 
 ✻ Brewed for 48s
 - [ ] For some reason gorkie can read threads in private channels fix it
-- [ ] Skip tool doesn't work: it only logs and returns `{ skipped: true }`, so nothing suppresses the reply. When the model narrates while skipping (e.g. "(Not addressed to me — skipping.)") that text still streams and posts. Need to actually suppress/discard the streamed output (or delete the posted line) when skip is called, and/or prompt the model to emit no text at all when it skips.
 - [ ] Test out leaving thread: verify the `leaveThread` tool actually works end-to-end — ask gorkie to leave, confirm it stops auto-responding to that thread, and confirm it can still be @-mentioned back in.
