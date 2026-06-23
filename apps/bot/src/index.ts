@@ -1,48 +1,47 @@
-import { env } from '@/env';
-import { startTelemetry } from '@/lib/ai/telemetry';
+import { bot } from '@/bot';
+import { stopAllTurns } from '@/lib/agent';
+import { buildAllowlist } from '@/lib/allowed-users';
+import { slack } from '@/lib/chat';
 import logger from '@/lib/logger';
-import { startSandboxCleanup } from '@/lib/sandbox/janitor';
-import { startTaskRunner } from '@/lib/tasks/runner';
-import { createSlackApp } from '@/slack/app';
+import { shutdownLangfuse } from '@/lib/observability/langfuse';
 
-const telemetry = startTelemetry({ logger });
+let shuttingDown = false;
 
-process.on('unhandledRejection', (reason) => {
-  logger.error({ error: reason }, 'Unhandled promise rejection');
-});
-
-process.on('uncaughtException', (error) => {
-  logger.error({ error }, 'Uncaught exception');
-  telemetry
-    .shutdown()
-    .catch((shutdownError: unknown) => {
-      logger.error(
-        { error: shutdownError },
-        'Failed to shutdown telemetry after uncaught exception'
-      );
-    })
-    .finally(() => {
-      process.exit(1);
-    });
-});
-
-async function main() {
-  startSandboxCleanup();
-  const { app, socketMode } = createSlackApp();
-  startTaskRunner(app.client);
-
-  if (socketMode) {
-    await app.start();
-    logger.info('Slack Bolt app connected via Socket Mode');
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) {
     return;
   }
-
-  await app.start(env.PORT);
-  logger.info({ port: env.PORT }, 'Slack Bolt app listening for events');
+  shuttingDown = true;
+  stopAllTurns();
+  logger.info({ signal }, '[bot] shutting down');
+  await bot.shutdown().catch((error: unknown) => {
+    logger.error({ err: error }, '[bot] error during shutdown');
+  });
+  await shutdownLangfuse();
+  process.exit(0);
 }
 
-main().catch(async (error) => {
-  logger.error({ error }, 'Failed to start Slack Bolt app');
-  await telemetry.shutdown();
-  process.exitCode = 1;
-});
+try {
+  await bot.initialize();
+  await buildAllowlist();
+  const botProfile = slack.botUserId
+    ? await slack.webClient.users
+        .info({ user: slack.botUserId })
+        .catch(() => null)
+    : null;
+  logger.info(
+    `[bot] ${botProfile?.user?.profile?.display_name || botProfile?.user?.profile?.real_name || botProfile?.user?.name || 'gorkie'} (${slack.botUserId ?? 'unknown id'}) is online`
+  );
+} catch (error) {
+  logger.error({ err: error }, '[bot] failed to start');
+  process.exit(1);
+}
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => {
+    shutdown(signal).catch((error: unknown) => {
+      logger.error({ err: error }, '[bot] shutdown failed');
+      process.exit(1);
+    });
+  });
+}

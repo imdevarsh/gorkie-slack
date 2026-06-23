@@ -1,11 +1,8 @@
 # Development
 
-Gorkie runs as two local apps:
+Gorkie runs as one local app: `apps/bot`.
 
-- `apps/bot` is the Slack bot.
-- `apps/server` is the Nitro proxy that holds provider API keys.
-
-The bot does not start or import the proxy server. For sandbox work, E2B must be able to reach `apps/server` through a public URL.
+The bot uses Chat SDK with the Slack adapter in Socket Mode, so local development does not need a public tunnel. AI work runs through AI SDK Harness/Pi and each active Slack thread gets an E2B sandbox.
 
 ## Prerequisites
 
@@ -13,120 +10,50 @@ The bot does not start or import the proxy server. For sandbox work, E2B must be
 - PostgreSQL
 - A Slack app created from `slack-manifest.json`
 - An E2B API key
-- Provider API keys for the proxy in `apps/server/.env`
+- Provider keys for the configured Pi attempts
 
-Redis is optional right now. Keep `REDIS_URL` unset unless a feature imports `@repo/kv`.
+## Environment
 
-## Environment Files
-
-Create both app env files:
+Create the bot env file:
 
 ```bash
 cp apps/bot/.env.example apps/bot/.env
-cp apps/server/.env.example apps/server/.env
 ```
 
-Use the same `DATABASE_URL` in both files. The bot writes short-lived proxy tokens to the database, and the proxy validates those tokens from the same database.
-
-Put Slack, Exa, E2B, AgentMail, Langfuse, and `SERVER_BASE_URL` in `apps/bot/.env`.
-
-Both apps need `HACKCLUB_API_KEY`, `OPENROUTER_API_KEY`, and `GOOGLE_GENERATIVE_AI_API_KEY`: the bot uses them for direct orchestrator inference, the proxy uses them to forward sandbox requests upstream.
+Fill in Slack, database, provider, E2B, Exa, and optional Langfuse values. `SLACK_SOCKET_MODE=true` is the normal local setting.
 
 ## Running Locally
 
-Install dependencies and push the schema:
+Install dependencies, push the schema, then start the bot:
 
 ```bash
 bun install
 bun run db:push
-```
-
-The bot and proxy run in separate terminals. E2B sandboxes are external processes, so the proxy must be reachable over a public URL. `localhost` is not sufficient.
-
-Start the proxy in one terminal:
-
-```bash
-bun run dev:server
-```
-
-In a second terminal, expose the proxy with a public tunnel:
-
-```bash
-npx untun@latest tunnel http://localhost:3001
-```
-
-Copy the printed `https://...trycloudflare.com` URL into `apps/bot/.env` as `SERVER_BASE_URL`. It must point at the server root. The sandbox config appends paths like `/provider/hackclub` and calls `/ip` to resolve the sandbox outbound IP.
-
-In a third terminal, start the bot:
-
-```bash
 bun run dev:bot
 ```
 
-If you change `SERVER_BASE_URL`, restart the bot to pick it up.
+The bot runs TypeScript directly with Bun. Dev mode uses process-restart watch, not Bun hot reload, because Slack Socket Mode owns a persistent WebSocket that must shut down cleanly between reloads. Do not add bot bundling or `tsdown` unless there is a real deployment target that needs it.
 
-`SLACK_SOCKET_MODE=true` is the simplest setup for local Slack development. Slack does not need to reach your bot over HTTP.
+## Sandbox Template
 
-To test the production build locally, build first and then use `start:bot`:
+Build the E2B template when sandbox packages or CLI dependencies change:
 
 ```bash
-bun run build --filter=bot
-bun run start:bot
+bun --filter=@repo/sandbox run build:template
 ```
 
-This runs with `NODE_ENV=production`, so logs are written as plain JSON to stdout and to a timestamped file under `apps/bot/logs/`.
+The template installs runtime tools such as Node, Python packages, `agent-browser`, browser dependencies, and upstream skill files. If Pi does not discover template-installed skills, investigate the adapter's skill discovery roots before adding app-owned skill copies.
 
-## Common Checks
+## Checks
 
 ```bash
 bun run typecheck
-bun check
+bun run check
 bun run check:spelling
 ```
 
-## Deployment
+Run `bun run fix` before preparing a commit.
 
-### Proxy (`apps/server`) to Vercel
+## Deployment Notes
 
-The proxy is a Nitro app and deploys to Vercel as a serverless Node.js function.
-
-1. Import the repo in the Vercel dashboard. Set the **Root Directory** to `apps/server` and the **Framework Preset** to **Other**.
-
-2. Add environment variables in the Vercel project settings, everything from `apps/server/.env.example`:
-
-   | Variable | Notes |
-   |---|---|
-   | `DATABASE_URL` | Same Neon connection string as the bot |
-   | `HACKCLUB_API_KEY` | Provider key (never put in the bot) |
-   | `OPENROUTER_API_KEY` / `OPENROUTER_BASE_URL` | Optional fallback |
-   | `GOOGLE_GENERATIVE_AI_API_KEY` | Optional fallback |
-   | `CORS_ORIGIN` | Your bot's public URL, or `*` to allow all origins |
-   | `LOG_LEVEL` | `info` for production |
-
-3. Deploy. The proxy URL will be `https://<your-project>.vercel.app`.
-
-4. Set that URL as `SERVER_BASE_URL` in `apps/bot/.env` (and in your bot's production environment).
-
-The `/health` and `/ip` endpoints have no auth. `/provider/:provider/*` requires a valid short-lived token issued by the bot.
-
-### Bot (`apps/bot`)
-
-The bot runs as a long-lived Node.js process and is not suited for serverless. Deploy it to a persistent host:
-
-1. Set the start command to `bun run start` (runs `dist/index.mjs`).
-2. Add all variables from `apps/bot/.env.example`, including `SERVER_BASE_URL` pointing at the deployed server.
-3. Set `SLACK_SOCKET_MODE=true`, Socket Mode keeps Slack's connection open without requiring a public HTTP endpoint for the bot itself.
-
-**Database:**
-
-Both apps must share the same `DATABASE_URL`. The bot writes short-lived proxy tokens; the proxy validates them. [Neon](https://neon.tech) works well for this, free tier is sufficient and the connection string supports SSL by default.
-
-### Deploying the Sandbox Template
-
-The E2B sandbox template must be built and registered before the bot can create sandboxes:
-
-```bash
-bun run build:sandbox
-```
-
-The template name comes from `config.template` in `apps/bot/src/config.ts`. After building, the template ID is pinned, update `config.template` if you create a new version.
+`apps/bot` is a long-lived process and should run on a persistent host. Configure the same variables as `apps/bot/.env.example` in the host environment and keep Socket Mode enabled unless the Slack runtime is explicitly moved to HTTP events.

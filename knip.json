@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreDependencies": [
+    "@biomejs/biome",
+    "@cspell/dict-bash",
+    "@cspell/dict-npm",
+    "@cspell/dict-redis",
+    "@repo/cspell-config",
+    "cspell",
+    "pino-pretty"
+  ],
+  "tags": ["-lintignore"],
+  "workspaces": {
+    ".": {
+      "entry": ["taze.config.ts", "turbo/generators/config.ts"]
+    },
+    "apps/bot": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/ai": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/db": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/logging": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/sandbox": {
+      "project": ["src/**/*.ts"]
+    },
+    "tooling/cspell": {
+      "project": ["**/*.ts"]
+    }
+  }
+}

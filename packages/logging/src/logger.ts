@@ -32,44 +32,46 @@ export async function createLogger({
     return pino(base);
   }
 
-  if (!isProduction) {
-    return pino(
-      base,
-      createTransport({
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
-          ignore: 'pid,hostname,ctxId',
-          messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
-        },
-      })
-    );
+  const prettyTarget: TransportTargetOptions = {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
+      ignore: 'pid,hostname,ctxId',
+      messageFormat: '{if ctxId}[{ctxId}] {end}{msg}',
+    },
+  };
+
+  const shouldFile = fileLogging ?? isProduction;
+
+  if (!(isProduction || shouldFile)) {
+    return pino(base, createTransport(prettyTarget));
   }
 
-  const shouldFile = fileLogging ?? true;
   if (!shouldFile) {
     return pino(base);
   }
 
-  const targets: TransportTargetOptions[] = [
-    { target: 'pino/file', options: { destination: 1 }, level: logLevel },
-  ];
+  const targets: TransportTargetOptions[] = isProduction
+    ? [{ target: 'pino/file', options: { destination: 1 }, level: logLevel }]
+    : [prettyTarget];
 
-  try {
-    await mkdir(logDirectory, { recursive: true });
-    const runId = new Date()
-      .toISOString()
-      .replace('T', '_')
-      .replace(/[:.]/g, '-')
-      .slice(0, 19);
-    targets.unshift({
-      target: 'pino/file',
-      options: { destination: path.join(logDirectory, `${runId}.log`) },
-      level: logLevel,
-    });
-  } catch {
-    // continue without file
+  if (!isProduction) {
+    try {
+      await mkdir(logDirectory, { recursive: true });
+      const runId = new Date()
+        .toISOString()
+        .replace('T', '_')
+        .replace(/[:.]/g, '-')
+        .slice(0, 19);
+      targets.unshift({
+        target: 'pino/file',
+        options: { destination: path.join(logDirectory, `${runId}.log`) },
+        level: logLevel,
+      });
+    } catch {
+      // continue without file
+    }
   }
 
   return pino(base, createTransport({ targets }));

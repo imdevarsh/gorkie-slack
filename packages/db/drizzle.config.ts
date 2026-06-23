@@ -5,7 +5,6 @@ import { defineConfig } from 'drizzle-kit';
 import { keys } from './src/keys';
 
 const root = resolve(process.cwd(), '../..');
-dotenv.config({ path: resolve(root, 'apps/server/.env') });
 dotenv.config({ path: resolve(root, 'apps/bot/.env') });
 
 const env = keys();

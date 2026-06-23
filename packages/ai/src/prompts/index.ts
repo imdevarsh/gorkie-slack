@@ -1,40 +1,23 @@
-import type {
-  ChatRequestHints,
-  SandboxRequestHints,
-  SlackMessageContext,
-} from '../types';
-import { chatPrompt } from './chat';
+import { contextPrompt } from './context';
+import { corePrompt } from './core';
+import { customizationPrompt } from './customization';
+import type { RequestHints } from './hints';
+import { personalityPrompt } from './personality';
 import { sandboxPrompt } from './sandbox';
+import { slackPrompt } from './slack';
 
-export function systemPrompt(
-  opts:
-    | {
-        agent: 'chat';
-        requestHints: ChatRequestHints;
-        context: SlackMessageContext;
-      }
-    | {
-        agent: 'sandbox';
-        context?: SlackMessageContext;
-        requestHints?: SandboxRequestHints;
-      }
-): string {
-  switch (opts.agent) {
-    case 'chat':
-      return chatPrompt({
-        requestHints: opts.requestHints,
-        context: opts.context,
-      });
-    case 'sandbox':
-      return sandboxPrompt({
-        context: opts.context,
-        requestHints: opts.requestHints,
-      });
-    default: {
-      const _exhaustive: never = opts;
-      throw new Error(
-        `Unknown agent type: ${(_exhaustive as { agent: string }).agent}`
-      );
-    }
-  }
+export type { RequestHints } from './hints';
+
+export function systemPrompt({ hints }: { hints: RequestHints }): string {
+  return [
+    corePrompt,
+    personalityPrompt,
+    sandboxPrompt,
+    slackPrompt,
+    contextPrompt(hints),
+    customizationPrompt(hints),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+    .trim();
 }

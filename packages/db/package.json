@@ -30,19 +30,17 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit migrate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@t3-oss/env-core": "catalog:",
     "drizzle-orm": "catalog:",
-    "pg": "catalog:",
+    "postgres": "^3.4.7",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",
     "@types/bun": "catalog:",
-    "@types/pg": "catalog:",
     "dotenv": "catalog:",
     "drizzle-kit": "catalog:",
     "typescript": "catalog:"

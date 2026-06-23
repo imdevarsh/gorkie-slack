@@ -1,5 +1,33 @@
 {
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "import": ["@repo/cspell-config"],
+  "ignorePaths": ["pr30-review-state.md", "agent-goal.md"],
+  "words": [
+    "affordances",
+    "asyncio",
+    "BYOK",
+    "creds",
+    "dedup",
+    "elif",
+    "fumadocs",
+    "Fumadocs",
+    "freevm",
+    "hmac",
+    "Hmac",
+    "isinstance",
+    "janky",
+    "kimi",
+    "kwargs",
+    "llms",
+    "mattpocock",
+    "MCPO",
+    "moonshotai",
+    "reclutter",
+    "resumability",
+    "takumi",
+    "unreads",
+    "unreplied",
+    "waku"
+  ],
   "useGitignore": true
 }

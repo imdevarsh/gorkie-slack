@@ -7,23 +7,35 @@
       "skillPath": "skills/use-ai-sdk/SKILL.md",
       "computedHash": "2249889eb47ef0f61c4dba4cf2afe01c1c8dd793bb4c24230347c1ab909bb7dd"
     },
-    "hono": {
-      "source": "yusukebe/hono-skill",
+    "chat-sdk": {
+      "source": "vercel/chat",
       "sourceType": "github",
-      "skillPath": "skills/hono/SKILL.md",
-      "computedHash": "220e5e1b12bbaeec49ec362b6e2262d77632d0536e9758bba9acbbc323fef990"
+      "skillPath": "skills/chat/SKILL.md",
+      "computedHash": "eec16293cb0044b8e4376dec986b96dc70bf425854c6fb7aa062890faa020a25"
     },
-    "neon-postgres": {
-      "source": "neondatabase/agent-skills",
+    "grill-with-docs": {
+      "source": "mattpocock/skills",
       "sourceType": "github",
-      "skillPath": "skills/neon-postgres/SKILL.md",
-      "computedHash": "6c6dc205493216d88fb0ee040eafec1d3a722926f6f8f3f568ce26740c53eb74"
+      "skillPath": "skills/engineering/grill-with-docs/SKILL.md",
+      "computedHash": "eb0e91e84277283dc2b23ed544399e53afd6b5287e5b6929f25fe8aa608e164b"
     },
-    "tsdown": {
-      "source": "rolldown/tsdown",
+    "improve": {
+      "source": "shadcn/improve",
       "sourceType": "github",
-      "skillPath": "skills/tsdown/SKILL.md",
-      "computedHash": "c5cb4d806d5bc454dbfc0bd03a8dbaf8fb1d45dea1973ed3ae724d3a2c191246"
+      "skillPath": "skills/improve/SKILL.md",
+      "computedHash": "431adaf38132005b32cacb952313f18b4c03ee98ee4c5859bad323156a48bb02"
+    },
+    "slack-agent": {
+      "source": "vercel-labs/slack-agent-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "c40b751775659892fa9f3eb28f77d570243e07c85c575b24ee0fb19dc824f43f"
+    },
+    "thermo-nuclear-code-quality-review": {
+      "source": "cursor/plugins",
+      "sourceType": "github",
+      "skillPath": "cursor-team-kit/skills/thermo-nuclear-code-quality-review/SKILL.md",
+      "computedHash": "9052b01b46b1d8dbf94c45f9313ec1983443f9a460e83d49cdc7fe0f640ca476"
     },
     "turborepo": {
       "source": "vercel/turborepo",

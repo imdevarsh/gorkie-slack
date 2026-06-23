@@ -4,12 +4,11 @@
   "globalEnv": [
     "AGENTMAIL_API_KEY",
     "AUTO_ADD_CHANNEL",
-    "CORS_ORIGIN",
     "DATABASE_URL",
     "E2B_API_KEY",
     "EXA_API_KEY",
-    "GOOGLE_GENERATIVE_AI_API_KEY",
     "HACKCLUB_API_KEY",
+    "INFERENCE_API_KEY",
     "LANGFUSE_BASEURL",
     "LANGFUSE_PUBLIC_KEY",
     "LANGFUSE_SECRET_KEY",
@@ -18,18 +17,12 @@
     "OPENROUTER_API_KEY",
     "OPENROUTER_BASE_URL",
     "OPT_IN_CHANNEL",
-    "SERVER_BASE_URL",
-    "REDIS_URL",
     "SLACK_APP_TOKEN",
     "SLACK_BOT_TOKEN",
-    "SLACK_SIGNING_SECRET",
-    "SLACK_SOCKET_MODE"
+    "SLACK_SIGNING_SECRET"
   ],
   "globalPassThroughEnv": [
     "CI",
-    "CRON_SECRET",
-    "NITRO_PRESET",
-    "NITRO_PRESET_CLOUD",
     "NODE_ENV",
     "PORT",
     "TURBO_TEAM",
@@ -46,9 +39,6 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
     "typecheck": {
       "dependsOn": ["^typecheck"]
     },
@@ -64,10 +54,6 @@
     },
     "db:generate": {
       "cache": false
-    },
-    "db:migrate": {
-      "cache": false,
-      "persistent": true
     },
     "db:studio": {
       "cache": false,

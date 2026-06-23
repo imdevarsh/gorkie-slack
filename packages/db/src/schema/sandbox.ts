@@ -1,4 +1,20 @@
-import { index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  index,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
+
+export const sandboxStatus = pgEnum('sandbox_status', [
+  'creating',
+  'active',
+  'paused',
+  'destroyed',
+]);
+
+export type SandboxStatus = (typeof sandboxStatus.enumValues)[number];
 
 export const sandboxSessions = pgTable(
   'sandbox_sessions',
@@ -6,7 +22,10 @@ export const sandboxSessions = pgTable(
     threadId: text('thread_id').primaryKey(),
     sandboxId: text('sandbox_id').notNull(),
     sessionId: text('session_id').notNull(),
-    status: text('status').notNull().default('creating'),
+    resumeState: text('resume_state'),
+    // Pi transcript mirror for sandbox recreation.
+    session: jsonb('session').$type<{ data: string; file: string }>(),
+    status: sandboxStatus('status').notNull().default('creating'),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     resumedAt: timestamp('resumed_at', { withTimezone: true }),
     destroyedAt: timestamp('destroyed_at', { withTimezone: true }),
@@ -25,24 +44,5 @@ export const sandboxSessions = pgTable(
   ]
 );
 
-export const sandboxTokens = pgTable(
-  'sandbox_tokens',
-  {
-    token: text('token_hash').primaryKey(),
-    sandboxId: text('sandbox_id').notNull(),
-    allowedIp: text('allowed_ip'),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    index('sandbox_tokens_sandbox_idx').on(table.sandboxId),
-    index('sandbox_tokens_expires_idx').on(table.expiresAt),
-  ]
-);
-
 export type SandboxSession = typeof sandboxSessions.$inferSelect;
 export type NewSandboxSession = typeof sandboxSessions.$inferInsert;
-export type SandboxToken = typeof sandboxTokens.$inferSelect;
-export type NewSandboxToken = typeof sandboxTokens.$inferInsert;

@@ -11,3 +11,8 @@ export const userCustomizations = pgTable('user_customizations', {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export type UserCustomization = Pick<
+  typeof userCustomizations.$inferSelect,
+  'prompt'
+>;

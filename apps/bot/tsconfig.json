@@ -1,8 +1,10 @@
 {
   "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
-    "composite": true,
+    "composite": false,
+    "declaration": false,
     "outDir": "dist",
+    "rootDir": "./src",
     "paths": {
       "@/*": ["./src/*"]
     },

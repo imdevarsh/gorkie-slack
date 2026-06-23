@@ -1,65 +1,90 @@
-import { toLogError } from '@repo/utils/error';
-import type { App } from '@slack/bolt';
 import { env } from '@/env';
-import logger from './logger';
+import { bot, slack } from '@/lib/chat';
+import logger from '@/lib/logger';
+import { toRawSlackChannelId } from '@/lib/slack/ids';
+import { toLogError } from '@/lib/utils/error';
 
-const allowedUsers = new Set<string>();
+// Opt-in allowlist: when OPT_IN_CHANNEL is set, only members of that channel may
+// use Gorkie. The channel gates terms-of-service acceptance, users read the terms
+// posted there and opt in by joining, which is what grants access.
 
-export async function buildCache(app: App) {
-  if (!env.OPT_IN_CHANNEL) {
-    return;
-  }
-
-  // biome-ignore lint/suspicious/useAwait: await is not needed here
-  app.event('member_joined_channel', async ({ event }) => {
-    if (event.channel !== env.OPT_IN_CHANNEL) {
-      return;
-    }
-    logger.debug(`${event.user} joined opt-in channel`);
-    allowedUsers.add(event.user);
-    return;
-  });
-
-  // biome-ignore lint/suspicious/useAwait: await is not needed here
-  app.event('member_left_channel', async ({ event }) => {
-    if (event.channel !== env.OPT_IN_CHANNEL) {
-      return;
-    }
-    logger.debug(`${event.user} left opt-in channel`);
-    allowedUsers.delete(event.user);
-    return;
-  });
-
-  let cursor: string | undefined;
-
-  logger.info('Building opt-in user cache');
-  do {
-    const req = await app.client.conversations.members({
-      channel: env.OPT_IN_CHANNEL,
-      limit: 200,
-      cursor,
-    });
-    if (!req.ok) {
-      logger.error(
-        { ...toLogError(req.error), channelId: env.OPT_IN_CHANNEL },
-        'Error building opt-in cache'
-      );
-      throw new Error('Failed to build opt-in cache');
-    }
-    cursor = req.response_metadata?.next_cursor;
-    if (!req.members) {
-      continue;
-    }
-    for (const member of req.members) {
-      allowedUsers.add(member);
-    }
-  } while (cursor);
-  logger.info(`${allowedUsers.size} users added to opt-in cache`);
+function allowlistKey(channel: string): string {
+  return `slack:allowed-users:${channel}`;
 }
 
-export function isUserAllowed(userId: string) {
+export async function isUserAllowed(userId: string): Promise<boolean> {
   if (!env.OPT_IN_CHANNEL) {
     return true;
   }
-  return allowedUsers.has(userId);
+  try {
+    const allowedUsers = await bot
+      .getState()
+      .get<string[]>(allowlistKey(env.OPT_IN_CHANNEL));
+    return allowedUsers?.includes(userId) ?? false;
+  } catch (error) {
+    logger.warn(
+      { ...toLogError(error), userId },
+      '[allowlist] failed to read opt-in cache'
+    );
+    return false;
+  }
+}
+
+export async function addAllowedUser(userId: string): Promise<void> {
+  const channel = env.OPT_IN_CHANNEL;
+  if (!channel) {
+    return;
+  }
+  const state = bot.getState();
+  try {
+    const allowedUsers = new Set(
+      (await state.get<string[]>(allowlistKey(channel))) ?? []
+    );
+    allowedUsers.add(userId);
+    await state.set(allowlistKey(channel), [...allowedUsers]);
+  } catch (error) {
+    logger.warn(
+      { ...toLogError(error), channel, userId },
+      '[allowlist] failed to add user to opt-in cache'
+    );
+  }
+}
+
+export async function buildAllowlist(): Promise<void> {
+  const channel = env.OPT_IN_CHANNEL;
+  if (!channel) {
+    return;
+  }
+  const state = bot.getState();
+
+  // No member-left event exists, so leavers stay cached until restart.
+  bot.onMemberJoinedChannel(async (event) => {
+    if (toRawSlackChannelId(event.channelId) === channel) {
+      await addAllowedUser(event.userId);
+    }
+  });
+
+  try {
+    const allowedUsers = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const response = await slack.webClient.conversations.members({
+        channel,
+        cursor,
+        limit: 200,
+      });
+      for (const member of response.members ?? []) {
+        allowedUsers.add(member);
+      }
+      cursor = response.response_metadata?.next_cursor || undefined;
+    } while (cursor);
+    await state.set(allowlistKey(channel), [...allowedUsers]);
+    logger.info({ count: allowedUsers.size }, '[allowlist] opt-in cache built');
+  } catch (error) {
+    logger.error(
+      { ...toLogError(error), channel },
+      '[allowlist] failed to build opt-in cache'
+    );
+    throw new Error('Failed to build opt-in allowlist');
+  }
 }

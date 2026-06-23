@@ -1,118 +1,75 @@
-# Gorkie Slack
+# Gorkie
 
-A helpful AI Slack Bot built with AI SDK.
+Gorkie is an AI assistant for Slack. The codebase is a Bun/TypeScript monorepo using Chat SDK, AI SDK Harness/Pi, E2B, Drizzle/Postgres, Turborepo, and Ultracite.
 
-## Project Overview
+## Mental Model
 
-Gorkie is a Slack AI assistant built with Bun, TypeScript, Vercel AI SDK, and Slack Bolt SDK.
-It responds to mentions, DMs, and thread replies with AI-generated responses.
+Each Slack conversation runs an AI SDK 7 `HarnessAgent` driving the `pi` coding agent.
 
-## Build and Development Commands
+The HarnessAgent/Pi brain runs on the bot host machine, not in the sandbox. Model keys, BYOK secrets, future MCP credentials, prompt assembly, Slack tools, and the agent loop all live on the host.
 
-```bash
-bun install          # Install dependencies
-bun dev              # Start all apps in watch mode
-bun build            # Build all apps and packages
-bun typecheck        # Type-check the monorepo
-bun check            # Lint + format check (Ultracite/Biome)
-bun fix              # Auto-fix lint and formatting issues
-bun run check:spelling  # Spell-check with cspell
-bun run db:push      # Push schema changes to database
-```
+Each conversation gets its own persistent E2B sandbox. The sandbox is remote Linux for filesystem and shell work: Pi's `bash`, `read`, `write`, and `edit` tools execute there, but Pi itself never runs inside it.
 
-There is no committed test suite for the sandbox proxy yet. Use temporary local scripts or direct app requests for validation, then delete those artifacts.
+## When Unsure
 
-## Project Structure
+- Read source before guessing. Harness/Pi, AI SDK 7, and Chat SDK are canary or under-documented.
+- Use the relevant skills when a task touches their area: `ai-sdk`, `chat-sdk`, `ultracite`, `neon-postgres`.
+- Clone and inspect upstream source when local docs are not enough:
+  - AI SDK/Harness/Pi: `https://github.com/vercel/ai`
+  - Chat SDK: `https://github.com/vercel/chat`
+  - Pi internals when needed: `https://github.com/earendil-works/pi`
+- Docs and architecture: start in `docs/index.md`.
+- Cleanup tracker: `REWRITE_TODO.md`.
+- Long-form build plan and coding examples: `REWRITE_PLAN.md`.
 
-```
-apps/
-  bot/              # Slack bot (entry point: src/index.ts)
-  server/           # Nitro proxy/API server for AI provider keys
-packages/
-  ai/               # AI providers, model config, and system prompts
-  db/               # Drizzle ORM schema, queries, Postgres client
-  kv/               # Redis env and client factory
-  logging/          # Pino logger factory
-  utils/            # Shared framework-agnostic utility helpers
-  validators/       # Shared Zod schemas
-tooling/
-  cspell/           # @repo/cspell-config — spell-check dictionaries
-  github/           # Reusable GitHub Actions (setup action)
-  typescript/       # @repo/tsconfig — shared TypeScript configs
-```
+## Where Things Belong
 
-The Slack bot must not start or import the proxy server. Proxy/API work belongs in `apps/server`; `apps/bot` calls it through configured URLs only.
+- `apps/bot`: chat runtime, Slack routing, Slack features, stop controls, line replies, task rendering, and bot-owned host tools.
+- `packages/ai`: platform-neutral agent construction, Pi attempts, prompts, request hint types, and session persistence.
+- `packages/sandbox`: E2B sandbox provider, sandbox session adapter, template builder, and vendored skills.
+- `packages/db`: Drizzle schema, Postgres client, and app-owned queries.
+- `docs`: Markdown architecture docs for humans and agents.
 
-`apps/server` uses Nitro with filesystem routing (`src/routes/`). Route handlers use `defineHandler` from `nitro/h3`. Middleware goes in `src/middleware/`. Plugins (startup hooks) go in `src/plugins/`.
+## Boundaries
 
-## Coding Guidelines
+- Never: put Slack-only behavior in `packages/ai`.
+- Never: put model keys, Slack tokens, or future MCP secrets in the sandbox.
+- Never: make Slack transcript storage the agent memory. Harness/Pi session history is the durable agent history.
+- Never: add one-use constants, wrappers, helpers, or re-export-only files.
+- Never: commit secrets or tracked throwaway scripts.
+- Ask first: dependency changes, broad schema changes, destructive git operations, or anything that changes deployment shape.
+- Prefer: feature-owned files and direct names over compatibility wrappers.
 
-### Inline over extract
-Prefer inlining over creating utility functions. Only extract to a named function when the logic is called in **multiple places** or is genuinely complex. A helper called exactly once is worse than the code it replaced.
+## Coding Rules
 
-```ts
-// bad — one-shot helper
-function getFileExtension(mime: string) { return MAP[mime] ?? 'png'; }
-const ext = getFileExtension(image.mediaType);
+Full detail and examples live in `REWRITE_PLAN.md`.
 
-// good — just inline it
-const ext = EXTENSION[image.mediaType] ?? 'png';
-```
+- Inline over extract: no one-shot helpers.
+- Avoid constants unless absolutely needed: inline one-use literals and values.
+- Dict params: functions with more than one parameter take a single options object.
+- Small functions: prefer early returns over nesting; respect complexity and parameter limits.
+- No `as const` on discriminants: annotate with the SDK type.
+- No type casts to silence TypeScript: parse or validate with Zod at boundaries.
+- No what-comments, no JSDoc: comment only a non-obvious why.
+- Tuneables belong in the owning app/package config, never scattered call-site literals.
+- Feature-enclosed: Slack features live under `apps/bot/src/slack/features/<name>/`.
+- Direct names: delete dead wrappers instead of renaming them.
 
-### Dict params
-Functions with more than one parameter should take a single options object. Prefer this even for one-param functions when that parameter is logically a "config" rather than a plain value.
+## Validation
 
-```ts
-// bad
-logReply(ctxId, author, result, reason);
+Before handoff after code changes:
 
-// good
-logReply({ ctxId, author, result, reason });
-```
+1. `bun run typecheck`
+2. `bun run check`
+3. `bun run check:spelling`
+4. `bun run check:knip`
 
-### No `as const` on type discriminants
-When building objects that need a literal type for a discriminant field (e.g. `type: 'text'`), prefer assigning the whole expression to an SDK-typed variable or returning through a typed function. Do not use `as const` on the property.
+For docs-only changes, `bun run check` and `bun run check:spelling` are usually enough.
 
-```ts
-// bad
-{ type: 'text' as const, text }
+For cleanup, dependency, package export, or file-move work, run `bun run check:knip`.
 
-// good — use the SDK's UserContent type as an annotation
-const content: UserContent = [{ type: 'text', text }, ...images];
-```
+Before committing:
 
-### Avoid type casting
-Do not use type casts to silence TypeScript. Prefer schema parsing, typed builders, narrower function signatures, or explicit runtime checks. A cast is acceptable only at a real external boundary where TypeScript cannot know the shape after validation, and the validation should live next to the cast.
-
-```ts
-// bad
-const meta = JSON.parse(view.private_metadata || '{}') as ServerMeta;
-
-// good
-const meta = serverMetaSchema.parse(JSON.parse(view.private_metadata || '{}'));
-```
-
-### No comments explaining what code does
-Only add a comment when the **why** is non-obvious — a hidden constraint, a workaround for a specific bug, or behaviour that would genuinely surprise a reader. Never describe what the code already says.
-
-### No JSDoc / docstrings
-No multi-line block comments on functions. Self-documenting names are enough.
-
-### Config for tuneable values
-Anything that could reasonably change per deployment (thresholds, message lists, locale) belongs in `apps/bot/src/config.ts`, not hardcoded at the call site.
-
-### Feature-enclosed architecture
-Slack features live under `apps/bot/src/slack/features/<name>/`. Each feature exports `{ actions, views, commands }` from its `index.ts` when applicable. Keep feature-specific UI/actions near the feature that owns them.
-
-### Review cleanup findings
-When addressing review comments, prefer deleting compatibility wrappers and one-shot helpers over renaming them. Keep MCP naming direct (`OAuth`, `URL`, concise function names), parse Slack modal metadata with schemas, and avoid adding files that only re-export another module without real ownership.
-
-## Formatting and Linting (Ultracite)
-
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
-
-- **Format code**: `bun x ultracite fix`
-- **Check for issues**: `bun x ultracite check`
-- **Diagnose setup**: `bun x ultracite doctor`
-
-Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+1. `git status --short`
+2. `git diff --stat`
+3. Run the relevant checks above.

@@ -1,37 +1,63 @@
 <div align="center">
   <img alt="Gorkie banner" src="./.github/banner.png" />
-  <h1>Gorkie (for Slack)</h1>
+  <h1>Gorkie for Slack</h1>
 </div>
 
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [Tech Stack](#tech-stack)
-3. [Getting Started](#getting-started)
-4. [Project Structure](#project-structure)
-5. [License](#license)
+2. [Features](#features)
+3. [Tech Stack](#tech-stack)
+4. [Getting Started](#getting-started)
+5. [Project Structure](#project-structure)
+6. [Development](#development)
+7. [License](#license)
 
 ## Introduction
 
-An AI assistant (called Gorkie) designed to help Slack users. Based on [Gork for Slack](https://github.com/techwithanirudh/gork-slack).
+Gorkie is an AI assistant for Slack. It responds in mentions, DMs, Assistant
+threads, and subscribed Slack threads with answers backed by tools, sandboxed
+code execution, web search, Slack context, file uploads, image generation, and
+reminders.
 
-Gorkie responds to mentions, DMs, and thread replies with AI-generated responses, including web search, code sandboxes, image generation, scheduled tasks, and Slack-aware tools.
+The bot runs as a long-lived Bun process. Slack events are handled through
+[Vercel Chat SDK][chat-sdk] and the Slack adapter in Socket Mode, while coding
+agent work runs through [Vercel AI SDK][ai-sdk] Harness/Pi. Each active Slack
+conversation gets an [E2B][e2b] sandbox so Gorkie can run commands, inspect
+files, generate artifacts, and upload results back to Slack.
+
+## Features
+
+- Slack-native replies for mentions, DMs, Assistant threads, and thread follow-ups.
+- Per-thread sandbox sessions backed by E2B.
+- Coding-agent workflows through AI SDK Harness/Pi.
+- Slack-aware tools for reading public channel/thread history, posting messages,
+  looking up users/channels, and reacting to messages.
+- Web search through Exa.
+- Image generation and file uploads back into the active Slack thread.
+- Mermaid diagram generation.
+- Scheduled Slack reminders.
+- App Home customization for user instructions and presets.
+- Langfuse/OpenTelemetry tracing hooks for runtime visibility.
 
 ## Tech Stack
 
-- [Vercel AI SDK][ai-sdk]
-- [Slack Bolt SDK][slack-bolt]
-- [Exa][exa]
-- [E2B][e2b]
+- [Bun][bun] and TypeScript
+- [Vercel Chat SDK][chat-sdk] with `@chat-adapter/slack`
+- [Vercel AI SDK][ai-sdk] `HarnessAgent` with `@ai-sdk/harness-pi`
+- [E2B][e2b] sandbox sessions
 - [PostgreSQL][postgres] + [Drizzle ORM][drizzle]
-- [Redis][redis]
-- [Bun][bun]
+- [Exa][exa]
+- [Langfuse][langfuse] + [OpenTelemetry][otel]
 - [Turborepo][turbo]
-- [Biome][biome]
+- [Ultracite][ultracite]
 
 ## Getting Started
 
-Create a new [Slack App](https://api.slack.com/apps) using the [provided manifest](slack-manifest.json). You will also need [Git][git], [Bun][bun], and a [PostgreSQL][postgres] database.
+Create a new [Slack app](https://api.slack.com/apps) using the
+[provided manifest](slack-manifest.json). You will also need [Git][git],
+[Bun][bun], a [PostgreSQL][postgres] database, an [E2B][e2b] API key, and model
+provider keys for the configured Harness/Pi attempts.
 
 ```bash
 # Clone this repository
@@ -40,33 +66,74 @@ git clone https://github.com/imdevarsh/gorkie-slack.git
 # Install dependencies
 bun install
 
-# Copy and fill in your environment variables
+# Copy and fill in the bot environment
 cp apps/bot/.env.example apps/bot/.env
-cp apps/server/.env.example apps/server/.env
 
 # Push the database schema
 bun run db:push
+
+# Start the Slack bot
+bun run dev:bot
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for the full local setup, including the proxy tunnel required for E2B sandboxes.
+Local development uses Slack Socket Mode, so the bot does not need a public HTTP
+tunnel just to receive Slack events.
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the full local setup, sandbox template
+notes, and deployment guidance.
 
 ## Project Structure
 
-```
+```text
 apps/
-  bot/        Slack bot (entry: src/index.ts)
-  server/     Nitro proxy for AI provider keys
+  bot/        Slack runtime, Chat SDK wiring, Slack features, bot-owned tools
+docs/         Human/agent-readable architecture notes
 packages/
-  ai/         AI providers, model config, prompts
+  ai/         Harness/Pi agent setup, prompts, provider attempts, session files
   db/         Drizzle schema, PostgreSQL client, queries
-  kv/         Redis env and client factory
   logging/    Pino logger factory
+  sandbox/    E2B sandbox provider, template builder, sandbox skills
   utils/      Shared framework-agnostic helpers
-  validators/ Shared Zod schemas
-tooling/      Shared TypeScript, cspell, GitHub Action config
+tooling/
+  cspell/     Shared cspell configuration
+  github/     Reusable GitHub Actions setup
+  typescript/ Shared TypeScript configs
 ```
 
-The bot does not start or import the proxy server. It creates short-lived DB-backed tokens and passes `SERVER_BASE_URL` plus the scoped token into the sandbox. Provider keys stay in `apps/server`.
+`apps/bot` is the production runtime. It runs TypeScript directly with Bun and
+keeps Slack Socket Mode, Chat SDK state, Harness/Pi sessions, and E2B sandbox
+coordination in one process.
+
+## Development
+
+Use these checks before handing off changes:
+
+```bash
+bun run typecheck
+bun run check
+bun run check:spelling
+```
+
+Build everything with:
+
+```bash
+bun run build
+```
+
+Build the sandbox template when sandbox tools, skills, browser dependencies, or
+CLI packages change:
+
+```bash
+bun run build:template
+```
+
+Manual Slack smoke testing is documented in [TESTING.md](TESTING.md).
+
+Architecture notes live in [docs/](docs/). They are Markdown files with Fumadocs-compatible frontmatter/components and can be previewed with:
+
+```bash
+bun run docs:preview
+```
 
 ## License
 
@@ -74,12 +141,13 @@ This project is under the MIT license. See [LICENSE](LICENSE) for details.
 
 [git]: https://git-scm.com/
 [bun]: https://bun.sh/
-[slack-bolt]: https://docs.slack.dev/tools/bolt-js/
+[chat-sdk]: https://chat-sdk.dev/
 [ai-sdk]: https://ai-sdk.dev/
-[exa]: https://exa.ai/
 [e2b]: https://e2b.dev/
 [postgres]: https://www.postgresql.org/
 [drizzle]: https://orm.drizzle.team/
-[redis]: https://redis.io/
+[exa]: https://exa.ai/
+[langfuse]: https://langfuse.com/
+[otel]: https://opentelemetry.io/
 [turbo]: https://turbo.build/
-[biome]: https://biomejs.dev/
+[ultracite]: https://www.ultracite.ai/
