@@ -34,7 +34,7 @@ Sandbox explains the persistent E2B Linux workspace. It tells the model to use t
 
 ## Tools
 
-Tools describes the host tools: Slack reads, Slack writes, web search, images, diagrams, uploads, reminders, and skip behavior.
+Tools describes the host tools: Slack reads, Slack writes, web search, images, diagrams, uploads, and reminders.
 
 Tool descriptions in code still matter. The prompt gives the overall policy; each tool schema gives the exact input shape.
 

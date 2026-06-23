@@ -12,7 +12,11 @@
   "tags": ["-lintignore"],
   "workspaces": {
     ".": {
-      "entry": ["taze.config.ts", "turbo/generators/config.ts"]
+      "entry": [
+        "fumadocs.config.ts",
+        "taze.config.ts",
+        "turbo/generators/config.ts"
+      ]
     },
     "apps/bot": {
       "project": ["src/**/*.ts"]

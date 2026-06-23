@@ -1,5 +1,6 @@
 import { clamp } from '@/lib/utils/text';
 import {
+  directMessage,
   fetchMessages,
   getChannelInfo,
   getUser,
@@ -10,7 +11,7 @@ import {
 import { defaultTool } from './default';
 import { generateImage } from './generate-image';
 import { getFile } from './get-file';
-import { resultErrorOutput, textField } from './helpers';
+import { resultErrorOutput } from './helpers';
 import { leaveThread } from './leave-thread';
 import { mermaid } from './mermaid';
 import { command, file, search } from './pi';
@@ -46,7 +47,7 @@ const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   scheduleReminder,
   searchSlack,
   searchWeb,
-  sendDirectMessage: { ...message, title: 'Sending DM' },
+  sendDirectMessage: directMessage,
   summarizeThread,
   uploadFile,
   write: { ...file, title: 'Writing file' },

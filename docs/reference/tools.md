@@ -60,7 +60,6 @@ Gorkie uses a small custom Slack history surface:
 | `uploadFile` | Upload a file from the sandbox workspace to the active Slack thread. |
 | `mermaid` | Render Mermaid and upload a diagram image. |
 | `scheduleReminder` | Schedule a one-time Slack reminder DM. |
-| `skip` | End the turn without replying. |
 
 `uploadFile` is restricted to the active sandbox workspace. It cannot upload arbitrary host files.
 

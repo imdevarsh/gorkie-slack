@@ -30,7 +30,6 @@ flowchart LR
 - [Tools](./reference/tools): The model-facing tool surface and safety boundaries.
 - [Prompts](./reference/prompts): How the system prompt is assembled.
 - [Data Model](./reference/data-model): What Postgres stores and why.
-- [TODO](./todo): Remaining reliability, context, tool, and upstream work.
 
 ## Main Flow
 

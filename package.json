@@ -52,7 +52,7 @@
     "db:push": "turbo run db:push --filter=@repo/db",
     "db:studio": "turbo run db:studio --filter=@repo/db",
     "db:generate": "turbo run db:generate --filter=@repo/db",
-    "docs:preview": "bun x fumadocs-preview docs",
+    "docs:preview": "fumadocs-preview",
     "build:template": "bun --filter=@repo/sandbox run build:template",
     "check": "ultracite check .",
     "check:knip": "DATABASE_URL=postgres://user:password@localhost:5432/gorkie knip",
