@@ -198,7 +198,7 @@ async function executeTurn(
       await thread
         .post({
           markdown:
-            "_Gorkie's responses are shaped by this user's personal instructions._",
+            "_gorkie's responses are shaped by this user's instructions_",
         })
         .catch(() => undefined);
     }
