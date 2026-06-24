@@ -1,6 +1,5 @@
 import { clamp } from '@/lib/utils/text';
 import {
-  directMessage,
   fetchMessages,
   getChannelInfo,
   getUser,
@@ -25,7 +24,6 @@ import { uploadFile } from './upload-file';
 type RenderPhase = 'request' | 'response' | 'error';
 
 const toolRenderers: Record<string, ToolTaskRendererEntry> = {
-  addReaction: reaction,
   bash: command,
   compaction: { title: 'Compacting context' },
   edit: { ...file, title: 'Editing file' },
@@ -40,14 +38,13 @@ const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   listThreads,
   ls: { title: 'Listing files' },
   mermaid,
-  postChannelMessage: { ...message, title: 'Posting to channel' },
   postMessage: message,
   readConversationHistory: { ...fetchMessages, title: 'Reading history' },
+  react: reaction,
   read: file,
   scheduleReminder,
   searchSlack,
   searchWeb,
-  sendDirectMessage: directMessage,
   summarizeThread,
   uploadFile,
   write: { ...file, title: 'Writing file' },

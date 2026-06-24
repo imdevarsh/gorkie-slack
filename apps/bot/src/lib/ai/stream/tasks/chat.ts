@@ -10,6 +10,7 @@ import type { ToolTaskRendererEntry } from './types';
 export const message: ToolTaskRendererEntry = {
   request: ({ input }) => ({
     details:
+      textField(input, 'id') ??
       textField(input, 'threadId') ??
       textField(input, 'channelId') ??
       textField(input, 'userId'),
@@ -19,21 +20,6 @@ export const message: ToolTaskRendererEntry = {
     title: 'Sent message',
   }),
   title: 'Sending message',
-};
-
-export const directMessage: ToolTaskRendererEntry = {
-  request: ({ input }) => ({
-    details: textField(input, 'userId'),
-  }),
-  response: ({ input, output }) => {
-    const userId = textField(input, 'userId');
-    const threadId = textField(output, 'threadId');
-    return {
-      output: `Sent DM${userId ? ` to ${userId}` : ''}${threadId ? ` in ${threadId}` : ''}.`,
-      title: 'Sent DM',
-    };
-  },
-  title: 'Sending DM',
 };
 
 export const fetchMessages: ToolTaskRendererEntry = {

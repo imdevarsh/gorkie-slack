@@ -15,9 +15,7 @@ export function getChannelInfoTool({
     description:
       'Fetch metadata for a channel: name, member count, DM status, visibility, etc.',
     inputSchema: z.object({
-      channelId: z
-        .string()
-        .describe('Chat SDK channel id, e.g. slack:C123456.'),
+      channelId: z.string(),
     }),
     execute: async ({ channelId }) => {
       const chatChannelId = toChatSlackChannelId(channelId);

@@ -13,20 +13,9 @@ export function listThreadsTool({
     description:
       'List recent Slack channel threads so you can pick a thread id before reading it. The current channel always works (even if private); other channels must be public.',
     inputSchema: z.object({
-      channelId: z
-        .string()
-        .describe('Chat SDK channel id, e.g. slack:C123456.'),
-      cursor: z
-        .string()
-        .optional()
-        .describe('Slack pagination cursor from a previous response.'),
-      limit: z
-        .number()
-        .int()
-        .min(1)
-        .max(100)
-        .default(20)
-        .describe('Maximum thread roots to return.'),
+      channelId: z.string(),
+      cursor: z.string().optional(),
+      limit: z.number().int().min(1).max(100).default(20),
     }),
     execute: async ({ channelId, cursor, limit }) => {
       const chatChannelId = toChatSlackChannelId(channelId);

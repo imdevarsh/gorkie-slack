@@ -71,7 +71,7 @@ sequenceDiagram
 | Chat SDK setup | `apps/bot/src/lib/chat.ts` |
 | Turn orchestration | `apps/bot/src/lib/agent/index.ts` |
 | Turn interruption and stop controls | `apps/bot/src/lib/agent/steering.ts`, `apps/bot/src/lib/agent/controls.ts` |
-| Slack reply chunking | `apps/bot/src/lib/agent/line-reply.ts` |
+| Slack reply chunking | `apps/bot/src/lib/agent/reply.ts` |
 | Stream and task rendering | `apps/bot/src/lib/ai/stream/**` |
 | Host tools | `apps/bot/src/lib/ai/tools/**`, `apps/bot/src/lib/ai/toolset.ts` |
 | Agent construction | `packages/ai/src/agent.ts` |

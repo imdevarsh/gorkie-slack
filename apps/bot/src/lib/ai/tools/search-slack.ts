@@ -74,7 +74,7 @@ const slackSearchResponseSchema = z.looseObject({
     .optional(),
 });
 
-export function searchSlack({ message }: { message: Message }) {
+export function searchSlackTool({ message }: { message: Message }) {
   return tool({
     description:
       'Search Slack messages for past conversations, decisions, links, or context outside the current thread.',
@@ -84,13 +84,7 @@ export function searchSlack({ message }: { message: Message }) {
         .min(1)
         .optional()
         .describe('Cursor from a previous Slack search result page.'),
-      query: z
-        .string()
-        .min(1)
-        .max(500)
-        .describe(
-          'Specific Slack search query with keywords, people, channels, or dates.'
-        ),
+      query: z.string().min(1).max(500),
     }),
     execute: async ({ cursor, query }) => {
       const parsedRaw = actionTokenSchema.safeParse(message.raw);

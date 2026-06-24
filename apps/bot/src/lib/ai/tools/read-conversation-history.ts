@@ -11,29 +11,12 @@ export function readConversationHistoryTool({
 }) {
   return tool({
     description:
-      'Read message history from a Slack channel or thread using a channel ID and optional thread timestamp. The current conversation is always readable (even a private channel or DM); other channels must be public.',
+      'Read channel history or thread replies. The current conversation is always readable; other channels must be public.',
     inputSchema: z.object({
-      channelId: z
-        .string()
-        .optional()
-        .describe('Chat SDK channel id, e.g. slack:C123456.'),
-      threadId: z
-        .string()
-        .optional()
-        .describe(
-          'Optional full Chat SDK thread id, e.g. slack:C123456:1781599802.270109.'
-        ),
-      threadTs: z
-        .string()
-        .optional()
-        .describe('Optional Slack thread timestamp to read replies.'),
-      limit: z
-        .number()
-        .int()
-        .min(1)
-        .max(200)
-        .default(40)
-        .describe('Maximum messages to read.'),
+      channelId: z.string().optional(),
+      threadId: z.string().optional(),
+      threadTs: z.string().optional(),
+      limit: z.number().int().min(1).max(200).default(40),
       cursor: z
         .string()
         .optional()
@@ -48,9 +31,7 @@ export function readConversationHistoryTool({
         (threadId ? slack.channelIdFromThreadId(threadId) : undefined);
       const resolvedThreadTs = threadTs ?? decodedThread?.threadTs;
       if (!resolvedChannelId) {
-        throw new Error(
-          'readConversationHistory needs channelId, or a full threadId like slack:C123456:1781599802.270109.'
-        );
+        throw new Error('readConversationHistory needs channelId or threadId.');
       }
 
       const chatChannelId = toChatSlackChannelId(resolvedChannelId);

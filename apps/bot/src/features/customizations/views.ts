@@ -12,7 +12,7 @@ import type {
   SlackTextInputElement,
 } from './types';
 
-const maxHomePromptLength = 900;
+const maxHomePromptLength = 600;
 const maxPromptLength = 3000;
 
 export function buildHomeView({

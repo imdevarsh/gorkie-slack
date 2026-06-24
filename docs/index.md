@@ -27,6 +27,7 @@ flowchart LR
 - [Sandbox And Sessions](./runtime/sandbox): E2B lifecycle, session files, recovery, and skills.
 - [Streaming](./runtime/streaming): Assistant text, task rows, stop controls, and Slack limits.
 - [Turn Controls](./runtime/controls): Interruption, stop, shutdown, and session parking.
+- [Runtime Error Catalog](./runtime/error-catalog): Observed failures, root causes, and fix paths.
 - [Tools](./reference/tools): The model-facing tool surface and safety boundaries.
 - [Prompts](./reference/prompts): How the system prompt is assembled.
 - [Data Model](./reference/data-model): What Postgres stores and why.

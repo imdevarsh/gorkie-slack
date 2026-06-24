@@ -16,7 +16,7 @@ const IDLE_MS = 1500;
 const FENCE_REOPEN_PADDING = 3;
 const TABLE_SEPARATOR = /^\|?[\s:|-]*-{2,}[\s:|-]*$/;
 
-export function createLineReply({ threadId }: { threadId: string }) {
+export function createReply({ threadId }: { threadId: string }) {
   let buffer = '';
   let lastPostAt = Date.now();
 
@@ -42,7 +42,7 @@ export function createLineReply({ threadId }: { threadId: string }) {
           lastPostAt = Date.now();
         })
         .catch((error: unknown) => {
-          logger.warn({ err: error, threadId }, '[agent] line reply failed');
+          logger.warn({ err: error, threadId }, '[agent] reply post failed');
         });
     }
   }

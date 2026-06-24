@@ -5,14 +5,14 @@ description: Assistant text, task rows, and Slack limits.
 
 Gorkie renders a turn through two Slack output paths:
 
-- assistant text is posted as normal Slack replies through `createLineReply`;
+- assistant text is posted as normal Slack replies through `createReply`;
 - reasoning and tool activity are rendered as task rows through Chat SDK `StreamingPlan`.
 
 > **Slack message limits:** Long native Slack stream buffers can fail with `msg_too_long`. Gorkie keeps assistant text outside the native stream buffer so long answers can be split into multiple Slack messages.
 
 ## Text Replies
 
-`apps/bot/src/lib/agent/line-reply.ts` buffers text deltas and posts chunks at natural boundaries. It prefers paragraph breaks, then sentence or line boundaries, and falls back to a hard size split before Slack's message limit.
+`apps/bot/src/lib/agent/reply.ts` buffers text deltas and posts chunks at natural boundaries. It prefers paragraph breaks, then sentence or line boundaries, and falls back to a hard size split before Slack's message limit.
 
 The splitting logic also avoids splitting inside open fenced code blocks.
 

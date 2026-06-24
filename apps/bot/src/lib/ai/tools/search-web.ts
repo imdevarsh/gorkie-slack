@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import Exa from 'exa-js';
 import { z } from 'zod';
 
-export function searchWeb({ apiKey }: { apiKey: string }) {
+export function searchWebTool({ apiKey }: { apiKey: string }) {
   const exa = new Exa(apiKey);
   return tool({
     description:

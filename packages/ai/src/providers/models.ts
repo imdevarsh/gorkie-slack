@@ -14,8 +14,6 @@ export const provider: Provider = customProvider({
     'chat-model': hostProvider.languageModel('google/gemini-3-flash-preview'),
   },
   imageModels: {
-    'image-model': hostProvider.imageModel(
-      'google/gemini-3.1-flash-image-preview'
-    ),
+    'image-model': hostProvider.imageModel('google/gemini-3.1-flash-image'),
   },
 });

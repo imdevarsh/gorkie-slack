@@ -27,9 +27,15 @@ export async function* renderStream({
         break;
       }
       case 'reasoning-start': {
-        reasoning.set(part.id, '');
+        const id = reasoningTaskId(part.id);
+        if (!showTask({ id, visibleTaskIds })) {
+          hiddenTaskCount += 1;
+          yield hiddenTaskUpdate({ count: hiddenTaskCount, done: false });
+          break;
+        }
+        reasoning.set(id, '');
         yield {
-          id: `reasoning-${part.id}`,
+          id,
           status: 'in_progress',
           title: 'Thinking',
           type: 'task_update',
@@ -37,19 +43,26 @@ export async function* renderStream({
         break;
       }
       case 'reasoning-delta': {
-        reasoning.set(part.id, (reasoning.get(part.id) ?? '') + part.text);
+        const id = reasoningTaskId(part.id);
+        if (visibleTaskIds.has(id)) {
+          reasoning.set(id, (reasoning.get(id) ?? '') + part.text);
+        }
         break;
       }
       case 'reasoning-end': {
-        const text = reasoning.get(part.id)?.trim();
+        const id = reasoningTaskId(part.id);
+        if (!visibleTaskIds.has(id)) {
+          break;
+        }
+        const text = reasoning.get(id)?.trim();
         yield {
-          id: `reasoning-${part.id}`,
+          id,
           output: text ? clamp(text, REASONING_OUTPUT_MAX_LENGTH) : undefined,
           status: 'complete',
           title: 'Thinking',
           type: 'task_update',
         };
-        reasoning.delete(part.id);
+        reasoning.delete(id);
         break;
       }
       case 'tool-call': {
@@ -167,6 +180,10 @@ function showTask({
   return false;
 }
 
+function reasoningTaskId(id: string): string {
+  return `reasoning-${id}`;
+}
+
 function hiddenTaskUpdate({
   count,
   done,
@@ -175,12 +192,12 @@ function hiddenTaskUpdate({
   done: boolean;
 }): StreamChunk {
   return {
-    id: 'hidden-tool-activity',
+    id: 'hidden-activity',
     output: done
-      ? `Ran ${count} additional tool${count === 1 ? '' : 's'}.`
+      ? `Ran ${count} additional activity item${count === 1 ? '' : 's'}.`
       : undefined,
     status: done ? 'complete' : 'in_progress',
-    title: `Tool activity: ${count}`,
+    title: `Activity: ${count}`,
     type: 'task_update',
   };
 }

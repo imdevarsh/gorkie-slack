@@ -7,19 +7,19 @@ import {
   type SandboxContext,
   systemPrompt,
 } from '@repo/ai';
-import { E2BSandboxProvider, loadSkills } from '@repo/sandbox';
+import { loadSkills } from '@repo/sandbox';
 import { type Message, StreamingPlan, type Thread } from 'chat';
-import { env } from '@/env';
 import { deleteControls, postControls } from '@/lib/agent/controls';
-import { createLineReply } from '@/lib/agent/line-reply';
-import { buildAgentPromptText } from '@/lib/agent/prompt';
+import { buildPrompt } from '@/lib/agent/prompt';
+import { createReply } from '@/lib/agent/reply';
+import { sandbox } from '@/lib/agent/sandbox';
 import {
   type ActiveTurn,
   abortReasonOf,
   interruptTurn,
   pendingResumeInput,
-  TurnAbort,
 } from '@/lib/agent/steering';
+import { clearTurn, getTurn, setTurn } from '@/lib/agent/turns';
 import { startThinking } from '@/lib/agent/utils';
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
 import { type AttemptFailure, nextAttempt } from '@/lib/ai/attempts';
@@ -32,118 +32,25 @@ import { type AgentErrorStage, agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
 import { errorMessage } from '@/lib/utils/error';
 
-const activeTurns = new Map<string, ActiveTurn>();
-
-const sandbox = new E2BSandboxProvider({
-  apiKey: env.E2B_API_KEY,
-  env: {
-    ...(env.AGENTMAIL_API_KEY
-      ? { AGENTMAIL_API_KEY: env.AGENTMAIL_API_KEY }
-      : {}),
-  },
-  logger,
-});
+export { compactTurn } from '@/lib/agent/compaction';
+export { stopAllTurns, stopTurn } from '@/lib/agent/turns';
 
 export function runTurn(input: {
   message: Message;
   thread: Thread;
 }): Promise<void> {
-  const activeTurn = activeTurns.get(input.thread.id);
-  if (!activeTurn) {
+  const turn = getTurn({ threadId: input.thread.id });
+  if (!turn) {
     return runQueuedTurn({
       threadId: input.thread.id,
       run: (controller) => executeTurn(input, controller),
     });
   }
 
-  interruptTurn({ activeTurn, input });
+  interruptTurn({ activeTurn: turn, input });
   return slack
     .addReaction(input.thread.id, input.message.id, 'white_check_mark')
     .catch(() => undefined);
-}
-
-export function stopTurn({ threadId }: { threadId: string }): boolean {
-  const activeTurn = activeTurns.get(threadId);
-  if (!activeTurn) {
-    return false;
-  }
-  activeTurn.controller.abort(new TurnAbort('stop'));
-  return true;
-}
-
-export function stopAllTurns(): void {
-  for (const activeTurn of activeTurns.values()) {
-    activeTurn.controller.abort(new TurnAbort('shutdown'));
-  }
-}
-
-// Compaction is queued like a turn so it never races an in-flight response on
-// the same thread; the runtime (Pi) compacts its session in place, and we
-// persist the smaller transcript so the next turn resumes from it.
-export function compactTurn(input: {
-  instructions?: string;
-  message: Message;
-  thread: Thread;
-}): Promise<void> {
-  return runQueuedTurn({
-    threadId: input.thread.id,
-    run: () => executeCompact(input),
-  });
-}
-
-async function executeCompact({
-  instructions,
-  message,
-  thread,
-}: {
-  instructions?: string;
-  message: Message;
-  thread: Thread;
-}): Promise<void> {
-  const threadId = thread.id;
-  const attempt = chatAttempts[0];
-  if (!attempt) {
-    logger.error({ threadId }, '[agent] no model configured for compaction');
-    return;
-  }
-  logger.info({ threadId }, '[agent] compaction started');
-  await thread.startTyping('is compacting');
-
-  const hints = await requestHints({ thread, message });
-  const skills = await loadSkills();
-  let sandboxContext: SandboxContext | undefined;
-  const agent = createAgent({
-    attempt,
-    onSandboxReady: (context) => {
-      sandboxContext = context;
-    },
-    sandbox,
-    sessionId: threadId,
-    skills,
-    systemPrompt: systemPrompt({ hints }),
-    tools: buildTools({
-      bot,
-      getSandboxContext: () => sandboxContext,
-      message,
-      thread,
-    }),
-  });
-
-  let session: Awaited<ReturnType<typeof openSession>> | undefined;
-  try {
-    session = await openSession({ agent, threadId });
-    await session.compact(instructions);
-    await persistSession({ session, snapshotSource: sandboxContext, threadId });
-    await sandbox.pauseSession({ threadId });
-    logger.info({ threadId }, '[agent] compaction complete');
-    await thread
-      .post({ markdown: '🧹 Compacted this thread’s context.' })
-      .catch(() => undefined);
-  } catch (error) {
-    logger.error({ err: error, threadId }, '[agent] compaction failed');
-    await session?.detach().catch(() => undefined);
-    await thread.post(agentErrorMessage({ error })).catch(() => undefined);
-  }
 }
 
 async function executeTurn(
@@ -156,7 +63,7 @@ async function executeTurn(
     controller,
     pendingMessages: [],
   };
-  activeTurns.set(threadId, activeTurn);
+  setTurn({ threadId, turn: activeTurn });
   await startThinking({ thread });
   const hints = await requestHints({ thread, message });
 
@@ -165,7 +72,7 @@ async function executeTurn(
   let controls: Awaited<ReturnType<typeof postControls>> = null;
   let sandboxContext: SandboxContext | undefined;
   let completion: { finishReason: string; textLength: number } | undefined;
-  let lineReply: ReturnType<typeof createLineReply> | undefined;
+  let reply: ReturnType<typeof createReply> | undefined;
   let errorStage: AgentErrorStage = 'before_output';
 
   const parkSession = async ({ pause }: { pause: boolean }): Promise<void> => {
@@ -196,7 +103,7 @@ async function executeTurn(
         'Agent turn ended before session completion was recorded.'
       );
     }
-    await lineReply?.flush({ thread });
+    await reply?.flush({ thread });
     if (hints.customization?.prompt && !slack.isDM(thread.id)) {
       await thread
         .post({
@@ -225,15 +132,13 @@ async function executeTurn(
         { attempt: attemptLog(activeAttempt), err: error, threadId },
         '[agent] turn failed'
       );
-      await lineReply?.flush({ thread });
+      await reply?.flush({ thread });
       await parkSession({ pause: true });
       await deleteControls({ controls });
       await thread.post(agentErrorMessage({ error, stage: errorStage }));
     }
   } finally {
-    if (activeTurns.get(threadId) === activeTurn) {
-      activeTurns.delete(threadId);
-    }
+    clearTurn({ threadId, turn: activeTurn });
     // Only an interrupt replays queued messages; a rapid burst is merged into a
     // single follow-up so steering does not drop intermediate corrections.
     const resume =
@@ -258,10 +163,12 @@ async function executeTurn(
     thread: Thread;
   }) {
     const skills = await loadSkills();
-    const messageText = await buildAgentPromptText(message);
+    const messageText = await buildPrompt(message, {
+      customizationPrompt: hints.customization?.prompt,
+    });
     let attachments: Awaited<ReturnType<typeof seedAttachments>> = [];
-    let hasStreamed = false;
-    const attemptHistory: AttemptFailure[] = [];
+    let streamed = false;
+    const attempts: AttemptFailure[] = [];
     let attempt = chatAttempts[0];
     while (attempt) {
       const currentAttempt = attempt;
@@ -292,7 +199,7 @@ async function executeTurn(
           }),
         });
         session = await openSession({ agent, threadId });
-        lineReply = createLineReply({ threadId });
+        reply = createReply({ threadId });
         const result = await agent.stream({
           abortSignal: controller.signal,
           prompt: promptWithAttachments({
@@ -303,14 +210,14 @@ async function executeTurn(
         });
         for await (const chunk of renderStream({
           onTextDelta: async (text) => {
-            hasStreamed = true;
+            streamed = true;
             errorStage = 'after_text';
             controls ??= await postControls({ thread });
-            await lineReply?.append({ text, thread });
+            await reply?.append({ text, thread });
           },
           stream: result.stream,
         })) {
-          hasStreamed = true;
+          streamed = true;
           if (errorStage === 'before_output') {
             errorStage = 'after_progress';
           }
@@ -325,23 +232,23 @@ async function executeTurn(
           ]);
           completion = { finishReason, textLength: text.length };
         } catch (error) {
-          if (!hasStreamed) {
+          if (!streamed) {
             throw error;
           }
           logger.warn(
             { err: errorMessage(error), threadId },
             '[agent] failed to read final stream metadata after text output'
           );
-          completion = { finishReason: 'unknown', textLength: 0 };
+          completion = { finishReason: 'metadata_unavailable', textLength: 0 };
         }
         return;
       } catch (error) {
-        attemptHistory.push({ attempt: currentAttempt, error });
+        attempts.push({ attempt: currentAttempt, error });
         const retryAttempt = nextAttempt({
           attempts: chatAttempts,
-          failures: attemptHistory,
+          failures: attempts,
         });
-        if (controller.signal.aborted || hasStreamed || !retryAttempt) {
+        if (controller.signal.aborted || streamed || !retryAttempt) {
           throw error;
         }
         logger.warn(
