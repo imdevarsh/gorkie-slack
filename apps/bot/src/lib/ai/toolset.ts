@@ -4,6 +4,12 @@ import type { ToolSet } from 'ai';
 import type { Chat, Message, Thread } from 'chat';
 import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
+import {
+  canvasDeleteTool,
+  canvasListTool,
+  canvasReadTool,
+  canvasWriteTool,
+} from './tools/canvas';
 import { generateImageTool } from './tools/generate-image';
 import { getChannelInfoTool } from './tools/get-channel-info';
 import { getFileTool } from './tools/get-file';
@@ -52,6 +58,10 @@ export function buildTools({
     getChannelInfo: getChannelInfoTool({ bot, currentThreadId: thread.id }),
     ...(sendDirectMessage && { sendDirectMessage }),
     mermaid: mermaidTool({ thread }),
+    canvasRead: canvasReadTool(),
+    canvasWrite: canvasWriteTool({ thread }),
+    canvasList: canvasListTool({ thread }),
+    canvasDelete: canvasDeleteTool(),
     scheduleReminder: scheduleReminderTool({ message }),
     searchSlack: searchSlack({ message }),
     searchWeb: searchWeb({ apiKey: env.EXA_API_KEY }),

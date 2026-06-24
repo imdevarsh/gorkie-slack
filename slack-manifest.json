@@ -32,6 +32,8 @@
         "commands",
         "app_mentions:read",
         "assistant:write",
+        "canvases:read",
+        "canvases:write",
         "channels:history",
         "channels:join",
         "channels:manage",
