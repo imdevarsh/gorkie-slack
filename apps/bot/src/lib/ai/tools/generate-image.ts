@@ -1,7 +1,7 @@
 import { provider } from '@repo/ai';
 import { generateImage, tool } from 'ai';
 import { z } from 'zod';
-import type { GeneratedImage } from '@/lib/ai/types/tools/generate-image';
+import type { GeneratedImage } from '@/types/tools/generate-image';
 
 export function generateImageTool({
   upload,

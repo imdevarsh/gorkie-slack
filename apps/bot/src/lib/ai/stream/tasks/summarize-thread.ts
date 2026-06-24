@@ -1,5 +1,5 @@
+import type { ToolTaskRendererEntry } from '@/types/task-renderers';
 import { numberField, plural, textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const summarizeThread: ToolTaskRendererEntry = {
   title: 'Summarizing thread',

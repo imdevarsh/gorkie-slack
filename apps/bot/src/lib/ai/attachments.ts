@@ -1,8 +1,8 @@
 import nodePath from 'node:path/posix';
 import type { SandboxContext } from '@repo/ai';
 import type { Message } from 'chat';
-import type { SeededAttachment } from '@/lib/ai/types/attachments';
 import { sanitizeFilename } from '@/lib/utils/sanitize';
+import type { SeededAttachment } from '@/types/attachments';
 
 export async function seedAttachments({
   message,

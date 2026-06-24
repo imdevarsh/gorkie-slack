@@ -24,7 +24,11 @@ Clean by reducing jumps, not by adding architecture.
    without changing model-facing tool keys.
 6. Keep schemas terse. Add `.describe()` only for fields whose contract is not
    obvious from the name.
-7. Remove stale docs and prompts after renames. Search for old names before
+7. Keep type ownership explicit. Private one-file shapes stay inline; shared or
+   exported shapes live in the nearest clear owner `types/` folder. App-wide bot
+   shapes can live under `apps/bot/src/types/`. Tool-owned shared shapes use a
+   `types/tools/<tool>.ts` path.
+8. Remove stale docs and prompts after renames. Search for old names before
    handoff.
 
 ## Gorkie-Specific Smells
@@ -34,6 +38,9 @@ Clean by reducing jumps, not by adding architecture.
 - Three optional fields where a discriminated shape is clearer.
 - Long async closures inside tool factories or object literals.
 - User-facing task names that describe internal status instead of the action.
+- Exported interfaces living in implementation files when an owned `types/`
+  folder is the clearer home.
+- Tool-owned shared types outside a `types/tools/` folder.
 - Stale prompt/docs references after tool or agent module renames.
 
 ## Validation

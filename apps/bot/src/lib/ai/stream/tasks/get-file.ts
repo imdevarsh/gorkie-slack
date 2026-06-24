@@ -1,5 +1,5 @@
+import type { ToolTaskRendererEntry } from '@/types/task-renderers';
 import { textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const getFile: ToolTaskRendererEntry = {
   title: 'Downloading file',

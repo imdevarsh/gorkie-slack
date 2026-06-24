@@ -1,5 +1,5 @@
+import type { DefaultToolTaskRenderer } from '@/types/task-renderers';
 import { errorOutput, textField } from './helpers';
-import type { DefaultToolTaskRenderer } from './types/renderers';
 
 export const defaultTool: DefaultToolTaskRenderer = {
   request: ({ input, toolName }) => {

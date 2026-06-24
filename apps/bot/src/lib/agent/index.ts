@@ -19,8 +19,6 @@ import {
   pendingResumeInput,
 } from '@/lib/agent/steering';
 import { clearTurn, getTurn, setTurn } from '@/lib/agent/turns';
-import type { AgentErrorStage } from '@/lib/agent/types/errors';
-import type { ActiveTurn } from '@/lib/agent/types/steering';
 import { startThinking } from '@/lib/agent/utils';
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
 import { nextAttempt } from '@/lib/ai/attempts';
@@ -28,11 +26,12 @@ import { requestHints } from '@/lib/ai/hints';
 import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
-import type { AttemptFailure } from '@/lib/ai/types/attempts';
 import { bot, slack } from '@/lib/chat';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
 import { errorMessage } from '@/lib/utils/error';
+import type { ActiveTurn, AgentErrorStage } from '@/types/agent';
+import type { AttemptFailure } from '@/types/attempts';
 
 export { compactTurn } from '@/lib/agent/compaction';
 export { stopAllTurns, stopTurn } from '@/lib/agent/turns';
@@ -73,7 +72,6 @@ async function executeTurn(
   let activeAttempt: PiAttempt | undefined;
   let controls: Awaited<ReturnType<typeof postControls>> = null;
   let sandboxContext: SandboxContext | undefined;
-  let completion: { finishReason: string; textLength: number } | undefined;
   let reply: ReturnType<typeof createReply> | undefined;
   let errorStage: AgentErrorStage = 'before_output';
 
@@ -100,10 +98,8 @@ async function executeTurn(
         groupTasks: 'plan',
       })
     );
-    if (!(session && completion)) {
-      throw new Error(
-        'Agent turn ended before session completion was recorded.'
-      );
+    if (!session) {
+      throw new Error('Agent turn ended before session was recorded.');
     }
     await reply?.flush({ thread });
     if (hints.customization?.prompt && !slack.isDM(thread.id)) {
@@ -117,7 +113,7 @@ async function executeTurn(
     await deleteControls({ controls });
     await parkSession({ pause: true });
     logger.info(
-      { ...completion, attempt: attemptLog(activeAttempt), threadId },
+      { attempt: attemptLog(activeAttempt), threadId },
       '[agent] turn complete'
     );
   } catch (error) {
@@ -227,22 +223,6 @@ async function executeTurn(
           controls ??= await postControls({ thread });
         }
 
-        try {
-          const [text, finishReason] = await Promise.all([
-            result.text,
-            result.finishReason,
-          ]);
-          completion = { finishReason, textLength: text.length };
-        } catch (error) {
-          if (!streamed) {
-            throw error;
-          }
-          logger.warn(
-            { err: errorMessage(error), threadId },
-            '[agent] failed to read final stream metadata after text output'
-          );
-          completion = { finishReason: 'metadata_unavailable', textLength: 0 };
-        }
         return;
       } catch (error) {
         attempts.push({ attempt: currentAttempt, error });

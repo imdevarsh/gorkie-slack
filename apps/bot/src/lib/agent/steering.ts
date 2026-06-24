@@ -1,9 +1,5 @@
 import { Message, parseMarkdown } from 'chat';
-import type {
-  AbortReason,
-  ActiveTurn,
-  TurnInput,
-} from '@/lib/agent/types/steering';
+import type { AbortReason, ActiveTurn, TurnInput } from '@/types/agent';
 
 // Carried as the AbortSignal reason so the turn loop knows why it was aborted:
 // an `interrupt` restarts with the queued follow-up; `stop`/`shutdown` do not.

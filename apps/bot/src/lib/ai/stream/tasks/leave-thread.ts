@@ -1,4 +1,4 @@
-import type { ToolTaskRendererEntry } from './types/renderers';
+import type { ToolTaskRendererEntry } from '@/types/task-renderers';
 
 export const leaveThread: ToolTaskRendererEntry = {
   title: 'Leaving thread',

@@ -1,3 +1,4 @@
+import type { ToolTaskRendererEntry } from '@/types/task-renderers';
 import {
   arrayLength,
   booleanField,
@@ -5,7 +6,6 @@ import {
   plural,
   textField,
 } from './helpers';
-import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const message: ToolTaskRendererEntry = {
   request: ({ input }) => ({

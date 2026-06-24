@@ -1,5 +1,5 @@
-import type { AgentErrorStage } from '@/lib/agent/types/errors';
 import { errorMessage } from '@/lib/utils/error';
+import type { AgentErrorStage } from '@/types/agent';
 
 const CREDIT_ERROR_PATTERN =
   /\b(credit|credits|quota|daily limit|requires more credits)\b/i;

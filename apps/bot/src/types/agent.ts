@@ -1,5 +1,7 @@
 import type { Message, Thread } from 'chat';
 
+export type AgentErrorStage = 'after_progress' | 'after_text' | 'before_output';
+
 export interface TurnInput {
   message: Message;
   thread: Thread;

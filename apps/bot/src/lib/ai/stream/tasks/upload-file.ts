@@ -1,5 +1,5 @@
+import type { ToolTaskRendererEntry } from '@/types/task-renderers';
 import { booleanField, textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const uploadFile: ToolTaskRendererEntry = {
   title: 'Uploading file',

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { bot, slack } from '@/lib/chat';
-import type { UserProfile } from '@/lib/slack/types/names';
+import type { UserProfile } from '@/types/names';
 
 const profileFieldsSchema = z.record(
   z.string(),

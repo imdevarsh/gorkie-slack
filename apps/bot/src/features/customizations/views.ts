@@ -4,13 +4,13 @@ import {
   escapeSlackText,
 } from '@chat-adapter/slack/format';
 import { personas } from '@repo/ai';
-import { PROMPT_INPUT } from './schema';
 import type {
   SlackBlock,
   SlackHomeView,
   SlackModalView,
   SlackTextInputElement,
-} from './types/slack';
+} from '@/types/slack-views';
+import { PROMPT_INPUT } from './schema';
 
 const maxHomePromptLength = 600;
 const maxPromptLength = 3000;

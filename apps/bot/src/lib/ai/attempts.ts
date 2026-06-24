@@ -1,5 +1,5 @@
 import type { PiAttempt } from '@repo/ai';
-import type { AttemptFailure } from '@/lib/ai/types/attempts';
+import type { AttemptFailure } from '@/types/attempts';
 
 export function nextAttempt({
   attempts,
