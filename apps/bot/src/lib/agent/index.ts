@@ -19,6 +19,7 @@ import {
   interruptTurn,
   TurnAbort,
 } from '@/lib/agent/steering';
+import { startThinking } from '@/lib/agent/utils';
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
 import { type AttemptFailure, nextAttempt } from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
@@ -155,7 +156,7 @@ async function executeTurn(
     pendingMessages: [],
   };
   activeTurns.set(threadId, activeTurn);
-  await thread.startTyping('is thinking');
+  await startThinking({ thread });
   const hints = await requestHints({ thread, message });
 
   let session: Awaited<ReturnType<typeof openSession>> | undefined;

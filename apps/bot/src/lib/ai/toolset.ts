@@ -5,6 +5,7 @@ import type { Chat, Message, Thread } from 'chat';
 import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
 import { generateImageTool } from './tools/generate-image';
+import { getChannelInfoTool } from './tools/get-channel-info';
 import { getFileTool } from './tools/get-file';
 import { getUserTool } from './tools/get-user';
 import { leaveThreadTool } from './tools/leave-thread';
@@ -34,13 +35,8 @@ export function buildTools({
     requireApproval: false,
   });
 
-  const {
-    addReaction,
-    getChannelInfo,
-    postChannelMessage,
-    postMessage,
-    sendDirectMessage,
-  } = chatTools;
+  const { addReaction, postChannelMessage, postMessage, sendDirectMessage } =
+    chatTools;
 
   return {
     ...(addReaction && { addReaction }),
@@ -53,7 +49,7 @@ export function buildTools({
     readConversationHistory: readConversationHistoryTool({
       currentThreadId: thread.id,
     }),
-    ...(getChannelInfo && { getChannelInfo }),
+    getChannelInfo: getChannelInfoTool({ bot, currentThreadId: thread.id }),
     ...(sendDirectMessage && { sendDirectMessage }),
     mermaid: mermaidTool({ thread }),
     scheduleReminder: scheduleReminderTool({ message }),

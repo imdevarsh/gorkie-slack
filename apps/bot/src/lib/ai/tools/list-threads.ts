@@ -15,7 +15,7 @@ export function listThreadsTool({
     inputSchema: z.object({
       channelId: z
         .string()
-        .describe('Slack channel id, e.g. C123456 or slack:C123456.'),
+        .describe('Chat SDK channel id, e.g. slack:C123456.'),
       cursor: z
         .string()
         .optional()
@@ -30,11 +30,6 @@ export function listThreadsTool({
     }),
     execute: async ({ channelId, cursor, limit }) => {
       const chatChannelId = toChatSlackChannelId(channelId);
-      if (!chatChannelId) {
-        throw new Error(
-          `${channelId} is not a Slack channel id. Use a value like C123456 or slack:C123456.`
-        );
-      }
 
       await assertReadableChannel(chatChannelId, { currentThreadId });
 

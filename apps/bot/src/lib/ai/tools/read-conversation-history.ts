@@ -16,7 +16,7 @@ export function readConversationHistoryTool({
       channelId: z
         .string()
         .optional()
-        .describe('Slack channel id, e.g. C123456 or slack:C123456.'),
+        .describe('Chat SDK channel id, e.g. slack:C123456.'),
       threadId: z
         .string()
         .optional()
@@ -54,11 +54,6 @@ export function readConversationHistoryTool({
       }
 
       const chatChannelId = toChatSlackChannelId(resolvedChannelId);
-      if (!chatChannelId) {
-        throw new Error(
-          `${resolvedChannelId} is not a Slack channel id. Use a value like C123456 or slack:C123456.`
-        );
-      }
 
       await assertReadableChannel(chatChannelId, { currentThreadId });
 

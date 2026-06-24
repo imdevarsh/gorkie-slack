@@ -25,7 +25,7 @@ export function getUserTool() {
         fullName: profile.realName,
         pronouns: profile.pronouns,
         status: profile.status,
-        summary: `${profile.displayName ?? userId}${profile.pronouns ? ` (${profile.pronouns})` : ''}${profile.title ? ` — ${profile.title}` : ''}.`,
+        summary: `${profile.displayName ?? userId}${profile.pronouns ? ` (${profile.pronouns})` : ''}${profile.title ? `, ${profile.title}` : ''}.`,
         title: profile.title,
         userId,
         userName: profile.displayName,

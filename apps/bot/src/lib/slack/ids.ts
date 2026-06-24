@@ -6,5 +6,10 @@ export function toRawSlackChannelId(id: string): string {
 }
 
 export function toChatSlackChannelId(channelId: string): string {
-  return channelId.startsWith('slack:') ? channelId : `slack:${channelId}`;
+  if (channelId.startsWith('slack:') && channelId.split(':').length === 2) {
+    return channelId;
+  }
+  throw new Error(
+    `${channelId} is not a Chat SDK Slack channel id. Use a value like slack:C123456.`
+  );
 }
