@@ -124,3 +124,49 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 ---
 
 Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.
+
+---
+
+## Project Notes (Gorkie Slack bot)
+
+> **Keep this section current.** Whenever you add, remove, or change a feature
+> (a new agent tool, a changed scope, a config flag, gating rules, etc.), update
+> the relevant note below in the same change. Treat these notes as living
+> documentation — stale notes are worse than none.
+
+### Pull requests
+- Open PRs against the **upstream main repo**, not the fork or the codex branch.
+  - Base repo: `imdevarsh/gorkie-slack`, base branch: `main`.
+  - `origin` is the personal fork (`Devansh-awat/gorkie-slack`); `upstream` is the main repo.
+  - `gh`'s default repo is already set to `imdevarsh/gorkie-slack`, so:
+    `gh pr create --base main --head Devansh-awat:<branch>`
+
+### AI tools
+- Agent tools live in `apps/bot/src/lib/ai/tools/` and are registered in
+  `apps/bot/src/lib/ai/toolset.ts`. Each tool returns `{ success, error?, summary? }`
+  and uses `errorMessage()` + `logger.warn` on failure (follow the existing files).
+- Raw Slack Web API access is via `slack.webClient.apiCall(method, args)` from `@/lib/chat`.
+- Canvas tools: `canvasRead`, `canvasWrite`, `canvasList`, `canvasDelete` (need
+  `canvases:read/write`, `files:read` scopes). Also added: `pinMessage`,
+  `unpinMessage`, `bookmarkLink`, `createChannel`, `setChannelTopic`, `poll`,
+  `getPermalink`, `fetchUrl`.
+- Slack app scopes are declared in `slack-manifest.json` — update it when a tool
+  needs a new scope (e.g. `pins:write`, `canvases:write`, the `user` `chat:write`).
+
+### Send/edit-as-owner
+- `sendAsUser` posts AS the owner using `SLACK_USER_TOKEN` (xoxp). Defaults to the
+  current thread; pass `channelId` to post a top-level message in any channel.
+- `editAsUser` edits one of the owner's own messages via `chat.update` (Slack only
+  lets the user token edit its own messages). Defaults to the current channel; pass
+  `channelId` for another channel.
+- Both are gated two ways: only **registered** when `message.author.userId === OWNER_USER_ID`
+  (in `toolset.ts`, so it only fires when the owner mentions the bot), and each tool
+  **re-checks** the author at execute time via `checkOwner()` as defense-in-depth.
+  Other users mentioning the bot can never trigger them.
+- Config in `apps/bot/.env`: `SLACK_USER_TOKEN`, `OWNER_USER_ID`. Requires the
+  `chat:write` **user** scope on the Slack app (declared under `oauth_config.scopes.user`).
+
+### Sandbox / E2B
+- Config in `packages/sandbox/src/config.ts`. Idle keep-alive `timeoutMs` is **5 min**
+  (sandboxes pause after 5 min idle to limit E2B credit burn); `executionTimeoutMs` is 20 min.
+- Only sandbox/code-execution work bills E2B; the Slack tools above are free HTTP calls.

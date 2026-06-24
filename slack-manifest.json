@@ -32,6 +32,9 @@
         "commands",
         "app_mentions:read",
         "assistant:write",
+        "bookmarks:write",
+        "canvases:read",
+        "canvases:write",
         "channels:history",
         "channels:join",
         "channels:manage",
@@ -40,6 +43,8 @@
         "chat:write",
         "files:read",
         "files:write",
+        "pins:read",
+        "pins:write",
         "groups:history",
         "groups:read",
         "groups:write",
@@ -56,7 +61,8 @@
         "team:read",
         "users.profile:read",
         "users:read"
-      ]
+      ],
+      "user": ["chat:write"]
     },
     "pkce_enabled": false
   },

@@ -4,16 +4,31 @@ import type { ToolSet } from 'ai';
 import type { Chat, Message, Thread } from 'chat';
 import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
+import {
+  canvasDeleteTool,
+  canvasListTool,
+  canvasReadTool,
+  canvasWriteTool,
+} from './tools/canvas';
+import { createChannelTool, setChannelTopicTool } from './tools/channels';
 import { generateImageTool } from './tools/generate-image';
 import { listThreadsTool } from './tools/list-threads';
 import { mermaidTool } from './tools/mermaid';
+import {
+  bookmarkLinkTool,
+  pinMessageTool,
+  unpinMessageTool,
+} from './tools/pins';
+import { pollTool } from './tools/poll';
 import { readConversationHistoryTool } from './tools/read-conversation-history';
 import { scheduleReminderTool } from './tools/schedule-reminder';
 import { searchSlack } from './tools/search-slack';
 import { searchWeb } from './tools/search-web';
+import { editAsUserTool, sendAsUserTool } from './tools/send-as-user';
 import { skipTool } from './tools/skip';
 import { summarizeThreadTool } from './tools/summarize-thread';
 import { uploadFileTool } from './tools/upload-file';
+import { fetchUrlTool, getPermalinkTool } from './tools/url';
 
 export function buildTools({
   bot,
@@ -41,9 +56,21 @@ export function buildTools({
     sendDirectMessage,
   } = chatTools;
 
+  // Only expose "send as the owner" when this turn was triggered by the owner.
+  // Registering it conditionally means other users never get access to the tool.
+  const authorUserId = message.author.userId;
+  const canSendAsOwner =
+    Boolean(env.SLACK_USER_TOKEN) &&
+    Boolean(env.OWNER_USER_ID) &&
+    authorUserId === env.OWNER_USER_ID;
+
   return {
     ...(addReaction && { addReaction }),
     ...(getUser && { getUser }),
+    ...(canSendAsOwner && {
+      sendAsUser: sendAsUserTool({ authorUserId, thread }),
+      editAsUser: editAsUserTool({ authorUserId, thread }),
+    }),
     ...(postChannelMessage && { postChannelMessage }),
     ...(postMessage && { postMessage }),
     listThreads: listThreadsTool(),
@@ -51,6 +78,18 @@ export function buildTools({
     ...(getChannelInfo && { getChannelInfo }),
     ...(sendDirectMessage && { sendDirectMessage }),
     mermaid: mermaidTool({ thread }),
+    canvasRead: canvasReadTool(),
+    canvasWrite: canvasWriteTool({ thread }),
+    canvasList: canvasListTool({ thread }),
+    canvasDelete: canvasDeleteTool(),
+    pinMessage: pinMessageTool({ thread }),
+    unpinMessage: unpinMessageTool({ thread }),
+    bookmarkLink: bookmarkLinkTool({ thread }),
+    createChannel: createChannelTool(),
+    setChannelTopic: setChannelTopicTool({ thread }),
+    poll: pollTool({ thread }),
+    getPermalink: getPermalinkTool({ thread }),
+    fetchUrl: fetchUrlTool(),
     scheduleReminder: scheduleReminderTool({ message }),
     skip: skipTool({ threadId: thread.id }),
     searchSlack: searchSlack({ message }),
