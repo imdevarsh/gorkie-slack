@@ -11,6 +11,7 @@ import {
   canvasWriteTool,
 } from './tools/canvas';
 import { createChannelTool, setChannelTopicTool } from './tools/channels';
+import { deploySiteTool, removeSiteTool } from './tools/deploy-site';
 import { generateImageTool } from './tools/generate-image';
 import { listThreadsTool } from './tools/list-threads';
 import { mermaidTool } from './tools/mermaid';
@@ -90,6 +91,8 @@ export function buildTools({
     poll: pollTool({ thread }),
     getPermalink: getPermalinkTool({ thread }),
     fetchUrl: fetchUrlTool(),
+    deploySite: deploySiteTool({ getSandboxContext }),
+    removeSite: removeSiteTool(),
     scheduleReminder: scheduleReminderTool({ message }),
     skip: skipTool({ threadId: thread.id }),
     searchSlack: searchSlack({ message }),

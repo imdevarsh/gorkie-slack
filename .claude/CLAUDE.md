@@ -166,6 +166,23 @@ Most formatting and common issues are automatically fixed by Biome. Run `bun x u
 - Config in `apps/bot/.env`: `SLACK_USER_TOKEN`, `OWNER_USER_ID`. Requires the
   `chat:write` **user** scope on the Slack app (declared under `oauth_config.scopes.user`).
 
+### Static site hosting
+- `deploySite` / `removeSite` tools publish prebuilt static sites at
+  `https://<host>/gorkiesites/<name>/`. Code lives in `apps/bot/src/lib/sites/`:
+  `paths.ts` (name validation + path containment), `deploy.ts` (copy built files
+  out of the E2B sandbox), `server.ts` (the HTTPS host).
+- **Security invariant: the host NEVER executes site code.** All building/testing
+  happens in the E2B sandbox; only static output is copied to the host and served.
+  Site names are DNS-label validated; every served/written path is contained to the
+  site root via `resolveWithin` (traversal, encoded separators, and symlinks — via
+  `find -type f` — are all rejected). Deploys stage then atomically swap.
+- The server starts from `apps/bot/src/index.ts` (`startSitesServer`), binds
+  `SITES_PORT` (default 443) with a self-signed cert generated under
+  `SITES_ROOT/.tls`. Bind failures are logged, not fatal.
+- Config in `apps/bot/.env`: `SITES_ENABLED`, `SITES_PORT`, `SITES_ROOT`,
+  `SITES_PUBLIC_HOST`. If you add dynamic/server-side hosting later, it MUST run in
+  a sandbox/container, never directly on this host.
+
 ### Sandbox / E2B
 - Config in `packages/sandbox/src/config.ts`. Idle keep-alive `timeoutMs` is **5 min**
   (sandboxes pause after 5 min idle to limit E2B credit burn); `executionTimeoutMs` is 20 min.

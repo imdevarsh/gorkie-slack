@@ -4,6 +4,7 @@ import { buildAllowlist } from '@/lib/allowed-users';
 import { slack } from '@/lib/chat';
 import logger from '@/lib/logger';
 import { shutdownLangfuse } from '@/lib/observability/langfuse';
+import { startSitesServer } from '@/lib/sites/server';
 
 let shuttingDown = false;
 
@@ -32,6 +33,7 @@ try {
   logger.info(
     `[bot] ${botProfile?.user?.profile?.display_name || botProfile?.user?.profile?.real_name || botProfile?.user?.name || 'gorkie'} (${slack.botUserId ?? 'unknown id'}) is online`
   );
+  await startSitesServer();
 } catch (error) {
   logger.error({ err: error }, '[bot] failed to start');
   process.exit(1);

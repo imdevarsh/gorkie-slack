@@ -5,6 +5,11 @@ export interface SandboxContext {
       content: Uint8Array;
       path: string;
     }): PromiseLike<void>;
+    run(input: {
+      command: string;
+      env?: Record<string, string>;
+      workingDirectory?: string;
+    }): PromiseLike<{ exitCode: number; stderr: string; stdout: string }>;
   };
   sessionWorkDir: string;
 }
