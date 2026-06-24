@@ -72,6 +72,7 @@ async function main(): Promise<void> {
           'unzip',
           'jq',
           'sudo',
+          'util-linux',
         ],
         { noInstallRecommends: true }
       )
