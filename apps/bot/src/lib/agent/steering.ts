@@ -1,4 +1,4 @@
-import type { Message, Thread } from 'chat';
+import { Message, parseMarkdown, type Thread } from 'chat';
 
 export interface TurnInput {
   message: Message;
@@ -41,4 +41,42 @@ export function interruptTurn({
 }): void {
   activeTurn.pendingMessages.push(input);
   activeTurn.controller.abort(new TurnAbort('interrupt'));
+}
+
+export function pendingResumeInput(
+  activeTurn: ActiveTurn
+): TurnInput | undefined {
+  const latest = activeTurn.pendingMessages.at(-1);
+  if (!latest) {
+    return;
+  }
+  if (activeTurn.pendingMessages.length === 1) {
+    return latest;
+  }
+
+  const text = activeTurn.pendingMessages
+    .map(({ message }) => message.text.trim())
+    .filter(Boolean)
+    .join('\n\n');
+
+  return {
+    message: new Message({
+      attachments: latest.message.attachments,
+      author: latest.message.author,
+      formatted: parseMarkdown(text),
+      id: latest.message.id,
+      isMention: latest.message.isMention,
+      links: latest.message.links,
+      metadata: latest.message.metadata,
+      raw: {
+        combinedFrom: activeTurn.pendingMessages.map(({ message }) => ({
+          id: message.id,
+          text: message.text,
+        })),
+      },
+      text,
+      threadId: latest.message.threadId,
+    }),
+    thread: latest.thread,
+  };
 }

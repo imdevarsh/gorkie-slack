@@ -17,6 +17,7 @@ import {
   type ActiveTurn,
   abortReasonOf,
   interruptTurn,
+  pendingResumeInput,
   TurnAbort,
 } from '@/lib/agent/steering';
 import { startThinking } from '@/lib/agent/utils';
@@ -233,11 +234,11 @@ async function executeTurn(
     if (activeTurns.get(threadId) === activeTurn) {
       activeTurns.delete(threadId);
     }
-    // Only an interrupt replays a queued message; a rapid burst keeps the latest
-    // (later messages supersede the earlier ones within the same wind-down).
+    // Only an interrupt replays queued messages; a rapid burst is merged into a
+    // single follow-up so steering does not drop intermediate corrections.
     const resume =
       abortReasonOf(controller.signal) === 'interrupt'
-        ? activeTurn.pendingMessages.at(-1)
+        ? pendingResumeInput(activeTurn)
         : undefined;
     if (resume) {
       runTurn(resume).catch((error: unknown) => {
@@ -317,11 +318,22 @@ async function executeTurn(
           controls ??= await postControls({ thread });
         }
 
-        const [text, finishReason] = await Promise.all([
-          result.text,
-          result.finishReason,
-        ]);
-        completion = { finishReason, textLength: text.length };
+        try {
+          const [text, finishReason] = await Promise.all([
+            result.text,
+            result.finishReason,
+          ]);
+          completion = { finishReason, textLength: text.length };
+        } catch (error) {
+          if (!hasStreamed) {
+            throw error;
+          }
+          logger.warn(
+            { err: errorMessage(error), threadId },
+            '[agent] failed to read final stream metadata after text output'
+          );
+          completion = { finishReason: 'unknown', textLength: 0 };
+        }
         return;
       } catch (error) {
         attemptHistory.push({ attempt: currentAttempt, error });

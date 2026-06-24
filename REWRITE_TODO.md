@@ -38,7 +38,11 @@ Working notes for the rewrite. `REWRITE_PLAN.md` is the architectural plan; this
 - [ ] Verify Langfuse receives AI SDK spans using `@ai-sdk/otel` + `LangfuseSpanProcessor`. [it doesn't!!]
 
 ## P3 - Tool Scope Decisions
+- TODO: Markdown rendering is broken in sendMessage, sendMessageToChannel
 
+and buggy in normal responses
+- [ ] Investigate a Harness/Pi-native subagent flow for `summarizeThread`. AI SDK has generic tool-called subagent docs, but current Gorkie wiring does not expose a clean way to run a delegated Harness/Pi agent with the same per-turn attempt, sandbox/session shape, and cancellation behavior. Keep the direct AI SDK summary path until that contract is explicit.
+- [ ] Evaluate Slack carousel blocks for multi-item tool outputs, especially generated images and file lists. Decide whether carousel output should replace the current repeated file posts, and revisit native Chat SDK streaming once carousel/task rendering is stable.
 - [ ] Add a draft-first DM tool flow: Gorkie can prepare a DM or group-DM message for the Acting User, show recipient/body/context, and require explicit approval before any send.
 - [ ] Support user-token DM actions only behind per-user authorization: start DMs/group DMs and send messages on behalf of the Acting User when scopes allow it, but never silently fall back to a shared user token.
 - [ ] Add edit/cancel/send states for drafted DMs and group DMs. The user should be able to revise generated copy before sending, cancel it without side effects, or send after a clear confirmation.
