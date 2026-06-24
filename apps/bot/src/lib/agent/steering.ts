@@ -1,11 +1,9 @@
-import { Message, parseMarkdown, type Thread } from 'chat';
-
-export interface TurnInput {
-  message: Message;
-  thread: Thread;
-}
-
-export type AbortReason = 'interrupt' | 'stop' | 'shutdown';
+import { Message, parseMarkdown } from 'chat';
+import type {
+  AbortReason,
+  ActiveTurn,
+  TurnInput,
+} from '@/lib/agent/types/steering';
 
 // Carried as the AbortSignal reason so the turn loop knows why it was aborted:
 // an `interrupt` restarts with the queued follow-up; `stop`/`shutdown` do not.
@@ -16,11 +14,6 @@ export class TurnAbort extends Error {
     this.name = 'TurnAbort';
     this.reason = reason;
   }
-}
-
-export interface ActiveTurn {
-  controller: AbortController;
-  pendingMessages: TurnInput[];
 }
 
 export function abortReasonOf(signal: AbortSignal): AbortReason | undefined {

@@ -1,5 +1,5 @@
 import { textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const mermaid: ToolTaskRendererEntry = {
   title: 'Creating diagram',

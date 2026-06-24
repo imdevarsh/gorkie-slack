@@ -7,6 +7,7 @@ import {
   CardText,
   type Thread,
 } from 'chat';
+import { z } from 'zod';
 import { env } from '@/env';
 import { addAllowedUser } from '@/lib/allowed-users';
 import { slack } from '@/lib/chat';
@@ -19,6 +20,14 @@ import { toLogError } from '@/lib/utils/error';
 // invites them into the terms channel.
 
 export const OPT_IN_ACCEPT_ACTION = 'opt_in_accept';
+
+const slackErrorSchema = z.looseObject({
+  data: z
+    .looseObject({
+      error: z.string().optional(),
+    })
+    .optional(),
+});
 
 export async function offerOptIn(thread: Thread, user: Author): Promise<void> {
   if (!env.OPT_IN_CHANNEL) {
@@ -94,12 +103,5 @@ async function inviteToOptInChannel(userId: string): Promise<void> {
 }
 
 function slackErrorCode(error: unknown): string | undefined {
-  if (error && typeof error === 'object' && 'data' in error) {
-    const data = (error as { data?: unknown }).data;
-    if (data && typeof data === 'object' && 'error' in data) {
-      const code = (data as { error?: unknown }).error;
-      return typeof code === 'string' ? code : undefined;
-    }
-  }
-  return;
+  return slackErrorSchema.safeParse(error).data?.data?.error;
 }

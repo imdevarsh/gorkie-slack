@@ -14,21 +14,23 @@ import { buildPrompt } from '@/lib/agent/prompt';
 import { createReply } from '@/lib/agent/reply';
 import { sandbox } from '@/lib/agent/sandbox';
 import {
-  type ActiveTurn,
   abortReasonOf,
   interruptTurn,
   pendingResumeInput,
 } from '@/lib/agent/steering';
 import { clearTurn, getTurn, setTurn } from '@/lib/agent/turns';
+import type { AgentErrorStage } from '@/lib/agent/types/errors';
+import type { ActiveTurn } from '@/lib/agent/types/steering';
 import { startThinking } from '@/lib/agent/utils';
 import { promptWithAttachments, seedAttachments } from '@/lib/ai/attachments';
-import { type AttemptFailure, nextAttempt } from '@/lib/ai/attempts';
+import { nextAttempt } from '@/lib/ai/attempts';
 import { requestHints } from '@/lib/ai/hints';
 import { renderStream } from '@/lib/ai/stream';
 import { buildTools } from '@/lib/ai/toolset';
 import { runQueuedTurn } from '@/lib/ai/turn-queue';
+import type { AttemptFailure } from '@/lib/ai/types/attempts';
 import { bot, slack } from '@/lib/chat';
-import { type AgentErrorStage, agentErrorMessage } from '@/lib/errors';
+import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
 import { errorMessage } from '@/lib/utils/error';
 

@@ -1,5 +1,5 @@
 import { numberField, plural, textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const searchSlack: ToolTaskRendererEntry = {
   title: 'Searching Slack',

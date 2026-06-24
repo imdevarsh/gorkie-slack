@@ -1,18 +1,14 @@
+import { z } from 'zod';
 import { bot, slack } from '@/lib/chat';
+import type { UserProfile } from '@/lib/slack/types/names';
 
-interface ProfileField {
-  label: string;
-  value: string;
-}
-
-export interface UserProfile {
-  displayName?: string;
-  fields?: ProfileField[];
-  pronouns?: string;
-  realName?: string;
-  status?: string;
-  title?: string;
-}
+const profileFieldsSchema = z.record(
+  z.string(),
+  z.looseObject({
+    label: z.string().optional(),
+    value: z.string().optional(),
+  })
+);
 
 export async function resolveUserProfile(
   userId: string
@@ -33,10 +29,7 @@ export async function resolveUserProfile(
       if (!(raw || user)) {
         return;
       }
-      const fields = (raw?.fields ?? {}) as Record<
-        string,
-        { label?: string; value?: string }
-      >;
+      const fields = profileFieldsSchema.parse(raw?.fields ?? {});
       profile = {
         displayName: raw?.display_name || undefined,
         fields: Object.values(fields).flatMap((field) =>

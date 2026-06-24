@@ -5,15 +5,11 @@ import {
   plural,
   textField,
 } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const message: ToolTaskRendererEntry = {
   request: ({ input }) => ({
-    details:
-      textField(input, 'id') ??
-      textField(input, 'threadId') ??
-      textField(input, 'channelId') ??
-      textField(input, 'userId'),
+    details: textField(input, 'id'),
   }),
   response: ({ output }) => ({
     output: `Sent message${textField(output, 'threadId') ? ` in ${textField(output, 'threadId')}` : ''}.`,

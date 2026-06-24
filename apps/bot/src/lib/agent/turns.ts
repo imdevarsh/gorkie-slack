@@ -1,5 +1,5 @@
-import type { ActiveTurn } from '@/lib/agent/steering';
 import { TurnAbort } from '@/lib/agent/steering';
+import type { ActiveTurn } from '@/lib/agent/types/steering';
 
 const turns = new Map<string, ActiveTurn>();
 

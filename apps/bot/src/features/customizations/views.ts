@@ -10,7 +10,7 @@ import type {
   SlackHomeView,
   SlackModalView,
   SlackTextInputElement,
-} from './types';
+} from './types/slack';
 
 const maxHomePromptLength = 600;
 const maxPromptLength = 3000;

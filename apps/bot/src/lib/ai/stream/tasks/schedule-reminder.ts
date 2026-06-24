@@ -1,5 +1,5 @@
 import { numberField, textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const scheduleReminder: ToolTaskRendererEntry = {
   title: 'Scheduling reminder',

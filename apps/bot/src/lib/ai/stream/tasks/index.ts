@@ -18,7 +18,7 @@ import { scheduleReminder } from './schedule-reminder';
 import { searchSlack } from './search-slack';
 import { searchWeb } from './search-web';
 import { summarizeThread } from './summarize-thread';
-import type { ToolTaskRendererEntry } from './types';
+import type { ToolTaskRendererEntry } from './types/renderers';
 import { uploadFile } from './upload-file';
 
 type RenderPhase = 'request' | 'response' | 'error';

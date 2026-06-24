@@ -1,5 +1,5 @@
 import { field, numberField, plural, textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { ToolTaskRendererEntry } from './types/renderers';
 
 export const searchWeb: ToolTaskRendererEntry = {
   title: 'Searching the web',
