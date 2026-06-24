@@ -70,7 +70,7 @@ export function renderToolTask({
       ? defaultTool.error
       : (entry?.[phase] ?? defaultTool[phase]);
   const rendered = renderer({ input, output, toolName });
-  const title = rendered.title ?? entry?.title ?? toolName;
+  const title = entry?.title ?? rendered.title ?? toolName;
   if (phase === 'request') {
     return {
       details: clamp(rendered.details, 96),

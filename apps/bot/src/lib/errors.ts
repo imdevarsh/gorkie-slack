@@ -4,6 +4,8 @@ const CREDIT_ERROR_PATTERN =
   /\b(credit|credits|quota|daily limit|requires more credits)\b/i;
 const CONTEXT_ERROR_PATTERN =
   /\b(max_tokens|maximum context|context length|too many tokens)\b/i;
+const PROVIDER_TIMEOUT_PATTERN =
+  /\b(5\d\d|gateway time-out|gateway timeout|cloudflare|timeout occurred|origin_response_timeout)\b/i;
 
 export type AgentErrorStage = 'after_progress' | 'after_text' | 'before_output';
 
@@ -26,6 +28,9 @@ export function agentErrorMessage({
   }
   if (CONTEXT_ERROR_PATTERN.test(message)) {
     return '_that request is too large for the current model budget. try a shorter prompt or ask me to compact/summarize first._';
+  }
+  if (PROVIDER_TIMEOUT_PATTERN.test(message)) {
+    return '_gorkie hit a model provider timeout. try again in a bit, or send a shorter follow-up so gorkie can continue from the current thread state._';
   }
   return '_oops, something went wrong._';
 }

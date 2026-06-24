@@ -11,6 +11,7 @@ import { getUserTool } from './tools/get-user';
 import { leaveThreadTool } from './tools/leave-thread';
 import { listThreadsTool } from './tools/list-threads';
 import { mermaidTool } from './tools/mermaid';
+import { postingTools } from './tools/posting';
 import { readConversationHistoryTool } from './tools/read-conversation-history';
 import { scheduleReminderTool } from './tools/schedule-reminder';
 import { searchSlack } from './tools/search-slack';
@@ -35,14 +36,12 @@ export function buildTools({
     requireApproval: false,
   });
 
-  const { addReaction, postChannelMessage, postMessage, sendDirectMessage } =
-    chatTools;
+  const { addReaction } = chatTools;
 
   return {
     ...(addReaction && { addReaction }),
     getUser: getUserTool(),
-    ...(postChannelMessage && { postChannelMessage }),
-    ...(postMessage && { postMessage }),
+    ...postingTools({ bot }),
     getFile: getFileTool({ getSandboxContext }),
     leaveThread: leaveThreadTool({ thread }),
     listThreads: listThreadsTool({ currentThreadId: thread.id }),
@@ -50,7 +49,6 @@ export function buildTools({
       currentThreadId: thread.id,
     }),
     getChannelInfo: getChannelInfoTool({ bot, currentThreadId: thread.id }),
-    ...(sendDirectMessage && { sendDirectMessage }),
     mermaid: mermaidTool({ thread }),
     scheduleReminder: scheduleReminderTool({ message }),
     searchSlack: searchSlack({ message }),
