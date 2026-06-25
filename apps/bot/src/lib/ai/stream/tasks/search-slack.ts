@@ -1,21 +1,21 @@
-import type { ToolTaskRendererEntry } from '@/types/task-renderers';
-import { numberField, plural, textField } from './helpers';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { number, plural, text } from './helpers';
 
-export const searchSlack: ToolTaskRendererEntry = {
+export const searchSlack: TaskRendererEntry = {
   title: 'Searching Slack',
   request: ({ input }) => ({
-    details: textField(input, 'query'),
+    details: text(input, 'query'),
   }),
   response: ({ input, output }) => {
-    const error = textField(output, 'error');
+    const error = text(output, 'error');
     if (error) {
       return {
         output: `Error: ${error}`,
         title: 'Slack search failed',
       };
     }
-    const count = numberField(output, 'resultCount') ?? 0;
-    const query = textField(input, 'query');
+    const count = number(output, 'resultCount') ?? 0;
+    const query = text(input, 'query');
     return {
       output: `Found ${plural(count, 'Slack result')}${query ? ` for "${query}"` : ''}.`,
       title: 'Searched Slack',

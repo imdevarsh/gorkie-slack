@@ -2,7 +2,7 @@ import type { TextStreamPart, ToolSet } from 'ai';
 import type { StreamChunk } from 'chat';
 import logger from '@/lib/logger';
 import { clamp } from '@/lib/utils/text';
-import { renderToolTask } from './tasks';
+import { renderTask } from './tasks';
 
 const MAX_VISIBLE_TASKS = 45;
 const REASONING_OUTPUT_MAX_LENGTH = 2800;
@@ -75,7 +75,7 @@ export async function* renderStream({
           },
           '[tool] called'
         );
-        const rendered = renderToolTask({
+        const rendered = renderTask({
           input: part.input,
           phase: 'request',
           toolName: part.toolName,
@@ -105,7 +105,7 @@ export async function* renderStream({
           },
           '[tool] completed'
         );
-        const rendered = renderToolTask({
+        const rendered = renderTask({
           input,
           output: part.output,
           phase: 'response',
@@ -135,7 +135,7 @@ export async function* renderStream({
           },
           '[tool] failed'
         );
-        const rendered = renderToolTask({
+        const rendered = renderTask({
           input,
           output: part.error,
           phase: 'error',

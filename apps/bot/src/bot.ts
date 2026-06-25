@@ -3,11 +3,7 @@ import { compactTurn, runTurn, stopTurn } from '@/lib/agent';
 import { isUserAllowed } from '@/lib/allowed-users';
 import { bot, slack } from '@/lib/chat';
 import logger from '@/lib/logger';
-import {
-  acceptOptIn,
-  OPT_IN_ACCEPT_ACTION,
-  offerOptIn,
-} from '@/lib/onboarding';
+import { acceptOptIn, offerOptIn } from '@/lib/onboarding';
 import { toLogError } from '@/lib/utils/error';
 import '@/features/assistant';
 import '@/features/customizations';
@@ -59,7 +55,7 @@ bot.onSubscribedMessage(async (thread, message) => {
   await runCommandOrTurn(thread, message);
 });
 
-bot.onAction(OPT_IN_ACCEPT_ACTION, acceptOptIn);
+bot.onAction('opt_in_accept', acceptOptIn);
 
 bot.onAction('stop_turn', async (event) => {
   const threadId = event.value ?? event.threadId;

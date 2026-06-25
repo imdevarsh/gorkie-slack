@@ -1,14 +1,11 @@
 import { tool } from 'ai';
-import type { Chat } from 'chat';
 import { z } from 'zod';
-import { slack } from '@/lib/chat';
 import { toChatSlackChannelId } from '@/lib/slack/ids';
+import { assertReadableChannel } from './utils';
 
 export function getChannelInfoTool({
-  bot,
   currentThreadId,
 }: {
-  bot: Chat;
   currentThreadId: string;
 }) {
   return tool({
@@ -19,15 +16,9 @@ export function getChannelInfoTool({
     }),
     execute: async ({ channelId }) => {
       const chatChannelId = toChatSlackChannelId(channelId);
-      const info = await bot.channel(chatChannelId).fetchMetadata();
-      if (
-        slack.channelIdFromThreadId(currentThreadId) !== chatChannelId &&
-        (info.isDM || info.channelVisibility !== 'workspace')
-      ) {
-        throw new Error(
-          'Reading DMs, private channels, or external conversations is not allowed.'
-        );
-      }
+      const info = await assertReadableChannel(chatChannelId, {
+        currentThreadId,
+      });
       return {
         id: info.id,
         name: info.name,

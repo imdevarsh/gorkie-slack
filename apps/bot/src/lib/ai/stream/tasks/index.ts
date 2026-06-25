@@ -1,5 +1,5 @@
 import { clamp } from '@/lib/utils/text';
-import type { ToolTaskRendererEntry } from '@/types/task-renderers';
+import type { TaskRendererEntry } from '@/types/task-renderers';
 import {
   fetchMessages,
   getChannelInfo,
@@ -23,7 +23,7 @@ import { uploadFile } from './upload-file';
 
 type RenderPhase = 'request' | 'response' | 'error';
 
-const toolRenderers: Record<string, ToolTaskRendererEntry> = {
+const renderers: Record<string, TaskRendererEntry> = {
   bash: command,
   compaction: { title: 'Compacting context' },
   edit: { ...file, title: 'Editing file' },
@@ -50,7 +50,7 @@ const toolRenderers: Record<string, ToolTaskRendererEntry> = {
   write: { ...file, title: 'Writing file' },
 };
 
-export function renderToolTask({
+export function renderTask({
   input,
   output,
   phase,
@@ -61,7 +61,7 @@ export function renderToolTask({
   phase: RenderPhase;
   toolName: string;
 }) {
-  const entry = toolRenderers[toolName];
+  const entry = renderers[toolName];
   const renderer =
     phase === 'error'
       ? defaultTool.error

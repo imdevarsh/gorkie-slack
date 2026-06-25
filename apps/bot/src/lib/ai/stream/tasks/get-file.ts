@@ -1,11 +1,11 @@
-import type { ToolTaskRendererEntry } from '@/types/task-renderers';
-import { textField } from './helpers';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { text } from './helpers';
 
-export const getFile: ToolTaskRendererEntry = {
+export const getFile: TaskRendererEntry = {
   title: 'Downloading file',
-  request: ({ input }) => ({ details: textField(input, 'file') }),
+  request: ({ input }) => ({ details: text(input, 'file') }),
   response: ({ output }) => ({
-    output: `Downloaded ${textField(output, 'filename') ?? 'file'}.`,
+    output: `Downloaded ${text(output, 'filename') ?? 'file'}.`,
     title: 'Downloaded file',
   }),
 };

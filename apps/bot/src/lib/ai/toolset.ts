@@ -40,7 +40,7 @@ export function buildTools({
     readConversationHistory: readConversationHistoryTool({
       currentThreadId: thread.id,
     }),
-    getChannelInfo: getChannelInfoTool({ bot, currentThreadId: thread.id }),
+    getChannelInfo: getChannelInfoTool({ currentThreadId: thread.id }),
     mermaid: mermaidTool({ thread }),
     scheduleReminder: scheduleReminderTool({ message }),
     searchSlack: searchSlackTool({ message }),

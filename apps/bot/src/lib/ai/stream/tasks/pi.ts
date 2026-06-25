@@ -1,10 +1,10 @@
-import type { ToolTaskRendererEntry } from '@/types/task-renderers';
-import { textField } from './helpers';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { text } from './helpers';
 
-export const command: ToolTaskRendererEntry = {
+export const command: TaskRendererEntry = {
   title: 'Running command',
   request: ({ input }) => {
-    const commandText = textField(input, 'command');
+    const commandText = text(input, 'command');
     if (!commandText) {
       return {};
     }
@@ -18,10 +18,10 @@ export const command: ToolTaskRendererEntry = {
   },
 };
 
-export const file: ToolTaskRendererEntry = {
+export const file: TaskRendererEntry = {
   title: 'Reading file',
   request: ({ input }) => {
-    const detail = textField(input, 'path') ?? textField(input, 'file_path');
+    const detail = text(input, 'path') ?? text(input, 'file_path');
     return { details: detail };
   },
   response: ({ toolName }) => {
@@ -38,10 +38,10 @@ export const file: ToolTaskRendererEntry = {
   },
 };
 
-export const search: ToolTaskRendererEntry = {
+export const search: TaskRendererEntry = {
   title: 'Searching files',
   request: ({ input }) => {
-    const detail = textField(input, 'pattern') ?? textField(input, 'path');
+    const detail = text(input, 'pattern') ?? text(input, 'path');
     return { details: detail };
   },
 };

@@ -19,8 +19,6 @@ import { toLogError } from '@/lib/utils/error';
 // silence. Clicking "I accept" is the recorded consent: it grants access and
 // invites them into the terms channel.
 
-export const OPT_IN_ACCEPT_ACTION = 'opt_in_accept';
-
 const slackErrorSchema = z.looseObject({
   data: z
     .looseObject({
@@ -47,7 +45,7 @@ export async function offerOptIn(thread: Thread, user: Author): Promise<void> {
           ),
           Actions([
             Button({
-              id: OPT_IN_ACCEPT_ACTION,
+              id: 'opt_in_accept',
               label: 'I accept — opt me in',
               style: 'primary',
               value: thread.id,

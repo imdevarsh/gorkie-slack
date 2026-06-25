@@ -1,25 +1,25 @@
-interface ToolTaskRenderInput {
+interface TaskRenderInput {
   input: unknown;
   output?: unknown;
   toolName: string;
 }
 
-interface ToolTaskRenderResult {
+interface RenderedTask {
   details?: string;
   output?: string;
   title?: string;
 }
 
-type ToolTaskRenderer = (input: ToolTaskRenderInput) => ToolTaskRenderResult;
+type TaskRenderer = (input: TaskRenderInput) => RenderedTask;
 
-export interface DefaultToolTaskRenderer {
-  error: ToolTaskRenderer;
-  request: ToolTaskRenderer;
-  response: ToolTaskRenderer;
+export interface DefaultTaskRenderer {
+  error: TaskRenderer;
+  request: TaskRenderer;
+  response: TaskRenderer;
 }
 
-export interface ToolTaskRendererEntry {
-  request?: ToolTaskRenderer;
-  response?: ToolTaskRenderer;
+export interface TaskRendererEntry {
+  request?: TaskRenderer;
+  response?: TaskRenderer;
   title: string;
 }

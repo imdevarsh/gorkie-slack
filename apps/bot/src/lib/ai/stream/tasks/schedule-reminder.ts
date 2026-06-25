@@ -1,17 +1,17 @@
-import type { ToolTaskRendererEntry } from '@/types/task-renderers';
-import { numberField, textField } from './helpers';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { number, text } from './helpers';
 
-export const scheduleReminder: ToolTaskRendererEntry = {
+export const scheduleReminder: TaskRendererEntry = {
   title: 'Scheduling reminder',
   request: ({ input }) => {
-    const seconds = numberField(input, 'seconds');
-    const text = textField(input, 'text');
+    const seconds = number(input, 'seconds');
+    const reminder = text(input, 'text');
     return {
-      details: `${seconds ?? '?'}s${text ? ` · ${text}` : ''}`,
+      details: `${seconds ?? '?'}s${reminder ? ` · ${reminder}` : ''}`,
     };
   },
   response: ({ output }) => {
-    const error = textField(output, 'error');
+    const error = text(output, 'error');
     if (error) {
       return {
         output: `Error: ${error}`,
@@ -19,7 +19,7 @@ export const scheduleReminder: ToolTaskRendererEntry = {
       };
     }
     return {
-      output: `Scheduled for ${textField(output, 'scheduledFor') ?? textField(output, 'userId') ?? 'later'}.`,
+      output: `Scheduled for ${text(output, 'scheduledFor') ?? text(output, 'userId') ?? 'later'}.`,
       title: 'Scheduled reminder',
     };
   },

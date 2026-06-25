@@ -1,22 +1,21 @@
-import type { ToolTaskRendererEntry } from '@/types/task-renderers';
-import { numberField, plural, textField } from './helpers';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { number, plural, text } from './helpers';
 
-export const summarizeThread: ToolTaskRendererEntry = {
+export const summarizeThread: TaskRendererEntry = {
   title: 'Summarizing thread',
   request: ({ input }) => {
-    const detail =
-      textField(input, 'threadId') ?? textField(input, 'instructions');
+    const detail = text(input, 'threadId') ?? text(input, 'instructions');
     return { details: detail };
   },
   response: ({ output }) => {
-    const error = textField(output, 'error');
+    const error = text(output, 'error');
     if (error) {
       return {
         output: `Error: ${error}`,
         title: 'Summary failed',
       };
     }
-    const count = numberField(output, 'messageCount');
+    const count = number(output, 'messageCount');
     return {
       output:
         count === undefined ? undefined : `Read ${plural(count, 'message')}.`,

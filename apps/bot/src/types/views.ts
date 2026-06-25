@@ -16,7 +16,7 @@ interface SlackButtonElement {
   value?: string;
 }
 
-export interface SlackTextInputElement {
+interface SlackTextInputElement {
   action_id: string;
   initial_value?: string;
   max_length?: number;
