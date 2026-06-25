@@ -1,13 +1,7 @@
 import { provider } from '@repo/ai';
 import { generateImage, tool } from 'ai';
 import { z } from 'zod';
-
-export interface GeneratedImage {
-  bytes: Uint8Array;
-  index: number;
-  mediaType: string;
-  total: number;
-}
+import type { GeneratedImage } from '@/types/tools/generate-image';
 
 export function generateImageTool({
   upload,

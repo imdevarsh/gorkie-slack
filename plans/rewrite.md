@@ -123,8 +123,9 @@ typecheck/build yet — that's expected. All removed code (incl. old schemas) li
 | `packages/logging` | Keep — pino. |
 
 **AI deps:** the old `ai-retry` dependency/patch is removed, but the behavior is still needed.
-Rebuild an ai-powered retry/fallback layer for Harness/pi model calls instead of trying to wrap
-AI SDK `generateText` directly. Keep app-specific host-tool deps in `apps/bot`, not `packages/ai`.
+Rebuild retry/fallback around Harness/Pi model attempts instead of assuming every model call is
+a direct AI SDK `generateText` call. Keep app-specific host-tool deps in `apps/bot`, not
+`packages/ai`.
 `apps/server` (MCP OAuth callback) returns only in the MCP phase.
 
 ## 4. Target architecture

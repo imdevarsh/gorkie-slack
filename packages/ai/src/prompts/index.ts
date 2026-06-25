@@ -1,6 +1,5 @@
 import { contextPrompt } from './context';
 import { corePrompt } from './core';
-import { customizationPrompt } from './customization';
 import type { RequestHints } from './hints';
 import { personalityPrompt } from './personality';
 import { sandboxPrompt } from './sandbox';
@@ -15,7 +14,6 @@ export function systemPrompt({ hints }: { hints: RequestHints }): string {
     sandboxPrompt,
     slackPrompt,
     contextPrompt(hints),
-    customizationPrompt(hints),
   ]
     .filter(Boolean)
     .join('\n\n')

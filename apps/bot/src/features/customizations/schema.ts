@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-export const PROMPT_INPUT = 'prompt';
-
 const modalStateSchema = z
   .object({
     showPresets: z.boolean().default(false),
@@ -56,6 +54,6 @@ export function promptFromViewValues({
     return null;
   }
 
-  const input = parsed.data.customization_prompt?.[PROMPT_INPUT];
+  const input = parsed.data.customization_prompt?.prompt;
   return typeof input?.value === 'string' ? input.value.trim() : null;
 }

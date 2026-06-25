@@ -1,49 +1,24 @@
-import {
-  arrayLength,
-  booleanField,
-  numberField,
-  plural,
-  textField,
-} from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { arraySize, bool, number, plural, text } from './helpers';
 
-export const message: ToolTaskRendererEntry = {
+export const message: TaskRendererEntry = {
   request: ({ input }) => ({
-    details:
-      textField(input, 'threadId') ??
-      textField(input, 'channelId') ??
-      textField(input, 'userId'),
+    details: text(input, 'id'),
   }),
   response: ({ output }) => ({
-    output: `Sent message${textField(output, 'threadId') ? ` in ${textField(output, 'threadId')}` : ''}.`,
+    output: `Sent message${text(output, 'threadId') ? ` in ${text(output, 'threadId')}` : ''}.`,
     title: 'Sent message',
   }),
   title: 'Sending message',
 };
 
-export const directMessage: ToolTaskRendererEntry = {
+export const fetchMessages: TaskRendererEntry = {
   request: ({ input }) => ({
-    details: textField(input, 'userId'),
+    details: text(input, 'threadId') ?? text(input, 'channelId'),
   }),
   response: ({ input, output }) => {
-    const userId = textField(input, 'userId');
-    const threadId = textField(output, 'threadId');
-    return {
-      output: `Sent DM${userId ? ` to ${userId}` : ''}${threadId ? ` in ${threadId}` : ''}.`,
-      title: 'Sent DM',
-    };
-  },
-  title: 'Sending DM',
-};
-
-export const fetchMessages: ToolTaskRendererEntry = {
-  request: ({ input }) => ({
-    details: textField(input, 'threadId') ?? textField(input, 'channelId'),
-  }),
-  response: ({ input, output }) => {
-    const count = arrayLength(output, 'messages') ?? 0;
-    const target =
-      textField(input, 'threadId') ?? textField(input, 'channelId');
+    const count = arraySize(output, 'messages') ?? 0;
+    const target = text(input, 'threadId') ?? text(input, 'channelId');
     return {
       output:
         count === 0 && target
@@ -55,9 +30,9 @@ export const fetchMessages: ToolTaskRendererEntry = {
   title: 'Reading messages',
 };
 
-export const listThreads: ToolTaskRendererEntry = {
+export const listThreads: TaskRendererEntry = {
   response: ({ output }) => {
-    const count = arrayLength(output, 'threads') ?? 0;
+    const count = arraySize(output, 'threads') ?? 0;
     return {
       output: `Found ${plural(count, 'thread')}.`,
       title: 'Listed threads',
@@ -66,13 +41,13 @@ export const listThreads: ToolTaskRendererEntry = {
   title: 'Listing threads',
 };
 
-export const getUser: ToolTaskRendererEntry = {
+export const getUser: TaskRendererEntry = {
   response: ({ input, output }) => {
     const name =
-      textField(output, 'userName') ??
-      textField(output, 'fullName') ??
-      textField(input, 'userId');
-    const pronouns = textField(output, 'pronouns');
+      text(output, 'userName') ??
+      text(output, 'fullName') ??
+      text(input, 'userId');
+    const pronouns = text(output, 'pronouns');
     return {
       output: name
         ? `Found ${name}${pronouns ? ` (${pronouns})` : ''}.`
@@ -83,11 +58,10 @@ export const getUser: ToolTaskRendererEntry = {
   title: 'Looking up user',
 };
 
-export const getChannelInfo: ToolTaskRendererEntry = {
+export const getChannelInfo: TaskRendererEntry = {
   response: ({ output }) => {
-    const name =
-      textField(output, 'name') ?? textField(output, 'id') ?? 'channel';
-    const members = numberField(output, 'memberCount');
+    const name = text(output, 'name') ?? text(output, 'id') ?? 'channel';
+    const members = number(output, 'memberCount');
     return {
       output: `${name}${members === undefined ? '' : ` · ${plural(members, 'member')}`}.`,
       title: 'Read channel',
@@ -96,14 +70,13 @@ export const getChannelInfo: ToolTaskRendererEntry = {
   title: 'Reading channel',
 };
 
-export const reaction: ToolTaskRendererEntry = {
+export const reaction: TaskRendererEntry = {
   request: ({ input }) => ({
-    details: textField(input, 'emoji') ?? textField(input, 'messageId'),
+    details: text(input, 'emoji') ?? text(input, 'messageId'),
   }),
   response: ({ input, output }) => {
-    const emoji =
-      textField(output, 'emoji') ?? textField(input, 'emoji') ?? 'reaction';
-    const added = booleanField(output, 'added');
+    const emoji = text(output, 'emoji') ?? text(input, 'emoji') ?? 'reaction';
+    const added = bool(output, 'added');
     const action = added === false ? 'Could not update' : 'Added';
     return {
       output: `${action} :${emoji}:.`,

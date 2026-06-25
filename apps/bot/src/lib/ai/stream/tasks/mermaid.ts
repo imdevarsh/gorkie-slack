@@ -1,14 +1,14 @@
-import { textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { text } from './helpers';
 
-export const mermaid: ToolTaskRendererEntry = {
+export const mermaid: TaskRendererEntry = {
   title: 'Creating diagram',
   request: ({ input }) => {
-    const detail = textField(input, 'title') ?? textField(input, 'code');
+    const detail = text(input, 'title') ?? text(input, 'code');
     return { details: detail };
   },
   response: ({ output }) => {
-    const error = textField(output, 'error');
+    const error = text(output, 'error');
     if (error) {
       return {
         output: `Error: ${error}`,
@@ -16,7 +16,7 @@ export const mermaid: ToolTaskRendererEntry = {
       };
     }
     return {
-      output: `Uploaded ${textField(output, 'title') ?? 'diagram'}.`,
+      output: `Uploaded ${text(output, 'title') ?? 'diagram'}.`,
       title: 'Created diagram',
     };
   },

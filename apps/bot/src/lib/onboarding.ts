@@ -7,6 +7,7 @@ import {
   CardText,
   type Thread,
 } from 'chat';
+import { z } from 'zod';
 import { env } from '@/env';
 import { addAllowedUser } from '@/lib/allowed-users';
 import { slack } from '@/lib/chat';
@@ -18,7 +19,13 @@ import { toLogError } from '@/lib/utils/error';
 // silence. Clicking "I accept" is the recorded consent: it grants access and
 // invites them into the terms channel.
 
-export const OPT_IN_ACCEPT_ACTION = 'opt_in_accept';
+const slackErrorSchema = z.looseObject({
+  data: z
+    .looseObject({
+      error: z.string().optional(),
+    })
+    .optional(),
+});
 
 export async function offerOptIn(thread: Thread, user: Author): Promise<void> {
   if (!env.OPT_IN_CHANNEL) {
@@ -28,18 +35,18 @@ export async function offerOptIn(thread: Thread, user: Author): Promise<void> {
     await thread.postEphemeral(
       user,
       Card({
-        title: '👋 First time meeting Gorkie',
+        title: ':wave: first time meeting gorkie',
         children: [
           CardText(
-            `Hi! I'm Gorkie. Before I can help, you need to accept the terms posted in <#${env.OPT_IN_CHANNEL}>.`
+            `hi! i'm gorkie. before i can help, you need to accept the terms posted in <#${env.OPT_IN_CHANNEL}>.`
           ),
           CardText(
-            "Tap below to opt in — I'll add you to the terms channel and we can get started."
+            "tap below to opt in, i'll add you to the terms channel and we can get started."
           ),
           Actions([
             Button({
-              id: OPT_IN_ACCEPT_ACTION,
-              label: 'I accept — opt me in',
+              id: 'opt_in_accept',
+              label: 'i accept, opt me in',
               style: 'primary',
               value: thread.id,
             }),
@@ -63,7 +70,7 @@ export async function acceptOptIn(event: ActionEvent): Promise<void> {
   await event.thread
     ?.postEphemeral(
       event.user,
-      "✅ You're all set — welcome to Gorkie! Ask me anything.",
+      "you're all set, welcome to gorkie. ask me anything.",
       { fallbackToDM: true }
     )
     .catch((error: unknown) => {
@@ -83,7 +90,8 @@ async function inviteToOptInChannel(userId: string): Promise<void> {
     await slack.webClient.conversations.invite({ channel, users: userId });
   } catch (error) {
     // Already a member is success; external users can't be invited (we log it).
-    if (slackErrorCode(error) === 'already_in_channel') {
+    const slackError = slackErrorSchema.safeParse(error).data?.data?.error;
+    if (slackError === 'already_in_channel') {
       return;
     }
     logger.warn(
@@ -91,15 +99,4 @@ async function inviteToOptInChannel(userId: string): Promise<void> {
       '[onboarding] failed to invite to opt-in channel'
     );
   }
-}
-
-function slackErrorCode(error: unknown): string | undefined {
-  if (error && typeof error === 'object' && 'data' in error) {
-    const data = (error as { data?: unknown }).data;
-    if (data && typeof data === 'object' && 'error' in data) {
-      const code = (data as { error?: unknown }).error;
-      return typeof code === 'string' ? code : undefined;
-    }
-  }
-  return;
 }

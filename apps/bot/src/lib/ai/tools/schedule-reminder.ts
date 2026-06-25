@@ -7,19 +7,14 @@ import { errorMessage } from '@/lib/utils/error';
 export function scheduleReminderTool({ message }: { message: Message }) {
   return tool({
     description:
-      'Schedule a one-time reminder DM to the user who sent the current message. Use scheduleTask for recurring reminders once available.',
+      'Schedule a one-time reminder DM to the user who sent the current message.',
     inputSchema: z.object({
-      text: z
-        .string()
-        .min(1)
-        .max(3000)
-        .describe('Reminder message text to send to the user.'),
+      text: z.string().min(1).max(3000),
       seconds: z
         .number()
         .int()
         .min(1)
-        .max(120 * 24 * 60 * 60)
-        .describe('Seconds from now to send the reminder.'),
+        .max(120 * 24 * 60 * 60),
     }),
     execute: async ({ text, seconds }) => {
       const postAt = new Date(Date.now() + seconds * 1000);

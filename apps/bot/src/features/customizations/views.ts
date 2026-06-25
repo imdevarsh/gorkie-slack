@@ -4,15 +4,9 @@ import {
   escapeSlackText,
 } from '@chat-adapter/slack/format';
 import { personas } from '@repo/ai';
-import { PROMPT_INPUT } from './schema';
-import type {
-  SlackBlock,
-  SlackHomeView,
-  SlackModalView,
-  SlackTextInputElement,
-} from './types';
+import type { SlackBlock, SlackHomeView, SlackModalView } from '@/types/views';
 
-const maxHomePromptLength = 900;
+const maxHomePromptLength = 600;
 const maxPromptLength = 3000;
 
 export function buildHomeView({
@@ -82,20 +76,6 @@ export function buildPromptModal({
   prompt: string | null;
   showPresets?: boolean;
 }): SlackModalView {
-  const input: SlackTextInputElement = {
-    action_id: PROMPT_INPUT,
-    max_length: maxPromptLength,
-    multiline: true,
-    placeholder: createSlackPlainText(
-      'e.g. Keep responses concise. Prefer TypeScript. Call me Alex.'
-    ),
-    type: 'plain_text_input',
-  };
-
-  if (prompt) {
-    input.initial_value = prompt;
-  }
-
   const presetBlocks: SlackBlock[] = showPresets
     ? personas.map((persona) => ({
         accessory: {
@@ -128,7 +108,16 @@ export function buildPromptModal({
       { type: 'divider' },
       {
         block_id: 'customization_prompt',
-        element: input,
+        element: {
+          action_id: 'prompt',
+          ...(prompt ? { initial_value: prompt } : {}),
+          max_length: maxPromptLength,
+          multiline: true,
+          placeholder: createSlackPlainText(
+            'e.g. Keep responses concise. Prefer TypeScript. Call me Alex.'
+          ),
+          type: 'plain_text_input',
+        },
         hint: createSlackPlainText(
           'Gorkie follows these instructions across every conversation.'
         ),
@@ -163,7 +152,7 @@ export function buildPresetModal({
       {
         block_id: 'customization_prompt',
         element: {
-          action_id: PROMPT_INPUT,
+          action_id: 'prompt',
           initial_value: prompt,
           max_length: maxPromptLength,
           multiline: true,

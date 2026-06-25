@@ -1,18 +1,18 @@
-import { booleanField, textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { bool, text } from './helpers';
 
-export const uploadFile: ToolTaskRendererEntry = {
+export const uploadFile: TaskRendererEntry = {
   title: 'Uploading file',
   request: ({ input }) => ({
-    details: textField(input, 'path'),
+    details: text(input, 'path'),
   }),
   response: ({ input, output }) => {
     const filename =
-      textField(output, 'filename') ??
-      textField(input, 'filename') ??
-      textField(input, 'path') ??
+      text(output, 'filename') ??
+      text(input, 'filename') ??
+      text(input, 'path') ??
       'file';
-    const uploaded = booleanField(output, 'uploaded');
+    const uploaded = bool(output, 'uploaded');
     return {
       output:
         uploaded === false

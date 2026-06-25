@@ -1,20 +1,20 @@
-import { field, numberField, plural, textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { number, plural, text, value } from './helpers';
 
-export const searchWeb: ToolTaskRendererEntry = {
+export const searchWeb: TaskRendererEntry = {
   title: 'Searching the web',
   request: ({ input }) => ({
-    details: textField(input, 'query'),
+    details: text(input, 'query'),
   }),
   response: ({ input, output }) => {
-    const count = numberField(output, 'resultCount') ?? 0;
-    const links = field(output, 'links');
+    const count = number(output, 'resultCount') ?? 0;
+    const links = value(output, 'links');
     const topLinks = Array.isArray(links)
       ? links
           .filter((link): link is string => typeof link === 'string')
           .slice(0, 3)
       : [];
-    const query = textField(input, 'query');
+    const query = text(input, 'query');
     return {
       output: `Found ${plural(count, 'web result')}${query ? ` for "${query}"` : ''}.${topLinks.length > 0 ? ` ${topLinks.join(', ')}` : ''}`,
       title: 'Searched the web',

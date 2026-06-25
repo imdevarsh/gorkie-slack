@@ -136,7 +136,7 @@ export class E2BSandboxProvider implements HarnessV1SandboxProvider {
 
     this.logger.info(
       { sessionId, sandboxId: nextSandbox.sandboxId, template: this.template },
-      '[sandbox] created e2b sandbox'
+      '[sandbox] created sandbox'
     );
 
     return session;

@@ -2,7 +2,6 @@ import nodePath from 'node:path/posix';
 import type { SandboxContext } from '@repo/ai';
 import type { ToolSet } from 'ai';
 import type { Chat, Message, Thread } from 'chat';
-import { createChatTools } from 'chat/ai';
 import { env } from '@/env';
 import { generateImageTool } from './tools/generate-image';
 import { getChannelInfoTool } from './tools/get-channel-info';
@@ -11,11 +10,12 @@ import { getUserTool } from './tools/get-user';
 import { leaveThreadTool } from './tools/leave-thread';
 import { listThreadsTool } from './tools/list-threads';
 import { mermaidTool } from './tools/mermaid';
-import { postingTools } from './tools/posting';
+import { postMessageTool } from './tools/post-message';
+import { reactTool } from './tools/react';
 import { readConversationHistoryTool } from './tools/read-conversation-history';
 import { scheduleReminderTool } from './tools/schedule-reminder';
-import { searchSlack } from './tools/search-slack';
-import { searchWeb } from './tools/search-web';
+import { searchSlackTool } from './tools/search-slack';
+import { searchWebTool } from './tools/search-web';
 import { summarizeThreadTool } from './tools/summarize-thread';
 import { uploadFileTool } from './tools/upload-file';
 
@@ -30,29 +30,21 @@ export function buildTools({
   message: Message;
   thread: Thread;
 }): ToolSet {
-  const chatTools = createChatTools({
-    chat: bot,
-    preset: 'messenger',
-    requireApproval: false,
-  });
-
-  const { addReaction } = chatTools;
-
   return {
-    ...(addReaction && { addReaction }),
+    react: reactTool({ bot }),
     getUser: getUserTool(),
-    ...postingTools({ bot }),
+    postMessage: postMessageTool({ bot }),
     getFile: getFileTool({ getSandboxContext }),
     leaveThread: leaveThreadTool({ thread }),
     listThreads: listThreadsTool({ currentThreadId: thread.id }),
     readConversationHistory: readConversationHistoryTool({
       currentThreadId: thread.id,
     }),
-    getChannelInfo: getChannelInfoTool({ bot, currentThreadId: thread.id }),
+    getChannelInfo: getChannelInfoTool({ currentThreadId: thread.id }),
     mermaid: mermaidTool({ thread }),
     scheduleReminder: scheduleReminderTool({ message }),
-    searchSlack: searchSlack({ message }),
-    searchWeb: searchWeb({ apiKey: env.EXA_API_KEY }),
+    searchSlack: searchSlackTool({ message }),
+    searchWeb: searchWebTool({ apiKey: env.EXA_API_KEY }),
     summarizeThread: summarizeThreadTool({ bot, threadId: thread.id }),
     generateImage: generateImageTool({
       upload: async ({ bytes, mediaType, index, total }) => {

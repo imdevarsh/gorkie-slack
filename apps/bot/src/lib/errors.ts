@@ -1,4 +1,5 @@
 import { errorMessage } from '@/lib/utils/error';
+import type { AgentErrorStage } from '@/types/agent';
 
 const CREDIT_ERROR_PATTERN =
   /\b(credit|credits|quota|daily limit|requires more credits)\b/i;
@@ -6,8 +7,6 @@ const CONTEXT_ERROR_PATTERN =
   /\b(max_tokens|maximum context|context length|too many tokens)\b/i;
 const PROVIDER_TIMEOUT_PATTERN =
   /\b(5\d\d|gateway time-out|gateway timeout|cloudflare|timeout occurred|origin_response_timeout)\b/i;
-
-export type AgentErrorStage = 'after_progress' | 'after_text' | 'before_output';
 
 export function agentErrorMessage({
   error,

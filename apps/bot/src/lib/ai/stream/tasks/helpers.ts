@@ -1,27 +1,27 @@
-export function field(input: unknown, key: string): unknown {
+export function value(input: unknown, key: string): unknown {
   return input && typeof input === 'object' && key in input
     ? Reflect.get(input, key)
     : undefined;
 }
 
-export function textField(input: unknown, key: string): string | undefined {
-  const value = field(input, key);
-  return typeof value === 'string' && value ? value : undefined;
+export function text(input: unknown, key: string): string | undefined {
+  const raw = value(input, key);
+  return typeof raw === 'string' && raw ? raw : undefined;
 }
 
-export function numberField(input: unknown, key: string): number | undefined {
-  const value = field(input, key);
-  return typeof value === 'number' ? value : undefined;
+export function number(input: unknown, key: string): number | undefined {
+  const raw = value(input, key);
+  return typeof raw === 'number' ? raw : undefined;
 }
 
-export function booleanField(input: unknown, key: string): boolean | undefined {
-  const value = field(input, key);
-  return typeof value === 'boolean' ? value : undefined;
+export function bool(input: unknown, key: string): boolean | undefined {
+  const raw = value(input, key);
+  return typeof raw === 'boolean' ? raw : undefined;
 }
 
-export function arrayLength(input: unknown, key: string): number | undefined {
-  const value = field(input, key);
-  return Array.isArray(value) ? value.length : undefined;
+export function arraySize(input: unknown, key: string): number | undefined {
+  const raw = value(input, key);
+  return Array.isArray(raw) ? raw.length : undefined;
 }
 
 export function plural(
@@ -39,7 +39,7 @@ export function errorOutput(output: unknown): string | undefined {
   if (typeof output === 'string') {
     return `**Error**: ${output.replace(/^Error:\s*/, '')}`;
   }
-  const message = textField(output, 'message') ?? textField(output, 'error');
+  const message = text(output, 'message') ?? text(output, 'error');
   if (!message) {
     return '**Error**: tool failed';
   }

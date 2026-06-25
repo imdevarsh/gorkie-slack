@@ -23,14 +23,12 @@ These tools operate in the sandbox. They do not call Slack directly.
 
 ## Slack And Chat Tools
 
-`apps/bot/src/lib/ai/toolset.ts` starts from Chat SDK's `messenger` preset and exposes only the tools Gorkie currently wants:
+`apps/bot/src/lib/ai/toolset.ts` exposes bot-owned tools for Slack actions:
 
 | Tool | Purpose |
 | --- | --- |
-| `postMessage` | Post to another thread. |
-| `postChannelMessage` | Post to a channel. |
-| `sendDirectMessage` | Send a DM. |
-| `addReaction` | React to a message. |
+| `postMessage` | Post to another thread, channel, or user. |
+| `react` | React to a message. |
 | `getChannelInfo` | Read channel metadata. |
 | `getUser` | Read user metadata. |
 

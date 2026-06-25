@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import Exa from 'exa-js';
 import { z } from 'zod';
 
-export function searchWeb({ apiKey }: { apiKey: string }) {
+export function searchWebTool({ apiKey }: { apiKey: string }) {
   const exa = new Exa(apiKey);
   return tool({
     description:
@@ -15,10 +15,10 @@ export function searchWeb({ apiKey }: { apiKey: string }) {
         .describe("A specific, clear web search query for what you're after."),
     }),
     execute: async ({ query }) => {
-      const { results } = await exa.searchAndContents(query, {
+      const { results } = await exa.search(query, {
         type: 'auto',
         numResults: 8,
-        text: { maxCharacters: 1200 },
+        contents: { text: { maxCharacters: 1200 } },
       });
       const links = results.slice(0, 5).map((result) => result.url);
       return {

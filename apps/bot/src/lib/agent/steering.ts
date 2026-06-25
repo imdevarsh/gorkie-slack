@@ -1,14 +1,6 @@
-import { Message, parseMarkdown, type Thread } from 'chat';
+import { Message, parseMarkdown } from 'chat';
+import type { AbortReason, ActiveTurn, TurnInput } from '@/types/agent';
 
-export interface TurnInput {
-  message: Message;
-  thread: Thread;
-}
-
-export type AbortReason = 'interrupt' | 'stop' | 'shutdown';
-
-// Carried as the AbortSignal reason so the turn loop knows why it was aborted:
-// an `interrupt` restarts with the queued follow-up; `stop`/`shutdown` do not.
 export class TurnAbort extends Error {
   readonly reason: AbortReason;
   constructor(reason: AbortReason) {
@@ -18,18 +10,12 @@ export class TurnAbort extends Error {
   }
 }
 
-export interface ActiveTurn {
-  controller: AbortController;
-  pendingMessages: TurnInput[];
-}
-
 export function abortReasonOf(signal: AbortSignal): AbortReason | undefined {
   if (!signal.aborted) {
     return;
   }
-  return signal.reason instanceof TurnAbort
-    ? signal.reason.reason
-    : 'interrupt';
+  const { reason } = signal;
+  return reason instanceof TurnAbort ? reason.reason : 'interrupt';
 }
 
 export function interruptTurn({
@@ -43,9 +29,7 @@ export function interruptTurn({
   activeTurn.controller.abort(new TurnAbort('interrupt'));
 }
 
-export function pendingResumeInput(
-  activeTurn: ActiveTurn
-): TurnInput | undefined {
+export function queuedInput(activeTurn: ActiveTurn): TurnInput | undefined {
   const latest = activeTurn.pendingMessages.at(-1);
   if (!latest) {
     return;

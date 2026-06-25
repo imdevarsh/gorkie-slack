@@ -19,8 +19,8 @@ Each conversation gets its own persistent E2B sandbox. The sandbox is remote Lin
   - Chat SDK: `https://github.com/vercel/chat`
   - Pi internals when needed: `https://github.com/earendil-works/pi`
 - Docs and architecture: start in `docs/index.md`.
-- Cleanup tracker: `REWRITE_TODO.md`.
-- Long-form build plan and coding examples: `REWRITE_PLAN.md`.
+- Cleanup tracker: `TODO.md`.
+- Long-form build plan and coding examples: `plans/rewrite.md`.
 
 ## Where Things Belong
 
@@ -42,7 +42,7 @@ Each conversation gets its own persistent E2B sandbox. The sandbox is remote Lin
 
 ## Coding Rules
 
-Full detail and examples live in `REWRITE_PLAN.md`.
+Full detail and examples live in `plans/rewrite.md`.
 
 - Inline over extract: no one-shot helpers.
 - Avoid constants unless absolutely needed: inline one-use literals and values.

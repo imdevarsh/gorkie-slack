@@ -1,13 +1,13 @@
-import { numberField, plural, textField } from './helpers';
-import type { ToolTaskRendererEntry } from './types';
+import type { TaskRendererEntry } from '@/types/task-renderers';
+import { number, plural, text } from './helpers';
 
-export const generateImage: ToolTaskRendererEntry = {
+export const generateImage: TaskRendererEntry = {
   title: 'Generating image',
   request: ({ input }) => ({
-    details: textField(input, 'prompt'),
+    details: text(input, 'prompt'),
   }),
   response: ({ output }) => {
-    const uploaded = numberField(output, 'uploaded') ?? 0;
+    const uploaded = number(output, 'uploaded') ?? 0;
     return {
       output: `Uploaded ${plural(uploaded, 'image')}.`,
       title: uploaded > 0 ? 'Generated image' : 'Image generation finished',

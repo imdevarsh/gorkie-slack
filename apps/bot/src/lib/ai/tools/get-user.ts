@@ -7,7 +7,7 @@ export function getUserTool() {
     description:
       "Look up a Slack user's profile by their user id (like U0123ABCD): display name, real name, pronouns, title, status, and custom profile fields (Website, GitHub, etc.). Use their pronouns when referring to them.",
     inputSchema: z.object({
-      userId: z.string().min(1).describe('The Slack user id, like U0123ABCD.'),
+      userId: z.string().min(1),
     }),
     execute: async ({ userId }) => {
       const profile = await resolveUserProfile(userId);
