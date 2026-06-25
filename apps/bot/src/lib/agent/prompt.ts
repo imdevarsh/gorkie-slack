@@ -1,6 +1,7 @@
 import { slackMrkdwnToMarkdown } from '@chat-adapter/slack/format';
 import type { Message } from 'chat';
 import { annotateMentions } from '@/lib/agent/mentions';
+import { rawSlackText } from '@/lib/utils/message';
 
 export async function buildPrompt(
   message: Message,
@@ -11,9 +12,9 @@ export async function buildPrompt(
   } = {}
 ): Promise<string> {
   const prefix = `@${message.author.userName} (${message.author.userId})`;
-  const rawText = getRawSlackText(message);
-  const text = rawText
-    ? slackMrkdwnToMarkdown(await annotateMentions(rawText))
+  const slackText = rawSlackText(message);
+  const text = slackText
+    ? slackMrkdwnToMarkdown(await annotateMentions(slackText))
     : message.text;
   const messageText = `${prefix}: ${text}`;
 
@@ -26,17 +27,4 @@ export async function buildPrompt(
         messageText,
       ].join('\n')
     : messageText;
-}
-
-function getRawSlackText(message: Message): string | undefined {
-  const raw = message.raw;
-  if (
-    !raw ||
-    typeof raw !== 'object' ||
-    !('text' in raw) ||
-    typeof raw.text !== 'string'
-  ) {
-    return;
-  }
-  return raw.text;
 }

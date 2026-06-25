@@ -29,9 +29,7 @@ export function interruptTurn({
   activeTurn.controller.abort(new TurnAbort('interrupt'));
 }
 
-export function queuedFollowUpInput(
-  activeTurn: ActiveTurn
-): TurnInput | undefined {
+export function queuedInput(activeTurn: ActiveTurn): TurnInput | undefined {
   const latest = activeTurn.pendingMessages.at(-1);
   if (!latest) {
     return;

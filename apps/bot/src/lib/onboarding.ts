@@ -35,18 +35,18 @@ export async function offerOptIn(thread: Thread, user: Author): Promise<void> {
     await thread.postEphemeral(
       user,
       Card({
-        title: '👋 First time meeting Gorkie',
+        title: ':wave: first time meeting gorkie',
         children: [
           CardText(
-            `Hi! I'm Gorkie. Before I can help, you need to accept the terms posted in <#${env.OPT_IN_CHANNEL}>.`
+            `hi! i'm gorkie. before i can help, you need to accept the terms posted in <#${env.OPT_IN_CHANNEL}>.`
           ),
           CardText(
-            "Tap below to opt in — I'll add you to the terms channel and we can get started."
+            "tap below to opt in, i'll add you to the terms channel and we can get started."
           ),
           Actions([
             Button({
               id: 'opt_in_accept',
-              label: 'I accept — opt me in',
+              label: 'i accept, opt me in',
               style: 'primary',
               value: thread.id,
             }),
@@ -70,7 +70,7 @@ export async function acceptOptIn(event: ActionEvent): Promise<void> {
   await event.thread
     ?.postEphemeral(
       event.user,
-      "✅ You're all set — welcome to Gorkie! Ask me anything.",
+      "you're all set, welcome to gorkie. ask me anything.",
       { fallbackToDM: true }
     )
     .catch((error: unknown) => {
@@ -90,7 +90,8 @@ async function inviteToOptInChannel(userId: string): Promise<void> {
     await slack.webClient.conversations.invite({ channel, users: userId });
   } catch (error) {
     // Already a member is success; external users can't be invited (we log it).
-    if (slackErrorCode(error) === 'already_in_channel') {
+    const slackError = slackErrorSchema.safeParse(error).data?.data?.error;
+    if (slackError === 'already_in_channel') {
       return;
     }
     logger.warn(
@@ -98,8 +99,4 @@ async function inviteToOptInChannel(userId: string): Promise<void> {
       '[onboarding] failed to invite to opt-in channel'
     );
   }
-}
-
-function slackErrorCode(error: unknown): string | undefined {
-  return slackErrorSchema.safeParse(error).data?.data?.error;
 }

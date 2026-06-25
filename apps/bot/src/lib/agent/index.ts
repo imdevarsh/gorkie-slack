@@ -16,7 +16,7 @@ import { sandbox } from '@/lib/agent/sandbox';
 import {
   abortReasonOf,
   interruptTurn,
-  queuedFollowUpInput,
+  queuedInput,
 } from '@/lib/agent/steering';
 import { clearTurn, getTurn, setTurn } from '@/lib/agent/turns';
 import { startThinking } from '@/lib/agent/utils';
@@ -141,7 +141,7 @@ async function executeTurn(
     // single follow-up so steering does not drop intermediate corrections.
     const resume =
       abortReasonOf(controller.signal) === 'interrupt'
-        ? queuedFollowUpInput(activeTurn)
+        ? queuedInput(activeTurn)
         : undefined;
     if (resume) {
       runTurn(resume).catch((error: unknown) => {

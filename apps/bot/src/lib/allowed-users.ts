@@ -40,8 +40,12 @@ export async function addAllowedUser(userId: string): Promise<void> {
     const allowedUsers = new Set(
       (await state.get<string[]>(allowlistKey(channel))) ?? []
     );
+    const wasAllowed = allowedUsers.has(userId);
     allowedUsers.add(userId);
     await state.set(allowlistKey(channel), [...allowedUsers]);
+    if (!wasAllowed) {
+      logger.info({ channel, userId }, '[allowlist] user opted in');
+    }
   } catch (error) {
     logger.warn(
       { ...toLogError(error), channel, userId },

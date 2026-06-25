@@ -1,10 +1,12 @@
 import type { Message, Thread } from 'chat';
-import { compactTurn, runTurn, stopTurn } from '@/lib/agent';
+import { runTurn, stopTurn } from '@/lib/agent';
 import { isUserAllowed } from '@/lib/allowed-users';
 import { bot, slack } from '@/lib/chat';
+import { handleCommand } from '@/lib/commands';
 import logger from '@/lib/logger';
 import { acceptOptIn, offerOptIn } from '@/lib/onboarding';
 import { toLogError } from '@/lib/utils/error';
+import { rawText, withoutLeadingMentions } from '@/lib/utils/message';
 import '@/features/assistant';
 import '@/features/customizations';
 
@@ -63,7 +65,7 @@ bot.onAction('stop_turn', async (event) => {
 
   if (!stopped) {
     await event.thread
-      ?.postEphemeral(event.user, 'No active response to stop.', {
+      ?.postEphemeral(event.user, 'no active response to stop.', {
         fallbackToDM: false,
       })
       .catch((error: unknown) => {
@@ -79,39 +81,11 @@ bot.onAction('stop_turn', async (event) => {
   }
 });
 
-// Leading `<@U...>` mentions Slack puts before the actual message body.
-const LEADING_MENTIONS = /^\s*(?:<@[A-Z0-9][A-Z0-9._-]*(?:\|[^>]+)?>\s*)+/;
-const COMPACT_COMMAND = /^!compact\b(.*)$/is;
-
-function rawText(message: Message): string {
-  const raw = message.raw;
-  return raw &&
-    typeof raw === 'object' &&
-    'text' in raw &&
-    typeof raw.text === 'string'
-    ? raw.text
-    : message.text;
-}
-
-// A `!compact` command addressed to Gorkie returns its (possibly empty) custom
-// summary instructions; anything else returns null.
-function compactInstructions(message: Message): string | null {
-  const body = rawText(message).replace(LEADING_MENTIONS, '').trim();
-  const match = body.match(COMPACT_COMMAND);
-  return match ? (match[1] ?? '').trim() : null;
-}
-
 async function runCommandOrTurn(
   thread: Thread,
   message: Message
 ): Promise<void> {
-  const instructions = compactInstructions(message);
-  if (instructions !== null) {
-    await compactTurn({
-      instructions: instructions || undefined,
-      message,
-      thread,
-    });
+  if (await handleCommand({ message, thread })) {
     return;
   }
   await runTurn({ message, thread });
@@ -127,7 +101,7 @@ function shouldIgnore(message: Message): boolean {
   }
 
   for (const line of rawText(message).split('\n')) {
-    if (line.replace(LEADING_MENTIONS, '').trimStart().startsWith('##')) {
+    if (withoutLeadingMentions(line).trimStart().startsWith('##')) {
       return true;
     }
   }

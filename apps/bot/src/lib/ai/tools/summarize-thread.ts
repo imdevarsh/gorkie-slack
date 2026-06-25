@@ -23,11 +23,9 @@ export function summarizeThreadTool({
     }),
     execute: async (input) => {
       const targetThreadId = input.threadId ?? threadId;
-      if (targetThreadId.startsWith('slack:')) {
-        const channelId = slack.channelIdFromThreadId(targetThreadId);
-        await assertReadableChannel(channelId, { currentThreadId: threadId });
-        await joinChannel(channelId);
-      }
+      const channelId = slack.channelIdFromThreadId(targetThreadId);
+      await assertReadableChannel(channelId, { currentThreadId: threadId });
+      await joinChannel(channelId);
       const result = await bot
         .thread(targetThreadId)
         .adapter.fetchMessages(targetThreadId, {
