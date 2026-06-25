@@ -6,6 +6,11 @@ lives in `plans/rewrite.md`.
 
 ## Slack Context And History
 
+### Summaries
+
+- [ ] Revisit `summarizeThread` subagent design after there is an ephemeral
+  Harness/Pi session path that does not create persistent sandbox rows.
+
 ### Context Prelude
 
 - [ ] Add a bounded Slack context prelude before each Pi prompt so Gorkie starts
