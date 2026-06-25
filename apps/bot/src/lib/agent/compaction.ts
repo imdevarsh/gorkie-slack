@@ -16,9 +16,6 @@ import { bot } from '@/lib/chat';
 import { agentErrorMessage } from '@/lib/errors';
 import logger from '@/lib/logger';
 
-// Compaction is queued like a turn so it never races an in-flight response on
-// the same thread; Pi compacts its session in place, and we persist the smaller
-// transcript so the next turn resumes from it.
 export function compactTurn(input: {
   instructions?: string;
   message: Message;
@@ -76,7 +73,7 @@ async function executeCompact({
     await sandbox.pauseSession({ threadId });
     logger.info({ threadId }, '[agent] compaction complete');
     await thread
-      .post({ markdown: '🧹 Compacted this thread’s context.' })
+      .post({ markdown: "compacted this thread's context." })
       .catch(() => undefined);
   } catch (error) {
     logger.error({ err: error, threadId }, '[agent] compaction failed');

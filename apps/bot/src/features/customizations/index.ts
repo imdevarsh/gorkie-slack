@@ -15,7 +15,6 @@ import logger from '@/lib/logger';
 import { toLogError } from '@/lib/utils/error';
 import {
   openedViewSchema,
-  PROMPT_INPUT,
   parseModalState,
   promptFromViewValues,
   slackActionViewSchema,
@@ -162,7 +161,7 @@ bot.onAction('home_clear_prompt', async (event) => {
 bot.onModalSubmit(
   ['home_save_prompt', 'home_save_preset_prompt'],
   async (event) => {
-    const prompt = event.values[PROMPT_INPUT]?.trim();
+    const prompt = event.values.prompt?.trim();
     if (prompt === undefined) {
       return {
         action: 'errors',

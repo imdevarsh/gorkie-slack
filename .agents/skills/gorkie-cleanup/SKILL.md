@@ -1,4 +1,4 @@
----
+all ---
 name: gorkie-cleanup
 description: >
   Use when cleaning or refactoring this Gorkie Slack codebase. Covers the local

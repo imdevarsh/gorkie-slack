@@ -10,7 +10,6 @@ import type {
   SlackModalView,
   SlackTextInputElement,
 } from '@/types/slack-views';
-import { PROMPT_INPUT } from './schema';
 
 const maxHomePromptLength = 600;
 const maxPromptLength = 3000;
@@ -83,7 +82,7 @@ export function buildPromptModal({
   showPresets?: boolean;
 }): SlackModalView {
   const input: SlackTextInputElement = {
-    action_id: PROMPT_INPUT,
+    action_id: 'prompt',
     max_length: maxPromptLength,
     multiline: true,
     placeholder: createSlackPlainText(
@@ -163,7 +162,7 @@ export function buildPresetModal({
       {
         block_id: 'customization_prompt',
         element: {
-          action_id: PROMPT_INPUT,
+          action_id: 'prompt',
           initial_value: prompt,
           max_length: maxPromptLength,
           multiline: true,
