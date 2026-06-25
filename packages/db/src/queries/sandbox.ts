@@ -29,6 +29,12 @@ export async function getByThread(
   return rows[0] ?? null;
 }
 
+export async function deleteByThread(threadId: string): Promise<void> {
+  await db
+    .delete(sandboxSessions)
+    .where(eq(sandboxSessions.threadId, threadId));
+}
+
 export async function upsert(session: NewSandboxSession): Promise<void> {
   await db
     .insert(sandboxSessions)
