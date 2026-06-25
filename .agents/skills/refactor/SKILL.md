@@ -1,5 +1,5 @@
-all ---
-name: gorkie-cleanup
+---
+name: refactor
 description: >
   Use when cleaning or refactoring this Gorkie Slack codebase. Covers the local
   cleanup style: simplifying names, collapsing thin helpers, splitting real
@@ -7,7 +7,7 @@ description: >
   running the repo validation suite.
 ---
 
-# Gorkie Cleanup
+# Gorkie Refactor
 
 Clean by reducing jumps, not by adding architecture.
 
